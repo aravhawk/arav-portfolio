@@ -62,7 +62,7 @@ Sent from Arav Jain's Portfolio Directory`;
       industry: "SaaS / AI",
       founded: "2024",
       stage: "Pre-seed",
-      website: "neuralbytes.com",
+      website: "neuralbytes.net",
       logo: "N"
     }
   ];
