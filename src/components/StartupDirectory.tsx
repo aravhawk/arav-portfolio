@@ -123,6 +123,13 @@ Sent from Arav Jain's Portfolio Directory`;
                 className={`px-4 py-2 rounded-md font-medium ${activeTab === 'about' ? 'bg-indigo-100 text-indigo-900' : 'text-gray-600 hover:bg-gray-100'}`}>
                 About
               </button>
+              <a 
+                href="https://blog.aravjain.dev" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="px-4 py-2 rounded-md font-medium text-gray-600 hover:bg-gray-100 transition">
+                Blog
+              </a>
             </div>
           </nav>
         </div>
