@@ -11,7 +11,7 @@ const StartupDirectory = () => {
     message: ''
   });
   
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -67,9 +67,21 @@ Sent from Arav Jain's Portfolio Directory`;
     }
   ];
 
-  const investments = [];
+  const investments: Array<{
+    id: number;
+    company: string;
+    description: string;
+    year: string;
+    type: string;
+  }> = [];
 
-  const advisoryRoles = [];
+  const advisoryRoles: Array<{
+    id: number;
+    company: string;
+    role: string;
+    industry: string;
+    period: string;
+  }> = [];
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
@@ -89,7 +101,7 @@ Sent from Arav Jain's Portfolio Directory`;
       <div className="sticky top-0 bg-white shadow-md z-10">
         <div className="max-w-5xl mx-auto px-6">
           <nav className="flex justify-between items-center py-4">
-            <div className="font-bold text-xl text-indigo-900">Arav's Portfolio</div>
+            <div className="font-bold text-xl text-indigo-900">Arav&apos;s Portfolio</div>
             <div className="flex space-x-1">
               <button 
                 onClick={() => setActiveTab('ventures')}
@@ -202,13 +214,13 @@ Sent from Arav Jain's Portfolio Directory`;
             <div className="bg-white rounded-lg shadow-md p-8">
               <div className="prose max-w-none">
                 <p className="mb-4">
-                  I'm a software engineer and entrepreneur passionate about the intersection of artificial intelligence and blockchain technology. As the Founder & CEO of Infiniflop, I'm building pay-per-FLOP GPU compute solutions that make AI infrastructure more accessible and efficient.
+                  I&apos;m a software engineer and entrepreneur passionate about the intersection of artificial intelligence and blockchain technology. As the Founder & CEO of Infiniflop, I&apos;m building pay-per-FLOP GPU compute solutions that make AI infrastructure more accessible and efficient.
                 </p>
                 <p className="mb-4">
-                  My technical background spans machine learning, deep learning with PyTorch, and blockchain development. I'm currently developing Tensorcoin, a high-performance blockchain powered by GPUs that aims to redefine cryptocurrency efficiency by addressing the speed and energy concerns of traditional blockchain systems.
+                  My technical background spans machine learning, deep learning with PyTorch, and blockchain development. I&apos;m currently developing Tensorcoin, a high-performance blockchain powered by GPUs that aims to redefine cryptocurrency efficiency by addressing the speed and energy concerns of traditional blockchain systems.
                 </p>
                 <p className="mb-4">
-                  I've open-sourced several projects including IntergalacticPro (a space-focused AI chatbot), SumQuick (an AI summarization tool that runs locally using Ollama), and various AI/ML tools. I'm also expanding my skills in Swift development for Apple platforms while continuing to push the boundaries of what's possible with GPU-accelerated computing.
+                  I&apos;ve open-sourced several projects including IntergalacticPro (a space-focused AI chatbot), SumQuick (an AI summarization tool that runs locally using Ollama), and various AI/ML tools. I&apos;m also expanding my skills in Swift development for Apple platforms while continuing to push the boundaries of what&apos;s possible with GPU-accelerated computing.
                 </p>
                 <h3 className="text-xl font-bold mt-6 mb-4">Current Projects</h3>
                 <ul className="list-disc pl-5 mb-4">
@@ -247,7 +259,7 @@ Sent from Arav Jain's Portfolio Directory`;
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <p className="mb-4">
-                Interested in connecting? I'm always open to discussing new projects, investment opportunities, or strategic partnerships.
+                Interested in connecting? I&apos;m always open to discussing new projects, investment opportunities, or strategic partnerships.
               </p>
               <div className="mt-6 space-y-4">
                 <div className="flex items-center">
@@ -302,7 +314,7 @@ Sent from Arav Jain's Portfolio Directory`;
                   <textarea 
                     id="message" 
                     name="message"
-                    rows="4" 
+                    rows={4} 
                     value={formData.message}
                     onChange={handleInputChange}
                     className="w-full p-2 rounded bg-indigo-700 border border-indigo-600 text-white placeholder-indigo-300" 
