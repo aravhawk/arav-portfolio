@@ -294,13 +294,13 @@ Sent from Arav Jain's Portfolio Directory`;
               <div className="lg:col-span-2">
                 <div className="prose max-w-none text-gray-600 leading-relaxed space-y-6">
                   <p className="text-lg">
-                    I'm a software engineer and entrepreneur passionate about the intersection of artificial intelligence and blockchain technology. As the Founder & CEO of Infiniflop, I'm building pay-per-FLOP GPU compute solutions that make AI infrastructure more accessible and efficient.
+                    I&apos;m a software engineer and entrepreneur passionate about the intersection of artificial intelligence and blockchain technology. As the Founder & CEO of Infiniflop, I&apos;m building pay-per-FLOP GPU compute solutions that make AI infrastructure more accessible and efficient.
                   </p>
                   <p>
-                    My technical background spans machine learning, deep learning with PyTorch, and blockchain development. I'm currently developing Tensorcoin, a high-performance blockchain powered by GPUs that aims to redefine cryptocurrency efficiency by addressing the speed and energy concerns of traditional blockchain systems.
+                    My technical background spans machine learning, deep learning with PyTorch, and blockchain development. I&apos;m currently developing Tensorcoin, a high-performance blockchain powered by GPUs that aims to redefine cryptocurrency efficiency by addressing the speed and energy concerns of traditional blockchain systems.
                   </p>
                   <p>
-                    I've open-sourced several projects including IntergalacticPro (a space-focused AI chatbot), SumQuick (an AI summarization tool that runs locally using Ollama), and various AI/ML tools. I'm also expanding my skills in Swift development for Apple platforms while continuing to push the boundaries of what's possible with GPU-accelerated computing.
+                    I&apos;ve open-sourced several projects including IntergalacticPro (a space-focused AI chatbot), SumQuick (an AI summarization tool that runs locally using Ollama), and various AI/ML tools. I&apos;m also expanding my skills in Swift development for Apple platforms while continuing to push the boundaries of what&apos;s possible with GPU-accelerated computing.
                   </p>
                 </div>
               </div>
@@ -388,7 +388,7 @@ Sent from Arav Jain's Portfolio Directory`;
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div>
               <p className="text-gray-300 mb-8 text-lg leading-relaxed">
-                Interested in connecting? I'm always open to discussing new projects, investment opportunities, or strategic partnerships.
+                Interested in connecting? I&apos;m always open to discussing new projects, investment opportunities, or strategic partnerships.
               </p>
               
               <div className="space-y-6">
