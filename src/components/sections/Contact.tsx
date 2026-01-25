@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Linkedin, Twitter, ArrowRight } from 'lucide-react';
+import { Mail, Linkedin, Twitter, Github, ArrowRight } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
@@ -15,7 +15,7 @@ const iconMap = {
   mail: Mail,
   linkedin: Linkedin,
   twitter: Twitter,
-  github: null
+  github: Github
 };
 
 export default function Contact() {
