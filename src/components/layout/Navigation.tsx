@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, ExternalLink } from 'lucide-react';
-import Button from '@/components/ui/Button';
+import { Menu, X, ArrowUpRight } from 'lucide-react';
 import { navItems } from '@/lib/data';
 
 export default function Navigation() {
@@ -15,9 +14,8 @@ export default function Navigation() {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
 
-      // Determine active section based on scroll position
       const sections = ['ventures', 'about', 'contact'];
-      const scrollPosition = window.scrollY + 100;
+      const scrollPosition = window.scrollY + 150;
 
       for (const section of sections) {
         const element = document.getElementById(section);
@@ -30,7 +28,6 @@ export default function Navigation() {
         }
       }
 
-      // If at the top, no active section
       if (window.scrollY < 300) {
         setActiveSection('');
       }
@@ -55,29 +52,36 @@ export default function Navigation() {
       <motion.nav
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, ease: [0.25, 0.4, 0.25, 1] }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? 'glass border-b border-white/10' : 'bg-transparent'
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          isScrolled
+            ? 'bg-[#050505]/90 backdrop-blur-md border-b border-[#1F1F1F]'
+            : 'bg-transparent'
         }`}
       >
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <a
+            <motion.a
               href="#"
               onClick={(e) => {
                 e.preventDefault();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="text-xl font-bold text-white hover:text-gray-300 transition-colors"
+              className="relative group"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              Arav
-            </a>
+              <span className="font-display text-2xl text-[#FAFAFA] group-hover:text-[#00F0FF] transition-colors duration-300">
+                Arav
+              </span>
+              <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#00F0FF] group-hover:w-full transition-all duration-300" />
+            </motion.a>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => (
-                <a
+              {navItems.map((item, index) => (
+                <motion.a
                   key={item.label}
                   href={item.href}
                   target={item.external ? '_blank' : undefined}
@@ -88,40 +92,70 @@ export default function Navigation() {
                       handleNavClick(item.href);
                     }
                   }}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 inline-flex items-center gap-1 ${
+                  className={`relative px-4 py-2 text-sm font-mono uppercase tracking-wider transition-colors duration-300 flex items-center gap-1 ${
                     activeSection === item.href.slice(1)
-                      ? 'text-white bg-white/10'
-                      : 'text-[#a1a1aa] hover:text-white hover:bg-white/5'
+                      ? 'text-[#00F0FF]'
+                      : 'text-[#888888] hover:text-[#FAFAFA]'
                   }`}
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index, duration: 0.5 }}
                 >
+                  <span className="text-xs text-[#333333] mr-1">0{index + 1}</span>
                   {item.label}
-                  {item.external && <ExternalLink size={12} />}
-                </a>
+                  {item.external && <ArrowUpRight size={12} className="ml-1" />}
+                </motion.a>
               ))}
             </div>
 
             {/* CTA Button - Desktop */}
-            <div className="hidden md:block">
-              <Button
-                variant="primary"
-                size="sm"
+            <motion.div
+              className="hidden md:block"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <a
                 href="#contact"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNavClick('#contact');
                 }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-mono uppercase tracking-wider text-[#050505] bg-[#00F0FF] hover:bg-[#00D4E0] transition-colors duration-300"
               >
-                Get in Touch
-              </Button>
-            </div>
+                Contact
+              </a>
+            </motion.div>
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="md:hidden relative w-12 h-12 flex items-center justify-center text-[#FAFAFA]"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              <AnimatePresence mode="wait">
+                {isMobileMenuOpen ? (
+                  <motion.div
+                    key="close"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <X size={24} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="menu"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Menu size={24} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </button>
           </div>
         </div>
@@ -131,17 +165,28 @@ export default function Navigation() {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             className="fixed inset-0 z-40 md:hidden"
           >
-            <div className="absolute inset-0 bg-black/95 backdrop-blur-lg" onClick={() => setIsMobileMenuOpen(false)} />
-            <div className="relative pt-20 px-6">
-              <div className="flex flex-col gap-2">
-                {navItems.map((item) => (
-                  <a
+            {/* Backdrop */}
+            <motion.div
+              className="absolute inset-0 bg-[#050505]/98 backdrop-blur-lg"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+
+            {/* Menu content */}
+            <div className="relative h-full flex flex-col justify-center px-6">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="space-y-2"
+              >
+                {navItems.map((item, index) => (
+                  <motion.a
                     key={item.label}
                     href={item.href}
                     target={item.external ? '_blank' : undefined}
@@ -154,27 +199,44 @@ export default function Navigation() {
                         setIsMobileMenuOpen(false);
                       }
                     }}
-                    className="px-4 py-3 text-lg font-medium text-[#a1a1aa] hover:text-white hover:bg-white/5 rounded-lg transition-all duration-200 inline-flex items-center gap-2"
+                    className="block py-4 border-b border-[#1F1F1F] group"
+                    initial={{ x: -40, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.1 + index * 0.05 }}
                   >
-                    {item.label}
-                    {item.external && <ExternalLink size={16} />}
-                  </a>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <span className="text-xs font-mono text-[#333333]">0{index + 1}</span>
+                        <span className="font-display text-4xl text-[#FAFAFA] group-hover:text-[#00F0FF] transition-colors duration-300">
+                          {item.label}
+                        </span>
+                      </div>
+                      {item.external && (
+                        <ArrowUpRight size={20} className="text-[#555555]" />
+                      )}
+                    </div>
+                  </motion.a>
                 ))}
-                <div className="mt-4 pt-4 border-t border-white/10">
-                  <Button
-                    variant="primary"
-                    size="md"
-                    className="w-full"
-                    href="#contact"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleNavClick('#contact');
-                    }}
-                  >
-                    Get in Touch
-                  </Button>
-                </div>
-              </div>
+              </motion.div>
+
+              {/* Mobile CTA */}
+              <motion.div
+                className="mt-12"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <a
+                  href="#contact"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNavClick('#contact');
+                  }}
+                  className="inline-flex items-center justify-center w-full py-4 text-sm font-mono uppercase tracking-wider text-[#050505] bg-[#00F0FF]"
+                >
+                  Get in Touch
+                </a>
+              </motion.div>
             </div>
           </motion.div>
         )}

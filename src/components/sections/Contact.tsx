@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Mail, Linkedin, Twitter, Github, ArrowRight } from 'lucide-react';
-import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import Button from '@/components/ui/Button';
@@ -15,20 +14,20 @@ const iconMap = {
   mail: Mail,
   linkedin: Linkedin,
   twitter: Twitter,
-  github: Github
+  github: Github,
 };
 
 export default function Contact() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    message: ''
+    message: '',
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -58,28 +57,38 @@ Sent from Arav Jain's Portfolio`;
     setFormData({ name: '', email: '', message: '' });
   };
 
-  const displayedSocials = socialLinks.filter(
-    (link) => iconMap[link.icon] !== null
-  );
-
   return (
-    <section id="contact" className="relative py-24 bg-[#0a0a0a] overflow-hidden">
-      {/* Grid Background */}
-      <GridBackground fade="top" className="opacity-50" />
+    <section id="contact" className="relative py-32 bg-[#050505] overflow-hidden">
+      {/* Background elements */}
+      <GridBackground variant="dots" fade="radial" intensity="dim" />
 
-      <div className="relative max-w-6xl mx-auto px-6">
+      {/* Accent gradient */}
+      <div
+        className="absolute bottom-0 right-0 w-[600px] h-[600px] opacity-20 pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-12">
         {/* Header */}
         <motion.div
           variants={fadeInUp}
           initial="initial"
           whileInView="animate"
           viewport={viewportSettings}
-          className="mb-16"
+          className="mb-20"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <div className="flex items-center gap-4 mb-6">
+            <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#00F0FF]">
+              03
+            </span>
+            <div className="h-px bg-[#00F0FF]/30 w-16" />
+          </div>
+          <h2 className="font-display text-5xl md:text-6xl lg:text-7xl text-[#FAFAFA] mb-6 leading-[1.1]">
             Get in Touch
           </h2>
-          <p className="text-xl text-[#a1a1aa]">
+          <p className="text-lg md:text-xl text-[#888888] max-w-2xl leading-relaxed">
             Ready to build something amazing together?
           </p>
         </motion.div>
@@ -89,30 +98,43 @@ Sent from Arav Jain's Portfolio`;
           initial="initial"
           whileInView="animate"
           viewport={viewportSettings}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-12"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-16"
         >
           {/* Left Column - Info */}
-          <motion.div variants={fadeInUp}>
-            <p className="text-[#a1a1aa] text-lg mb-8 leading-relaxed">
-              Interested in connecting? I&apos;m always open to discussing new projects, investment opportunities, or strategic partnerships.
-            </p>
+          <motion.div variants={fadeInUp} className="space-y-12">
+            <div>
+              <p className="text-[#888888] text-lg leading-relaxed mb-8">
+                Interested in connecting? I&apos;m always open to discussing new projects, investment opportunities, or strategic partnerships.
+              </p>
+            </div>
 
+            {/* Social Links */}
             <div className="space-y-4">
-              {displayedSocials.map((link) => {
+              {socialLinks.map((link) => {
                 const Icon = iconMap[link.icon];
                 return Icon ? (
-                  <a
+                  <motion.a
                     key={link.label}
                     href={link.href}
                     target={link.href.startsWith('http') ? '_blank' : undefined}
                     rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    className="flex items-center gap-4 group hover:text-white text-[#a1a1aa] transition-colors duration-200"
+                    className="flex items-center gap-6 group py-4 border-b border-[#1F1F1F] hover:border-[#00F0FF]/30 transition-colors duration-300"
+                    whileHover={{ x: 8 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <div className="w-10 h-10 flex items-center justify-center bg-[#1a1a1a] rounded-lg group-hover:bg-[#262626] transition-colors duration-200">
-                      <Icon size={18} />
+                    <div className="w-12 h-12 flex items-center justify-center bg-[#0C0C0C] border border-[#2A2A2A] group-hover:border-[#00F0FF]/50 group-hover:bg-[#00F0FF]/5 transition-all duration-300">
+                      <Icon size={20} className="text-[#555555] group-hover:text-[#00F0FF] transition-colors duration-300" />
                     </div>
-                    <span className="text-lg">{link.label}</span>
-                  </a>
+                    <div className="flex-grow">
+                      <span className="text-[#FAFAFA] group-hover:text-[#00F0FF] transition-colors duration-300">
+                        {link.label}
+                      </span>
+                    </div>
+                    <ArrowRight
+                      size={16}
+                      className="text-[#333333] group-hover:text-[#00F0FF] transition-all duration-300 group-hover:translate-x-1"
+                    />
+                  </motion.a>
                 ) : null;
               })}
             </div>
@@ -120,9 +142,16 @@ Sent from Arav Jain's Portfolio`;
 
           {/* Right Column - Form */}
           <motion.div variants={fadeInUp}>
-            <Card hover={false} className="bg-[#111]">
-              <h3 className="text-xl font-semibold text-white mb-6">Send a Message</h3>
-              <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="border border-[#1F1F1F] bg-[#0C0C0C] p-8 md:p-10">
+              {/* Form header */}
+              <div className="flex items-center gap-3 mb-10">
+                <div className="w-2 h-2 bg-[#FFB800]" />
+                <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-[#888888]">
+                  Send a Message
+                </h3>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-8">
                 <Input
                   label="Name"
                   id="name"
@@ -147,7 +176,7 @@ Sent from Arav Jain's Portfolio`;
                   label="Message"
                   id="message"
                   name="message"
-                  rows={4}
+                  rows={5}
                   placeholder="Tell me about your project..."
                   value={formData.message}
                   onChange={handleInputChange}
@@ -156,14 +185,14 @@ Sent from Arav Jain's Portfolio`;
                 <Button
                   type="submit"
                   variant="primary"
-                  size="md"
+                  size="lg"
+                  icon="arrow"
                   className="w-full"
                 >
                   Send Message
-                  <ArrowRight className="ml-2" size={16} />
                 </Button>
               </form>
-            </Card>
+            </div>
           </motion.div>
         </motion.div>
       </div>

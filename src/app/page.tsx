@@ -4,10 +4,18 @@ import Ventures from '@/components/sections/Ventures';
 import About from '@/components/sections/About';
 import Contact from '@/components/sections/Contact';
 import Footer from '@/components/layout/Footer';
+import CustomCursor from '@/components/ui/CustomCursor';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-black">
+    <main className="min-h-screen bg-[#050505]">
+      {/* Custom cursor */}
+      <CustomCursor />
+
+      {/* Noise overlay */}
+      <div className="noise-overlay animate-grain" />
+
+      {/* Content */}
       <Navigation />
       <Hero />
       <Ventures />
