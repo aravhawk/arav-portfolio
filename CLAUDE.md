@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ```bash
-# Start development server with Turbopack (runs on port 3000, or 3001 if occupied)
+# Start development server (Turbopack is the default bundler in Next.js 16)
 pnpm dev
 
 # Build for production
@@ -20,10 +20,10 @@ pnpm lint
 
 ## Architecture Overview
 
-This is a Next.js 15 portfolio site with a **"Brutalist Tech Noir"** design aesthetic featuring dramatic typography, custom animations, and technical visual elements.
+This is a Next.js 16 portfolio site with a **"Brutalist Tech Noir"** design aesthetic featuring dramatic typography, custom animations, and technical visual elements.
 
 ### Tech Stack
-- **Framework:** Next.js 15.3.8 (App Router, React 19, Turbopack)
+- **Framework:** Next.js 16.1.6 (App Router, React 19, Turbopack)
 - **Styling:** Tailwind CSS 4 with custom CSS variables and utility classes
 - **Animations:** Motion library (Framer Motion alternative) with custom variants
 - **Icons:** Lucide React
