@@ -1,5 +1,7 @@
 'use client';
 
+import { motion } from 'motion/react';
+
 type BadgeVariant = 'default' | 'cyan' | 'amber' | 'outline' | 'success';
 
 interface BadgeProps {
@@ -24,7 +26,7 @@ export default function Badge({
   mono = true,
 }: BadgeProps) {
   return (
-    <span
+    <motion.span
       className={`
         inline-flex items-center px-3 py-1
         text-xs tracking-wider uppercase
@@ -33,8 +35,11 @@ export default function Badge({
         ${variantStyles[variant]}
         ${className}
       `}
+      whileHover={{ scale: 1.05, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.2 }}
     >
       {children}
-    </span>
+    </motion.span>
   );
 }

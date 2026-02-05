@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'motion/react';
+import { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { fadeInUp, lineReveal, viewportSettings } from '@/lib/animations';
 
 interface SectionProps {
@@ -22,12 +23,29 @@ export default function Section({
   className = '',
   fullWidth = false,
 }: SectionProps) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"],
+  });
+
+  const rotateX = useTransform(scrollYProgress, [0, 0.5, 1], [1.5, 0, -1.5]);
+  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.985, 1, 0.985]);
+
   return (
     <section
+      ref={sectionRef}
       id={id}
       className={`relative py-32 ${className}`}
     >
-      <div className={fullWidth ? 'px-6 lg:px-12' : 'max-w-7xl mx-auto px-6 lg:px-12'}>
+      <motion.div
+        style={{
+          rotateX,
+          scale,
+          transformPerspective: 1200,
+        }}
+        className={fullWidth ? 'px-6 lg:px-12' : 'max-w-7xl mx-auto px-6 lg:px-12'}
+      >
         {(title || subtitle || label) && (
           <motion.div
             variants={fadeInUp}
@@ -63,7 +81,7 @@ export default function Section({
           </motion.div>
         )}
         {children}
-      </div>
+      </motion.div>
     </section>
   );
 }

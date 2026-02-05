@@ -60,7 +60,7 @@ export default function Footer() {
         {/* Divider */}
         <div className="border-t border-[#1F1F1F] pt-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            {/* Social Icons */}
+            {/* Social Icons with spring hover + glow */}
             <div className="flex items-center gap-4">
               {socialLinks
                 .filter((link) => socialIcons[link.icon])
@@ -73,7 +73,12 @@ export default function Footer() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-10 h-10 flex items-center justify-center border border-[#2A2A2A] text-[#555555] hover:border-[#00F0FF] hover:text-[#00F0FF] transition-all duration-300"
-                      whileHover={{ y: -2 }}
+                      whileHover={{
+                        y: -4,
+                        scale: 1.1,
+                        boxShadow: "0 0 20px rgba(0, 240, 255, 0.15)",
+                      }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       aria-label={link.label}
                     >
                       <Icon size={16} />
@@ -94,13 +99,13 @@ export default function Footer() {
 
         {/* Large decorative text */}
         <motion.div
-          className="mt-20 overflow-hidden"
+          className="mt-20 pb-2"
           variants={fadeInUp}
           initial="initial"
           whileInView="animate"
           viewport={viewportSettings}
         >
-          <div className="font-display text-[8vw] md:text-[6vw] text-[#1F1F1F] leading-none tracking-tight select-none">
+          <div className="font-display text-[8vw] md:text-[6vw] text-[#1F1F1F] leading-[0.95] tracking-tight select-none">
             Building the future.
           </div>
         </motion.div>

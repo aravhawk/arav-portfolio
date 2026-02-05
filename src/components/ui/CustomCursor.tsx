@@ -1,13 +1,21 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { motion, useSpring, useMotionValue } from 'motion/react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { motion, useSpring, useMotionValue, AnimatePresence } from 'motion/react';
+
+interface Ripple {
+  id: number;
+  x: number;
+  y: number;
+}
 
 export default function CustomCursor() {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [ripples, setRipples] = useState<Ripple[]>([]);
   const cursorRef = useRef<HTMLDivElement>(null);
+  const rippleIdRef = useRef(0);
 
   const cursorX = useMotionValue(-100);
   const cursorY = useMotionValue(-100);
@@ -15,6 +23,14 @@ export default function CustomCursor() {
   const springConfig = { damping: 25, stiffness: 400 };
   const cursorXSpring = useSpring(cursorX, springConfig);
   const cursorYSpring = useSpring(cursorY, springConfig);
+
+  const addRipple = useCallback((x: number, y: number) => {
+    const id = rippleIdRef.current++;
+    setRipples(prev => [...prev, { id, x, y }]);
+    setTimeout(() => {
+      setRipples(prev => prev.filter(r => r.id !== id));
+    }, 400);
+  }, []);
 
   useEffect(() => {
     // Check for touch device
@@ -53,7 +69,10 @@ export default function CustomCursor() {
       }
     };
 
-    const handleMouseDown = () => setIsClicking(true);
+    const handleMouseDown = (e: MouseEvent) => {
+      setIsClicking(true);
+      addRipple(e.clientX, e.clientY);
+    };
     const handleMouseUp = () => setIsClicking(false);
 
     const handleMouseLeaveWindow = () => setIsVisible(false);
@@ -76,7 +95,7 @@ export default function CustomCursor() {
       document.removeEventListener('mouseleave', handleMouseLeaveWindow);
       document.removeEventListener('mouseenter', handleMouseEnterWindow);
     };
-  }, [cursorX, cursorY, isVisible]);
+  }, [cursorX, cursorY, isVisible, addRipple]);
 
   // Hide on mobile/touch
   if (typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
@@ -87,6 +106,29 @@ export default function CustomCursor() {
 
   return (
     <>
+      {/* Click ripple effects */}
+      <AnimatePresence>
+        {ripples.map((ripple) => (
+          <motion.div
+            key={ripple.id}
+            className="fixed pointer-events-none z-[10001]"
+            style={{
+              left: ripple.x,
+              top: ripple.y,
+            }}
+            initial={{ scale: 0, opacity: 0.5 }}
+            animate={{ scale: 2, opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            <div
+              className="w-8 h-8 rounded-full border border-white"
+              style={{ transform: 'translate(-50%, -50%)' }}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
       {/* Main cursor dot */}
       <motion.div
         ref={cursorRef}

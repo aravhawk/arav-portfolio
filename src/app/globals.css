@@ -190,6 +190,9 @@ a, button, [role="button"] {
 
 .glow-border:hover::before {
   opacity: 1;
+  background: linear-gradient(135deg, var(--accent-cyan), transparent, var(--accent-amber), transparent, var(--accent-cyan));
+  background-size: 300% 300%;
+  animation: glow-border-rotate 3s ease infinite;
 }
 
 /* Brutalist box style */
@@ -274,18 +277,57 @@ a, button, [role="button"] {
   animation: float 4s ease-in-out infinite;
 }
 
-/* Grain animation for noise */
+/* Grain animation for noise - with subtle opacity variation */
 @keyframes grain {
-  0%, 100% { transform: translate(0, 0); }
-  10% { transform: translate(-5%, -10%); }
-  30% { transform: translate(3%, -15%); }
-  50% { transform: translate(-2%, 5%); }
-  70% { transform: translate(7%, -5%); }
-  90% { transform: translate(-10%, 10%); }
+  0%, 100% { transform: translate(0, 0); opacity: 0.035; }
+  10% { transform: translate(-5%, -10%); opacity: 0.04; }
+  30% { transform: translate(3%, -15%); opacity: 0.03; }
+  50% { transform: translate(-2%, 5%); opacity: 0.045; }
+  70% { transform: translate(7%, -5%); opacity: 0.035; }
+  90% { transform: translate(-10%, 10%); opacity: 0.04; }
 }
 
 .animate-grain {
   animation: grain 8s steps(10) infinite;
+}
+
+/* Border breathe - subtle border color oscillation */
+@keyframes border-breathe {
+  0%, 100% { border-color: #1F1F1F; }
+  50% { border-color: #2A2A2A; }
+}
+
+.card-breathe {
+  animation: border-breathe 4s ease-in-out infinite;
+}
+
+/* Accent glow breathe */
+@keyframes accent-breathe {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.25; }
+}
+
+.accent-glow-breathe {
+  animation: accent-breathe 3s ease-in-out infinite;
+}
+
+/* Hero scan line effect */
+@keyframes hero-scan {
+  0% { transform: translateY(-100vh); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+.hero-scan-line {
+  animation: hero-scan 2s ease-in-out forwards;
+}
+
+/* Enhanced glow border rotation */
+@keyframes glow-border-rotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 /* Horizontal rule with glow */

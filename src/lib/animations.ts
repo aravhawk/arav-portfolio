@@ -11,15 +11,17 @@ export const viewportSettings = {
   margin: '-100px' as const
 };
 
-// Fade in from bottom
+// Fade in from bottom with blur materialize
 export const fadeInUp: Variants = {
   initial: {
     opacity: 0,
     y: 40,
+    filter: "blur(4px)",
   },
   animate: {
     opacity: 1,
     y: 0,
+    filter: "blur(0px)",
     transition: {
       duration: 0.8,
       ease: easeOutExpo,
@@ -34,6 +36,60 @@ export const fadeIn: Variants = {
     opacity: 1,
     transition: {
       duration: 0.6,
+      ease: easeOutQuint,
+    },
+  },
+};
+
+// Fade in from left with blur
+export const fadeInLeft: Variants = {
+  initial: {
+    opacity: 0,
+    x: -40,
+    filter: "blur(4px)",
+  },
+  animate: {
+    opacity: 1,
+    x: 0,
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.7,
+      ease: easeOutExpo,
+    },
+  },
+};
+
+// Fade in from right with blur
+export const fadeInRight: Variants = {
+  initial: {
+    opacity: 0,
+    x: 40,
+    filter: "blur(4px)",
+  },
+  animate: {
+    opacity: 1,
+    x: 0,
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.7,
+      ease: easeOutExpo,
+    },
+  },
+};
+
+// Scale in with glow (for highlight cards)
+export const scaleInGlow: Variants = {
+  initial: {
+    opacity: 0,
+    scale: 0.95,
+    filter: "blur(4px)",
+  },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.7,
       ease: easeOutQuint,
     },
   },
@@ -199,11 +255,13 @@ export const navEnter: Variants = {
 export const cardHover: Variants = {
   rest: {
     y: 0,
+    scale: 1,
     boxShadow: "0 0 0 rgba(0, 240, 255, 0)",
   },
   hover: {
-    y: -8,
-    boxShadow: "0 20px 40px rgba(0, 240, 255, 0.1)",
+    y: -10,
+    scale: 1.01,
+    boxShadow: "0 25px 50px rgba(0, 240, 255, 0.15)",
     transition: {
       duration: 0.3,
       ease: easeOutQuint,

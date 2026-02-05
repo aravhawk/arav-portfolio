@@ -83,11 +83,19 @@ export default function GridBackground({
         }}
         animate={{
           backgroundPosition: ['0px 0px', '80px 80px'],
+          opacity: [opacity * 20, opacity * 30, opacity * 20],
         }}
         transition={{
-          duration: 20,
-          repeat: Infinity,
-          ease: 'linear',
+          backgroundPosition: {
+            duration: 60,
+            repeat: Infinity,
+            ease: 'linear',
+          },
+          opacity: {
+            duration: 8,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          },
         }}
       />
     );

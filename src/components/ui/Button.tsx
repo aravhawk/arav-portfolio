@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { motion, useMotionValue, useSpring } from 'motion/react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 
@@ -48,6 +48,7 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const buttonRef = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -63,8 +64,8 @@ export default function Button({
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
-    const deltaX = (e.clientX - centerX) * 0.15;
-    const deltaY = (e.clientY - centerY) * 0.15;
+    const deltaX = (e.clientX - centerX) * 0.2;
+    const deltaY = (e.clientY - centerY) * 0.2;
 
     x.set(deltaX);
     y.set(deltaY);
@@ -73,6 +74,11 @@ export default function Button({
   const handleMouseLeave = () => {
     x.set(0);
     y.set(0);
+    setIsHovered(false);
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
   };
 
   const baseStyles = `
@@ -80,6 +86,7 @@ export default function Button({
     font-mono font-medium uppercase
     border transition-colors duration-300
     disabled:opacity-40 disabled:cursor-not-allowed
+    overflow-hidden
   `;
 
   const iconSize = iconSizes[size];
@@ -88,15 +95,27 @@ export default function Button({
   const classes = `${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`;
 
   const content = (
-    <span className="relative z-10 flex items-center gap-2">
-      {children}
-      {IconComponent && (
-        <IconComponent
-          size={iconSize}
-          className="transition-transform duration-300 group-hover:translate-x-0.5"
-        />
-      )}
-    </span>
+    <>
+      {/* Shimmer effect on hover */}
+      <motion.span
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)',
+        }}
+        initial={{ x: '-100%' }}
+        animate={{ x: isHovered ? '100%' : '-100%' }}
+        transition={{ duration: 0.6, ease: "easeInOut" }}
+      />
+      <span className="relative z-10 flex items-center gap-2">
+        {children}
+        {IconComponent && (
+          <IconComponent
+            size={iconSize}
+            className="transition-transform duration-300 group-hover:translate-x-0.5"
+          />
+        )}
+      </span>
+    </>
   );
 
   if (href) {
@@ -109,6 +128,7 @@ export default function Button({
         className={`${classes} group`}
         style={{ x: xSpring, y: ySpring }}
         onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         whileTap={{ scale: 0.98 }}
       >
@@ -123,6 +143,7 @@ export default function Button({
       className={`${classes} group`}
       style={{ x: xSpring, y: ySpring }}
       onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       whileTap={{ scale: 0.98 }}
       {...(props as React.ComponentProps<typeof motion.button>)}
