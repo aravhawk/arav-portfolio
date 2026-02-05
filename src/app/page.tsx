@@ -13,7 +13,7 @@ export default function Home() {
       <CustomCursor />
 
       {/* Noise overlay */}
-      <div className="noise-overlay animate-grain" />
+      <div className="noise-overlay" />
 
       {/* Content */}
       <Navigation />
