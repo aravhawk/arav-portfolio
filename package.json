@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -13,7 +13,7 @@
     "geist": "^1.5.1",
     "lucide-react": "^0.511.0",
     "motion": "^12.29.0",
-    "next": "15.3.8",
+    "next": "16.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "vercel": "^42.1.1"
@@ -25,7 +25,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.3.2",
+    "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
