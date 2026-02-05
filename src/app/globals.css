@@ -64,8 +64,8 @@ a, button, [role="button"] {
 
 /* Selection styling */
 ::selection {
-  background: var(--accent-cyan-dim);
-  color: var(--accent-cyan);
+  background: var(--accent-cyan);
+  color: var(--bg-void);
 }
 
 /* Focus visible for accessibility */

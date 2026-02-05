@@ -83,6 +83,8 @@ export default function CustomCursor() {
     return null;
   }
 
+  const isRingVisible = isHovering || isClicking;
+
   return (
     <>
       {/* Main cursor dot */}
@@ -97,7 +99,6 @@ export default function CustomCursor() {
         <motion.div
           className="relative flex items-center justify-center"
           animate={{
-            scale: isClicking ? 0.8 : isHovering ? 1.5 : 1,
             opacity: isVisible ? 1 : 0,
           }}
           transition={{ duration: 0.15 }}
@@ -109,6 +110,8 @@ export default function CustomCursor() {
               width: isHovering ? 48 : 32,
               height: isHovering ? 48 : 32,
               borderWidth: isHovering ? 2 : 1,
+              opacity: isRingVisible ? 1 : 0,
+              scale: isRingVisible ? 1 : 0.6,
             }}
             style={{
               transform: 'translate(-50%, -50%)',
@@ -122,7 +125,7 @@ export default function CustomCursor() {
               transform: 'translate(-50%, -50%)',
             }}
             animate={{
-              scale: isHovering ? 0 : 1,
+              scale: isClicking ? 0.8 : 1,
             }}
             transition={{ duration: 0.15 }}
           />
