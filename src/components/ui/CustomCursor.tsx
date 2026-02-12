@@ -13,6 +13,7 @@ export default function CustomCursor() {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const cursorRef = useRef<HTMLDivElement>(null);
   const rippleIdRef = useRef(0);
@@ -33,8 +34,10 @@ export default function CustomCursor() {
   }, []);
 
   useEffect(() => {
-    // Check for touch device
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
+
+  useEffect(() => {
     if (isTouchDevice) return;
 
     const moveCursor = (e: MouseEvent) => {
@@ -95,10 +98,9 @@ export default function CustomCursor() {
       document.removeEventListener('mouseleave', handleMouseLeaveWindow);
       document.removeEventListener('mouseenter', handleMouseEnterWindow);
     };
-  }, [cursorX, cursorY, isVisible, addRipple]);
+  }, [cursorX, cursorY, isVisible, addRipple, isTouchDevice]);
 
-  // Hide on mobile/touch
-  if (typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+  if (isTouchDevice) {
     return null;
   }
 

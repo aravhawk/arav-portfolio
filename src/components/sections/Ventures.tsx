@@ -52,8 +52,8 @@ export default function Ventures() {
           whileInView="animate"
           viewport={viewportSettings}
         >
-          <div className="w-2 h-2 bg-[#00F0FF]" />
-          <p className="text-sm font-mono text-[#555555] uppercase tracking-wider">
+          <div className="h-2 w-2 shrink-0 -translate-y-px bg-[#00F0FF]" />
+          <p className="text-sm leading-none font-mono text-[#555555] uppercase tracking-wider">
             More ventures coming soon
           </p>
         </motion.div>

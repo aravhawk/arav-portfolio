@@ -77,8 +77,8 @@ export default function About() {
               className="border border-[#1F1F1F] bg-[#0C0C0C] p-8"
             >
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-2 h-2 bg-[#FFB800]" />
-                <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-[#888888]">
+                <div className="h-2 w-2 shrink-0 -translate-y-px bg-[#FFB800]" />
+                <h3 className="text-xs leading-none font-mono uppercase tracking-[0.2em] text-[#888888]">
                   Current Projects
                 </h3>
               </div>
@@ -116,8 +116,8 @@ export default function About() {
               className="border border-[#1F1F1F] bg-[#0C0C0C] p-8"
             >
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-2 h-2 bg-[#00F0FF]" />
-                <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-[#888888]">
+                <div className="h-2 w-2 shrink-0 -translate-y-px bg-[#00F0FF]" />
+                <h3 className="text-xs leading-none font-mono uppercase tracking-[0.2em] text-[#888888]">
                   Technical Expertise
                 </h3>
               </div>
@@ -153,8 +153,8 @@ export default function About() {
             className="border border-[#1F1F1F] bg-[#0C0C0C] p-8"
           >
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-2 h-2 bg-[#FF00AA]" />
-              <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-[#888888]">
+              <div className="h-2 w-2 shrink-0 -translate-y-px bg-[#FF00AA]" />
+              <h3 className="text-xs leading-none font-mono uppercase tracking-[0.2em] text-[#888888]">
                 Focus Areas
               </h3>
             </div>

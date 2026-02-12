@@ -159,8 +159,8 @@ Sent from Arav Jain's Portfolio`;
             <div className="border border-[#1F1F1F] bg-[#0C0C0C] p-8 md:p-10">
               {/* Form header */}
               <div className="flex items-center gap-3 mb-10">
-                <div className="w-2 h-2 bg-[#FFB800]" />
-                <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-[#888888]">
+                <div className="h-2 w-2 shrink-0 -translate-y-px bg-[#FFB800]" />
+                <h3 className="text-xs leading-none font-mono uppercase tracking-[0.2em] text-[#888888]">
                   Send a Message
                 </h3>
               </div>

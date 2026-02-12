@@ -7,6 +7,8 @@ import Footer from '@/components/layout/Footer';
 import CustomCursor from '@/components/ui/CustomCursor';
 
 export default function Home() {
+  const currentYear = new Date().getFullYear();
+
   return (
     <main className="min-h-screen bg-[#050505]">
       {/* Custom cursor */}
@@ -21,7 +23,7 @@ export default function Home() {
       <Ventures />
       <About />
       <Contact />
-      <Footer />
+      <Footer currentYear={currentYear} />
     </main>
   );
 }

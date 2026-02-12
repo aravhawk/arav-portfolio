@@ -12,9 +12,7 @@ const socialIcons = {
   mail: null,
 };
 
-export default function Footer() {
-  const currentYear = new Date().getFullYear();
-
+export default function Footer({ currentYear }: { currentYear: number }) {
   return (
     <footer className="relative bg-[#050505] border-t border-[#1F1F1F]">
       {/* Decorative top line */}
@@ -89,8 +87,8 @@ export default function Footer() {
 
             {/* Copyright */}
             <div className="flex items-center gap-4">
-              <div className="w-2 h-2 bg-[#00F0FF] animate-pulse" />
-              <p className="text-sm font-mono text-[#555555]">
+              <div className="h-2 w-2 shrink-0 -translate-y-px bg-[#00F0FF] animate-pulse" />
+              <p className="text-sm leading-none font-mono text-[#555555]">
                 &copy; {currentYear} Arav Jain
               </p>
             </div>

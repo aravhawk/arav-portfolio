@@ -157,11 +157,11 @@ export default function Hero() {
             variants={fadeInUp}
             className="flex items-center gap-3 mb-10"
           >
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex shrink-0 -translate-y-px items-center justify-center">
               <span className="absolute w-3 h-3 bg-[#00F0FF] rounded-full animate-ping opacity-40" />
               <span className="relative w-2 h-2 bg-[#00F0FF] rounded-full" />
             </div>
-            <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#888888]">
+            <span className="text-xs leading-none font-mono uppercase tracking-[0.2em] text-[#888888]">
               Building the future of compute
             </span>
           </motion.div>
