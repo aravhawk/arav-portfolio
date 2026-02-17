@@ -173,6 +173,7 @@ The home page is a **single-page application** with smooth scroll navigation:
 - All sections (`Hero`, `Ventures`, `About`, `Contact`) are rendered on the home page
 - Navigation uses hash links (`#ventures`, `#about`, `#contact`)
 - Smooth scroll behavior implemented in Navigation component
+- On non-home routes (for example `/blog`), hash nav clicks are routed to home section anchors (`/#ventures`, `/#about`, `/#contact`)
 - Active section highlighting based on scroll position
 
 The site also has multi-page routes:

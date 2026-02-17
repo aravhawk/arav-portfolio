@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 import { navItems } from '@/lib/data';
 
 export default function Navigation() {
+  const router = useRouter();
   const pathname = usePathname();
   const isHome = pathname === '/';
   const [isScrolled, setIsScrolled] = useState(false);
@@ -42,12 +43,25 @@ export default function Navigation() {
 
   const handleNavClick = (href: string) => {
     setIsMobileMenuOpen(false);
+
     if (href.startsWith('#')) {
+      if (!isHome) {
+        router.push(`/${href}`);
+        return;
+      }
+
       const element = document.getElementById(href.slice(1));
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     }
+  };
+
+  const resolveHref = (href: string) => {
+    if (!isHome && href.startsWith('#')) {
+      return `/${href}`;
+    }
+    return href;
   };
 
   return (
@@ -88,7 +102,7 @@ export default function Navigation() {
               {navItems.map((item, index) => (
                 <motion.a
                   key={item.label}
-                  href={item.href}
+                  href={resolveHref(item.href)}
                   target={item.external ? '_blank' : undefined}
                   rel={item.external ? 'noopener noreferrer' : undefined}
                   onClick={(e) => {
@@ -121,7 +135,7 @@ export default function Navigation() {
               transition={{ delay: 0.5 }}
             >
               <a
-                href="#contact"
+                href={resolveHref('#contact')}
                 onClick={(e) => {
                   e.preventDefault();
                   handleNavClick('#contact');
@@ -193,7 +207,7 @@ export default function Navigation() {
                 {navItems.map((item, index) => (
                   <motion.a
                     key={item.label}
-                    href={item.href}
+                    href={resolveHref(item.href)}
                     target={item.external ? '_blank' : undefined}
                     rel={item.external ? 'noopener noreferrer' : undefined}
                     onClick={(e) => {
@@ -234,7 +248,7 @@ export default function Navigation() {
                 transition={{ delay: 0.4 }}
               >
                 <a
-                  href="#contact"
+                  href={resolveHref('#contact')}
                   onClick={(e) => {
                     e.preventDefault();
                     handleNavClick('#contact');

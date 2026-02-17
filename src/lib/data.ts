@@ -79,7 +79,6 @@ export const socialLinks: SocialLink[] = [
 export const navItems: NavItem[] = [
   { label: 'Ventures', href: '#ventures' },
   { label: 'About', href: '#about' },
-  { label: 'Contact', href: '#contact' },
   { label: 'Blog', href: '/blog' }
 ];
 
