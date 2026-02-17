@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 import { navItems } from '@/lib/data';
 
 export default function Navigation() {
+  const pathname = usePathname();
+  const isHome = pathname === '/';
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -63,10 +66,12 @@ export default function Navigation() {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <motion.a
-              href="#"
+              href="/"
               onClick={(e) => {
-                e.preventDefault();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (isHome) {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
               }}
               className="relative group"
               whileHover={{ scale: 1.02 }}
@@ -87,7 +92,7 @@ export default function Navigation() {
                   target={item.external ? '_blank' : undefined}
                   rel={item.external ? 'noopener noreferrer' : undefined}
                   onClick={(e) => {
-                    if (!item.external) {
+                    if (!item.external && item.href.startsWith('#')) {
                       e.preventDefault();
                       handleNavClick(item.href);
                     }
@@ -192,9 +197,11 @@ export default function Navigation() {
                     target={item.external ? '_blank' : undefined}
                     rel={item.external ? 'noopener noreferrer' : undefined}
                     onClick={(e) => {
-                      if (!item.external) {
+                      if (!item.external && item.href.startsWith('#')) {
                         e.preventDefault();
                         handleNavClick(item.href);
+                      } else if (!item.external) {
+                        setIsMobileMenuOpen(false);
                       } else {
                         setIsMobileMenuOpen(false);
                       }

@@ -43,3 +43,7 @@ yarn.lock
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# blog-editor build artifacts
+blog-editor/node_modules
+blog-editor/.next

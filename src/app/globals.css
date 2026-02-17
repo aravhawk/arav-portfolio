@@ -346,6 +346,43 @@ a, button, [role="button"] {
   color: var(--text-muted);
 }
 
+/* rehype-pretty-code syntax highlighting */
+[data-rehype-pretty-code-figure] pre {
+  background: #0C0C0C !important;
+  border: 1px solid #1F1F1F;
+  padding: 1.5rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+}
+
+[data-rehype-pretty-code-figure] code {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+[data-rehype-pretty-code-figure] [data-line] {
+  padding: 0 1rem;
+  border-left: 2px solid transparent;
+}
+
+[data-rehype-pretty-code-figure] [data-highlighted-line] {
+  background: rgba(0, 240, 255, 0.05);
+  border-left-color: #00F0FF;
+}
+
+[data-rehype-pretty-code-title] {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #555555;
+  padding: 0.5rem 1rem;
+  border: 1px solid #1F1F1F;
+  border-bottom: none;
+  background: #0A0A0A;
+}
+
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   html {

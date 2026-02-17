@@ -80,7 +80,7 @@ export const navItems: NavItem[] = [
   { label: 'Ventures', href: '#ventures' },
   { label: 'About', href: '#about' },
   { label: 'Contact', href: '#contact' },
-  { label: 'Blog', href: 'https://blog.aravjain.dev', external: true }
+  { label: 'Blog', href: '/blog' }
 ];
 
 export const footerColumns: FooterColumn[] = [
@@ -111,7 +111,7 @@ export const footerColumns: FooterColumn[] = [
   {
     title: 'Resources',
     links: [
-      { label: 'Blog', href: 'https://blog.aravjain.dev', external: true },
+      { label: 'Blog', href: '/blog' },
       { label: 'GitHub', href: 'https://github.com/aravhawk', external: true }
     ]
   }

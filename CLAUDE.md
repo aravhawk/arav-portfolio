@@ -16,6 +16,9 @@ pnpm start
 
 # Run linter
 pnpm lint
+
+# Start blog editor (local tool, port 3001)
+cd blog-editor && pnpm dev
 ```
 
 ## Architecture Overview
@@ -60,17 +63,28 @@ src/
 ├── app/                    # Next.js App Router
 │   ├── layout.tsx         # Root layout with metadata
 │   ├── page.tsx           # Home page (single-page app)
-│   └── globals.css        # Global styles with CSS variables
+│   ├── globals.css        # Global styles with CSS variables
+│   ├── blog/
+│   │   ├── page.tsx       # Blog index page
+│   │   └── [slug]/
+│   │       └── page.tsx   # Individual blog post (SSG)
+│   └── feed.xml/
+│       └── route.ts       # RSS feed route handler
 ├── components/
+│   ├── blog/              # Blog components (MDXComponents, BlogPostCard, BlogIndex, etc.)
 │   ├── cards/             # VentureCard
 │   ├── layout/            # Navigation, Footer, Section wrapper
 │   ├── sections/          # Hero, Ventures, About, Contact
 │   └── ui/                # Reusable UI components
 ├── lib/
 │   ├── animations.ts      # Motion variants and easing curves
+│   ├── blog.ts            # Blog utilities (getAllPosts, getPostBySlug, etc.)
 │   └── data.ts            # Centralized content data
 └── types/
     └── index.ts           # TypeScript interfaces
+content/
+└── posts/                 # MDX blog posts (frontmatter + content)
+blog-editor/               # Local blog editor app (Next.js, runs on port 3001)
 ```
 
 ### Data Architecture
@@ -153,13 +167,18 @@ Example: `import Button from '@/components/ui/Button'`
 - `.animate-float`: Vertical float
 - `.animate-grain`: Noise texture animation
 
-### Single-Page Architecture
+### Site Architecture
 
-This is a **single-page application** with smooth scroll navigation:
+The home page is a **single-page application** with smooth scroll navigation:
 - All sections (`Hero`, `Ventures`, `About`, `Contact`) are rendered on the home page
 - Navigation uses hash links (`#ventures`, `#about`, `#contact`)
 - Smooth scroll behavior implemented in Navigation component
 - Active section highlighting based on scroll position
+
+The site also has multi-page routes:
+- `/blog` -- Blog index with search and tag filtering
+- `/blog/[slug]` -- Individual blog post pages (SSG via `generateStaticParams`)
+- `/feed.xml` -- RSS feed (dynamic route handler)
 
 ### Motion Library Usage
 
@@ -184,3 +203,45 @@ To add a new venture:
 3. Add to footer `Ventures` column if needed
 
 To modify hero text or taglines, edit `src/lib/data.ts` and section components directly.
+
+### Blog System
+
+**Content:** MDX files in `content/posts/` with YAML frontmatter:
+```yaml
+title: string
+date: string (ISO)
+description: string
+tags: string[]
+published: boolean
+image?: string
+```
+
+**MDX Processing:**
+- `gray-matter` parses frontmatter (used for index page listing)
+- `compileMDX` from `next-mdx-remote/rsc` renders full MDX on post pages
+- Plugins: `remark-gfm`, `rehype-pretty-code` (Shiki), `rehype-slug`, `rehype-autolink-headings`
+- Custom themed components in `src/components/blog/MDXComponents.tsx`
+
+**Blog utilities in `src/lib/blog.ts`:**
+- `getAllPosts()`: All published posts sorted by date
+- `getPostBySlug(slug)`: Single post by slug
+- `getAllTags()`: Unique tags across all posts
+- `getAdjacentPosts(slug)`: Previous/next navigation
+- `getAllPostSlugs()`: For `generateStaticParams`
+
+**RSS feed:** Generated at `/feed.xml` using the `feed` library.
+
+**Blog Editor:** Local Next.js app in `blog-editor/` (port 3001). Reads/writes MDX files in `content/posts/`. Start with `cd blog-editor && pnpm dev`.
+
+To add a new blog post:
+1. Create `content/posts/my-post-slug.mdx` with frontmatter and MDX content
+2. Or use the blog editor at `localhost:3001`
+
+### Development Commands (Blog Editor)
+
+```bash
+# Start blog editor (from repo root)
+cd blog-editor && pnpm dev
+
+# Blog editor runs on http://localhost:3001
+```

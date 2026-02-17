@@ -19,6 +19,11 @@ export const metadata: Metadata = {
     description: 'Building the future of GPU compute infrastructure.',
     creator: '@aravhawk',
   },
+  alternates: {
+    types: {
+      'application/rss+xml': '/feed.xml',
+    },
+  },
 };
 
 export default function RootLayout({

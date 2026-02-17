@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+:root {
+  --bg-void: #050505;
+  --bg-primary: #0C0C0C;
+  --bg-elevated: #121212;
+  --bg-surface: #1A1A1A;
+  --accent-cyan: #00F0FF;
+  --accent-cyan-dim: rgba(0, 240, 255, 0.15);
+  --accent-amber: #FFB800;
+  --accent-amber-dim: rgba(255, 184, 0, 0.15);
+  --text-primary: #FAFAFA;
+  --text-secondary: #888888;
+  --text-muted: #555555;
+  --text-subtle: #333333;
+  --border-dim: #1F1F1F;
+  --border-subtle: #2A2A2A;
+  --border-visible: #3A3A3A;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'DM Mono', 'SF Mono', Consolas, monospace;
+  --font-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--accent-cyan);
+  color: var(--bg-void);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 4px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-visible);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
+}
+
+/* Override md-editor dark theme */
+.w-md-editor {
+  --color-canvas-default: #0C0C0C !important;
+  --color-border-default: #1F1F1F !important;
+  --color-fg-default: #FAFAFA !important;
+  background-color: #0C0C0C !important;
+  border-color: #1F1F1F !important;
+  color: #FAFAFA !important;
+}
+
+.w-md-editor-toolbar {
+  background-color: #121212 !important;
+  border-color: #1F1F1F !important;
+}
+
+.w-md-editor-toolbar li button {
+  color: #888888 !important;
+}
+
+.w-md-editor-toolbar li button:hover {
+  color: #00F0FF !important;
+}
+
+.w-md-editor-content {
+  background-color: #0C0C0C !important;
+}
+
+.w-md-editor-text-pre,
+.w-md-editor-text-input,
+.w-md-editor-text {
+  color: #FAFAFA !important;
+}
+
+.wmde-markdown {
+  background-color: #0C0C0C !important;
+  color: #CCCCCC !important;
+}
+
+.wmde-markdown code {
+  background-color: #1A1A1A !important;
+  color: #00F0FF !important;
+}
+
+/* HR glow (for preview) */
+.hr-glow {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+  border: none;
+}
+
+/* rehype-pretty-code styles (for preview) */
+[data-rehype-pretty-code-figure] pre {
+  background: #0C0C0C !important;
+  border: 1px solid #1F1F1F;
+  padding: 1.5rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+}
+
+[data-rehype-pretty-code-figure] code {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+[data-rehype-pretty-code-figure] [data-line] {
+  padding: 0 1rem;
+  border-left: 2px solid transparent;
+}
+
+[data-rehype-pretty-code-figure] [data-highlighted-line] {
+  background: rgba(0, 240, 255, 0.05);
+  border-left-color: #00F0FF;
+}
