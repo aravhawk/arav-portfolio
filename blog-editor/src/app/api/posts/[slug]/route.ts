@@ -2,11 +2,18 @@ import { NextResponse } from 'next/server';
 import { getPost, updatePost, deletePost } from '@/lib/posts';
 import type { PostFrontmatter } from '@/lib/posts';
 
+function isValidSlug(slug: string): boolean {
+  return /^[a-z0-9-]+$/.test(slug);
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
+  if (!isValidSlug(slug)) {
+    return NextResponse.json({ error: 'Invalid slug' }, { status: 400 });
+  }
   const post = getPost(slug);
 
   if (!post) {
@@ -21,11 +28,25 @@ export async function PUT(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const body = await request.json();
+  if (!isValidSlug(slug)) {
+    return NextResponse.json({ error: 'Invalid slug' }, { status: 400 });
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
   const { frontmatter, content } = body as {
     frontmatter: PostFrontmatter;
     content: string;
   };
+
+  if (!frontmatter?.title) {
+    return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+  }
 
   const updated = updatePost(slug, frontmatter, content || '');
   if (!updated) {
@@ -40,6 +61,9 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
+  if (!isValidSlug(slug)) {
+    return NextResponse.json({ error: 'Invalid slug' }, { status: 400 });
+  }
   const deleted = deletePost(slug);
 
   if (!deleted) {

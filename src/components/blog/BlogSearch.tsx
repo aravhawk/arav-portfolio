@@ -10,11 +10,14 @@ interface BlogSearchProps {
 export default function BlogSearch({ value, onChange }: BlogSearchProps) {
   return (
     <div className="relative max-w-md">
+      <label htmlFor="blog-search" className="sr-only">Search posts</label>
       <Search
         size={16}
         className="absolute left-4 top-1/2 -translate-y-1/2 text-[#555555]"
+        aria-hidden="true"
       />
       <input
+        id="blog-search"
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}

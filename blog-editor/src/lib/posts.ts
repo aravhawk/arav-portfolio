@@ -31,7 +31,9 @@ function ensurePostsDir() {
 }
 
 export function getAllPosts(): PostMeta[] {
-  ensurePostsDir();
+  if (!fs.existsSync(POSTS_DIR)) {
+    ensurePostsDir();
+  }
 
   const files = fs.readdirSync(POSTS_DIR).filter((f) => f.endsWith('.mdx'));
 

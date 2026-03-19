@@ -6,8 +6,6 @@ import Contact from '@/components/sections/Contact';
 import Footer from '@/components/layout/Footer';
 
 export default function Home() {
-  const currentYear = new Date().getFullYear();
-
   return (
     <main className="min-h-screen bg-[#050505]">
       {/* Noise overlay */}
@@ -19,7 +17,7 @@ export default function Home() {
       <Ventures />
       <About />
       <Contact />
-      <Footer currentYear={currentYear} />
+      <Footer />
     </main>
   );
 }

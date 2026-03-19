@@ -81,8 +81,6 @@ export default async function BlogPostPage({
     ? { ...adjacentPosts.next, content: '' }
     : null;
 
-  const currentYear = new Date().getFullYear();
-
   const date = new Date(post.frontmatter.date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -137,7 +135,7 @@ export default async function BlogPostPage({
         </div>
       </article>
 
-      <Footer currentYear={currentYear} />
+      <Footer />
     </main>
   );
 }

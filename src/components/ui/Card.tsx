@@ -32,7 +32,7 @@ export default function Card({
   if (hover) {
     return (
       <motion.div
-        className={`${baseStyles} ${variants[variant]} ${className}`}
+        className={`group ${baseStyles} ${variants[variant]} ${className}`}
         initial="rest"
         whileHover="hover"
         variants={cardHover}

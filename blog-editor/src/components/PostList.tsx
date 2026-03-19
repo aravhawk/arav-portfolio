@@ -19,12 +19,20 @@ interface PostMeta {
 export default function PostList() {
   const [posts, setPosts] = useState<PostMeta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const fetchPosts = async () => {
-    const res = await fetch('/api/posts');
-    const data = await res.json();
-    setPosts(data);
-    setLoading(false);
+    try {
+      setError('');
+      const res = await fetch('/api/posts');
+      if (!res.ok) throw new Error('Failed to fetch posts');
+      const data = await res.json();
+      setPosts(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load posts');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -34,9 +42,12 @@ export default function PostList() {
   const handleDelete = async (slug: string, title: string) => {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
 
-    const res = await fetch(`/api/posts/${slug}`, { method: 'DELETE' });
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/posts/${slug}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete post');
       setPosts((prev) => prev.filter((p) => p.slug !== slug));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete post');
     }
   };
 
@@ -44,6 +55,20 @@ export default function PostList() {
     return (
       <div className="text-center py-20">
         <p className="font-mono text-sm text-[#555555]">Loading posts...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="font-mono text-sm text-red-400 mb-4">{error}</p>
+        <button
+          onClick={fetchPosts}
+          className="text-xs font-mono uppercase tracking-wider px-4 py-2 border border-[#2A2A2A] text-[#888888] hover:text-[#FAFAFA] hover:border-[#3A3A3A] transition-colors"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -132,14 +157,14 @@ export default function PostList() {
               <Link
                 href={`/edit/${post.slug}`}
                 className="p-2 border border-[#2A2A2A] text-[#888888] hover:text-[#00F0FF] hover:border-[#00F0FF]/30 transition-colors"
-                title="Edit"
+                aria-label={`Edit "${post.frontmatter.title}"`}
               >
                 <Pencil size={14} />
               </Link>
               <Link
                 href={`/preview/${post.slug}`}
                 className="p-2 border border-[#2A2A2A] text-[#888888] hover:text-[#00F0FF] hover:border-[#00F0FF]/30 transition-colors"
-                title="Preview"
+                aria-label={`Preview "${post.frontmatter.title}"`}
               >
                 <Eye size={14} />
               </Link>
@@ -148,7 +173,7 @@ export default function PostList() {
                   handleDelete(post.slug, post.frontmatter.title)
                 }
                 className="p-2 border border-[#2A2A2A] text-[#888888] hover:text-red-400 hover:border-red-400/30 transition-colors"
-                title="Delete"
+                aria-label={`Delete "${post.frontmatter.title}"`}
               >
                 <Trash2 size={14} />
               </button>

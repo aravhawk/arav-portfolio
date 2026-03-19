@@ -50,16 +50,20 @@ export function getPostBySlug(slug: string): BlogPost | null {
   return { slug, frontmatter, readingTime: stats.text, content };
 }
 
-export function getAllTags(): string[] {
-  const posts = getAllPosts();
+export function getTagsFromPosts(posts: Pick<BlogPost, 'frontmatter'>[]): string[] {
   const tagSet = new Set<string>();
   posts.forEach((p) => p.frontmatter.tags.forEach((t) => tagSet.add(t)));
   return Array.from(tagSet).sort();
 }
 
+export function getAllTags(): string[] {
+  return getTagsFromPosts(getAllPosts());
+}
+
 export function getAdjacentPosts(
   slug: string
 ): { prev: BlogPost | null; next: BlogPost | null } {
+  // Posts are sorted newest-first. "prev" = older (next in array), "next" = newer (prev in array).
   const posts = getAllPosts();
   const index = posts.findIndex((p) => p.slug === slug);
   return {

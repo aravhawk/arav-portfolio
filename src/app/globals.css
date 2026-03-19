@@ -25,10 +25,10 @@
   --border-subtle: #2A2A2A;
   --border-visible: #3A3A3A;
 
-  /* Font families */
-  --font-display: 'Instrument Serif', Georgia, serif;
-  --font-mono: 'DM Mono', 'SF Mono', Consolas, monospace;
-  --font-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  /* Font families — loaded via next/font CSS variables, with fallbacks */
+  --font-display: var(--font-instrument-serif, 'Instrument Serif'), Georgia, serif;
+  --font-mono: var(--font-dm-mono, 'DM Mono'), 'SF Mono', Consolas, monospace;
+  --font-sans: var(--font-space-grotesk, 'Space Grotesk'), system-ui, -apple-system, sans-serif;
 }
 
 @theme inline {

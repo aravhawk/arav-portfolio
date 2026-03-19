@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
+import Link from 'next/link';
 import { Github, Linkedin, Twitter, ArrowUpRight } from 'lucide-react';
 import { footerColumns, socialLinks } from '@/lib/data';
 import { fadeInUp, staggerContainer, viewportSettings } from '@/lib/animations';
@@ -12,7 +13,8 @@ const socialIcons = {
   mail: null,
 };
 
-export default function Footer({ currentYear }: { currentYear: number }) {
+export default function Footer() {
+  const currentYear = new Date().getFullYear();
   return (
     <footer className="relative bg-[#050505] border-t border-[#1F1F1F]">
       {/* Decorative top line */}
@@ -34,20 +36,27 @@ export default function Footer({ currentYear }: { currentYear: number }) {
               <ul className="space-y-4">
                 {column.links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      target={link.external ? '_blank' : undefined}
-                      rel={link.external ? 'noopener noreferrer' : undefined}
-                      className="inline-flex items-center gap-1 text-sm text-[#888888] hover:text-[#00F0FF] transition-colors duration-300 group"
-                    >
-                      {link.label}
-                      {link.external && (
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-[#888888] hover:text-[#00F0FF] transition-colors duration-300 group"
+                      >
+                        {link.label}
                         <ArrowUpRight
                           size={12}
                           className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                         />
-                      )}
-                    </a>
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="inline-flex items-center gap-1 text-sm text-[#888888] hover:text-[#00F0FF] transition-colors duration-300"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

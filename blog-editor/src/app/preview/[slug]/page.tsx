@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
 import rehypePrettyCode from 'rehype-pretty-code';
@@ -45,14 +46,20 @@ const mdxComponents: MDXComponents = {
     <strong className="text-[#FAFAFA] font-semibold" {...props} />
   ),
   em: (props) => <em className="text-[#CCCCCC] italic" {...props} />,
-  a: (props) => (
-    <a
-      className="text-[#00F0FF] hover:text-[#00D4E0] underline underline-offset-4 decoration-[#00F0FF]/30 hover:decoration-[#00F0FF] transition-colors duration-300"
-      target={props.href?.startsWith('http') ? '_blank' : undefined}
-      rel={props.href?.startsWith('http') ? 'noopener noreferrer' : undefined}
-      {...props}
-    />
-  ),
+  a: (props) => {
+    const href = props.href || '';
+    const isSafe = href.startsWith('/') || href.startsWith('#') || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:');
+    if (!isSafe) return <span className="text-[#888888]">{props.children}</span>;
+    return (
+      <a
+        className="text-[#00F0FF] hover:text-[#00D4E0] underline underline-offset-4 decoration-[#00F0FF]/30 hover:decoration-[#00F0FF] transition-colors duration-300"
+        target={href.startsWith('http') ? '_blank' : undefined}
+        rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+        {...props}
+        href={href}
+      />
+    );
+  },
   ul: (props) => (
     <ul className="list-none space-y-2 mb-6 pl-0" {...props} />
   ),
@@ -151,12 +158,12 @@ export default async function PreviewPage({
       {/* Preview banner */}
       <div className="mb-8 px-4 py-3 border border-[#FFB800]/30 bg-[#FFB800]/10 text-[#FFB800] text-xs font-mono uppercase tracking-wider flex items-center justify-between">
         <span>Preview Mode - {post.frontmatter.published ? 'Published' : 'Draft'}</span>
-        <a
+        <Link
           href={`/edit/${slug}`}
           className="text-[#00F0FF] hover:text-[#00D4E0] transition-colors"
         >
           Edit Post
-        </a>
+        </Link>
       </div>
 
       {/* Post preview matching main site layout */}

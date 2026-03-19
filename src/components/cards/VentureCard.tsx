@@ -52,18 +52,8 @@ export default function VentureCard({ venture, index }: VentureCardProps) {
             {/* Corner accents on hover — only for active */}
             {!isArchived && (
               <>
-                <motion.div
-                  className="absolute top-0 left-0 border-t-2 border-l-2 border-[#00F0FF] opacity-0 group-hover:opacity-100"
-                  initial={{ width: 0, height: 0 }}
-                  whileHover={{ width: 24, height: 24 }}
-                  transition={{ duration: 0.3, delay: 0 }}
-                />
-                <motion.div
-                  className="absolute bottom-0 right-0 border-b-2 border-r-2 border-[#00F0FF] opacity-0 group-hover:opacity-100"
-                  initial={{ width: 0, height: 0 }}
-                  whileHover={{ width: 24, height: 24 }}
-                  transition={{ duration: 0.3, delay: 0.05 }}
-                />
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#00F0FF] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#00F0FF] opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-[50ms]" />
               </>
             )}
 

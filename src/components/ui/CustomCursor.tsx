@@ -13,10 +13,13 @@ export default function CustomCursor() {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(() =>
+    typeof window !== 'undefined' ? ('ontouchstart' in window || navigator.maxTouchPoints > 0) : false
+  );
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const cursorRef = useRef<HTMLDivElement>(null);
   const rippleIdRef = useRef(0);
+  const isVisibleRef = useRef(false);
 
   const cursorX = useMotionValue(-100);
   const cursorY = useMotionValue(-100);
@@ -34,16 +37,15 @@ export default function CustomCursor() {
   }, []);
 
   useEffect(() => {
-    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  }, []);
-
-  useEffect(() => {
     if (isTouchDevice) return;
 
     const moveCursor = (e: MouseEvent) => {
       cursorX.set(e.clientX);
       cursorY.set(e.clientY);
-      if (!isVisible) setIsVisible(true);
+      if (!isVisibleRef.current) {
+        isVisibleRef.current = true;
+        setIsVisible(true);
+      }
     };
 
     const handleMouseEnter = (e: MouseEvent) => {
@@ -78,8 +80,14 @@ export default function CustomCursor() {
     };
     const handleMouseUp = () => setIsClicking(false);
 
-    const handleMouseLeaveWindow = () => setIsVisible(false);
-    const handleMouseEnterWindow = () => setIsVisible(true);
+    const handleMouseLeaveWindow = () => {
+      isVisibleRef.current = false;
+      setIsVisible(false);
+    };
+    const handleMouseEnterWindow = () => {
+      isVisibleRef.current = true;
+      setIsVisible(true);
+    };
 
     window.addEventListener('mousemove', moveCursor);
     document.addEventListener('mouseover', handleMouseEnter);
@@ -98,7 +106,7 @@ export default function CustomCursor() {
       document.removeEventListener('mouseleave', handleMouseLeaveWindow);
       document.removeEventListener('mouseenter', handleMouseEnterWindow);
     };
-  }, [cursorX, cursorY, isVisible, addRipple, isTouchDevice]);
+  }, [cursorX, cursorY, addRipple, isTouchDevice]);
 
   if (isTouchDevice) {
     return null;

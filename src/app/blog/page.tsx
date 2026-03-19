@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getAllPosts, getAllTags } from '@/lib/blog';
+import { getAllPosts, getTagsFromPosts } from '@/lib/blog';
 import BlogIndex from '@/components/blog/BlogIndex';
 import Navigation from '@/components/layout/Navigation';
 import Footer from '@/components/layout/Footer';
@@ -18,15 +18,14 @@ export const metadata: Metadata = {
 
 export default function BlogPage() {
   const posts = getAllPosts().map(({ content: _content, ...rest }) => rest);
-  const tags = getAllTags();
-  const currentYear = new Date().getFullYear();
+  const tags = getTagsFromPosts(posts);
 
   return (
     <main className="min-h-screen bg-[#050505]">
       <div className="noise-overlay" />
       <Navigation />
       <BlogIndex posts={posts} tags={tags} />
-      <Footer currentYear={currentYear} />
+      <Footer />
     </main>
   );
 }
