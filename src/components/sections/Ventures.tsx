@@ -21,8 +21,8 @@ export default function Ventures() {
     <Section
       id="ventures"
       label="01"
-      title="Ventures"
-      subtitle="Building the infrastructure for next-generation AI and blockchain systems."
+      title="Work"
+      subtitle="Building AI agents that find issues in your apps before your users do."
       className="bg-[#050505]"
     >
       <div ref={sectionRef}>
@@ -42,20 +42,6 @@ export default function Ventures() {
           {ventures.map((venture, index) => (
             <VentureCard key={venture.id} venture={venture} index={index} />
           ))}
-        </motion.div>
-
-        {/* Bottom accent */}
-        <motion.div
-          className="mt-20 flex items-center gap-4"
-          variants={fadeInUp}
-          initial="initial"
-          whileInView="animate"
-          viewport={viewportSettings}
-        >
-          <div className="h-2 w-2 shrink-0 -translate-y-px bg-[#00F0FF]" />
-          <p className="text-sm leading-none font-mono text-[#555555] uppercase tracking-wider">
-            More ventures coming soon
-          </p>
         </motion.div>
       </div>
     </Section>

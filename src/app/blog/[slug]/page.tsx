@@ -14,7 +14,6 @@ import { mdxComponents } from '@/components/blog/MDXComponents';
 import PostNavigation from '@/components/blog/PostNavigation';
 import Navigation from '@/components/layout/Navigation';
 import Footer from '@/components/layout/Footer';
-import CustomCursor from '@/components/ui/CustomCursor';
 import Badge from '@/components/ui/Badge';
 import GridBackground from '@/components/ui/GridBackground';
 import type { BlogFrontmatter } from '@/types';
@@ -92,7 +91,6 @@ export default async function BlogPostPage({
 
   return (
     <main className="min-h-screen bg-[#050505]">
-      <CustomCursor />
       <div className="noise-overlay" />
       <Navigation />
 

@@ -87,7 +87,7 @@ export default function Footer({ currentYear }: { currentYear: number }) {
 
             {/* Copyright */}
             <div className="flex items-center gap-4">
-              <div className="h-2 w-2 shrink-0 -translate-y-px bg-[#00F0FF] animate-pulse" />
+              <div className="h-2 w-2 shrink-0 -translate-y-px bg-[#00F0FF]" />
               <p className="text-sm leading-none font-mono text-[#555555]">
                 &copy; {currentYear} Arav Jain
               </p>

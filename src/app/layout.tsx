@@ -4,19 +4,19 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Arav Jain - AI Founder & Engineer',
-  description: 'Founder & CEO of Infiniflop - Building the future of GPU compute infrastructure with pay-per-FLOP solutions.',
-  keywords: ['AI', 'GPU', 'Machine Learning', 'Infiniflop', 'Arav Jain', 'Founder', 'Engineer'],
+  title: 'Arav Jain - Co-Founder, Infiniflop Labs',
+  description: 'Co-Founder of Infiniflop Labs. Building AI agents that find issues in your apps before users do.',
+  keywords: ['Infiniflop Labs', 'AI Agents', 'Arav Jain', 'Founder', 'Engineer'],
   authors: [{ name: 'Arav Jain' }],
   openGraph: {
-    title: 'Arav Jain - AI Founder & Engineer',
-    description: 'Building the future of GPU compute infrastructure.',
+    title: 'Arav Jain - Co-Founder, Infiniflop Labs',
+    description: 'Co-Founder of Infiniflop Labs. Building AI agents that find issues in your apps before users do.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Arav Jain - AI Founder & Engineer',
-    description: 'Building the future of GPU compute infrastructure.',
+    title: 'Arav Jain - Co-Founder, Infiniflop Labs',
+    description: 'Co-Founder of Infiniflop Labs. Building AI agents that find issues in your apps before users do.',
     creator: '@aravhawk',
   },
   alternates: {

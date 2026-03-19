@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
 import Button from '@/components/ui/Button';
 import GridBackground from '@/components/ui/GridBackground';
-import { fadeInUp, letterStagger, letterFadeIn, lineReveal, maskReveal } from '@/lib/animations';
+import { fadeInUp, letterStagger, letterFadeIn, lineReveal } from '@/lib/animations';
 
 // Hero-specific stagger with more dramatic timing
 const heroStagger = {
@@ -59,7 +59,7 @@ export default function Hero() {
           className="absolute top-0 right-0 w-[600px] h-[600px] accent-glow-breathe"
           style={{
             background: 'radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, transparent 70%)',
-            opacity: 0.2,
+            opacity: 0.1,
           }}
         />
 
@@ -68,74 +68,37 @@ export default function Hero() {
           className="absolute bottom-0 left-0 w-[400px] h-[400px] accent-glow-breathe"
           style={{
             background: 'radial-gradient(circle, rgba(255, 184, 0, 0.1) 0%, transparent 70%)',
-            opacity: 0.15,
+            opacity: 0.08,
             animationDelay: '1.5s',
           }}
         />
       </div>
 
-      {/* Hero scan line effect */}
-      <div
-        className="absolute inset-0 pointer-events-none z-10 hero-scan-line"
-        style={{
-          background: 'linear-gradient(180deg, transparent 0%, rgba(0, 240, 255, 0.08) 45%, rgba(0, 240, 255, 0.15) 50%, rgba(0, 240, 255, 0.08) 55%, transparent 100%)',
-          height: '6px',
-          width: '100%',
-        }}
-      />
-
       {/* Floating decorative elements */}
-      {/* Vertical line - ambient breathing */}
+      {/* Vertical line - ambient breathing (toned down) */}
       <motion.div
-        className="absolute top-[20%] right-[15%] w-px h-32 bg-gradient-to-b from-[#00F0FF]/50 to-transparent"
+        className="absolute top-[20%] right-[15%] w-px h-32 bg-gradient-to-b from-[#00F0FF]/25 to-transparent"
         style={{ y }}
         animate={{
           y: [0, -15, 0],
-          opacity: [0.5, 0.8, 0.5],
+          opacity: [0.25, 0.4, 0.25],
         }}
         transition={{
-          duration: 6,
+          duration: 9,
           repeat: Infinity,
           ease: "easeInOut",
         }}
       />
-      {/* Horizontal line - ambient pulse */}
+      {/* Horizontal line - ambient pulse (toned down) */}
       <motion.div
-        className="absolute bottom-[30%] left-[10%] w-24 h-px bg-gradient-to-r from-transparent to-[#FFB800]/30"
+        className="absolute bottom-[30%] left-[10%] w-24 h-px bg-gradient-to-r from-transparent to-[#FFB800]/15"
         style={{ y }}
         animate={{
           scaleX: [1, 1.3, 1],
-          opacity: [0.3, 0.6, 0.3],
+          opacity: [0.15, 0.3, 0.15],
         }}
         transition={{
-          duration: 5,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
-
-      {/* Small rotating square - amber border */}
-      <motion.div
-        className="absolute top-[35%] right-[8%] w-4 h-4 border border-[#FFB800]/40 hidden md:block"
-        animate={{
-          rotate: 360,
-          scale: [1, 1.1, 1],
-        }}
-        transition={{
-          rotate: { duration: 20, repeat: Infinity, ease: "linear" },
-          scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-        }}
-      />
-
-      {/* Additional vertical accent line - bottom right */}
-      <motion.div
-        className="absolute bottom-[15%] right-[20%] w-px h-20 bg-gradient-to-t from-[#00F0FF]/30 to-transparent hidden md:block"
-        animate={{
-          opacity: [0.2, 0.5, 0.2],
-          scaleY: [1, 1.2, 1],
-        }}
-        transition={{
-          duration: 5,
+          duration: 7.5,
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -152,47 +115,26 @@ export default function Hero() {
           animate="animate"
           className="max-w-4xl"
         >
-          {/* Status indicator */}
-          <motion.div
-            variants={fadeInUp}
-            className="flex items-center gap-3 mb-10"
-          >
-            <div className="relative flex shrink-0 -translate-y-px items-center justify-center">
-              <span className="absolute w-3 h-3 bg-[#00F0FF] rounded-full animate-ping opacity-40" />
-              <span className="relative w-2 h-2 bg-[#00F0FF] rounded-full" />
-            </div>
-            <span className="text-xs leading-none font-mono uppercase tracking-[0.2em] text-[#888888]">
-              Building the future of compute
-            </span>
-          </motion.div>
-
-          {/* Name with clip-path reveal + character animation */}
-          <motion.div
-            variants={maskReveal}
+          {/* Name with character animation */}
+          <motion.h1
+            variants={letterStagger}
             initial="initial"
             animate="animate"
-            transition={{ duration: 1.2, ease: [0.65, 0, 0.35, 1] }}
+            className="font-display text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] leading-[0.85] mb-8 tracking-tight"
           >
-            <motion.h1
-              variants={letterStagger}
-              initial="initial"
-              animate="animate"
-              className="font-display text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] leading-[0.85] mb-8 tracking-tight"
-            >
-              {nameChars.map((char, index) => (
-                <motion.span
-                  key={index}
-                  variants={letterFadeIn}
-                  className={char === ' ' ? 'inline-block w-6' : 'inline-block'}
-                  style={{
-                    color: index < 4 ? '#FAFAFA' : '#00F0FF',
-                  }}
-                >
-                  {char}
-                </motion.span>
-              ))}
-            </motion.h1>
-          </motion.div>
+            {nameChars.map((char, index) => (
+              <motion.span
+                key={index}
+                variants={letterFadeIn}
+                className={char === ' ' ? 'inline-block w-6' : 'inline-block'}
+                style={{
+                  color: index < 4 ? '#FAFAFA' : '#00F0FF',
+                }}
+              >
+                {char}
+              </motion.span>
+            ))}
+          </motion.h1>
 
           {/* Title */}
           <motion.div
@@ -204,7 +146,7 @@ export default function Hero() {
               variants={lineReveal}
             />
             <p className="text-lg md:text-xl font-mono text-[#888888]">
-              Founder & CEO of <span className="text-[#FFB800]">Infiniflop</span>
+              Co-Founder, <span className="text-[#FFB800]">Infiniflop Labs</span>
             </p>
           </motion.div>
 
@@ -213,8 +155,7 @@ export default function Hero() {
             variants={fadeInUp}
             className="text-lg md:text-xl text-[#555555] max-w-2xl leading-relaxed mb-12"
           >
-            Building the future of GPU compute infrastructure.
-            Making AI accessible through pay-per-FLOP solutions.
+            Building AI agents that find issues in your apps before users do.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -235,7 +176,7 @@ export default function Hero() {
               size="lg"
               onClick={() => scrollToSection('ventures')}
             >
-              View Ventures
+              View Work
             </Button>
           </motion.div>
         </motion.div>

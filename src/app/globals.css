@@ -50,15 +50,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom cursor */
-* {
-  cursor: none;
-}
-
-a, button, [role="button"] {
-  cursor: none;
-}
-
 /* Selection styling */
 ::selection {
   background: var(--accent-cyan);
@@ -256,10 +247,10 @@ a, button, [role="button"] {
 /* Pulse glow animation */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px var(--accent-cyan-dim);
+    box-shadow: 0 0 12px var(--accent-cyan-dim);
   }
   50% {
-    box-shadow: 0 0 40px var(--accent-cyan-dim), 0 0 60px rgba(0, 240, 255, 0.1);
+    box-shadow: 0 0 24px var(--accent-cyan-dim), 0 0 36px rgba(0, 240, 255, 0.06);
   }
 }
 
@@ -294,7 +285,7 @@ a, button, [role="button"] {
 /* Border breathe - subtle border color oscillation */
 @keyframes border-breathe {
   0%, 100% { border-color: #1F1F1F; }
-  50% { border-color: #2A2A2A; }
+  50% { border-color: #242424; }
 }
 
 .card-breathe {
@@ -303,24 +294,12 @@ a, button, [role="button"] {
 
 /* Accent glow breathe */
 @keyframes accent-breathe {
-  0%, 100% { opacity: 0.15; }
-  50% { opacity: 0.25; }
+  0%, 100% { opacity: 0.08; }
+  50% { opacity: 0.15; }
 }
 
 .accent-glow-breathe {
   animation: accent-breathe 3s ease-in-out infinite;
-}
-
-/* Hero scan line effect */
-@keyframes hero-scan {
-  0% { transform: translateY(-100vh); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(100vh); opacity: 0; }
-}
-
-.hero-scan-line {
-  animation: hero-scan 2s ease-in-out forwards;
 }
 
 /* Enhanced glow border rotation */
@@ -395,10 +374,6 @@ a, button, [role="button"] {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-
-  * {
-    cursor: auto;
   }
 }
 

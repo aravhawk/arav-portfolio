@@ -52,7 +52,7 @@ export default function BlogIndex({ posts, tags }: BlogIndexProps) {
       <Section
         label="Blog"
         title="Thoughts & Writing"
-        subtitle="On AI, GPU computing, blockchain, and building startups."
+        subtitle="On AI agents, security, engineering, and building startups."
       >
         {/* Search + Filter */}
         <div className="mb-12 space-y-6">
