@@ -1,0 +1,101 @@
+---
+title: Three AI Agents Built Me Five SaaS Products. I Wouldn't Ship Any of Them.
+date: '2026-04-18T00:00:00.000Z'
+description: >-
+  Three autonomous coding agents. One prompt. Five SaaS products. Zero I'd ship.
+  What the experiment actually revealed about where coding agents are.
+tags:
+  - Agents
+  - Evaluation
+  - Claude Code
+published: true
+---
+I gave the same prompt to three autonomous coding agents — Droid, Claude Code, and Jules — and let each of them loose on a fresh repo. No human checkpoints. No clarifying questions. No pauses. Push to main when done.
+
+The prompt asked for a real, production-ready SaaS: research the market, pick a novel idea, build it on Next.js 14+ with TypeScript, Prisma + PostgreSQL, NextAuth, Stripe checkout with webhooks, shadcn/ui, the whole stack. Not a toy. Not a CRUD dashboard. A real product a real person might pay for.
+
+Droid and Claude Code each did one run and shipped one product. Jules did three separate runs in the same repo and shipped three. Five products total.
+
+## The headline numbers
+
+On a seven-dimension scorecard (code quality, problem selection, architecture, monetization, market need, business ceiling, prompt adherence), the overall ranking was:
+
+- Claude Code — 7.6
+- Droid — 6.5
+- Jules — 4.7 (average across three runs)
+
+If you stop there, you have a boring story. "Claude wins, Google loses, news at 11." The actual finding is more interesting than the ranking.
+
+## Three failure modes, not one gradient
+
+The three agents didn't fail along the same axis at different magnitudes. They failed in completely different ways.
+
+Droid writes the cleanest TypeScript I've seen from any coding agent. Strict mode is genuinely honored: no `as any` casts, no disabled lint rules. The Stripe webhook handles three event types (checkout completion, subscription updated, subscription deleted), which is the most complete subscription lifecycle across all five products. And the regulatory research was real — Droid picked EU Directive 2024/1799 (Right-to-Repair) as its domain, cited the directive correctly, got the July 2026 transposition deadline right, and accurately noted which EU countries had already transposed it as of the build date. That's not pattern-matched content. That's research.
+
+The catch: the addressable market is maybe 10,000 manufacturers. Compliance-driven demand is time-limited. Post-deadline churn risk is real. Perfect execution, narrow ambition.
+
+Claude Code did almost the opposite. It picked scope creep in professional services — a universal, $12B+ pain point affecting freelancers, agencies, and consultancies — and built a GPT-4o-powered contract analysis pipeline that classifies logged work against scope and auto-generates change orders. That's a novel category, a massive TAM, and the only product of the five with a plausible path to venture-scale growth. It also tied its pricing tiers to AI analysis quotas rather than arbitrary seat counts, which is a quietly smart move: each GPT-4o call has a real inference cost, so the tier limits match the actual cost structure.
+
+Then I read the code.
+
+`session.user as any` appears in nine-plus files across the codebase, systematically overriding the strict TypeScript config that was set up one directory over. The PATCH handler at `api/projects/[projectId]/route.ts` passes the raw request body straight into `prisma.project.updateMany` with no validation. That's not a style issue. That's a real authenticated-user-can-modify-arbitrary-fields vulnerability. The main project page is 565 lines in a single component.
+
+Strategic brilliance, tactical mess.
+
+## The Jules pattern
+
+Jules is a different kind of story.
+
+Three runs, three products (InspectLite, RetainerHub, SubCert), and the same failures in every single one:
+
+- SQLite instead of PostgreSQL. Every time.
+- Zero Stripe webhooks across all three products. Every time.
+- ESLint's `no-explicit-any` and `react-hooks/exhaustive-deps` disabled rather than satisfied. Two of three.
+- Stock `create-next-app` README left in the repo. Two of three.
+- `.env` files committed to git (the `.gitignore` only excluded `.env*.local`, not `.env`). Two of three.
+
+Then the specific ones that got me:
+
+SubCert's sign-up flow writes `password: "hashed_password_mock"` directly into the database. There's a code comment that says "skip real hashing for pure mock." `bcryptjs` is installed, imported nowhere, and sitting unused in `package.json`. This shipped as "production-ready."
+
+InspectLite has an "Add Item" button with no `onClick` handler. It just sits there.
+
+RetainerHub's nav links to `/dashboard/clients`, which returns a 404 because the route was never built (only `/dashboard/clients/[id]` exists).
+
+And all three are basic CRUD apps, which the prompt explicitly forbade.
+
+The interesting thing isn't the individual failures. It's that the same failures repeated across three independent runs. That's not a bad draw. That's a lower internal bar for what "production-ready" actually means.
+
+## The orthogonal-strengths problem
+
+The two agents that finished well, Droid and Claude Code, have strengths that don't overlap.
+
+Droid has execution discipline. It doesn't cut corners on fundamentals. No `any`, no disabled rules, no mocked systems. Ask it to build something and it will build that thing correctly, within the scope of what you asked for.
+
+Claude Code has judgment. It picked the best problem, framed it as a new category ("we help you recover lost revenue" is the strongest commercial narrative across all five products), and built the most technically ambitious product. It also shipped a security vulnerability and a 565-line monolithic page component.
+
+An agent that picked problems like Claude Code and wrote code like Droid would be genuinely formidable. Neither exists yet. And I don't think that combination is automatic — discipline and ambition seem to trade off in current agents in ways that might not be purely coincidental.
+
+## Where all three lost together
+
+None of the five products enforced their own pricing plan limits at the API level. Droid defined `maxProducts` and `maxMembers` per tier and then never checked them anywhere. Claude Code defined AI analysis quotas and never checked them either. A free user can create unlimited records. A free user gets unlimited GPT-4o inference. The monetization looks right in a demo and breaks the unit economics the second a real user signs up.
+
+None produced a formal competitive analysis artifact. None used Turbopack. None fully satisfied the prompt.
+
+Even the best agents build monetization that demos well and breaks in production. That's worth sitting with.
+
+## What I took away
+
+The capability gap between the top two and Jules isn't really about raw coding skill. It's about what the agent considers "done." Jules happily ships mocked auth and calls it production. Droid writes a scoring engine with pure functions and no side effects because that's what the problem calls for. That's a values gap, not a skills gap. Training data, scaffolding, system prompts, whatever: something makes these agents have different internal definitions of "finished," and that difference shows up everywhere.
+
+Autonomy amplifies character. When you hover over an agent diff-by-diff, you catch the shortcuts. When you walk away and let it push to main, you find out what it actually thinks "finished" means. The gap between Jules and Droid narrows when you're reviewing every change. It widens a lot when you're not.
+
+Three outputs isn't better than one good output. Jules shipped three products versus one each from Droid and Claude Code, and scored lowest on every dimension. The quantity didn't compensate for anything. If your eval for coding agents is throughput, you're measuring the wrong thing.
+
+And the security finding sticks. ScopeShield was the highest-scoring product overall, and it had an authenticated-user-can-modify-arbitrary-fields bug that nobody would catch without reading the route handler. That's the kind of thing that passes most code reviews because most code reviews don't read API routes line by line looking for Prisma writes that trust the request body. It's also the kind of thing my team and I are building Docksmith to catch. The experiment didn't set out to validate my own product, but it did anyway.
+
+## Where this leaves me
+
+More optimistic than I expected, honestly. The top agents are not that far off from being genuinely trustworthy for greenfield work, as long as someone reads the diff. The gap between "impressive demo" and "production" is real but closing. And the kinds of failures that remain — security vulnerabilities, unenforced business logic, inconsistent `any` usage, mocked-out systems shipped as real ones — are exactly the kinds of things a review layer should catch.
+
+Three agents, five products, zero humans in the loop. The clearest lesson is still that someone has to read the code.
