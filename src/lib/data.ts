@@ -131,7 +131,7 @@ export const aboutTagline = "Building AI agents that find issues in your apps be
 
 export const aboutHighlights: AboutHighlight[] = [
   {
-    stat: "Docksmith",
+    stat: "Infiniview",
     label: "Current Focus",
     description: "Something big. Stay tuned."
   },
