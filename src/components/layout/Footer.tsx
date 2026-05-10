@@ -2,14 +2,14 @@
 
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { Github, Linkedin, Twitter, ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, BriefcaseBusiness, Code2, X } from 'lucide-react';
 import { footerColumns, socialLinks } from '@/lib/data';
 import { fadeInUp, staggerContainer, viewportSettings } from '@/lib/animations';
 
 const socialIcons = {
-  github: Github,
-  linkedin: Linkedin,
-  twitter: Twitter,
+  github: Code2,
+  linkedin: BriefcaseBusiness,
+  twitter: X,
   mail: null,
 };
 

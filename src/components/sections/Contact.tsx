@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { Mail, Linkedin, Twitter, Github, ArrowRight } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, Code2, Mail, X } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import Button from '@/components/ui/Button';
@@ -12,9 +12,9 @@ import { fadeInUp, staggerContainer, staggerContainerFast, viewportSettings } fr
 
 const iconMap = {
   mail: Mail,
-  linkedin: Linkedin,
-  twitter: Twitter,
-  github: Github,
+  linkedin: BriefcaseBusiness,
+  twitter: X,
+  github: Code2,
 };
 
 export default function Contact() {
