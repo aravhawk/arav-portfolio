@@ -8,27 +8,27 @@
     "start": "next start --port 3001"
   },
   "dependencies": {
-    "@uiw/react-md-editor": "^4.1.0",
+    "@uiw/react-md-editor": "^4.1.1",
     "gray-matter": "^4.0.3",
-    "lucide-react": "^1.14.0",
-    "next": "^16.2.6",
+    "lucide-react": "^1.28.0",
+    "next": "16.3.0",
     "next-mdx-remote": "^6.0.0",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "reading-time": "^1.5.0",
     "rehype-autolink-headings": "^7.1.0",
-    "rehype-pretty-code": "^0.14.3",
+    "rehype-pretty-code": "^0.14.5",
     "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
-    "shiki": "^4.0.2"
+    "shiki": "^4.4.2"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/mdx": "^2.0.13",
-    "@types/node": "^25",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "tailwindcss": "^4",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3"
   }
 }
