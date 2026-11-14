@@ -19,8 +19,8 @@ export default function Hud() {
       last.current = story.chapter;
       const i = chapters.findIndex((c) => c.id === story.chapter);
       if (text.current && i >= 0) text.current.textContent = `${String(i + 1).padStart(2, '0')} / ${String(chapters.length).padStart(2, '0')}  ${chapters[i].label}`;
-      // the hero and the close carry their own footers
-      if (root.current) root.current.dataset.show = i > 0 && i < chapters.length - 1 ? 'true' : 'false';
+      // only the open 3D chapters carry it; the hero, the lists and the close have their own footers
+      if (root.current) root.current.dataset.show = i > 0 && i < 5 ? 'true' : 'false';
     }
   });
 

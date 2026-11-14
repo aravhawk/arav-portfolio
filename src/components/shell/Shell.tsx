@@ -20,8 +20,10 @@ type ShellApi = {
 const Ctx = createContext<ShellApi>({ go: () => {}, scrollTo: () => {} });
 export const useShell = () => useContext(Ctx);
 
-const WIPE_IN = 460;
-const WIPE_OUT = 620;
+const labelFor = (path: string) => (path === '/' ? 'Arav Jain' : path.startsWith('/work') ? 'Work' : path.startsWith('/blog') ? 'Writing' : path.slice(1));
+
+const WIPE_IN = 420;
+const WIPE_OUT = 540;
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -34,7 +36,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const sectionsRef = useRef<Section[]>([]);
   const pendingRef = useRef<string | null>(null);
   const measureRef = useRef<() => void>(() => {});
-  const [sceneState, setSceneState] = useState<'idle' | 'ready' | 'failed'>('idle');
+  const [sceneState, setSceneState] = useState<'idle' | 'off' | 'ready' | 'failed'>('idle');
   const [fontsReady, setFontsReady] = useState(false);
 
   // One loop for everything that moves.
@@ -48,6 +50,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     let lastGround = '';
     let lastInk = '';
     let lastChapter = '';
+    let lastY = 0;
+    let lastNav = '';
 
     const startLenis = async () => {
       if (story.reduced || lenis) return;
@@ -103,6 +107,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         story.local = 0;
         return;
       }
+      // nav: hide while travelling down, show on the way up or near the top
+      const nav = y < 160 || y < lastY - 3 ? 'up' : y > lastY + 3 ? 'down' : lastNav;
+      lastY = y;
+      if (nav !== lastNav) {
+        lastNav = nav;
+        root.dataset.nav = nav;
+      }
       const yc = y + vh * 0.5;
       let i = list.findIndex((s) => yc >= s.top && yc < s.top + s.height);
       if (i < 0) i = yc < list[0].top ? 0 : list.length - 1;
@@ -146,6 +157,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         root.dataset.ink = ink;
       }
       if (cur.name !== lastChapter) {
+        // Reduced motion: the scene cuts between resting poses, softened by a short fade.
+        if (story.reduced && lastChapter) canvasRef.current?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease' });
         lastChapter = cur.name;
         root.dataset.at = cur.name;
       }
@@ -185,33 +198,50 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Fonts first (the engraving is drawn with them), then the WebGL chunk, off the critical path.
+  // Pages with no 3D chapter (a blog post) never download it.
+  const bootRef = useRef<() => void>(() => {});
   useEffect(() => {
     let cancelled = false;
+    let started = false;
     const css = getComputedStyle(document.documentElement);
     const display = css.getPropertyValue('--font-onest').trim() || 'sans-serif';
     const mono = css.getPropertyValue('--font-jetbrains').trim() || 'monospace';
-    const fonts = Promise.all([
-      document.fonts.load(`600 80px ${display}`, 'ARAV'),
-      document.fonts.load(`500 20px ${mono}`, 'LOOP 01'),
-    ])
+    const fonts = Promise.all([document.fonts.load(`600 80px ${display}`, 'ARAV'), document.fonts.load(`500 20px ${mono}`, 'LOOP 01')])
       .catch(() => null)
       .then(() => {
         if (!cancelled) setFontsReady(true);
       });
     const boot = async () => {
+      if (started || cancelled) return;
+      const wanted = Array.from(document.querySelectorAll<HTMLElement>('[data-chapter]')).some((el) => el.dataset.chapter !== 'none');
+      if (!wanted) {
+        setSceneState((s) => (s === 'idle' ? 'off' : s));
+        return;
+      }
+      started = true;
       await fonts;
       try {
         const { Engine } = await import('@/components/scene/engine');
         if (cancelled || !canvasRef.current) return;
         const lowPower = window.matchMedia('(max-width: 820px), (pointer: coarse)').matches;
-        const engine = new Engine({ canvas: canvasRef.current, fonts: { display, mono }, lowPower });
+        const engine = await Engine.create({
+          canvas: canvasRef.current,
+          fonts: { display, mono },
+          lowPower,
+          onFail: () => !cancelled && setSceneState('failed'),
+        });
+        if (cancelled) {
+          engine.dispose();
+          return;
+        }
         engine.setIntro(document.documentElement.dataset.loaded ? 1 : 0);
         engineRef.current = engine;
-        requestAnimationFrame(() => requestAnimationFrame(() => !cancelled && setSceneState('ready')));
+        requestAnimationFrame(() => requestAnimationFrame(() => !cancelled && setSceneState((s) => (s === 'failed' ? s : 'ready'))));
       } catch {
         if (!cancelled) setSceneState('failed');
       }
     };
+    bootRef.current = () => void boot();
     const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 60));
     idle(() => void boot());
     return () => {
@@ -231,6 +261,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     lenisRef.current?.scrollTo(0, { immediate: true, force: true });
     window.scrollTo(0, 0);
     measureRef.current();
+    bootRef.current();
     const hash = window.location.hash;
     if (hash) requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView());
     const wipe = wipeRef.current;
@@ -270,7 +301,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         return;
       }
       pendingRef.current = href;
-      if (wipeLabelRef.current) wipeLabelRef.current.textContent = url.pathname;
+      if (wipeLabelRef.current) wipeLabelRef.current.textContent = labelFor(url.pathname);
       wipe.dataset.on = 'true';
       const cover = wipe.animate([{ transform: 'translateY(101%)' }, { transform: 'translateY(0)' }], {
         duration: WIPE_IN,
@@ -285,7 +316,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const scrollTo = useCallback((target: string | number) => {
     const el = typeof target === 'string' ? (document.querySelector(target) as HTMLElement | null) : target;
     if (el === null) return;
-    if (lenisRef.current) lenisRef.current.scrollTo(el, { duration: 1.4 });
+    // keyboard-driven jumps (a number) land at once; pointer-driven ones glide
+    if (lenisRef.current) lenisRef.current.scrollTo(el, typeof el === 'number' ? { immediate: true } : { duration: 1.4 });
     else if (typeof el === 'number') window.scrollTo(0, el);
     else el.scrollIntoView();
   }, []);
@@ -296,13 +328,21 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         Skip to content
       </a>
       <canvas ref={canvasRef} className="scene" data-state={sceneState} />
+      {sceneState === 'failed' ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="scene-poster" src="/loop-poster.webp" alt="" />
+      ) : null}
+      <noscript>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="scene-poster" src="/loop-poster.webp" alt="" />
+      </noscript>
       <Nav />
       <div id="main" className="page">
         {children}
       </div>
       <Cursor />
       <div ref={wipeRef} className="wipe" data-on="false" aria-hidden="true">
-        <span ref={wipeLabelRef} className="mono" />
+        <span ref={wipeLabelRef} />
       </div>
       <Loader ready={fontsReady && sceneState !== 'idle'} onRevealed={onRevealed} />
     </Ctx.Provider>

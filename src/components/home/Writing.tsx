@@ -36,7 +36,7 @@ export default function Writing({ posts }: { posts: Meta[] }) {
         <PostBig key={p.slug} post={p} />
       ))}
       <div className="block-foot">
-        <a className="mono link" href="/feed.xml">
+        <a className="mono link tap" href="/feed.xml">
           RSS feed
         </a>
         <TLink className="btn" href="/blog">

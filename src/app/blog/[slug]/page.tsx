@@ -64,7 +64,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <article className="sheet" data-chapter="none" data-ground="#f2f2f2">
         <header className="article-head wrap">
           <div className="post-meta mono">
-            <TLink className="link" href="/blog">
+            <TLink className="link tap" href="/blog">
               Writing
             </TLink>
             <time dateTime={post.frontmatter.date}>{date}</time>
@@ -80,7 +80,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               <span>Arav Jain</span>
               <time dateTime={post.frontmatter.date}>{date}</time>
               <span>{post.readingTime}</span>
-              <TLink className="link" href="/blog" style={{ justifySelf: 'start' }}>
+              <TLink className="link tap" href="/blog" style={{ justifySelf: 'start' }}>
                 All writing
               </TLink>
             </aside>

@@ -20,7 +20,8 @@ export default function Now() {
     for (let i = 0; i < el.children.length; i++) {
       const c = el.children[i] as HTMLElement;
       const a = story.anchors[i];
-      const on = show && a.on ? '1' : '0';
+      // a label that would run off the right edge or under the nav stays hidden
+      const on = show && a.on && a.x < story.vw - 260 && a.y > 130 ? '1' : '0';
       if (c.style.opacity !== on) c.style.opacity = on;
       if (on === '1') c.style.transform = `translate3d(${a.x.toFixed(1)}px, ${a.y.toFixed(1)}px, 0)`;
     }

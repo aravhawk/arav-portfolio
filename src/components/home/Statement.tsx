@@ -17,7 +17,8 @@ export default function Statement() {
     if (!el || story.reduced) return;
     const r = el.getBoundingClientRect();
     const p = span(story.vh * 0.72 - r.top, r.height * 0.2, r.height * 0.62);
-    const n = Math.round(p * words.length);
+    // far below the fold the paragraph stays fully lit; it only dims once it is about to arrive
+    const n = r.top > story.vh * 1.15 ? words.length : Math.round(p * words.length);
     if (n === lit.current) return;
     lit.current = n;
     const spans = el.querySelectorAll<HTMLSpanElement>('[data-w]');
@@ -29,9 +30,10 @@ export default function Statement() {
 
   return (
     <section ref={root} className="statement wrap front" data-chapter="statement" data-ground="#ffd60a" aria-label="About">
-      <p className="statement-text" aria-label={statement}>
+      <p className="sr-only">{statement}</p>
+      <p className="statement-text" aria-hidden="true">
         {words.map((w, i) => (
-          <span key={i} data-w aria-hidden="true">
+          <span key={i} data-w>
             {w}{' '}
           </span>
         ))}

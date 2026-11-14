@@ -4,12 +4,22 @@ import { useRef } from 'react';
 import { useFrame } from '@/lib/useFrame';
 import { clamp, story } from '@/lib/story';
 import { ventures } from '@/lib/content';
+import { useShell } from '@/components/shell/Shell';
 import { Arrow } from './Arrow';
 
 export default function Timeline() {
   const root = useRef<HTMLElement>(null);
   const track = useRef<HTMLDivElement>(null);
   const years = useRef<HTMLDivElement>(null);
+  const { scrollTo } = useShell();
+
+  // Keyboard focus on a venture that is off to the side scrolls the run to it.
+  const reveal = (i: number) => {
+    const el = root.current;
+    if (!el || story.reduced || story.vw < 900) return;
+    const r = el.getBoundingClientRect();
+    scrollTo(r.top + window.scrollY + (i / Math.max(1, ventures.length - 1)) * (r.height - story.vh));
+  };
 
   // Vertical scroll becomes a sideways run along the years. The numerals sit behind the band and lag the cards.
   useFrame(() => {
@@ -51,8 +61,8 @@ export default function Timeline() {
           <span>2020 to now</span>
         </div>
         <div className="timeline-track" ref={track}>
-          {ventures.map((v) => (
-            <article className="venture" key={v.name}>
+          {ventures.map((v, i) => (
+            <article className="venture" key={v.name} onFocus={() => reveal(i)}>
               <p className="venture-year venture-year-inline" aria-hidden="true">
                 {v.year}
               </p>
@@ -67,7 +77,7 @@ export default function Timeline() {
                 <p className="venture-line">{v.line}</p>
                 {v.href ? (
                   <div className="venture-row mono">
-                    <a className="link" href={v.href} target="_blank" rel="noopener noreferrer">
+                    <a className="link tap" href={v.href} target="_blank" rel="noopener noreferrer">
                       {v.hrefLabel}
                     </a>
                     <Arrow out />

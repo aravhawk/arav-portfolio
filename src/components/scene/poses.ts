@@ -40,11 +40,11 @@ const base = {
 const GONE = { near: 0, far: 0.02 };
 
 // Hero: one steel strand cuts across the name, its underside comes back the other way.
-const HERO: Pose = { ...base, cam: [2.5, 0.8, 7.5], look: [1.6, 0.2, 0], rot: [0.5, -0.55, 0.32], shift: [-0.13, 0], portraitBack: 4 };
+const HERO: Pose = { ...base, cam: [2.5, 0.8, 7.5], look: [1.6, 0.2, 0], rot: [0.5, -0.55, 0.32], shift: [-0.2, 0.04], pshift: [0.05, -0.2], portraitBack: 5 };
 // Leaving the hero: the camera drops toward the band until the engraving is readable.
 const MACRO: Pose = { ...base, cam: [3.4, 1.4, 5.6], look: [2.6, 0.9, 0.2], rot: [0.5, -0.3, 0.25], fov: 28, flow: 0.02, shift: [0.2, 0], portraitBack: 1.5 };
 // Statement: the loop stands off to the right, the words own the left.
-const SHELF: Pose = { ...base, cam: [0, 0, 15], look: [0, 0, 0], rot: [0.2, 1.15, 0.5], fov: 28, flow: 0.016, shift: [0.3, 0.02], pshift: [0.1, 0.3], portraitBack: 6 };
+const SHELF: Pose = { ...base, cam: [0, 0, 15], look: [0, 0, 0], rot: [0.2, 1.15, 0.5], fov: 28, flow: 0.016, shift: [0.3, 0.02], pshift: [0.1, 0.4], portraitBack: 22 };
 const SHELF_B: Pose = { ...SHELF, rot: [0.5, 1.5, 0.7] };
 // Infiniview: the band arcs overhead through a line of probe rings.
 const GATES_IN: Pose = { ...base, cam: [6.4, 4.6, 7.6], look: [5.4, 0.2, 0.4], rot: [0, 0, 0], fov: 34, flow: 0.05, gates: 0.15, env: 0.95, pshift: [0, 0.16], portraitBack: 2 };
@@ -53,9 +53,9 @@ const GATES_OUT: Pose = { ...GATES, cam: [4.2, 2.6, 5.0], look: [5.4, 1.1, 0.4],
 // Rules: the whole loop as a small sculpture, top right, turning one notch per rule.
 const EDGE: Pose = { ...base, cam: [0, 0, 32], look: [0, 0, 0], rot: [0.5, 0.3, 0.1], fov: 30, flow: 0.014, env: 1, shift: [0.27, 0.23], pshift: [0, 0.26], portraitBack: 14 };
 // Ventures: a long run past the years.
-const RUN_A: Pose = { ...base, cam: [-4.6, 0.4, 6.2], look: [-3.4, -0.4, 0], rot: [0.1, 0.5, -0.4], fov: 30, flow: 0.03, shift: [0.1, 0.12], portraitBack: 2 };
-const RUN_B: Pose = { ...base, cam: [0, 3.0, 7.5], look: [0, 1.6, 0], rot: [0.2, 0, 0], fov: 30, flow: 0.03, shift: [0, 0.14], portraitBack: 2 };
-const RUN_C: Pose = { ...base, cam: [4.2, 2.2, 7.2], look: [3.2, 1.9, 0], rot: [0.25, -0.35, 0.15], fov: 30, flow: 0.03, shift: [0, 0.16], portraitBack: 2 };
+const RUN_A: Pose = { ...base, cam: [-4.6, 0.4, 6.2], look: [-3.4, -0.4, 0], rot: [0.1, 0.5, -0.4], fov: 30, flow: 0.03, shift: [0.12, 0.2], portraitBack: 2 };
+const RUN_B: Pose = { ...base, cam: [0, 3.0, 7.5], look: [0, 1.6, 0], rot: [0.2, 0, 0], fov: 30, flow: 0.03, shift: [0.04, 0.22], portraitBack: 2 };
+const RUN_C: Pose = { ...base, cam: [4.2, 2.2, 7.2], look: [3.2, 1.9, 0], rot: [0.25, -0.35, 0.15], fov: 30, flow: 0.03, shift: [0, 0.24], portraitBack: 2 };
 // Close: pull all the way out. The thing you were riding is one closed figure eight.
 const WHOLE_IN: Pose = { ...base, cam: [0, 0.2, 13], look: [0, -0.4, 0], rot: [0.7, 0.5, 0.15], portraitBack: 10 };
 const WHOLE: Pose = { ...base, cam: [0, 0, 25], look: [0, 0, 0], rot: [0.12, 0, 0], shift: [0, 0.12], pshift: [0, 0.1], portraitBack: 20 };

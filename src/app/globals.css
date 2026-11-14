@@ -1,4 +1,5 @@
-@import 'tailwindcss';
+/* Only this app's own source is scanned: the blog editor keeps its own stylesheet. */
+@import 'tailwindcss' source('../');
 
 /* ------------------------------------------------------------------
    Tokens. Three flat colours and one metal. Sharp corners everywhere.
@@ -60,6 +61,8 @@ button {
   font: inherit;
   color: inherit;
   touch-action: manipulation;
+  cursor: pointer;
+  border: 0;
 }
 
 h1,
@@ -128,6 +131,21 @@ p {
 .scene[data-state='ready'] {
   opacity: 1;
 }
+/* Still image of the loop, shown when WebGL is unavailable or scripts are off. */
+.scene-poster {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  pointer-events: none;
+}
+html[data-at='none'] .scene-poster,
+html[data-at='work'] .scene-poster,
+html[data-at='writing'] .scene-poster {
+  display: none;
+}
 html[data-at='none'] .scene,
 html[data-at='work'] .scene {
   opacity: 0;
@@ -188,8 +206,12 @@ html[data-at='work'] .scene {
   align-items: center;
   justify-content: space-between;
   color: var(--black);
-  transition: color 300ms var(--ease-out);
+  transition: color 300ms var(--ease-out), transform 300ms var(--ease-out);
   pointer-events: none;
+}
+/* Out of the way while reading down, back the moment you scroll up. */
+html[data-nav='down'] .nav:not(:focus-within) {
+  transform: translateY(-110%);
 }
 html[data-ink='light'] .nav {
   color: var(--paper);
@@ -282,6 +304,15 @@ html[data-ink='light'] .nav {
   padding-bottom: 2px;
   transition: background-size 250ms var(--ease-out);
 }
+/* Small inline links keep their look but get a 44px hit area. */
+.tap {
+  position: relative;
+}
+.tap::before {
+  content: '';
+  position: absolute;
+  inset: -14px -6px;
+}
 @media (hover: hover) and (pointer: fine) {
   .link:hover {
     background-size: 0% 1px;
@@ -353,16 +384,23 @@ html[data-ink='light'] .nav {
   color: var(--black);
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 16px;
-  padding-inline: var(--gutter);
-  clip-path: inset(0 0 0 0);
-  transition: clip-path 900ms var(--ease-in-out);
+  justify-content: space-between;
+  padding: 24px var(--gutter);
+  transition: background-color 1ms linear 150ms;
   /* if scripts never run, get out of the way */
   animation: loader-failsafe 1ms linear 7s forwards;
 }
 .loader[data-state='out'] {
-  clip-path: inset(0 0 100% 0);
+  background-color: transparent;
+  pointer-events: none;
+}
+.loader-top {
+  display: grid;
+  gap: 16px;
+  transition: opacity 300ms var(--ease-out);
+}
+.loader[data-state='out'] .loader-top {
+  opacity: 0;
 }
 .loader-row {
   display: flex;
@@ -380,6 +418,24 @@ html[data-ink='light'] .nav {
   transform: scaleX(0);
   transform-origin: left;
 }
+/* The count stands where the name will be, in the same cut. It leaves upward as the name rises. */
+.loader-num {
+  font-size: min(31.5vw, 43svh);
+  line-height: 0.8;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+  overflow: clip;
+  margin-left: -0.045em;
+  padding-bottom: 0.04em;
+}
+.loader-num span {
+  display: block;
+  transition: transform 480ms var(--ease-in-out);
+}
+.loader[data-state='out'] .loader-num span {
+  transform: translateY(-104%);
+}
 @keyframes loader-failsafe {
   to {
     visibility: hidden;
@@ -394,7 +450,11 @@ html[data-ink='light'] .nav {
   color: var(--yellow);
   display: flex;
   align-items: flex-end;
-  padding: var(--gutter);
+  padding: 24px var(--gutter);
+  font-size: min(12vw, 168px);
+  line-height: 0.9;
+  font-weight: 700;
+  letter-spacing: -0.05em;
   transform: translateY(101%);
   visibility: hidden;
 }
@@ -468,10 +528,10 @@ html[data-ink='light'] .nav {
 .hero-line > span {
   display: block;
   transform: translateY(102%);
-  transition: transform 1200ms var(--ease-out);
+  transition: transform 1100ms var(--ease-out) 220ms;
 }
 .hero-line:last-child > span {
-  transition-delay: 110ms;
+  transition-delay: 330ms;
 }
 html[data-loaded='true'] .hero-line > span {
   transform: none;
@@ -486,7 +546,7 @@ html[data-loaded='true'] .hero-line > span {
   align-items: flex-end;
   gap: 24px;
   opacity: 0;
-  transition: opacity 700ms var(--ease-out) 500ms;
+  transition: opacity 700ms var(--ease-out) 800ms;
 }
 html[data-loaded='true'] .hero-hud {
   opacity: 1;
@@ -519,12 +579,13 @@ html[data-loaded='true'] .hero-hud {
   max-width: 21ch;
   margin: 0;
 }
+/* Words are fully readable by default. The scroll reader dims the ones not reached yet,
+   so the text never depends on a script to be legible. */
 .statement-text span {
-  opacity: 0.22;
   transition: opacity 500ms var(--ease-out);
 }
-.statement-text span[data-on='true'] {
-  opacity: 1;
+.statement-text span[data-on='false'] {
+  opacity: 0.22;
 }
 
 /* ------------------------------------------------------------------
@@ -603,10 +664,13 @@ html[data-loaded='true'] .hero-hud {
 }
 .probe-tag b {
   position: absolute;
-  left: 68px;
-  top: -52px;
+  left: 60px;
+  top: -58px;
   font-weight: 500;
   white-space: nowrap;
+  background: var(--yellow);
+  color: var(--black);
+  padding: 4px 8px;
 }
 
 /* ------------------------------------------------------------------
@@ -949,6 +1013,7 @@ html[data-loaded='true'] .hero-hud {
 }
 .contact-mail {
   font-size: min(9.4vw, 168px);
+  padding-block: 8px;
   line-height: 0.9;
   letter-spacing: -0.06em;
   font-weight: 700;
@@ -975,7 +1040,8 @@ html[data-loaded='true'] .hero-hud {
 .contact-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 32px;
+  align-items: center;
+  gap: 8px 32px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1082,6 +1148,7 @@ html[data-ink='light'] .hud {
 }
 .footer-mail {
   font-size: min(9.4vw, 168px);
+  padding-block: 8px;
   line-height: 0.9;
   letter-spacing: -0.06em;
   font-weight: 700;
@@ -1411,12 +1478,14 @@ html[data-ink='light'] .hud {
   .now-pin {
     padding-bottom: 40px;
   }
-  /* The pinned track becomes a plain column. */
+  /* The pinned track becomes a plain column. The tall top pad lets the ground finish
+     turning from black to paper before any black text arrives. */
   .timeline {
     height: auto !important;
-    padding-block: 96px 64px;
+    padding-block: 56svh 64px;
   }
-  .timeline .pin {
+  .timeline .pin,
+  .timeline .pin.behind + .pin.front {
     position: static;
     height: auto;
     overflow: visible;
@@ -1446,11 +1515,21 @@ html[data-ink='light'] .hud {
   }
   .venture-year {
     transform: none !important;
-    font-size: 34vw;
+    font-size: 30vw;
+    line-height: 0.95;
   }
   .contact-mail,
   .footer-mail {
-    font-size: 10.6vw;
+    font-size: 8.3vw;
+    letter-spacing: -0.05em;
+  }
+  .row-side {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+  }
+  .statement-text {
+    max-width: none;
   }
   .head {
     min-height: 62svh;
@@ -1461,9 +1540,11 @@ html[data-ink='light'] .hud {
 }
 
 /* ------------------------------------------------------------------
-   Reduced motion: everything rests in its final, readable state.
+   Resting layout. The choreography above only applies when the head script has set
+   data-motion="full". Reduced motion, and a page whose scripts never ran, get every
+   chapter in its final, readable state.
    ------------------------------------------------------------------ */
-@media (prefers-reduced-motion: reduce) {
+html:not([data-motion='full']) {
   .loader {
     display: none;
   }
@@ -1478,7 +1559,7 @@ html[data-ink='light'] .hud {
     opacity: 1;
     transition: none;
   }
-  .statement-text span {
+  .statement-text span[data-on] {
     opacity: 1;
     transition: none;
   }
@@ -1508,9 +1589,10 @@ html[data-ink='light'] .hud {
   }
   .timeline {
     height: auto !important;
-    padding-block: 96px 64px;
+    padding-block: 56svh 64px;
   }
-  .timeline .pin {
+  .timeline .pin,
+  .timeline .pin.behind + .pin.front {
     position: static;
     height: auto;
     overflow: visible;

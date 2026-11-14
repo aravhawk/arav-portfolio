@@ -1,7 +1,24 @@
+'use client';
+
+import { useRef, useState } from 'react';
 import { person } from '@/lib/content';
 import { Arrow } from './Arrow';
 
 export default function Contact() {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef(0);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(person.email);
+      setCopied(true);
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      window.location.href = `mailto:${person.email}`;
+    }
+  };
+
   return (
     <section className="contact" id="contact" data-chapter="contact" data-ground="#ffd60a" aria-labelledby="contact-title">
       <div className="pin front contact-pin">
@@ -16,8 +33,13 @@ export default function Contact() {
           <a className="contact-mail" href={`mailto:${person.email}`} data-cursor="Write">
             {person.email}
           </a>
-          <div className="contact-foot">
+          <footer className="contact-foot">
             <ul className="contact-links mono">
+              <li>
+                <button type="button" className="btn" onClick={copy} aria-live="polite">
+                  {copied ? 'Address copied' : 'Copy the address'}
+                </button>
+              </li>
               {person.links.map((l) => (
                 <li key={l.href}>
                   <a href={l.href} target="_blank" rel="noopener noreferrer">
@@ -27,7 +49,7 @@ export default function Contact() {
               ))}
             </ul>
             <span className="mono">© 2026 Arav Jain</span>
-          </div>
+          </footer>
         </div>
       </div>
     </section>

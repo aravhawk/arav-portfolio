@@ -44,7 +44,7 @@ export default function Loader({ ready, onRevealed }: { ready: boolean; onReveal
         done = true;
         if (rootRef.current) rootRef.current.dataset.state = 'out';
         onRevealed();
-        timer = window.setTimeout(() => setGone(true), 1000);
+        timer = window.setTimeout(() => setGone(true), 900);
         return;
       }
       raf = requestAnimationFrame(tick);
@@ -59,16 +59,17 @@ export default function Loader({ ready, onRevealed }: { ready: boolean; onReveal
   if (gone) return null;
   return (
     <div ref={rootRef} className="loader" data-state="in" aria-hidden="true">
-      <div className="loader-row mono">
-        <span>Arav Jain</span>
-        <span ref={numRef}>000</span>
+      <div className="loader-top">
+        <div className="loader-row mono">
+          <span>Arav Jain</span>
+          <span>Loop 01</span>
+        </div>
+        <span className="loader-track">
+          <span ref={lineRef} className="loader-line" />
+        </span>
       </div>
-      <span className="loader-track">
-        <span ref={lineRef} className="loader-line" />
-      </span>
-      <div className="loader-row mono">
-        <span>Loop 01</span>
-        <span>Loading</span>
+      <div className="loader-num">
+        <span ref={numRef}>000</span>
       </div>
     </div>
   );

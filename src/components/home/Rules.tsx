@@ -5,12 +5,25 @@ import { useFrame } from '@/lib/useFrame';
 import { clamp, smooth, span, story } from '@/lib/story';
 import { rules } from '@/lib/content';
 import TLink from '@/components/shell/TLink';
+import { useShell } from '@/components/shell/Shell';
 import { Arrow } from './Arrow';
 
 export default function Rules() {
   const root = useRef<HTMLElement>(null);
   const count = useRef<HTMLSpanElement>(null);
   const shown = useRef(-1);
+  const { scrollTo } = useShell();
+
+  // A rule that takes keyboard focus while off stage is scrolled to, so focus is never on something invisible.
+  const reveal = (i: number) => {
+    const el = root.current;
+    if (!el || story.reduced) return;
+    const r = el.getBoundingClientRect();
+    const total = r.height - story.vh;
+    const p = clamp(-r.top / Math.max(1, total));
+    if (Math.floor(p * rules.length + 0.12) === i && r.top <= 0) return;
+    scrollTo(r.top + window.scrollY + ((i + 0.45) / rules.length) * total);
+  };
 
   // One rule on screen at a time. Scroll hands over from one to the next.
   useFrame(() => {
@@ -55,10 +68,10 @@ export default function Rules() {
             <span ref={count}>01</span> / {String(rules.length).padStart(2, '0')}
           </span>
         </div>
-        {rules.map((rule) => {
+        {rules.map((rule, i) => {
           const internal = rule.href.startsWith('/');
           return (
-            <article className="rule" key={rule.text}>
+            <article className="rule" key={rule.text} onFocus={() => reveal(i)}>
               <p className="rule-text">{rule.text}</p>
               <div className="rule-foot">
                 <p className="rule-note">{rule.note}</p>

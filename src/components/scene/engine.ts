@@ -241,6 +241,8 @@ function buildEngraving(width: number, height: number, fonts: { display: string;
 }
 
 export type EngineOptions = {
+  /** Called once if a shader fails to compile, so the page can fall back to the still image. */
+  onFail?: () => void;
   canvas: HTMLCanvasElement;
   fonts: { display: string; mono: string };
   lowPower: boolean;
@@ -276,11 +278,34 @@ export class Engine {
   private intro = 0;
   private introTarget = 0;
   ready = false;
+  failed = false;
 
-  constructor(private opts: EngineOptions) {
-    const { canvas, lowPower } = opts;
+  /** Builds the scene in three tasks so no single one blocks the main thread for long. */
+  static async create(opts: EngineOptions) {
+    const pause = () => new Promise<void>((r) => setTimeout(r, 0));
+    const maxSide = opts.lowPower ? 4096 : 8192;
+    const art = buildEngraving(maxSide, maxSide / 8, opts.fonts);
+    await pause();
+    const curve = buildCurve();
+    const band = buildBand(curve, opts.lowPower ? 520 : 900, opts.lowPower ? 4 : 6);
+    await pause();
+    return new Engine(opts, art, curve, band);
+  }
+
+  private constructor(
+    private opts: EngineOptions,
+    art: ReturnType<typeof buildEngraving>,
+    curve: CatmullRomCurve3,
+    built: ReturnType<typeof buildBand>,
+  ) {
+    const { canvas } = opts;
     this.renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
     this.renderer.setClearColor(0x000000, 0);
+    this.renderer.debug.onShaderError = () => {
+      if (this.failed) return;
+      this.failed = true;
+      opts.onFail?.();
+    };
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.outputColorSpace = SRGBColorSpace;
@@ -301,6 +326,8 @@ export class Engine {
     box(2, 14, 7, [15, 2, -3], [0, -Math.PI / 2, 0]); // right strip
     box(12, 2.2, 6, [0, 4, 15], [0, Math.PI, 0]); // front bar, behind camera
     box(7, 1.2, 4, [3, -2, -15], [0, 0, 0]); // back kicker
+    box(14, 1.6, 5, [-2, -6.6, 6], [-Math.PI / 2, 0, 0.5]); // floor strip, so undersides get a highlight too
+    box(1.2, 10, 4, [9, -6.6, -4], [-Math.PI / 2, 0, -0.3]);
     this.envFloor = new MeshBasicMaterial({ color: this.envColor.clone(), side: DoubleSide });
     const floor = new Mesh(new PlaneGeometry(80, 80), this.envFloor);
     floor.rotation.x = -Math.PI / 2;
@@ -309,13 +336,9 @@ export class Engine {
     this.pmrem = new PMREMGenerator(this.renderer);
 
     // The band.
-    const curve = buildCurve();
-    const { geometry, perimeter, length } = buildBand(curve, lowPower ? 520 : 900, lowPower ? 4 : 6);
-    const maxTex = this.renderer.capabilities.maxTextureSize;
-    const tw = lowPower || maxTex < 8192 ? 4096 : 8192;
-    const th = tw / 8;
-    const { color, rough } = buildEngraving(tw, th, opts.fonts);
-    const unitsPerRepeat = (tw / th) * perimeter;
+    const { geometry, perimeter, length } = built;
+    const { color, rough } = art;
+    const unitsPerRepeat = (color.width / color.height) * perimeter;
     const repeat = Math.max(1, Math.round(length / unitsPerRepeat));
     const mk = (src: HTMLCanvasElement, srgb: boolean) => {
       const t = new CanvasTexture(src);
@@ -412,7 +435,7 @@ export class Engine {
     if (d < 0.012 && this.envTarget) return;
     this.envStamp = now;
     this.envApplied.copy(this.envColor);
-    this.envFloor.color.copy(this.envColor).multiplyScalar(0.62);
+    this.envFloor.color.copy(this.envColor).multiplyScalar(0.3);
     const next = this.pmrem.fromScene(this.envScene, 0.035, 0.1, 100);
     this.scene.environment = next.texture;
     this.envTarget?.dispose();
@@ -425,6 +448,8 @@ export class Engine {
       if (dbg) return { ...CHAPTERS.hero[0], ...dbg };
     }
     const list = CHAPTERS[story.chapter] ?? CHAPTERS.hero;
+    // Reduced motion: one resting pose per chapter, no travel between them.
+    if (story.reduced) return list[story.chapter === 'hero' || story.chapter === 'head' ? 0 : Math.min(1, list.length - 1)];
     const f = clamp(story.local) * (list.length - 1);
     const i = Math.min(list.length - 2, Math.floor(f));
     if (list.length === 1) return list[0];
@@ -432,6 +457,7 @@ export class Engine {
   }
 
   render(now: number, still = false) {
+    if (this.failed) return;
     const dt = Math.min(0.05, (now - this.last) / 1000 || 0.016);
     this.last = now;
     this.target = this.poseAt();

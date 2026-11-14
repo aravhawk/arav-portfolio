@@ -31,6 +31,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${onest.variable} ${jetbrains.variable}`} data-ink="dark">
+      <head>
+        {/* Before first paint: tell the stylesheet whether the choreographed layout may apply. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.dataset.motion=matchMedia('(prefers-reduced-motion: reduce)').matches?'reduced':'full'",
+          }}
+        />
+      </head>
       <body>
         <Shell>{children}</Shell>
         <Analytics />

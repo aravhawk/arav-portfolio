@@ -35,7 +35,7 @@ export default function Hero() {
       </div>
       <div className="pin front">
         <div className="hero-hud" ref={hud}>
-          <p className="hero-role">Co-founder of Infiniflop Labs. I build AI agents and dev tools.</p>
+          <p className="hero-role">Co-founder of Infiniflop Labs, est. 2026. I build AI agents and dev tools.</p>
           <div className="hero-meta mono">
             <span>Now: building Infiniview</span>
             <span>Scroll to ride the loop</span>
