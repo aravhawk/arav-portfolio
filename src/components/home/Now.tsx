@@ -21,9 +21,11 @@ export default function Now() {
     // The copy leaves before the next chapter's first rule arrives, so the two never share the screen.
     if (root.current && grid.current && !story.reduced) {
       const r = root.current.getBoundingClientRect();
-      const out = smooth(span(-r.top / Math.max(1, r.height - story.vh), 0.8, 0.96));
-      grid.current.style.opacity = (1 - out).toFixed(3);
-      grid.current.style.transform = `translate3d(0, ${(-out * 40).toFixed(1)}px, 0)`;
+      // in only once the chapter is pinned and the camera has settled on the rings
+      const enter = smooth(span(r.top, story.vh * 0.22, 0));
+      const out = smooth(span(-r.top / Math.max(1, r.height - story.vh), 0.78, 0.94));
+      grid.current.style.opacity = (enter * (1 - out)).toFixed(3);
+      grid.current.style.transform = `translate3d(0, ${((1 - enter) * 32 - out * 40).toFixed(1)}px, 0)`;
     }
     const show = story.chapter === 'now';
     for (let i = 0; i < el.children.length; i++) {

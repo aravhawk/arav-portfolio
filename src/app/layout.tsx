@@ -41,8 +41,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Shell>{children}</Shell>
-        <Analytics />
-        <SpeedInsights />
+        {/* Vercel's scripts only exist on Vercel; elsewhere they would 404. */}
+        {process.env.VERCEL ? <Analytics /> : null}
+        {process.env.VERCEL ? <SpeedInsights /> : null}
       </body>
     </html>
   );

@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { useFrame } from '@/lib/useFrame';
-import { clamp, span, story } from '@/lib/story';
+import { clamp, smooth, span, story } from '@/lib/story';
 import { interests, statement } from '@/lib/content';
 
 const words = statement.split(' ');
@@ -10,6 +10,7 @@ const words = statement.split(' ');
 export default function Statement() {
   const root = useRef<HTMLElement>(null);
   const lit = useRef(-1);
+  const pin = useRef<HTMLDivElement>(null);
 
   // The paragraph is held in place while its words light up in reading order.
   useFrame(() => {
@@ -19,6 +20,8 @@ export default function Statement() {
     const p = clamp(-r.top / Math.max(1, r.height - story.vh));
     // far below the fold the paragraph stays fully lit; it only dims once it is about to arrive
     const n = r.top > story.vh * 1.15 ? words.length : Math.round(span(p, 0.06, 0.7) * words.length);
+    // the paragraph is gone before the camera leaves for the next chapter
+    if (pin.current) pin.current.style.opacity = (1 - smooth(span(p, 0.86, 0.98))).toFixed(3);
     if (n === lit.current) return;
     lit.current = n;
     el.querySelectorAll<HTMLSpanElement>('[data-w]').forEach((s, i) => {
@@ -29,7 +32,7 @@ export default function Statement() {
 
   return (
     <section ref={root} className="statement g-yellow" data-chapter="statement" data-ground="#ffd60a" aria-label="About">
-      <div className="pin front statement-pin">
+      <div className="pin front statement-pin" ref={pin}>
         <p className="sr-only">{statement}</p>
         <p className="statement-text" aria-hidden="true">
           {words.map((w, i) => (

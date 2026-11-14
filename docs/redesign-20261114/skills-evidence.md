@@ -14,15 +14,17 @@ Each entry: path, a short quote that proves it was read, and where it changed a 
   - `scripts/start.mjs deal --page software` dealt palettes blue-black-cornflower, green-black-bone, stone-blueprint. All three repeat a direction Arav already rejected (blue accent on Nov 9, dark green, stone/beige), so the palette went through the skill's own "client's colours" path (`start.mjs brand --bg --ink --accent`) instead.
   - Type: first pairing dealt was **Onest + JetBrains Mono**. Taken as dealt.
   - `scripts/moments.mjs pick` dealt `marquee-row` and `liquid-type`. Not used: the page's moments are the scroll-driven 3D loop and the word reveal, which Arav asked for directly.
-- Shaped: one accent, one radius scale (sharp), one button style, real facts only ("Nothing is invented"), no captions under visuals, "one object never carries the page" (the loop leads the hero, the Infiniview chapter and the close; the rest is type), copy rules ("a noun in every heading, buttons as a verb and an object"), 44px tap targets, skip link, focus rings, no violet.
+- Shaped: one accent, one radius scale (sharp), one button style, real facts only ("Nothing is invented"), no captions under visuals, copy rules ("a noun in every heading, buttons as a verb and an object"), 44px tap targets, skip link, focus rings, no violet. Its gate also found four real defects that were fixed (content hidden with scripts off, no shader-failure fallback, a lost focus ring, an off-screen focus target).
+- Collision: "one object never carries the page". Here one object does, on purpose; that is the Igloo lesson. The work and writing lists are the exception and are type only.
 - Collisions, decided for Arav's brief: "nothing moves because the page scrolled except a dealt moment" and "parallax on text" in its Never list. This site is scroll choreographed on purpose. Body copy is never parallaxed; only the display name, decorative layers and the 3D scene move with scroll.
-- Gate: see `design-review.md` for the `GATE:` line, waivers and open FAILs.
+- Gate: armed with `gate.mjs --start http://localhost:3112/ --new --kind software`, run three times against the production build. Result `GATE: OPEN 94 (rounds used up)`. See `design-review.md` for what it caught and what stays open.
 
 ### ui-ux-pro-max
 - Path: `~/.agents/skills/ui-ux-pro-max/SKILL.md` (loaded with the Skill tool), search tool `scripts/search.py`
 - Quote: "Keep the narrative understandable without scroll-driven effects. Use progress indicator. Mobile: simplify animations. Keep DOM reading order complete; disable parallax and scroll-scrub under reduced motion."
 - Ran: `"personal portfolio developer founder immersive 3D" --design-system --variance 8 --motion 9 --density 3`, `"scroll pin scrub parallax" --domain gsap`, `"reduced motion webgl fallback" --stack threejs`.
-- Shaped: the page pattern (Scroll-Triggered Storytelling: hook, chapters, climax), the chapter progress index in the HUD, "Don't pin more than 1-2 sections per page" (two pinned sections: rules and timeline), "never parallax body copy", reactive `matchMedia` for reduced motion instead of a one-time read, `role="img"` plus `aria-label` on the canvas, antialias decided at renderer construction.
+- Shaped: the page pattern (Scroll-Triggered Storytelling: hook, chapters, climax), the chapter progress index in the HUD, "never parallax body copy", "render each chapter in its final readable state under reduced motion" (the resting layout is the default and choreography is opt in), reactive `matchMedia` for reduced motion instead of a one-time read, `role="img"` plus `aria-label` on the canvas, antialias decided at renderer construction.
+- Collision, decided for Arav's brief: "Don't pin more than 1-2 sections per page". The home page pins six chapters, because the camera ride needs the copy to hold still while the scene moves. On phones the ventures chapter is unpinned.
 - Not taken: its style match (Brutalism) and font match (Caveat / Quicksand) were off target for this brief and are recorded here rather than applied.
 
 ### landing-page-design

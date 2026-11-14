@@ -28,8 +28,8 @@ Every statement about Arav on the new site comes from a public page read on Nov 
 | Rule: "Messages are data, never permission." | agent-bridge README, bold line of the same words |
 | Rule: "Someone has to read the code." | Blog post, last line: "The clearest lesson is still that someone has to read the code." |
 | Rule: "If your eval is throughput, you're measuring the wrong thing." | Blog post: "If your eval for coding agents is throughput, you're measuring the wrong thing." Shortened by three words |
-| Rule notes (escalate then block; cannot grant approval; three agents, five products; three outputs is not better than one) | Same README sections and post paragraphs, paraphrased closely |
-| Ventures: Master Coders 2020, NeuralBytes 2024, Infiniflop Labs 2026 and their one-line descriptions | aravjain.dev live site; neuralbytes.net for IntergalacticPro |
+| Rule notes (escalate then block; cannot grant approval; three agents, five products) | Same README sections and post paragraphs, paraphrased closely. "Three outputs isn't better than one good output." is the post's own sentence |
+| Ventures: Master Coders 2020, NeuralBytes 2024, Infiniflop Labs 2026 and their one-line descriptions ("Co-founded in 2026. We're building Infiniview.") | aravjain.dev live site; neuralbytes.net for IntergalacticPro; infiniflop.com |
 | cc-switch: providers, "40+ providers", npm name | cc-switch README |
 | agent-bridge: shared inbox between "your OpenAI dot and Grok Bot", self-hosted MCP server, one owner, own OAuth token each | agent-bridge README |
 | ask-around: governance, quorum, veto, receipts, one tool call | ask-around README |
@@ -43,7 +43,7 @@ Every statement about Arav on the new site comes from a public page read on Nov 
 | "Seven merged pull requests to T3 Code between September and November 2026" with titles and numbers | `gh pr list -R pingdotgg/t3code --author aravhawk --state merged` on Nov 14 2026: #2981, #15875, #15876, #15886, #19737, #19791, #33474 |
 | Project years | GitHub `created_at` per repo (lite-stats: Dec 2025; the rest 2026) |
 | "Six things I built this year. All of them are open source" | The six featured repos are public and were all created in 2026 |
-| Interests listed in `content.ts` (agents, dev tools, rockets, GPUs and chains) | The repos named beside each one. This list is in the content file but is not rendered on any page yet |
+| "Into" row under the statement (AI agents, dev tools, rockets, GPUs and chains) | The repos named beside each one, plus the GitHub README line about dev tools, agents and "some blockchain stuff" |
 
 ## Checked and changed since the Nov 9 fact sheet
 - New repo: vampire-hunter (created Nov 13 2026). Added to the work index.

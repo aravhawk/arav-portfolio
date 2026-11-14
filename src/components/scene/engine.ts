@@ -26,7 +26,7 @@ import {
   WebGLRenderer,
   WebGLRenderTarget,
 } from 'three';
-import { CHAPTERS, type Pose } from './poses';
+import { CHAPTERS, CHAPTERS_TALL, type Pose } from './poses';
 import { story } from '@/lib/story';
 
 /**
@@ -173,8 +173,8 @@ function buildEngraving(width: number, height: number, fonts: { display: string;
   // Face rows. v: top face 0..0.4336, bottom face 0.5..0.9336 (see profile()).
   const faceH = height * 0.4336;
   const rows = [
-    { y0: 0, flip: false },
-    // No flip: the profile already runs the bottom face right to left, so seen from below it reads true.
+    { y0: 0, flip: true },
+    // The profile already runs the bottom face right to left, so seen from below it reads true as drawn.
     { y0: height * 0.5, flip: false },
   ];
   const ink = '#111214';
@@ -188,8 +188,9 @@ function buildEngraving(width: number, height: number, fonts: { display: string;
       ctx.save();
       ctx.translate(0, row.y0);
       if (row.flip) {
-        ctx.translate(0, faceH);
-        ctx.scale(1, -1);
+        // Turn this face half a turn, so its words read upright where the band arches over the page.
+        ctx.translate(width, faceH);
+        ctx.rotate(Math.PI);
       }
       ctx.fillStyle = isRough ? 'rgb(215,215,215)' : ink;
       ctx.strokeStyle = ctx.fillStyle;
@@ -450,12 +451,15 @@ export class Engine {
       const dbg = (window as unknown as { __pose?: Partial<Pose> }).__pose;
       if (dbg) return { ...CHAPTERS.hero[0], ...dbg };
     }
-    const list = CHAPTERS[story.chapter] ?? CHAPTERS.hero;
+    const tall = this.camera.aspect < 0.8;
+    const list = (tall && CHAPTERS_TALL[story.chapter]) || CHAPTERS[story.chapter] || CHAPTERS.hero;
     // Reduced motion: one resting pose per chapter, no travel between them.
     if (story.reduced) {
       const rest = list[story.chapter === 'hero' || story.chapter.startsWith('head') ? 0 : Math.min(1, list.length - 1)];
-      // long static lists scroll over the canvas under reduced motion, so the band steps out for them
-      return story.chapter === 'rules' || story.chapter === 'timeline' ? { ...rest, near: 0, far: 0.02 } : rest;
+      // Under reduced motion the chapters are plain scrolling blocks, so the band only stands in the
+      // hero, the close and the page heads, where nothing scrolls across it.
+      const still = story.chapter === 'hero' || story.chapter === 'contact' || story.chapter.startsWith('head');
+      return still ? rest : { ...rest, near: 0, far: 0.02, gates: 0 };
     }
     const f = clamp(story.local) * (list.length - 1);
     const i = Math.min(list.length - 2, Math.floor(f));
@@ -470,6 +474,7 @@ export class Engine {
     this.target = this.poseAt();
     // Phones show the ventures as a plain column with nowhere for the band to stand clear, so it steps out.
     if (this.camera.aspect < 0.8 && story.chapter === 'timeline') this.target = { ...this.target, near: 0, far: 0.02 };
+
     if (!this.cur) this.cur = clonePose(this.target);
     // Critically damped follow: always from the presentation value, so scroll and pointer can interrupt.
     const k = still ? 1 : 1 - Math.exp(-dt * 5.2);

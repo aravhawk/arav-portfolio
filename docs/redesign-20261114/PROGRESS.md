@@ -34,3 +34,19 @@
 - taste-skill gate: three rounds, ended `GATE: OPEN 94 (rounds used up)`. Logs in `~/.t3/portfolio-redesign-20261114/gate/`.
 - Blog editor check: `pnpm install --frozen-lockfile` then `pnpm dev` in `blog-editor/` (port 3001). List, edit view and preview all loaded the existing post. No non-GET requests. `git diff 9a487fb -- content/posts` is empty. Editor stopped afterwards.
 - Independent critique (fresh subagent, no access to my reasoning): scored it about 6/10 and listed 17 problems. Round 4 below works through them.
+- Round 4 (commit 2c1bd36): hard-edged grounds, text-safe zones, true-reading engraving, three labelled rings, snapping ventures run, pinned statement with the "into" row, contents rail on posts.
+- Critic second pass: colour 6 to 8, mobile 4.5 to 5.5, overall still "a flaw within ten seconds" (band on the Infiniview copy). Round 5 fixes that and five more of its points.
+- Round 5: Infiniview copy enters after the camera settles, arch face reads upright, hero band moved to the empty lower left, tall-screen hero pose, per-page head poses, list sheets occlude the band, reduced motion shows the band only where it stands clear, Vercel scripts load only on Vercel.
+- Final checks on the production build: lint, typecheck and build clean; Lighthouse 100/100/100/100 (home mobile, home desktop, post mobile); first-load JS 183.5 kB gzip on `/`; no overflow at 390/768/1024/1440; no em or en dashes outside the post body.
+- Screenshots: `~/.t3/portfolio-redesign-20261114/screenshots/`. Videos: `home-scroll-1440.webm`, `home-scroll-390.webm` in the same parent folder.
+
+## Checklist (final)
+- [x] Step 0 preflight
+- [x] Step 1 design skills loaded, evidence written
+- [x] Step 2 reference research (browser), reference-log.md
+- [x] Step 3 content gathered, content-sources.md
+- [x] Step 4 build
+- [x] Quality: lint, typecheck, build, a11y, reduced motion, overflow, Lighthouse, bundle
+- [x] Self-review rounds, independent critique (two passes), design-review.md
+- [x] Blog/editor verification, posts diff empty
+- [x] Server on :3112, screenshots and videos saved

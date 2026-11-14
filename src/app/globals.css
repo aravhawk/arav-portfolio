@@ -634,7 +634,7 @@ html[data-loaded='true'] .hero-hud {
    Home: now (Infiniview)
    ------------------------------------------------------------------ */
 .now {
-  height: 240svh;
+  height: 210svh;
 }
 .now-pin {
   display: flex;
@@ -720,7 +720,7 @@ html[data-loaded='true'] .hero-hud {
    ------------------------------------------------------------------ */
 .rules {
   /* the first rule slides in under the Infiniview copy as that fades */
-  margin-top: -40svh;
+  margin-top: -50svh;
 }
 .rules-head {
   position: absolute;
@@ -1671,6 +1671,7 @@ html:not([data-motion='full']) {
     position: static;
     height: auto;
     padding-block: 96px;
+    opacity: 1 !important;
   }
   .now-grid {
     opacity: 1 !important;
