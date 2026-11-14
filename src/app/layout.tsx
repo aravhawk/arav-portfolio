@@ -1,66 +1,49 @@
-import type { Metadata } from 'next';
-import { Instrument_Serif, Space_Grotesk, DM_Mono } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Onest, JetBrains_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import Shell from '@/components/shell/Shell';
 import './globals.css';
 
-const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
-  weight: '400',
-  variable: '--font-instrument-serif',
-  display: 'swap',
-});
+const onest = Onest({ subsets: ['latin'], variable: '--font-onest', display: 'swap' });
+const jetbrains = JetBrains_Mono({ subsets: ['latin'], weight: ['500'], variable: '--font-jetbrains', display: 'swap' });
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-space-grotesk',
-  display: 'swap',
-});
-
-const dmMono = DM_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-dm-mono',
-  display: 'swap',
-});
+const title = 'Arav Jain. Co-founder, Infiniflop Labs';
+const description = 'I build AI agents and dev tools. Co-founder of Infiniflop Labs, building Infiniview: agents that review, probe, and stress-test your code.';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://aravjain.dev'),
-  title: 'Arav Jain - Co-Founder, Infiniflop Labs',
-  description: 'Co-Founder of Infiniflop Labs. Building AI agents that find issues in your apps before users do.',
-  keywords: ['Infiniflop Labs', 'AI Agents', 'Arav Jain', 'Founder', 'Engineer'],
+  title,
+  description,
   authors: [{ name: 'Arav Jain' }],
-  openGraph: {
-    title: 'Arav Jain - Co-Founder, Infiniflop Labs',
-    description: 'Co-Founder of Infiniflop Labs. Building AI agents that find issues in your apps before users do.',
-    type: 'website',
-    url: 'https://aravjain.dev',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Arav Jain - Co-Founder, Infiniflop Labs',
-    description: 'Co-Founder of Infiniflop Labs. Building AI agents that find issues in your apps before users do.',
-    creator: '@aravhawk',
-  },
-  alternates: {
-    canonical: '/',
-    types: {
-      'application/rss+xml': '/feed.xml',
-    },
-  },
+  openGraph: { title, description, type: 'website', url: 'https://aravjain.dev' },
+  twitter: { card: 'summary_large_image', title, description, creator: '@aravhawk' },
+  alternates: { canonical: '/', types: { 'application/rss+xml': '/feed.xml' } },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const viewport: Viewport = {
+  themeColor: '#ffd60a',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${instrumentSerif.variable} ${spaceGrotesk.variable} ${dmMono.variable}`} >
-      <body className="bg-[#050505] text-[#FAFAFA] antialiased font-sans">
-        {children}
-        <Analytics />
-        <SpeedInsights />
+    <html lang="en" suppressHydrationWarning className={`${onest.variable} ${jetbrains.variable}`} data-ink="dark">
+      <head>
+        {/* Before first paint: tell the stylesheet whether the choreographed layout may apply. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.dataset.motion=matchMedia('(prefers-reduced-motion: reduce)').matches?'reduced':'full'",
+          }}
+        />
+      </head>
+      <body>
+        <Shell>{children}</Shell>
+        {/* Vercel's scripts only exist on Vercel; elsewhere they would 404. */}
+        {process.env.VERCEL ? <Analytics /> : null}
+        {process.env.VERCEL ? <SpeedInsights /> : null}
       </body>
     </html>
   );

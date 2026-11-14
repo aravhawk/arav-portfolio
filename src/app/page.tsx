@@ -1,23 +1,27 @@
-import Navigation from '@/components/layout/Navigation';
-import Hero from '@/components/sections/Hero';
-import Ventures from '@/components/sections/Ventures';
-import About from '@/components/sections/About';
-import Contact from '@/components/sections/Contact';
-import Footer from '@/components/layout/Footer';
+import { getAllPosts } from '@/lib/blog';
+import Hero from '@/components/home/Hero';
+import Statement from '@/components/home/Statement';
+import Now from '@/components/home/Now';
+import Rules from '@/components/home/Rules';
+import Timeline from '@/components/home/Timeline';
+import Work from '@/components/home/Work';
+import Writing from '@/components/home/Writing';
+import Contact from '@/components/home/Contact';
+import Hud from '@/components/home/Hud';
 
 export default function Home() {
+  const posts = getAllPosts().map(({ content: _content, ...rest }) => rest);
   return (
-    <main className="min-h-screen bg-[#050505]">
-      {/* Noise overlay */}
-      <div className="noise-overlay" />
-
-      {/* Content */}
-      <Navigation />
+    <main>
       <Hero />
-      <Ventures />
-      <About />
+      <Statement />
+      <Now />
+      <Rules />
+      <Timeline />
+      <Work />
+      <Writing posts={posts} />
       <Contact />
-      <Footer />
+      <Hud />
     </main>
   );
 }

@@ -1,19 +1,16 @@
 import type { Metadata } from 'next';
 import { getAllPosts, getTagsFromPosts } from '@/lib/blog';
 import BlogIndex from '@/components/blog/BlogIndex';
-import Navigation from '@/components/layout/Navigation';
-import Footer from '@/components/layout/Footer';
+import PageHead from '@/components/shell/PageHead';
+import Footer from '@/components/shell/Footer';
+
+const description = 'Notes on AI agents, evaluation and the tools around them, by Arav Jain.';
 
 export const metadata: Metadata = {
-  title: 'Blog - Arav Jain',
-  description:
-    'Thoughts on AI agents, security, engineering, and building startups.',
-  openGraph: {
-    title: 'Blog - Arav Jain',
-    description:
-      'Thoughts on AI agents, security, engineering, and building startups.',
-    type: 'website',
-  },
+  title: 'Writing. Arav Jain',
+  description,
+  alternates: { canonical: '/blog' },
+  openGraph: { title: 'Writing. Arav Jain', description, type: 'website', url: 'https://aravjain.dev/blog' },
 };
 
 export default function BlogPage() {
@@ -21,10 +18,11 @@ export default function BlogPage() {
   const tags = getTagsFromPosts(posts);
 
   return (
-    <main className="min-h-screen bg-[#050505]">
-      <div className="noise-overlay" />
-      <Navigation />
-      <BlogIndex posts={posts} tags={tags} />
+    <main>
+      <PageHead pose="blog" title="Writing" lead="Experiments with coding agents, written up with the numbers." meta={`${posts.length} ${posts.length === 1 ? 'post' : 'posts'} / RSS at /feed.xml`} />
+      <div className="sheet" data-chapter="sheet" data-ground="#f2f2f2" data-sheet>
+        <BlogIndex posts={posts} tags={tags} />
+      </div>
       <Footer />
     </main>
   );

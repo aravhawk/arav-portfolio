@@ -1,98 +1,76 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
-import Section from '@/components/layout/Section';
-import GridBackground from '@/components/ui/GridBackground';
-import BlogPostCard from './BlogPostCard';
-import BlogSearch from './BlogSearch';
-import BlogTagFilter from './BlogTagFilter';
-import {
-  staggerContainer,
-  fadeInUp,
-  viewportSettings,
-} from '@/lib/animations';
+import { useMemo, useState } from 'react';
+import { PostBig } from '@/components/home/Writing';
 import type { BlogPost } from '@/types';
 
-type BlogPostMeta = Omit<BlogPost, 'content'>;
+type Meta = Omit<BlogPost, 'content'>;
 
-interface BlogIndexProps {
-  posts: BlogPostMeta[];
-  tags: string[];
-}
+export default function BlogIndex({ posts, tags }: { posts: Meta[]; tags: string[] }) {
+  const [query, setQuery] = useState('');
+  const [tag, setTag] = useState<string | null>(null);
 
-export default function BlogIndex({ posts, tags }: BlogIndexProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-
-  const filteredPosts = useMemo(() => {
+  const shown = useMemo(() => {
     let result = posts;
-
-    if (activeTag) {
-      result = result.filter((p) => p.frontmatter.tags.includes(activeTag));
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (tag) result = result.filter((p) => p.frontmatter.tags.includes(tag));
+    const q = query.trim().toLowerCase();
+    if (q) {
       result = result.filter(
         (p) =>
           p.frontmatter.title.toLowerCase().includes(q) ||
           p.frontmatter.description.toLowerCase().includes(q) ||
-          p.frontmatter.tags.some((t) => t.toLowerCase().includes(q))
+          p.frontmatter.tags.some((t) => t.toLowerCase().includes(q)),
       );
     }
-
     return result;
-  }, [posts, searchQuery, activeTag]);
+  }, [posts, query, tag]);
 
   return (
-    <div className="relative pt-32">
-      <GridBackground variant="circuit" fade="both" intensity="dim" />
-
-      <Section
-        label="Blog"
-        title="Thoughts & Writing"
-        subtitle="On AI agents, security, engineering, and building startups."
-      >
-        {/* Search + Filter */}
-        <div className="mb-12 space-y-6">
-          <BlogSearch value={searchQuery} onChange={setSearchQuery} />
-          <BlogTagFilter
-            tags={tags}
-            activeTag={activeTag}
-            onTagChange={setActiveTag}
-          />
-        </div>
-
-        {/* Post grid */}
-        <motion.div
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
-          viewport={viewportSettings}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
-        >
-          {filteredPosts.map((post) => (
-            <motion.div key={post.slug} variants={fadeInUp}>
-              <BlogPostCard post={post} />
-            </motion.div>
+    <section className="block wrap block-tight" aria-labelledby="posts-title">
+      <div className="index-bar">
+        <h2 id="posts-title" className="label mono">
+          Posts
+        </h2>
+        <p className="mono" aria-live="polite">
+          {shown.length} of {posts.length} shown
+        </p>
+      </div>
+      <div style={{ display: 'grid', gap: 16, marginBottom: 48 }}>
+        <label className="sr-only" htmlFor="post-search">
+          Search posts
+        </label>
+        <input id="post-search" className="field" type="search" placeholder="Search posts" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <div className="chips" role="group" aria-label="Filter by tag">
+          <button type="button" className="chip mono" aria-pressed={tag === null} onClick={() => setTag(null)}>
+            All
+          </button>
+          {tags.map((t) => (
+            <button type="button" key={t} className="chip mono" aria-pressed={tag === t} onClick={() => setTag(tag === t ? null : t)}>
+              {t}
+            </button>
           ))}
-        </motion.div>
-
-        {/* Empty state */}
-        {filteredPosts.length === 0 && (
-          <motion.div
-            variants={fadeInUp}
-            initial="initial"
-            animate="animate"
-            className="text-center py-20"
-          >
-            <p className="font-mono text-sm uppercase tracking-wider text-[#555555]">
-              No posts found
-            </p>
-          </motion.div>
-        )}
-      </Section>
-    </div>
+        </div>
+      </div>
+      {shown.map((p) => (
+        <PostBig key={p.slug} post={p} />
+      ))}
+      {shown.length === 0 ? (
+        <div className="post-big">
+          <p className="post-big-desc">No posts match that search.</p>
+          <div>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setQuery('');
+                setTag(null);
+              }}
+            >
+              Clear the filters
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
