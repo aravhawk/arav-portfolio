@@ -1,0 +1,310 @@
+'use client';
+
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import type Lenis from 'lenis';
+import { clamp, luminance, mixHex, runFrame, smooth, story } from '@/lib/story';
+import type { Engine } from '@/components/scene/engine';
+import Nav from './Nav';
+import Cursor from './Cursor';
+import Loader from './Loader';
+
+type Section = { name: string; top: number; height: number; ground: string; sheet: boolean };
+
+type ShellApi = {
+  /** Navigate with the wipe. Falls back to a plain push for keyboard and reduced motion. */
+  go: (href: string, animate: boolean) => void;
+  scrollTo: (target: string | number) => void;
+};
+
+const Ctx = createContext<ShellApi>({ go: () => {}, scrollTo: () => {} });
+export const useShell = () => useContext(Ctx);
+
+const WIPE_IN = 460;
+const WIPE_OUT = 620;
+
+export default function Shell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wipeRef = useRef<HTMLDivElement>(null);
+  const wipeLabelRef = useRef<HTMLSpanElement>(null);
+  const lenisRef = useRef<Lenis | null>(null);
+  const engineRef = useRef<Engine | null>(null);
+  const sectionsRef = useRef<Section[]>([]);
+  const pendingRef = useRef<string | null>(null);
+  const measureRef = useRef<() => void>(() => {});
+  const [sceneState, setSceneState] = useState<'idle' | 'ready' | 'failed'>('idle');
+  const [fontsReady, setFontsReady] = useState(false);
+
+  // One loop for everything that moves.
+  useEffect(() => {
+    const root = document.documentElement;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    story.reduced = mq.matches;
+    let lenis: Lenis | null = null;
+    let disposed = false;
+    let raf = 0;
+    let lastGround = '';
+    let lastInk = '';
+    let lastChapter = '';
+
+    const startLenis = async () => {
+      if (story.reduced || lenis) return;
+      const { default: LenisCtor } = await import('lenis');
+      if (disposed || story.reduced) return;
+      lenis = new LenisCtor({ lerp: 0.11, wheelMultiplier: 1, anchors: false });
+      lenisRef.current = lenis;
+    };
+    const stopLenis = () => {
+      lenis?.destroy();
+      lenis = null;
+      lenisRef.current = null;
+    };
+    const onMq = () => {
+      story.reduced = mq.matches;
+      root.dataset.motion = mq.matches ? 'reduced' : 'full';
+      if (mq.matches) stopLenis();
+      else void startLenis();
+    };
+    mq.addEventListener('change', onMq);
+    root.dataset.motion = mq.matches ? 'reduced' : 'full';
+    void startLenis();
+
+    const measure = () => {
+      const y = window.scrollY;
+      story.vh = window.innerHeight;
+      story.vw = window.innerWidth;
+      sectionsRef.current = Array.from(document.querySelectorAll<HTMLElement>('[data-chapter]')).map((el) => {
+        const r = el.getBoundingClientRect();
+        return {
+          name: el.dataset.chapter!,
+          top: r.top + y,
+          height: Math.max(1, r.height),
+          ground: el.dataset.ground || '#ffd60a',
+          sheet: el.dataset.sheet !== undefined,
+        };
+      });
+      engineRef.current?.resize();
+    };
+    measureRef.current = measure;
+    const ro = new ResizeObserver(measure);
+    ro.observe(document.body);
+    window.addEventListener('resize', measure);
+    measure();
+
+    const read = () => {
+      const list = sectionsRef.current;
+      const y = window.scrollY;
+      const vh = story.vh;
+      story.scrollY = y;
+      if (!list.length) {
+        story.chapter = 'none';
+        story.local = 0;
+        return;
+      }
+      const yc = y + vh * 0.5;
+      let i = list.findIndex((s) => yc >= s.top && yc < s.top + s.height);
+      if (i < 0) i = yc < list[0].top ? 0 : list.length - 1;
+      const cur = list[i];
+      story.chapter = cur.name;
+      story.local = clamp((yc - cur.top) / cur.height);
+
+      // Ground: taken from the open (non sheet) chapters. It only changes where one open chapter
+      // hands over to the next, or behind a sheet while the canvas is covered.
+      let a = i;
+      while (a > 0 && list[a].sheet) a--;
+      let b = i;
+      while (b < list.length - 1 && list[b].sheet) b++;
+      let ground = list[a].sheet ? list[b].ground : list[a].ground;
+      if (cur.sheet) {
+        if (!list[a].sheet && !list[b].sheet) {
+          const from = list[a].top + list[a].height;
+          const to = list[b].top;
+          ground = mixHex(list[a].ground, list[b].ground, smooth(clamp((yc - from) / Math.max(1, to - from) / 0.2 - 2)));
+        }
+      } else {
+        const band = vh * 0.32;
+        const prev = list[i - 1];
+        const next = list[i + 1];
+        if (prev && !prev.sheet && yc - cur.top < band) ground = mixHex(prev.ground, cur.ground, smooth(0.5 + (yc - cur.top) / (2 * band)));
+        else if (next && !next.sheet && cur.top + cur.height - yc < band)
+          ground = mixHex(cur.ground, next.ground, smooth(0.5 - (cur.top + cur.height - yc) / (2 * band)));
+      }
+      story.ground = ground;
+      if (ground !== lastGround) {
+        lastGround = ground;
+        root.style.setProperty('--ground', ground);
+      }
+
+      // Ink for the fixed chrome follows whatever sits under the top bar.
+      const yt = y + 40;
+      const top = list.find((s) => yt >= s.top && yt < s.top + s.height) ?? cur;
+      const ink = luminance(top.sheet ? top.ground : ground) > 0.32 ? 'dark' : 'light';
+      if (ink !== lastInk) {
+        lastInk = ink;
+        root.dataset.ink = ink;
+      }
+      if (cur.name !== lastChapter) {
+        lastChapter = cur.name;
+        root.dataset.at = cur.name;
+      }
+      story.covered = list.some((s, k) => {
+        if (!s.sheet) return false;
+        let end = k;
+        while (end < list.length - 1 && list[end + 1].sheet) end++;
+        return s.top <= y && list[end].top + list[end].height >= y + vh;
+      });
+    };
+
+    const tick = (now: number) => {
+      lenis?.raf(now);
+      read();
+      runFrame(now);
+      const engine = engineRef.current;
+      if (engine && !story.covered && !document.hidden) engine.render(now, story.reduced);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    const onPointer = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      engineRef.current?.setPointer((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1);
+    };
+    window.addEventListener('pointermove', onPointer, { passive: true });
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(raf);
+      mq.removeEventListener('change', onMq);
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('pointermove', onPointer);
+      ro.disconnect();
+      stopLenis();
+    };
+  }, []);
+
+  // Fonts first (the engraving is drawn with them), then the WebGL chunk, off the critical path.
+  useEffect(() => {
+    let cancelled = false;
+    const css = getComputedStyle(document.documentElement);
+    const display = css.getPropertyValue('--font-onest').trim() || 'sans-serif';
+    const mono = css.getPropertyValue('--font-jetbrains').trim() || 'monospace';
+    const fonts = Promise.all([
+      document.fonts.load(`600 80px ${display}`, 'ARAV'),
+      document.fonts.load(`500 20px ${mono}`, 'LOOP 01'),
+    ])
+      .catch(() => null)
+      .then(() => {
+        if (!cancelled) setFontsReady(true);
+      });
+    const boot = async () => {
+      await fonts;
+      try {
+        const { Engine } = await import('@/components/scene/engine');
+        if (cancelled || !canvasRef.current) return;
+        const lowPower = window.matchMedia('(max-width: 820px), (pointer: coarse)').matches;
+        const engine = new Engine({ canvas: canvasRef.current, fonts: { display, mono }, lowPower });
+        engine.setIntro(document.documentElement.dataset.loaded ? 1 : 0);
+        engineRef.current = engine;
+        requestAnimationFrame(() => requestAnimationFrame(() => !cancelled && setSceneState('ready')));
+      } catch {
+        if (!cancelled) setSceneState('failed');
+      }
+    };
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 60));
+    idle(() => void boot());
+    return () => {
+      cancelled = true;
+      engineRef.current?.dispose();
+      engineRef.current = null;
+    };
+  }, []);
+
+  const onRevealed = useCallback(() => {
+    document.documentElement.dataset.loaded = 'true';
+    engineRef.current?.setIntro(1);
+  }, []);
+
+  // Route change: finish the wipe once the new page is in.
+  useEffect(() => {
+    lenisRef.current?.scrollTo(0, { immediate: true, force: true });
+    window.scrollTo(0, 0);
+    measureRef.current();
+    const hash = window.location.hash;
+    if (hash) requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView());
+    const wipe = wipeRef.current;
+    if (!wipe || pendingRef.current === null) return;
+    pendingRef.current = null;
+    const out = wipe.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-101%)' }], {
+      duration: WIPE_OUT,
+      easing: 'cubic-bezier(0.77, 0, 0.175, 1)',
+      fill: 'forwards',
+      delay: 80,
+    });
+    out.onfinish = () => {
+      wipe.getAnimations().forEach((a) => a.cancel());
+      wipe.dataset.on = 'false';
+    };
+  }, [pathname]);
+
+  const go = useCallback(
+    (href: string, animate: boolean) => {
+      const url = new URL(href, window.location.href);
+      const samePage = url.pathname === window.location.pathname;
+      if (samePage) {
+        if (url.hash) {
+          const el = document.querySelector(url.hash);
+          if (el) {
+            if (lenisRef.current) lenisRef.current.scrollTo(el as HTMLElement, { duration: 1.4 });
+            else el.scrollIntoView();
+            history.replaceState(null, '', url.hash);
+          }
+        } else if (lenisRef.current) lenisRef.current.scrollTo(0, { duration: 1.2 });
+        else window.scrollTo(0, 0);
+        return;
+      }
+      const wipe = wipeRef.current;
+      if (!animate || story.reduced || !wipe || pendingRef.current !== null) {
+        router.push(href);
+        return;
+      }
+      pendingRef.current = href;
+      if (wipeLabelRef.current) wipeLabelRef.current.textContent = url.pathname;
+      wipe.dataset.on = 'true';
+      const cover = wipe.animate([{ transform: 'translateY(101%)' }, { transform: 'translateY(0)' }], {
+        duration: WIPE_IN,
+        easing: 'cubic-bezier(0.77, 0, 0.175, 1)',
+        fill: 'forwards',
+      });
+      cover.onfinish = () => router.push(href);
+    },
+    [router],
+  );
+
+  const scrollTo = useCallback((target: string | number) => {
+    const el = typeof target === 'string' ? (document.querySelector(target) as HTMLElement | null) : target;
+    if (el === null) return;
+    if (lenisRef.current) lenisRef.current.scrollTo(el, { duration: 1.4 });
+    else if (typeof el === 'number') window.scrollTo(0, el);
+    else el.scrollIntoView();
+  }, []);
+
+  return (
+    <Ctx.Provider value={{ go, scrollTo }}>
+      <a className="skip" href="#main">
+        Skip to content
+      </a>
+      <canvas ref={canvasRef} className="scene" data-state={sceneState} />
+      <Nav />
+      <div id="main" className="page">
+        {children}
+      </div>
+      <Cursor />
+      <div ref={wipeRef} className="wipe" data-on="false" aria-hidden="true">
+        <span ref={wipeLabelRef} className="mono" />
+      </div>
+      <Loader ready={fontsReady && sceneState !== 'idle'} onRevealed={onRevealed} />
+    </Ctx.Provider>
+  );
+}
