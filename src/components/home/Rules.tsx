@@ -53,11 +53,11 @@ export default function Rules() {
   return (
     <section
       ref={root}
-      className="rules"
+      className="rules g-black"
       data-chapter="rules"
       data-ground="#0a0a0a"
       aria-labelledby="rules-title"
-      style={{ height: `${(rules.length + 1) * 90}svh` }}
+      style={{ height: `${rules.length * 100 + 60}svh` }}
     >
       <div className="pin front rules-pin">
         <div className="rules-head mono">

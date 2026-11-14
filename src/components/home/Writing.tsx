@@ -25,23 +25,27 @@ export function PostBig({ post }: { post: Meta }) {
 
 export default function Writing({ posts }: { posts: Meta[] }) {
   return (
-    <section className="block wrap front" data-chapter="writing" data-ground="#f2f2f2" aria-labelledby="writing-title" style={{ paddingTop: 0 }}>
-      <div className="block-head">
-        <h2 id="writing-title" className="block-title">
-          Writing
-        </h2>
-        <p className="block-lead">Notes from running agents until they break, and what the wreckage says.</p>
-      </div>
-      {posts.slice(0, 3).map((p) => (
-        <PostBig key={p.slug} post={p} />
-      ))}
-      <div className="block-foot">
-        <a className="mono link tap" href="/feed.xml">
-          RSS feed
-        </a>
-        <TLink className="btn" href="/blog">
-          Read the blog <Arrow />
-        </TLink>
+    <section className="block g-paper" data-chapter="writing" data-ground="#f2f2f2" aria-labelledby="writing-title" style={{ paddingTop: 0 }}>
+      <div className="wrap">
+        <div className="block-head">
+          <h2 id="writing-title" className="block-title behind">
+            Writing
+          </h2>
+        </div>
+        <div className="block-sheet">
+          <p className="block-lead">Notes from running agents until they break, and what the wreckage says.</p>
+          {posts.slice(0, 3).map((p) => (
+            <PostBig key={p.slug} post={p} />
+          ))}
+          <div className="block-foot">
+            <a className="mono link tap" href="/feed.xml">
+              RSS feed
+            </a>
+            <TLink className="btn" href="/blog">
+              Read the blog <Arrow />
+            </TLink>
+          </div>
+        </div>
       </div>
     </section>
   );

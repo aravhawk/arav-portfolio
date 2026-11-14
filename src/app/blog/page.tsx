@@ -19,7 +19,7 @@ export default function BlogPage() {
 
   return (
     <main>
-      <PageHead title="Writing" lead="Notes from running agents until they break, and what the wreckage says." meta={`${posts.length} ${posts.length === 1 ? 'post' : 'posts'} / RSS at /feed.xml`} />
+      <PageHead pose="blog" title="Writing" lead="Experiments with coding agents, written up with the numbers." meta={`${posts.length} ${posts.length === 1 ? 'post' : 'posts'} / RSS at /feed.xml`} />
       <div className="sheet" data-chapter="sheet" data-ground="#f2f2f2" data-sheet>
         <BlogIndex posts={posts} tags={tags} />
       </div>

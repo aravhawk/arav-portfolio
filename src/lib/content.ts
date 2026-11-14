@@ -55,7 +55,7 @@ export const rules: Rule[] = [
     text: "If your eval is throughput, you're measuring the wrong thing.",
     from: 'Blog, April 2026',
     href: '/blog/three-ai-agents-five-saas-products',
-    note: 'Three outputs is not better than one good output.',
+    note: "Three outputs isn't better than one good output.",
   },
 ];
 
@@ -80,7 +80,7 @@ export const ventures: Venture[] = [
     year: '2026',
     name: 'Infiniflop Labs',
     state: 'Building',
-    line: "We're building Infiniview: agents that review, probe, and stress-test your code in cloud sandboxes.",
+    line: "Co-founded in 2026. We're building Infiniview.",
     href: 'https://infiniflop.com',
     hrefLabel: 'infiniflop.com',
   },

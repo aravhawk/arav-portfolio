@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type Lenis from 'lenis';
-import { clamp, luminance, mixHex, runFrame, smooth, story } from '@/lib/story';
+import { clamp, luminance, runFrame, story } from '@/lib/story';
 import type { Engine } from '@/components/scene/engine';
 import Nav from './Nav';
 import Cursor from './Cursor';
@@ -121,27 +121,11 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       story.chapter = cur.name;
       story.local = clamp((yc - cur.top) / cur.height);
 
-      // Ground: taken from the open (non sheet) chapters. It only changes where one open chapter
-      // hands over to the next, or behind a sheet while the canvas is covered.
+      // Ground: every chapter paints its own background, so the colour changes as a hard edge that
+      // scrolls with the page. This value only feeds the page backdrop and the 3D floor bounce.
       let a = i;
       while (a > 0 && list[a].sheet) a--;
-      let b = i;
-      while (b < list.length - 1 && list[b].sheet) b++;
-      let ground = list[a].sheet ? list[b].ground : list[a].ground;
-      if (cur.sheet) {
-        if (!list[a].sheet && !list[b].sheet) {
-          const from = list[a].top + list[a].height;
-          const to = list[b].top;
-          ground = mixHex(list[a].ground, list[b].ground, smooth(clamp((yc - from) / Math.max(1, to - from) / 0.2 - 2)));
-        }
-      } else {
-        const band = vh * 0.32;
-        const prev = list[i - 1];
-        const next = list[i + 1];
-        if (prev && !prev.sheet && yc - cur.top < band) ground = mixHex(prev.ground, cur.ground, smooth(0.5 + (yc - cur.top) / (2 * band)));
-        else if (next && !next.sheet && cur.top + cur.height - yc < band)
-          ground = mixHex(cur.ground, next.ground, smooth(0.5 - (cur.top + cur.height - yc) / (2 * band)));
-      }
+      const ground = list[a].sheet ? cur.ground : list[a].ground;
       story.ground = ground;
       if (ground !== lastGround) {
         lastGround = ground;
@@ -151,7 +135,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       // Ink for the fixed chrome follows whatever sits under the top bar.
       const yt = y + 40;
       const top = list.find((s) => yt >= s.top && yt < s.top + s.height) ?? cur;
-      const ink = luminance(top.sheet ? top.ground : ground) > 0.32 ? 'dark' : 'light';
+      const ink = luminance(top.ground) > 0.32 ? 'dark' : 'light';
       if (ink !== lastInk) {
         lastInk = ink;
         root.dataset.ink = ink;

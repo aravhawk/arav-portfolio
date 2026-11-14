@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { useFrame } from '@/lib/useFrame';
-import { clamp, story } from '@/lib/story';
+import { clamp, smooth, span, story } from '@/lib/story';
 import { ventures } from '@/lib/content';
 import { useShell } from '@/components/shell/Shell';
 import { Arrow } from './Arrow';
@@ -21,7 +21,8 @@ export default function Timeline() {
     scrollTo(r.top + window.scrollY + (i / Math.max(1, ventures.length - 1)) * (r.height - story.vh));
   };
 
-  // Vertical scroll becomes a sideways run along the years. The numerals sit behind the band and lag the cards.
+  // Vertical scroll becomes a sideways run along the years. The run rests with one venture squared to the
+  // left margin, moves, then rests on the next. The numerals sit behind the band and travel slower than the cards.
   useFrame(() => {
     const el = root.current;
     const tr = track.current;
@@ -29,20 +30,28 @@ export default function Timeline() {
     if (!el || !tr || !yr || story.reduced || story.vw < 900) return;
     const r = el.getBoundingClientRect();
     const p = clamp(-r.top / Math.max(1, r.height - story.vh));
-    const max = Math.max(0, tr.scrollWidth - story.vw);
-    const x = -p * max;
+    const first = tr.children[0] as HTMLElement | undefined;
+    if (!first) return;
+    const w = first.offsetWidth;
+    const f = p * (ventures.length - 1);
+    const i = Math.min(ventures.length - 2, Math.floor(f));
+    const x = -(i + smooth(span(f - i, 0.28, 0.72))) * w;
     tr.style.transform = `translate3d(${x.toFixed(1)}px, 0, 0)`;
-    yr.style.transform = `translate3d(${(x * 0.86).toFixed(1)}px, 0, 0)`;
+    yr.style.transform = `translate3d(${x.toFixed(1)}px, 0, 0)`;
+    for (let k = 0; k < yr.children.length; k++) {
+      const y = yr.children[k].firstElementChild as HTMLElement;
+      y.style.transform = `translate3d(${((x + k * w) * -0.16).toFixed(1)}px, 0, 0)`;
+    }
   });
 
   return (
     <section
       ref={root}
-      className="timeline"
+      className="timeline g-paper"
       data-chapter="timeline"
       data-ground="#f2f2f2"
       aria-labelledby="timeline-title"
-      style={{ height: `${ventures.length * 100 + 60}svh` }}
+      style={{ height: `${ventures.length * 110 + 40}svh` }}
     >
       <div className="pin behind timeline-back" aria-hidden="true">
         <div className="timeline-track" ref={years}>

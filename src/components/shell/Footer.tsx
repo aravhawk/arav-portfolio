@@ -2,9 +2,9 @@ import { person } from '@/lib/content';
 import { Arrow } from '@/components/home/Arrow';
 
 /** Closing band for inner pages. The home page ends on its own contact chapter instead. */
-export default function Footer() {
+export default function Footer({ quiet = false }: { quiet?: boolean }) {
   return (
-    <footer className="footer" data-chapter="sheet" data-ground="#0a0a0a" data-sheet>
+    <footer className="footer" data-chapter={quiet ? 'none' : 'sheet'} data-ground="#0a0a0a" data-sheet>
       <div className="wrap">
         <p className="label mono" data-live>
           Contact

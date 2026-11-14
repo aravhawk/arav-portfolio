@@ -19,3 +19,18 @@
 - git user.email aravhawk@gmail.com, commit.gpgsign true, gpg.format ssh.
 - Stale `next-server` on :3112 (PID 32763) stopped.
 - Note: `.taste-skill/` from the Nov 9 build is now untracked (the live .gitignore does not list it). Left in place, not deleted.
+
+### Steps 1 to 3 (done)
+- Skills loaded and recorded in `skills-evidence.md`. All four required skills loaded.
+- 16 reference sites captured in Chrome with GPU WebGL; decision map in `reference-log.md`.
+- Facts re-gathered from GitHub, infiniflop.com, the live site, X (logged-out view) and project READMEs; `content-sources.md`.
+
+### Step 4 build log
+- Commit 0761831: the loop scene (three.js), home chapters, /work, blog shell.
+- Commit 7d9de77: resting layout by default, poster fallback, loader count, a11y fixes.
+- Self-review round 1: hero pose hid the first letter; band underside read as flat olive; phone hero hid the name. Fixed with lens shift, a floor strip light and a portrait pose.
+- Self-review round 2: reading text was under the canvas inside sticky pins (a sticky box is its own stacking context). Split every pinned chapter into a behind layer and a front layer.
+- Self-review round 3: loader was a hairline on an empty field. Rebuilt as a count in the name's own cut that hands off to the name.
+- taste-skill gate: three rounds, ended `GATE: OPEN 94 (rounds used up)`. Logs in `~/.t3/portfolio-redesign-20261114/gate/`.
+- Blog editor check: `pnpm install --frozen-lockfile` then `pnpm dev` in `blog-editor/` (port 3001). List, edit view and preview all loaded the existing post. No non-GET requests. `git diff 9a487fb -- content/posts` is empty. Editor stopped afterwards.
+- Independent critique (fresh subagent, no access to my reasoning): scored it about 6/10 and listed 17 problems. Round 4 below works through them.

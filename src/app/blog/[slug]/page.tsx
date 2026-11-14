@@ -56,12 +56,22 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     },
   });
 
+  // Section list for the side rail. Ids match rehype-slug (github-slugger) for plain headings.
+  const toc = Array.from(post.content.matchAll(/^## (.+)$/gm)).map((m) => {
+    const text = m[1].trim();
+    const id = text
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s-]/gu, '')
+      .replace(/\s/g, '-');
+    return { text, id };
+  });
+
   const { prev, next } = getAdjacentPosts(slug);
   const date = new Date(post.frontmatter.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 
   return (
     <main>
-      <article className="sheet" data-chapter="none" data-ground="#f2f2f2">
+      <article className="sheet g-paper" data-chapter="none" data-ground="#f2f2f2">
         <header className="article-head wrap">
           <div className="post-meta mono">
             <TLink className="link tap" href="/blog">
@@ -76,14 +86,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         </header>
         <div className="wrap">
           <div className="article-layout">
-            <aside className="article-aside mono" aria-label="Post details">
-              <span>Arav Jain</span>
-              <time dateTime={post.frontmatter.date}>{date}</time>
-              <span>{post.readingTime}</span>
-              <TLink className="link tap" href="/blog" style={{ justifySelf: 'start' }}>
-                All writing
-              </TLink>
-            </aside>
+            <nav className="article-aside mono" aria-label="In this post">
+              <span className="article-aside-label">In this post</span>
+              <ol>
+                {toc.map((h) => (
+                  <li key={h.id}>
+                    <a href={`#${h.id}`}>{h.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
             <div className="article-body">
               <div className="prose">{content}</div>
             </div>
@@ -113,7 +125,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           )}
         </div>
       </article>
-      <Footer />
+      <Footer quiet />
     </main>
   );
 }

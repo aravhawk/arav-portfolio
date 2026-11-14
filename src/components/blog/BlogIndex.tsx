@@ -26,12 +26,12 @@ export default function BlogIndex({ posts, tags }: { posts: Meta[]; tags: string
   }, [posts, query, tag]);
 
   return (
-    <section className="block wrap" aria-labelledby="posts-title">
-      <div className="block-head">
-        <h2 id="posts-title" className="block-title">
+    <section className="block wrap block-tight" aria-labelledby="posts-title">
+      <div className="index-bar">
+        <h2 id="posts-title" className="label mono">
           Posts
         </h2>
-        <p className="block-lead" aria-live="polite">
+        <p className="mono" aria-live="polite">
           {shown.length} of {posts.length} shown
         </p>
       </div>

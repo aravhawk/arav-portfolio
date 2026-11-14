@@ -17,15 +17,15 @@ export const metadata: Metadata = {
 export default function WorkPage() {
   return (
     <main>
-      <PageHead title="Work" lead="Everything here is public. Read the source, run it, tell me where it breaks." meta={`${projects.length} projects / 2025 to 2026`} />
+      <PageHead pose="work" title="Work" lead="Everything here is public. Read the source, run it, tell me where it breaks." meta={`${projects.length} projects / 2025 to 2026`} />
       <div className="sheet" data-chapter="sheet" data-ground="#f2f2f2" data-sheet>
         <section className="block wrap" aria-labelledby="index-title">
           <div className="block-head">
             <h2 id="index-title" className="block-title">
               Index
             </h2>
-            <p className="block-lead">Agent tooling first, then the things I built because I wanted them to exist.</p>
           </div>
+          <p className="block-lead">Agent tooling first, then the things I built because I wanted them to exist.</p>
           <ProjectRows items={projects} detail />
         </section>
         <section className="block wrap" aria-labelledby="pr-title" style={{ paddingTop: 0 }}>
@@ -33,8 +33,8 @@ export default function WorkPage() {
             <h2 id="pr-title" className="block-title">
               Upstream
             </h2>
-            <p className="block-lead">{contributions.line}</p>
           </div>
+          <p className="block-lead">{contributions.line}</p>
           <ol className="rows">
             {contributions.items.map((c) => (
               <li className="row" key={c.n} data-cursor="Open">

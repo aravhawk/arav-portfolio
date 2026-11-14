@@ -22,7 +22,7 @@ export default function Hero() {
   });
 
   return (
-    <section className="hero" data-chapter="hero" data-ground="#ffd60a" aria-label="Introduction">
+    <section className="hero g-yellow" data-chapter="hero" data-ground="#ffd60a" aria-label="Introduction">
       <div className="pin behind">
         <h1 className="hero-name" aria-label="Arav Jain">
           <span className="hero-line" ref={a} aria-hidden="true">
@@ -38,7 +38,7 @@ export default function Hero() {
           <p className="hero-role">Co-founder of Infiniflop Labs, est. 2026. I build AI agents and dev tools.</p>
           <div className="hero-meta mono">
             <span>Now: building Infiniview</span>
-            <span>Scroll to ride the loop</span>
+            <span>Scroll</span>
           </div>
         </div>
       </div>

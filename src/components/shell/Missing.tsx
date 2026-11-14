@@ -6,7 +6,7 @@ type Props = { title: string; lead: string; href: string; action: string; onRetr
 export default function Missing({ title, lead, href, action, onRetry }: Props) {
   return (
     <main>
-      <section className="head wrap" data-chapter="head" data-ground="#ffd60a" style={{ minHeight: '100svh' }}>
+      <section className="head wrap g-yellow" data-chapter="head-lost" data-ground="#ffd60a" style={{ minHeight: '100svh' }}>
         <h1 className="head-title behind">{title}</h1>
         <div className="head-row front">
           <p className="head-lead">{lead}</p>

@@ -37,6 +37,8 @@ import { story } from '@/lib/story';
 const TAU = Math.PI * 2;
 const BAND_W = 0.92;
 const BAND_T = 0.085;
+/** Where the three probe rings sit along the loop (0..1). */
+const GATE_U = [0.07, 0.11, 0.15];
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -172,7 +174,8 @@ function buildEngraving(width: number, height: number, fonts: { display: string;
   const faceH = height * 0.4336;
   const rows = [
     { y0: 0, flip: false },
-    { y0: height * 0.5, flip: true },
+    // No flip: the profile already runs the bottom face right to left, so seen from below it reads true.
+    { y0: height * 0.5, flip: false },
   ];
   const ink = '#111214';
   const mark = (fn: (ctx: CanvasRenderingContext2D, isRough: boolean) => void) => {
@@ -213,7 +216,7 @@ function buildEngraving(width: number, height: number, fonts: { display: string;
           : ['BUILD', 'PROBE', 'BREAK', 'FIX', 'AGAIN'];
       const labels =
         ri === 0
-          ? ['LOOP 01', 'EST 2020', 'OPEN SOURCE', 'NOW 2026']
+          ? ['LOOP 01', '2020 TO NOW', 'OPEN SOURCE', 'EST 2026']
           : ['RUN 0001', 'RUN 0002', 'RUN 0003', 'RUN 0004', 'RUN 0005'];
       const slot = width / words.length;
       words.forEach((w, i) => {
@@ -264,6 +267,7 @@ export class Engine {
   private envTarget: WebGLRenderTarget | null = null;
   private envColor = new Color('#ffd60a');
   private envApplied = new Color(-1, -1, -1);
+  private envGoal = new Color('#ffd60a');
   private envStamp = 0;
   private cur: Pose | null = null;
   private target: Pose = CHAPTERS.hero[0];
@@ -383,12 +387,11 @@ export class Engine {
     this.band.frustumCulled = false;
     this.group.add(this.band);
 
-    // Probe gates: thin rings the band runs through. Only lit in the Infiniview chapter.
-    const ringGeo = new TorusGeometry(0.68, 0.009, 6, 96);
+    // Probe gates: three rings the band runs through, one per verb (review, probe, stress-test).
+    const ringGeo = new TorusGeometry(0.78, 0.011, 8, 128);
     const tan = new Vector3();
     const at = new Vector3();
-    for (let i = 0; i < 14; i++) {
-      const u = 0.012 + i * 0.0155;
+    for (const u of GATE_U) {
       const mat = new MeshBasicMaterial({ color: 0xffd60a, transparent: true, opacity: 0, depthWrite: false });
       const ring = new Mesh(ringGeo, mat);
       curve.getPointAt(u, at);
@@ -449,7 +452,11 @@ export class Engine {
     }
     const list = CHAPTERS[story.chapter] ?? CHAPTERS.hero;
     // Reduced motion: one resting pose per chapter, no travel between them.
-    if (story.reduced) return list[story.chapter === 'hero' || story.chapter === 'head' ? 0 : Math.min(1, list.length - 1)];
+    if (story.reduced) {
+      const rest = list[story.chapter === 'hero' || story.chapter.startsWith('head') ? 0 : Math.min(1, list.length - 1)];
+      // long static lists scroll over the canvas under reduced motion, so the band steps out for them
+      return story.chapter === 'rules' || story.chapter === 'timeline' ? { ...rest, near: 0, far: 0.02 } : rest;
+    }
     const f = clamp(story.local) * (list.length - 1);
     const i = Math.min(list.length - 2, Math.floor(f));
     if (list.length === 1) return list[0];
@@ -461,6 +468,8 @@ export class Engine {
     const dt = Math.min(0.05, (now - this.last) / 1000 || 0.016);
     this.last = now;
     this.target = this.poseAt();
+    // Phones show the ventures as a plain column with nowhere for the band to stand clear, so it steps out.
+    if (this.camera.aspect < 0.8 && story.chapter === 'timeline') this.target = { ...this.target, near: 0, far: 0.02 };
     if (!this.cur) this.cur = clonePose(this.target);
     // Critically damped follow: always from the presentation value, so scroll and pointer can interrupt.
     const k = still ? 1 : 1 - Math.exp(-dt * 5.2);
@@ -483,7 +492,8 @@ export class Engine {
     const par = still ? 0 : dist * 0.045;
     this.camera.position.addScaledVector(right, this.pointer.sx * par).addScaledVector(up, -this.pointer.sy * par * 0.7);
     this.look.set(p.look[0], p.look[1], p.look[2]);
-    this.camera.up.set(Math.sin(p.roll), Math.cos(p.roll), 0);
+    const roll = portrait ? p.proll : p.roll;
+    this.camera.up.set(Math.sin(roll), Math.cos(roll), 0);
     this.camera.lookAt(this.look);
     this.camera.fov = portrait ? p.fov * 1.25 : p.fov;
     const sh = portrait ? p.pshift : p.shift;
@@ -497,21 +507,25 @@ export class Engine {
     this.fogUniforms.uNear.value = p.near + back;
     this.fogUniforms.uFar.value = p.far + back;
     // one bright ring travels down the line, the rest idle dim: a probe pass
-    const head = still ? 4 : ((now / 260) % (this.gates.length + 6)) - 3;
+    const head = still ? 1 : ((now / 620) % (this.gates.length + 2)) - 1;
     for (let i = 0; i < this.gates.length; i++) {
       const d = Math.abs(i - head);
-      this.gateMats[i].opacity = p.gates * (0.36 + 0.64 * Math.max(0, 1 - d / 2.4));
+      this.gateMats[i].opacity = p.gates * (0.55 + 0.45 * Math.max(0, 1 - d));
       this.gates[i].visible = p.gates > 0.01;
+      // each ring breathes a little as the scan passes it
+      const sc = 1 + 0.05 * Math.max(0, 1 - d);
+      this.gates[i].scale.setScalar(sc);
     }
     this.material.envMapIntensity = p.env;
 
-    this.envColor.set(story.ground);
+    // the floor bounce eases toward the chapter colour instead of cutting with it
+    this.envColor.lerp(this.envGoal.set(story.ground), still ? 1 : 1 - Math.exp(-dt * 3.5));
     this.updateEnv(now);
     this.renderer.render(this.scene, this.camera);
     // screen anchors for the DOM labels that hang off the probe rings
-    const ids = [2, 6, 10];
-    for (let i = 0; i < ids.length; i++) {
-      const v = this.tmp.copy(this.gates[ids[i]].position).applyMatrix4(this.group.matrixWorld).project(this.camera);
+    for (let i = 0; i < this.gates.length; i++) {
+      // anchor on the ring's upper rim rather than its centre, so the leader starts on the ring
+      const v = this.tmp.set(0, 0.78, 0).applyMatrix4(this.gates[i].matrixWorld).project(this.camera);
       const a = story.anchors[i];
       a.x = (v.x * 0.5 + 0.5) * this.w;
       a.y = (-v.y * 0.5 + 0.5) * this.h;
@@ -546,6 +560,7 @@ function mixPose(a: Pose, b: Pose, t: number): Pose {
     look: v3(a.look, b.look),
     rot: v3(a.rot, b.rot),
     roll: lerp(a.roll, b.roll, t),
+    proll: lerp(a.proll, b.proll, t),
     fov: lerp(a.fov, b.fov, t),
     flow: lerp(a.flow, b.flow, t),
     near: lerp(a.near, b.near, t),
