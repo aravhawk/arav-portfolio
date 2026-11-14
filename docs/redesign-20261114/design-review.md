@@ -70,6 +70,9 @@ What stays open and why: the gate checks a company landing page built from its o
 - Chapter handoffs between pinned sections (Infiniview to rules especially) pass through a frame with little on it.
 - Phone timeline, work and writing are type only.
 - The engraved words on the band (`BUILD PROBE BREAK FIX AGAIN`, `LOOP 01`, `RUN 0001`, `OPEN SOURCE`) are decoration, not claims. Say the word and they change.
-- "OpenAI dot and Grok Bot" in the agent-bridge line is quoted from the repo's README. The critic read it as a typo. Worth a look from Arav.
+- The agent-bridge line now reads "OpenAI Dot", as Arav confirmed.
 - No Open Graph image yet. The card falls back to text.
-- Post dates now render in UTC ("Apr 18, 2026", matching the front matter). The live site shows Apr 17 in US time zones.
+- Post dates render in America/Chicago with an explicit time zone on server and client, so the post shows Apr 17, 2026 like the live site.
+
+## Follow-up, Nov 14 afternoon
+Arav asked for all of his work back on the site. `/work` is now grouped: a three-figure ledger (DeveloperWeek 2026 first of 74, 36 merged pull requests upstream, 2 hackathon and challenge entries), then Agents and tools (9), Apps (9), Markets and chains (3), Robots and hardware (3), an Earlier shelf (12) and Upstream by repository (10). The home work section carries the same ledger above the six featured rows. Checked at 390, 768, 1024 and 1440 for overflow, and under reduced motion. Sources for every added line are in `content-sources.md`.

@@ -999,6 +999,147 @@ html[data-loaded='true'] .hero-hud {
     gap: 8px;
   }
 }
+.block[id] {
+  scroll-margin-top: 24px;
+}
+
+/* Ledger: three figures in the display cut. */
+.ledger {
+  display: grid;
+  gap: 0;
+  margin: 0 0 56px;
+  border-top: 1px solid var(--black);
+}
+.ledger > div {
+  display: grid;
+  gap: 12px;
+  padding: 20px 0 24px;
+  border-bottom: 1px solid var(--black);
+}
+.ledger dt {
+  color: rgb(10 10 10 / 0.62);
+}
+.ledger dd {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.ledger-big {
+  font-size: clamp(64px, 9vw, 136px);
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-note {
+  grid-column: 1 / -1;
+  max-width: 34ch;
+  color: rgb(10 10 10 / 0.72);
+}
+@media (min-width: 900px) {
+  .ledger {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid var(--black);
+  }
+  .ledger > div {
+    border-bottom: 0;
+    padding: 24px 32px 32px 0;
+  }
+  .ledger > div + div {
+    border-left: 1px solid var(--black);
+    padding-left: 32px;
+  }
+  .ledger-note {
+    min-height: 48px;
+  }
+}
+
+/* Work page: section index and the shelf of older repos. */
+.work-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 28px;
+  padding-top: 24px;
+}
+.work-nav a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.work-nav span {
+  color: rgb(10 10 10 / 0.5);
+}
+.row-name-sm {
+  font-size: clamp(20px, 2.1vw, 30px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+.shelf {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  border-top: 1px solid var(--black);
+}
+.shelf a {
+  display: grid;
+  gap: 4px;
+  padding: 16px 0;
+  min-height: 96px;
+  align-content: space-between;
+  border-bottom: 1px solid var(--black);
+  position: relative;
+  isolation: isolate;
+}
+.shelf a::before {
+  content: '';
+  position: absolute;
+  inset: 0 -12px;
+  z-index: -1;
+  background: var(--yellow);
+  clip-path: inset(100% 0 0 0);
+  transition: clip-path 300ms var(--ease-out);
+}
+.shelf-name {
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.shelf-note {
+  font-size: 14px;
+  line-height: 20px;
+  color: rgb(10 10 10 / 0.72);
+}
+.shelf-meta {
+  color: rgb(10 10 10 / 0.62);
+}
+@media (hover: hover) and (pointer: fine) {
+  .work-nav a:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .shelf a:hover::before {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@media (min-width: 700px) {
+  .shelf {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 40px;
+  }
+}
+@media (min-width: 1100px) {
+  .shelf {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .block-foot {
   margin-top: 48px;
   display: flex;

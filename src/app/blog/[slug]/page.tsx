@@ -10,6 +10,7 @@ import { mdxComponents } from '@/components/blog/MDXComponents';
 import Footer from '@/components/shell/Footer';
 import TLink from '@/components/shell/TLink';
 import { Arrow } from '@/components/home/Arrow';
+import { formatDate } from '@/components/home/Writing';
 import type { BlogFrontmatter } from '@/types';
 
 export async function generateStaticParams() {
@@ -67,7 +68,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   });
 
   const { prev, next } = getAdjacentPosts(slug);
-  const date = new Date(post.frontmatter.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  const date = formatDate(post.frontmatter.date, 'long');
 
   return (
     <main>

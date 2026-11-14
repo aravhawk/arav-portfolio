@@ -1,4 +1,5 @@
-import { projects } from '@/lib/content';
+import { earlier, projects, recognition } from '@/lib/content';
+import Ledger from './Ledger';
 import TLink from '@/components/shell/TLink';
 import ProjectRows from './ProjectRows';
 import { Arrow } from './Arrow';
@@ -15,9 +16,10 @@ export default function Work() {
         </div>
         <div className="block-sheet">
           <p className="block-lead">Six things I built this year. All of them are open source, and most of them exist because an agent needed a guardrail.</p>
+          <Ledger items={recognition} />
           <ProjectRows items={featured} />
           <div className="block-foot">
-            <span className="mono">{projects.length} projects in the full index</span>
+            <span className="mono">{projects.length + earlier.length} projects in the full index</span>
             <TLink className="btn" href="/work">
               See all work <Arrow />
             </TLink>

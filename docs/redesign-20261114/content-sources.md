@@ -31,7 +31,7 @@ Every statement about Arav on the new site comes from a public page read on Nov 
 | Rule notes (escalate then block; cannot grant approval; three agents, five products) | Same README sections and post paragraphs, paraphrased closely. "Three outputs isn't better than one good output." is the post's own sentence |
 | Ventures: Master Coders 2020, NeuralBytes 2024, Infiniflop Labs 2026 and their one-line descriptions ("Co-founded in 2026. We're building Infiniview.") | aravjain.dev live site; neuralbytes.net for IntergalacticPro; infiniflop.com |
 | cc-switch: providers, "40+ providers", npm name | cc-switch README |
-| agent-bridge: shared inbox between "your OpenAI dot and Grok Bot", self-hosted MCP server, one owner, own OAuth token each | agent-bridge README |
+| agent-bridge: shared inbox between "your OpenAI Dot and Grok Bot" (the README writes "dot"; Arav confirmed the name is OpenAI Dot), self-hosted MCP server, one owner, own OAuth token each | agent-bridge README |
 | ask-around: governance, quorum, veto, receipts, one tool call | ask-around README |
 | RydAR: iPhone co-pilot for tight bends in Arkansas, spoken advisory from a bundled database, public map at rydar.org | RydAR README; rydar.org |
 | merlin-control: wireframe Merlin 1D driven by bare hands through a webcam, after SpaceX's 2013 "The Future of Design" demo, Three.js and MediaPipe | merlin-control README; merlin.aravhawk.com |
@@ -40,7 +40,7 @@ Every statement about Arav on the new site comes from a public page read on Nov 
 | passportphoto: local US passport photo studio, 2 by 2 inch, 300 DPI | passportphoto README |
 | lite-stats: trimmed Apple Silicon-only fork of exelban/stats | lite-stats README |
 | envfetch: env vars in an encrypted local vault, Secure Enclave key, Touch ID, zsh/bash/fish; archived | envfetch README; repo `archived: true` |
-| "Seven merged pull requests to T3 Code between September and November 2026" with titles and numbers | `gh pr list -R pingdotgg/t3code --author aravhawk --state merged` on Nov 14 2026: #2981, #15875, #15876, #15886, #19737, #19791, #33474 |
+| T3 Code: 8 merged pull requests, September to November 2026 | `gh search prs --author aravhawk --merged` on Nov 14 2026: #2981, #15875, #15876, #15886, #19737, #19791, #33474, #33475 |
 | Project years | GitHub `created_at` per repo (lite-stats: Dec 2025; the rest 2026) |
 | "Six things I built this year. All of them are open source" | The six featured repos are public and were all created in 2026 |
 | "Into" row under the statement (AI agents, dev tools, rockets, GPUs and chains) | The repos named beside each one, plus the GitHub README line about dev tools, agents and "some blockchain stuff" |
@@ -53,17 +53,38 @@ Every statement about Arav on the new site comes from a public page read on Nov 
 - The agent-bridge homepage URL returns a JSON health check, not a page, so the site links to the repository.
 - claudeclaw and fix-it-bot are on the live site's "current projects" list. fix-it-bot is archived on GitHub and claudeclaw is not a public repo, so neither is on the new site.
 
-## Left out, Arav can opt in
-These are public in places but were excluded on purpose. Adding any of them is a one-line change in `src/lib/content.ts`.
+## Added back on Arav's instruction (Nov 14, afternoon)
+Arav asked for every piece of work to be on the site, with the live site accepted as a source. Each line below is only what its source says.
 
+| On the site | Source |
+| --- | --- |
+| DeveloperWeek 2026: first place out of 74 submissions | aravjain.dev live site ("Won 1st place out of 74 submissions"). The live site does not name the project, so the site does not either |
+| Trading: autonomous equities and options bot on Claude Code CLI and Alpaca's API over MCP, 14 strategies, own memory, trap orders | Trading README |
+| AlphaPredict: stock market predictor with charts and company details, a NeuralBytes app with a signup page | Repo descriptions of AlphaPredict and AlphaPredict-Signup; neuralbytes.net lists it |
+| 99719T and 3400Z: source code for VEX Robotics teams, 2025 to 2026 and 2024 to 2025 | Repo descriptions. No school is named in either repo or on the site |
+| Weather-Station-BMP280 | Repo description |
+| claude-code-utils, kilobench | Repo descriptions; kilobench README is the Kilo Code README |
+| fix-it-bot | README (the package is fix-it-bot-react) |
+| claudeclaw: multi-platform AI assistant on the Claude Agents SDK | aravjain.dev live site. No public repo, so no link |
+| tempify, ClarifAI, typing-game (anytype) | Their READMEs |
+| CryptoLab: submitted to Apple's 2025 Swift Student Challenge; needs AR and a Secure Enclave | README |
+| askrosie: local study clone of a museum's AI companion, not for redeploy | README. The museum is not named on the site because it would point at a city |
+| "Earlier" shelf: Macro-Guru, neuralbytes.net, IntergalacticPro, SumQuick, ChatGPT-3.5-with-Vision, escaperoom, workjet-ms, workjet-google, wordle-clone, who-wants-to-be-a-billionaire, teamastros, top10tipsforsurvival | GitHub name, creation year, language and description. Seven have no README or description, so they carry nothing else |
+| Upstream: 36 merged pull requests in 10 public repositories (t3code 8, tokscale 3, kilocode 1, Investo 1, openbridge 1, ThrasherAndChambersWebsite 5, XcodeBenchmark 1, infiniview-web-frontend 6, infiniflop.com 5, infiniview-docs 5) | `gh search prs --author aravhawk --merged`, Nov 14 2026. Each row links to the filtered pull request list |
+| "2 entries": Kiroween 2026 and the Swift Student Challenge | vampire-hunter and CryptoLab READMEs |
+
+Still not on the site, and why:
+- Merged pull requests in private repositories (infiniflop/infiniview 7, pkyanam/agentsocket 2, 2ALabz/2alabz-site 5) and the private repo 99719X. Their titles are not public, so they are not listed.
+- aravhawk.github.io and IntergalacticPro-Signup: an empty Pages repo and a signup page for an app already listed.
+- Forks with no merged work of his own in them (excalidraw-cli, open-design).
+
+## Left out, Arav can opt in
 - Age (shown in the X bio).
 - City (shown on the X profile). The RydAR line names Arkansas only because the project is about Arkansas roads.
-- School or program details, including the VEX Robotics team repos (99719T, 3400Z).
-- Scholarships and internships.
-- Income, and anything about trading: the `Trading` repo and NeuralBytes' AlphaPredict (a stock predictor) are not mentioned.
-- "DeveloperWeek 2026: 1st place out of 74 submissions". It is on the live site, but the live site does not say which project won and I found no second public source, so it is not on the new one. Give me the project and a link and it goes in.
-- A portrait. The site has no photo of Arav. The hero is built so one is not needed.
-- Follower and star counts, and any usage numbers. None are claimed.
+- School or program details.
+- Scholarships.
+- Income.
+- A portrait. The site has no photo of Arav.
+- Follower and star counts, and any usage numbers.
 - Recent X posts. None are quoted.
-- Other merged pull requests (pkyanam/agentsocket, Kanishksasi/Investo, the Infiniflop org repos). Only T3 Code is listed.
-- infiniview.dev content. infiniflop.com links to it, but the brief limits Infiniview claims to what infiniflop.com says.
+- infiniview.dev content beyond what infiniflop.com says.

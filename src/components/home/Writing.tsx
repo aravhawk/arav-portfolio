@@ -4,8 +4,11 @@ import { Arrow } from './Arrow';
 
 type Meta = Omit<BlogPost, 'content'>;
 
-export const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+/** Post dates are shown in my local time, with the zone fixed so server and browser always agree. */
+export const POST_TZ = 'America/Chicago';
+
+export const formatDate = (iso: string, month: 'short' | 'long' = 'short') =>
+  new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: month, day: 'numeric', timeZone: POST_TZ });
 
 export function PostBig({ post }: { post: Meta }) {
   return (
