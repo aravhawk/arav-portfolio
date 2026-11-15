@@ -14,6 +14,24 @@ const links = [
 export default function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+
+  // Inner pages: the bar steps aside while reading down and returns on the way up.
+  useEffect(() => {
+    if (pathname === '/') return;
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - last) < 8) return;
+      setHidden(y > last && y > 160);
+      last = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      setHidden(false);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -32,7 +50,7 @@ export default function Nav() {
 
   return (
     <>
-      <header className="nav">
+      <header className="nav" data-hidden={hidden && !open}>
         <Glass as="nav" className="nav-bar" refract radius={999} aria-label="Primary">
           <Link href="/" className="nav-name" aria-current={pathname === '/' ? 'page' : undefined} onClick={() => setOpen(false)}>
             <span className="nav-dot" aria-hidden="true" />

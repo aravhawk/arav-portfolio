@@ -327,7 +327,8 @@ export default function Home() {
       for (let j = 0; j < secs.length; j++) {
         const rr = rects[j];
         if (rr.bottom < -vh || rr.top > vh * 2) continue;
-        const on = j === 0 ? rr.bottom > vh * 0.75 : rr.top < vh * 0.42 && rr.bottom > vh * 0.62;
+        // The next title arrives before the last one has left, so there is always type on screen.
+        const on = j === 0 ? rr.bottom > vh * 0.75 : rr.top < vh * 0.72 && rr.bottom > vh * 0.45;
         if (on !== state[j]) {
           state[j] = on;
           const v = String(on);

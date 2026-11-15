@@ -67,9 +67,13 @@ class Stage {
   reduced = false;
   dirty = true;
   private preview: ShapeName | null = null;
+  private last: Scene | null = null;
   private base = new Float32Array(N).fill(0);
   private listeners = new Set<() => void>();
   private first = true;
+  /** Inner pages: the drop belongs to the page header and scrolls away with it. In viewport heights. */
+  scrollAway = 0;
+  private sceneY = 0.5;
 
   constructor() {
     this.base[0] = 1;
@@ -83,14 +87,18 @@ class Stage {
     const pa = this.narrow() ? a.m : a.d;
     const pb = b ? (this.narrow() ? b.m : b.d) : pa;
     this.x.target = lerp(pa.x, pb.x, m);
-    this.y.target = lerp(pa.y, pb.y, m);
+    this.sceneY = lerp(pa.y, pb.y, m);
+    this.y.target = this.sceneY - this.scrollAway;
     this.size.target = lerp(pa.size, pb.size, m);
     this.pitch.target = lerp(a.pitch ?? 0, b?.pitch ?? a.pitch ?? 0, m);
     this.yawBase.target = lerp(a.yaw ?? 0, b?.yaw ?? a.yaw ?? 0, m);
     this.spin.target = lerp(a.spin ?? 0, b?.spin ?? a.spin ?? 0, m);
   }
 
-  private colours(a: GroundName, b: GroundName, m: number) {
+  private colours(a: GroundName, b: GroundName, m0: number) {
+    // Grounds change over the middle third of the blend, so mixed colours are on screen only briefly.
+    const t = clamp((m0 - 0.34) / 0.32);
+    const m = t * t * (3 - 2 * t);
     const ga = GROUNDS[a];
     const gb = GROUNDS[b];
     for (let i = 0; i < 3; i++) {
@@ -132,6 +140,8 @@ class Stage {
 
   /** A route or a hover picks one scene. Springs carry it there. */
   setScene(scene: Scene) {
+    this.last = scene;
+    this.preview = null;
     this.base.fill(0);
     this.base[SHAPES.indexOf(scene.shape)] = 1;
     this.applyWeights(spring.morph);
@@ -145,6 +155,8 @@ class Stage {
 
   /** Scroll position blends two neighbouring scenes. Tight springs keep it attached to the hand. */
   setBlend(a: Scene, b: Scene, m: number) {
+    this.last = null;
+    this.scrollAway = 0;
     this.base.fill(0);
     this.base[SHAPES.indexOf(a.shape)] += 1 - m;
     this.base[SHAPES.indexOf(b.shape)] += m;
@@ -161,6 +173,21 @@ class Stage {
   setPreview(shape: ShapeName | null) {
     this.preview = shape;
     this.applyWeights(spring.morph);
+    // While previewing, dock beside the list instead of floating over it.
+    if (shape && !this.narrow()) {
+      this.x.target = 0.9;
+      this.y.target = 0.5;
+      this.size.target = 0.13;
+    } else if (this.last) {
+      this.place(this.last, null, 0);
+    }
+    this.dirty = true;
+  }
+
+  setScrollAway(v: number) {
+    if (Math.abs(v - this.scrollAway) < 1e-4) return;
+    this.scrollAway = v;
+    if (!this.preview || this.narrow()) this.y.target = this.sceneY - v;
     this.dirty = true;
   }
 

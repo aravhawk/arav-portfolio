@@ -12,6 +12,14 @@ export default function SceneSetter({ name }: { name: string }) {
     const html = document.documentElement;
     html.dataset.ground = scene.ground;
     html.dataset.tone = GROUNDS[scene.ground].tone;
+    // The drop is part of this page's header: it leaves with it on scroll.
+    const onScroll = () => stage.setScrollAway(window.scrollY / Math.max(1, window.innerHeight));
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      stage.setScrollAway(0);
+    };
   }, [name]);
   return null;
 }

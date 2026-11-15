@@ -20,7 +20,7 @@ export default function WorkPage() {
               <span data-refract>Work</span>
             </span>
           </h1>
-          <p className="page-lede">What I have shipped in public. Hover a row and the glass takes its shape.</p>
+          <p className="page-lede">What I have shipped in public.</p>
         </header>
         <div className="layer-ui" style={{ display: 'grid', gap: 64 }}>
           <WorkIndex />

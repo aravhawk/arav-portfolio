@@ -376,26 +376,26 @@ export const archive: ArchiveItem[] = [
 const P = (x: number, y: number, size: number) => ({ x, y, size });
 
 export const scenes = {
-  hero: { shape: 'drop', ground: 'cloud', d: P(0.53, 0.46, 0.33), m: P(0.5, 0.5, 0.36), pitch: 0.1 },
-  infiniview: { shape: 'lens', ground: 'signal', d: P(0.7, 0.5, 0.27), m: P(0.5, 0.47, 0.31), pitch: 0.12, yaw: -0.55 },
-  'open-source': { shape: 'merge', ground: 'ink', d: P(0.76, 0.42, 0.25), m: P(0.5, 0.47, 0.3), yaw: 0.35, pitch: 0.05 },
-  'kilo-bench': { shape: 'bars', ground: 'cloud', d: P(0.72, 0.52, 0.26), m: P(0.5, 0.47, 0.31), yaw: -0.5, pitch: 0.2 },
-  'agent-bridge': { shape: 'bridge', ground: 'cobalt', d: P(0.46, 0.66, 0.23), m: P(0.5, 0.47, 0.3), yaw: 0.3, pitch: 0.16 },
-  'open-models': { shape: 'stack', ground: 'ink', d: P(0.72, 0.56, 0.27), m: P(0.5, 0.47, 0.31), pitch: 0.42, spin: 0.25 },
-  'cc-switch': { shape: 'switch', ground: 'signal', d: P(0.46, 0.52, 0.24), m: P(0.5, 0.47, 0.3), yaw: -0.3, pitch: 0.2 },
-  tensorpow: { shape: 'tensor', ground: 'cloud', d: P(0.72, 0.54, 0.25), m: P(0.5, 0.47, 0.3), pitch: 0.5, yaw: 0.6, spin: 0.18 },
-  'merlin-control': { shape: 'engine', ground: 'ink', d: P(0.7, 0.48, 0.34), m: P(0.5, 0.47, 0.31), pitch: 0.18, spin: 0.3 },
+  hero: { shape: 'drop', ground: 'cloud', d: P(0.53, 0.46, 0.33), m: P(0.6, 0.3, 0.3), pitch: 0.1 },
+  infiniview: { shape: 'lens', ground: 'signal', d: P(0.7, 0.5, 0.27), m: P(0.5, 0.5, 0.25), pitch: 0.12, yaw: -0.55 },
+  'open-source': { shape: 'merge', ground: 'ink', d: P(0.76, 0.42, 0.25), m: P(0.5, 0.5, 0.25), yaw: 0.35, pitch: 0.05 },
+  'kilo-bench': { shape: 'bars', ground: 'cloud', d: P(0.72, 0.52, 0.26), m: P(0.5, 0.5, 0.25), yaw: -0.5, pitch: 0.2 },
+  'agent-bridge': { shape: 'bridge', ground: 'cobalt', d: P(0.46, 0.66, 0.23), m: P(0.5, 0.5, 0.25), yaw: 0.3, pitch: 0.16 },
+  'open-models': { shape: 'stack', ground: 'ink', d: P(0.74, 0.68, 0.24), m: P(0.5, 0.5, 0.25), pitch: 0.42, spin: 0.25 },
+  'cc-switch': { shape: 'switch', ground: 'signal', d: P(0.46, 0.52, 0.24), m: P(0.5, 0.5, 0.25), yaw: -0.3, pitch: 0.2 },
+  tensorpow: { shape: 'tensor', ground: 'cloud', d: P(0.72, 0.54, 0.25), m: P(0.5, 0.5, 0.25), pitch: 0.5, yaw: 0.6, spin: 0.18 },
+  'merlin-control': { shape: 'engine', ground: 'ink', d: P(0.7, 0.48, 0.34), m: P(0.5, 0.5, 0.25), pitch: 0.18, spin: 0.3 },
   rydar: { shape: 'orbit', ground: 'cobalt', d: P(0.76, 0.42, 0.24), m: P(0.78, 0.2, 0.2), pitch: 0.5, spin: 0.1 },
   more: { shape: 'orbit', ground: 'cobalt', d: P(0.74, 0.38, 0.28), m: P(0.5, 0.42, 0.3), pitch: 0.55, spin: 0.12 },
-  contact: { shape: 'drop', ground: 'cloud', d: P(0.76, 0.42, 0.26), m: P(0.72, 0.24, 0.26), pitch: 0.1 },
-  work: { shape: 'slab', ground: 'cloud', d: P(0.72, 0.21, 0.19), m: P(0.78, 0.2, 0.2), yaw: -0.5, pitch: 0.25 },
+  contact: { shape: 'drop', ground: 'cloud', d: P(0.84, 0.6, 0.2), m: P(0.5, 0.6, 0.3), pitch: 0.1 },
+  work: { shape: 'slab', ground: 'cloud', d: P(0.72, 0.21, 0.19), m: P(0.74, 0.19, 0.2), yaw: -0.5, pitch: 0.25 },
   blog: { shape: 'slab', ground: 'cloud', d: P(0.32, 0.22, 0.17), m: P(0.78, 0.2, 0.2), yaw: 0.45, pitch: -0.2 },
   post: { shape: 'drop', ground: 'cloud', d: P(0.9, 0.2, 0.1), m: P(0.84, 0.14, 0.12), pitch: 0.1 },
-  lost: { shape: 'split', ground: 'ink', d: P(0.7, 0.42, 0.3), m: P(0.5, 0.47, 0.31), yaw: 0.2 },
+  lost: { shape: 'split', ground: 'ink', d: P(0.7, 0.42, 0.3), m: P(0.5, 0.5, 0.25), yaw: 0.2 },
 } satisfies Record<string, Scene>;
 
 /** Scene for a project page: the same form, parked beside the title. */
 export function projectScene(slug: string): Scene {
   const s = (scenes as Record<string, Scene>)[slug] ?? scenes.work;
-  return { ...s, d: { x: 0.8, y: 0.3, size: Math.min(s.d.size, 0.2) }, m: { x: 0.78, y: 0.2, size: 0.2 } };
+  return { ...s, d: { x: 0.86, y: 0.22, size: 0.15 }, m: { x: 0.8, y: 0.17, size: 0.16 } };
 }

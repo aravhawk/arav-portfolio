@@ -184,7 +184,7 @@ export class GlassEngine {
     c.width = Math.max(2, Math.round(w * this.dpr));
     c.height = Math.max(2, Math.round(h * this.dpr));
     this.gl.viewport(0, 0, c.width, c.height);
-    const ms = Math.min(1, 1500 / w);
+    const ms = Math.min(Math.min(window.devicePixelRatio || 1, 1.5), 1900 / w);
     this.maskCanvas.width = Math.max(2, Math.round(w * ms));
     this.maskCanvas.height = Math.max(2, Math.round(h * ms));
     this.fontCache = new WeakMap();

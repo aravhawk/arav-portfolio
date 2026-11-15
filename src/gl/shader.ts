@@ -251,6 +251,13 @@ vec3 envLight(vec3 r, float rough){
   e += vec3(1.0) * (pow(k, 110.0) * 5.0 + pow(k, 14.0) * 0.4);
   float box = smoothstep(0.5, 0.62, r.y) * (1.0 - smoothstep(0.18, 0.5, abs(r.x + 0.25)));
   e += vec3(1.0) * box * 0.9;
+  // Two coloured cards low in the room: they are what an empty ground gives the glass to reflect.
+  float cardA = (1.0 - smoothstep(0.1, 0.5, abs(r.x + 0.62))) * (1.0 - smoothstep(0.05, 0.4, abs(r.y + 0.1)));
+  float cardB = (1.0 - smoothstep(0.1, 0.5, abs(r.x - 0.66))) * (1.0 - smoothstep(0.05, 0.45, abs(r.y - 0.12)));
+  e = mix(e, vec3(1.0, 0.29, 0.08), cardA * 0.55);
+  e = mix(e, vec3(0.08, 0.2, 1.0), cardB * 0.5);
+  // A second, narrow strip light.
+  e += vec3(1.0) * smoothstep(0.035, 0.0, abs(r.x - 0.32 - r.y * 0.25)) * smoothstep(-0.1, 0.5, r.y) * 0.8;
   vec3 l2 = normalize(vec3(0.75, -0.35, 0.55));
   e += vec3(0.72, 0.84, 1.0) * pow(max(dot(r, l2), 0.0), 28.0) * 0.7;
   return e;
@@ -320,7 +327,7 @@ void main(){
   vec3 pos = ro + rd * t;
   vec3 n = calcNormal(pos);
   float ndv = max(dot(n, -rd), 0.0);
-  float F = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
+  float F = 0.07 + 0.93 * pow(1.0 - ndv, 4.0);
 
   // Inside the body.
   vec3 ri = refract(rd, n, 1.0 / IOR);
@@ -352,7 +359,9 @@ void main(){
   }
 
   vec3 tint = mix(uTintA, uTintB, 0.5 + 0.5 * dot(n, normalize(vec3(0.6, 0.7, 0.2))));
-  refr *= exp(-ti * 0.42 * (1.0 - tint));
+  // Light grounds need a body: more absorption with depth, so thick glass takes a cast instead of reading white.
+  float gl = dot(uGround, vec3(0.3, 0.6, 0.1));
+  refr *= exp(-ti * (0.42 + 0.75 * gl) * (1.0 - tint));
   float film = 0.5 + 0.5 * cos(6.2831 * (ti * 0.55 + ndv * 0.6));
   refr += tint * (uGlow * (0.35 + 0.65 * film) * (0.25 + 0.75 * (1.0 - ndv)));
 
@@ -364,7 +373,7 @@ void main(){
   // On dark grounds the body is read by its rim: a cool edge light scaled by the glow amount.
   col += vec3(0.72, 0.86, 1.0) * pow(1.0 - ndv, 3.0) * uGlow * 1.6;
   // Thickness: darken slightly where the body is deep, the way a real pane does at its edge.
-  col *= 1.0 - 0.1 * smoothstep(0.6, 0.0, ndv);
+  col *= 1.0 - (0.1 + 0.26 * gl) * smoothstep(0.55, 0.0, ndv);
 
   outColor = vec4(col * cov, cov) + under * (1.0 - cov);
 }`;
