@@ -33,13 +33,12 @@ export type BeatCopy = {
 
 export const beats: BeatCopy[] = [
   {
-    n: 1, id: 'arav', label: 'Arav Jain', place: 'bl',
+    n: 1, id: 'arav', label: 'Arav Jain', place: 'tl',
     head: [],
     line: 'I build AI agents and the tools around them.',
-    callouts: [{ at: [40, 25.5, 3.5], text: '65,536 lights', side: 'r' }],
   },
   {
-    n: 2, id: 'infiniview', label: 'Infiniview', place: 'bl', kicker: 'Now. Co-founder, Infiniflop Labs',
+    n: 2, id: 'infiniview', label: 'Infiniview', place: 'tl', kicker: 'Now. Co-founder, Infiniflop Labs',
     head: [[{ t: 'Infini', w: 'thin' }, { t: 'view', w: 'black' }]],
     line: 'Agents that review, probe and stress-test your code in cloud sandboxes.',
     link: { label: 'infiniflop.com', href: 'https://infiniflop.com' },
@@ -48,12 +47,11 @@ export const beats: BeatCopy[] = [
   {
     n: 3, id: 'developerweek', label: 'DeveloperWeek 2026', place: 'br', kicker: 'DeveloperWeek 2026',
     head: [[{ t: '1st', w: 'black' }], [{ t: 'of 74', w: 'thin' }]],
-    line: 'First place out of 74 submissions.',
-    callouts: [{ at: [-30, 5, 22], text: '73 entries', side: 'l' }, { at: [0.5, 30, -4], text: '01', side: 'r' }],
+    callouts: [{ at: [-30, 5, 22], text: '73 other entries', side: 'l' }],
   },
   {
     n: 4, id: 'agent-bridge', label: 'agent-bridge', place: 'bl', kicker: 'agent-bridge',
-    head: [[{ t: 'Messages are data.', w: 'thin' }], [{ t: 'Never permission.', w: 'black' }]],
+    head: [[{ t: 'Messages are data.', w: 'thin' }], [{ t: 'Never', w: 'black' }], [{ t: 'permission.', w: 'black' }]],
     line: 'A shared inbox between your OpenAI Dot and Grok Bot.',
     link: { label: 'GitHub', href: 'https://github.com/aravhawk/agent-bridge' },
     callouts: [{ at: [0, 35.5, 0], text: 'Inbox', side: 'r' }],
@@ -61,22 +59,22 @@ export const beats: BeatCopy[] = [
   {
     n: 5, id: 'upstream', label: 'Upstream', place: 'bl', kicker: 'Open source',
     head: [[{ t: '20', w: 'black' }], [{ t: 'merged upstream', w: 'thin' }]],
-    line: "Pull requests in other people's repos. 8 of them in T3 Code.",
+    line: "Pull requests in other people's repos. 8 in T3 Code.",
     link: { label: 'Pull requests', href: 'https://github.com/pulls?q=is%3Apr+author%3Aaravhawk+is%3Amerged+-user%3Aaravhawk' },
-    callouts: [{ at: [0, 7, -150], text: 'main', side: 'r' }],
+    callouts: [{ at: [0, 7, -60], text: 'main', side: 'r' }],
   },
   {
     n: 6, id: 'markets', label: 'Markets', place: 'tl', kicker: 'Trading',
     head: [[{ t: 'The bot', w: 'thin' }, { t: 'trades.', w: 'black' }]],
-    line: 'Equities and options, 14 strategies, on its own. Before it came AlphaPredict, a stock predictor.',
-    callouts: [{ at: [84, 31, -6], text: '14 strategies', side: 'r' }],
+    line: 'Equities and options, on its own.',
+    callouts: [{ at: [84, 31, -6], text: '14 strategies', side: 'l' }, { at: [-50, 10, 0], text: 'AlphaPredict, 2024', side: 'l' }],
   },
   {
     n: 7, id: 'merlin', label: 'Merlin 1D', place: 'br', kicker: 'merlin-control',
     head: [[{ t: 'Merlin 1D.', w: 'black' }], [{ t: 'Bare hands.', w: 'thin' }]],
     line: 'A SpaceX engine you spin through a webcam. Drag this one.',
     link: { label: 'merlin.aravhawk.com', href: 'https://merlin.aravhawk.com' },
-    callouts: [{ at: [0, 36, 0], text: 'Gimbal', side: 'l' }, { at: [0, 3, 0], text: 'Nozzle', side: 'l' }],
+    callouts: [{ at: [0, 48, 0], text: 'Gimbal', side: 'l' }],
   },
   {
     n: 8, id: 'early', label: 'First light', place: 'bl',

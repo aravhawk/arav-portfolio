@@ -7,6 +7,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import * as F from './formations';
 import type { Formation, V3 } from './formations';
 import { BEATS, SITES, HOLD, LAST, CALM } from './beats';
+import { createEngineModel } from './solid';
 import { SKY_VERT, SKY_FRAG, WATER_VERT, WATER_FRAG, SWARM_VERT, SWARM_FRAG, RIDGE_VERT, RIDGE_FRAG, FINAL_FRAG, FINAL_VERT } from './shaders';
 
 export type Mode = 'story' | 'calm';
@@ -76,7 +77,7 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
   const noise1 = (x: number) => { const i = Math.floor(x), f = x - i; const u = f * f * (3 - 2 * f); return hash1(i) * (1 - u) + hash1(i + 1) * u; };
   const sunAz = Math.atan2(U.uSun.value.x, -U.uSun.value.z);
   [{ r: 9000, h: 950, f: 14, d: 0.5, s: 3 }, { r: 6800, h: 620, f: 22, d: 0.72, s: 17 }, { r: 5000, h: 330, f: 34, d: 0.9, s: 41 }].forEach((L, li) => {
-    const M = 720; const pos = new Float32Array((M + 1) * 2 * 3);
+    const M = 720; const pos = new Float32Array((M + 1) * 2 * 3); const crest = new Float32Array((M + 1) * 2);
     for (let i = 0; i <= M; i++) {
       const th = (i / M) * Math.PI * 2 + Math.PI; const u = (i / M) * L.f; // seam sits behind the camera
       let h = 0; let amp = 1; let fr = 1; for (let o = 0; o < 5; o++) { h += (1 - Math.abs(noise1(u * fr + L.s + (i === M ? 0 : 0)) * 2 - 1)) * amp; amp *= 0.5; fr *= 2.03; }
@@ -87,10 +88,10 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
       const seam = Math.min(1, Math.min(i, M - i) / 20);
       const y = Math.pow(h / 1.94, 1.7) * L.h * pass * (0.4 + 0.6 * seam) + 12;
       const x = Math.sin(th) * L.r, z = -Math.cos(th) * L.r - 900;
-      pos.set([x, -2, z, x, y, z], i * 6);
+      pos.set([x, -2, z, x, y, z], i * 6); crest[i * 2 + 1] = 1;
     }
     const idx: number[] = []; for (let i = 0; i < M; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(idx);
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('crest', new THREE.BufferAttribute(crest, 1)); g.setIndex(idx);
     const m = new THREE.Mesh(g, new THREE.ShaderMaterial({ vertexShader: RIDGE_VERT, fragmentShader: RIDGE_FRAG, uniforms: { ...U, uDark: { value: L.d }, uTop: { value: L.h } }, side: THREE.DoubleSide }));
     m.frustumCulled = false; m.renderOrder = -5 + li; ridgeGroup.add(m);
   });
@@ -157,7 +158,7 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
   const pointer = { x: 0, y: 0, sx: 0, sy: 0, active: false, push: 0 };
   const spinQ = new THREE.Quaternion(); const spinV = { x: 0.18, y: 0 }; let spinIdle = 1;
   const camP = new THREE.Vector3(0, 46, 300), camL = new THREE.Vector3(0, 6, -300), prevP = new THREE.Vector3();
-  const shift = { x: 0, y: 0 }; let tod = 0; let fovK = 1; let move = 0;
+  const shift = { x: 0, y: 0 }; let pshift = 0; let tPs = 0; let tod = 0; let fovK = 1; let move = 0;
   const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
   const m4 = new THREE.Matrix4(); const qTmp = new THREE.Quaternion();
   let W = 1, H = 1, aspect = 1;
@@ -177,23 +178,25 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
     SU.uMix.value = mix; SU.uSpinA.value = a === 7 ? 1 : 0; SU.uSpinB.value = b === 7 ? 1 : 0;
   }
   setPair(0, 0, 0);
+  const smooth = (a: number, b: number, x: number) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
   SU.uSpinPivot.value.set(SITES[7][0] + F.ENGINE_PIVOT[0], F.ENGINE_PIVOT[1], SITES[7][2] + F.ENGINE_PIVOT[2]);
+  const model = createEngineModel(U, SU.uSpinPivot.value); model.set(0, 0); scene.add(model.group, model.splash);
 
   /** Scroll position q to formation pair, camera pose, sky and lens. */
   const tP = new THREE.Vector3(), tL = new THREE.Vector3(); let tTod = 0, tAp = 1, tSx = 0, tSy = 0, pa = 0, pb = 0, pm = 0;
   function evalStory(qq: number) {
     const seg = Math.min(Math.max(Math.floor(qq), 0), LAST); const f = qq - seg;
-    if (seg >= LAST) { pose(LAST, clamp01(f / HOLD), tP, tL); const b = BEATS[LAST]; tTod = b.tod; tAp = b.ap; tSx = b.shift[0]; tSy = b.shift[1]; pa = pb = LAST; pm = 0; return; }
+    if (seg >= LAST) { pose(LAST, clamp01(f / HOLD), tP, tL); const b = BEATS[LAST]; tTod = b.tod; tAp = b.ap; tSx = b.shift[0]; tSy = b.shift[1]; pa = pb = LAST; pm = 0; tPs = b.ps ?? 0; return; }
     const A = BEATS[seg], B = BEATS[seg + 1];
-    if (f < HOLD) { pose(seg, f / HOLD, tP, tL); tTod = A.tod; tAp = A.ap; tSx = A.shift[0]; tSy = A.shift[1]; pa = seg; pb = seg + 1; pm = 0; return; }
+    if (f < HOLD) { pose(seg, f / HOLD, tP, tL); tTod = A.tod; tAp = A.ap; tSx = A.shift[0]; tSy = A.shift[1]; pa = seg; pb = seg + 1; pm = 0; tPs = A.ps ?? 0; return; }
     const t = (f - HOLD) / (1 - HOLD); const e = ease(t);
     pose(seg, 1, v2, v3); pose(seg + 1, 0, tP, tL);
     const lift = Math.sin(Math.PI * e) * (seg === 0 ? 0 : 16);
     tP.lerpVectors(v2, tP, e); tP.y += lift;
     tL.lerpVectors(v3, tL, ease(clamp01(t * 1.12)));
-    tTod = A.tod + (B.tod - A.tod) * e; tAp = (A.ap + (B.ap - A.ap) * e) * (1 - Math.sin(Math.PI * e) * 0.45);
+    tTod = A.tod + (B.tod - A.tod) * e; tAp = (A.ap + (B.ap - A.ap) * e) * (1 - Math.sin(Math.PI * e) * 0.92);
     tSx = A.shift[0] + (B.shift[0] - A.shift[0]) * e; tSy = A.shift[1] + (B.shift[1] - A.shift[1]) * e;
-    pa = seg; pb = seg + 1; pm = t;
+    pa = seg; pb = seg + 1; pm = t; tPs = (A.ps ?? 0) + ((B.ps ?? 0) - (A.ps ?? 0)) * e;
   }
 
   function frame(now: number) {
@@ -214,7 +217,7 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
       tod = over.tod0 + (tTod - over.tod0) * e;
       if (over.t >= 1) over = null;
     } else { setPair(pa, pb, pm); camP.copy(tP); camL.copy(tL); tod = tTod; }
-    shift.x += (tSx - shift.x) * k; shift.y += (tSy - shift.y) * k;
+    pshift += (tPs - pshift) * k; shift.x += (tSx - shift.x) * k; shift.y += (tSy - shift.y) * k;
 
     // pointer: a little parallax, and a ray that parts the swarm
     pointer.sx += (pointer.x - pointer.sx) * (1 - Math.pow(0.004, dt)); pointer.sy += (pointer.y - pointer.sy) * (1 - Math.pow(0.004, dt));
@@ -224,7 +227,7 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
     camera.translateX(pointer.sx * dist * 0.022); camera.translateY(Math.max(-camP.y * 0.4, pointer.sy * dist * 0.012)); camera.lookAt(camL);
     camera.fov = 32 * fovK;
     const portrait = aspect < 1;
-    const sx = portrait ? 0 : shift.x; const sy = portrait ? 0.13 : shift.y;
+    const sx = portrait ? pshift : shift.x; const sy = portrait ? 0.13 : shift.y;
     camera.setViewOffset(W, H, -sx * W, sy * H, W, H);
     camera.updateMatrixWorld();
 
@@ -237,7 +240,7 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
     (waterMat.uniforms.uCam.value as THREE.Vector3).copy(camera.position);
 
     // lens
-    SU.uFocus.value = dist; SU.uAperture.value = tAp; SU.uGain.value = 0.5;
+    SU.uFocus.value = dist; SU.uAperture.value = tAp * 0.7; SU.uGain.value = 0.5;
     v0.set(pointer.sx, pointer.sy, 0.5).unproject(camera).sub(camera.position).normalize();
     SU.uRayO.value.copy(camera.position); SU.uRayD.value.copy(v0); SU.uPush.value = pointer.push * (mobile ? 0 : 1);
 
@@ -246,6 +249,9 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
     qTmp.setFromAxisAngle(v1.set(0, 1, 0), spinV.x * dt); spinQ.premultiply(qTmp);
     qTmp.setFromAxisAngle(v1.set(1, 0, 0).applyQuaternion(camera.quaternion).setY(0).normalize(), spinV.y * dt); spinQ.premultiply(qTmp);
     SU.uSpinMat.value.setFromMatrix4(m4.makeRotationFromQuaternion(spinQ));
+    model.group.quaternion.copy(spinQ);
+    const live = mode === 'story' && !over;
+    model.set(live ? smooth(6.62, 7.0, q) * (1 - smooth(7.5, 7.74, q)) : 0, live ? smooth(7.03, 7.22, q) * (1 - smooth(7.44, 7.52, q)) * (0.9 + 0.1 * Math.sin(time * 31)) : 0);
 
     move += (Math.min(1, prevP.distanceTo(camP) / Math.max(dt, 0.001) / 160) - move) * 0.2; prevP.copy(camP);
     final.uniforms.uTime.value = time; final.uniforms.uMove.value = move; final.uniforms.uExp.value = s.exp; final.uniforms.uFade.value = fade;
@@ -277,14 +283,14 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
       const dpr = Math.min(window.devicePixelRatio || 1, maxDpr, 2600 / Math.max(W, H));
       renderer.setPixelRatio(dpr); renderer.setSize(W, H, false); composer.setPixelRatio(dpr); composer.setSize(W, H);
       camera.aspect = aspect; fovK = aspect < 1 ? 1.22 : 1; camera.updateProjectionMatrix();
-      const rw = Math.round(W * dpr * (mobile ? 0.5 : 0.6)), rh = Math.round(H * dpr * (mobile ? 0.5 : 0.6));
+      const rw = Math.round(W * dpr * (mobile ? 0.6 : 0.85)), rh = Math.round(H * dpr * (mobile ? 0.6 : 0.85));
       water.getRenderTarget().setSize(rw, rh);
     },
     start() { if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(frame); },
     stop() { running = false; cancelAnimationFrame(raf); },
     dispose() {
       api.stop(); tex.forEach((t) => { t.pos.dispose(); t.aux.dispose(); t.col.dispose(); });
-      geo.dispose(); swarmMat.dispose(); water.dispose(); composer.dispose(); renderer.dispose();
+      model.dispose(); geo.dispose(); swarmMat.dispose(); water.dispose(); composer.dispose(); renderer.dispose();
     },
   };
   let spinTimer = 0;

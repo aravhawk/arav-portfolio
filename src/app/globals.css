@@ -34,7 +34,7 @@ button, .hud a, .nav a { user-select: none; -webkit-user-select: none; }
 /* Type */
 .mono { font-family: var(--font-mono), ui-monospace, monospace; font-size: 11px; line-height: 1.35; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 500; }
 .black { font-stretch: 125%; font-weight: 800; letter-spacing: -0.04em; }
-.thin { font-stretch: 62%; font-weight: 250; letter-spacing: 0; }
+.thin { font-stretch: 62%; font-weight: 250; letter-spacing: 0; word-spacing: 0.14em; }
 
 /* The world */
 .world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; background: var(--ink); }
@@ -93,6 +93,7 @@ html[data-cover='out'] .cover { transform: translateY(-101%); transition: transf
 .head { text-transform: uppercase; line-height: 0.84; font-size: var(--fs); text-wrap: balance; }
 .head .ln { display: block; position: relative; width: fit-content; padding: 0.04em 0 0.07em; }
 .head .ln > span + span { margin-left: 0.16em; }
+.head[data-size='xxl'] { --fs: clamp(6rem, 21vw, 24rem); }
 .head[data-size='xl'] { --fs: clamp(4.5rem, 12.5vw, 14rem); }
 .head[data-size='lg'] { --fs: clamp(3rem, 8.2vw, 9.4rem); }
 .head[data-size='md'] { --fs: clamp(2.2rem, 5.7vw, 6.6rem); }
@@ -109,6 +110,7 @@ html[data-world='live'] .beat { position: fixed; inset: 0; z-index: 3; pointer-e
 html[data-world='live'] .beat[data-place='bl'] { align-items: flex-end; justify-content: flex-start; }
 html[data-world='live'] .beat[data-place='br'] { align-items: flex-end; justify-content: flex-end; text-align: right; }
 html[data-world='live'] .beat[data-place='tl'] { align-items: flex-start; justify-content: flex-start; padding-top: calc(var(--pad) * 4.6); }
+html[data-world='live'] .beat[data-beat='1'] { padding-top: clamp(96px, 15vh, 150px); }
 html[data-world='live'] .beat[data-place='c'] { align-items: center; justify-content: center; text-align: center; }
 .beat[data-place='br'] .copy, .beat[data-place='br'] .head .ln { justify-items: end; margin-left: auto; }
 .beat[data-place='br'] .kicker { flex-direction: row-reverse; }
@@ -116,21 +118,27 @@ html[data-world='live'] .beat[data-place='c'] { align-items: center; justify-con
 .beat[data-place='c'] .copy { justify-items: center; }
 .beat[data-place='c'] .head .ln { margin-inline: auto; }
 
+/* A soft pool of shade under the copy so type never fights the lights */
+html[data-world='live'] .beat::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 500ms var(--ease-out); background: radial-gradient(ellipse 62% 58% at var(--sx, 0%) var(--sy, 100%), rgba(4, 7, 12, 0.62), rgba(4, 7, 12, 0) 72%); }
+html[data-world='live'] .beat[data-on]::before { opacity: 1; }
+.beat[data-place='br'] { --sx: 100%; } .beat[data-place='tl'] { --sy: 0%; } .beat[data-place='c'] { --sx: 50%; --sy: 50%; }
+.beat > .copy { position: relative; }
+
 /* Choreography. Lead: the headline, wiped in by a flare bar. Support: kicker, line, link. */
 html[data-world='live'] .beat .kicker, html[data-world='live'] .beat .line, html[data-world='live'] .beat .go, html[data-world='live'] .beat .ends { opacity: 0; transform: translateY(14px); transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); }
-html[data-world='live'] .beat .ln > span { opacity: 0; transition: opacity 120ms linear; }
-html[data-world='live'] .beat .ln::after { content: ''; position: absolute; inset: 0 -0.06em; background: var(--flare); transform: scaleX(0); transform-origin: left; }
+html[data-world='live'] .beat .ln { clip-path: inset(-10% 100% -10% 0); transition: clip-path 160ms var(--ease-out); }
+html[data-world='live'] .beat .ln::after { content: ''; position: absolute; top: 0.08em; bottom: 0.1em; left: 0; width: 3px; margin-left: -4px; background: var(--flare); opacity: 0; }
 html[data-world='live'] .beat[data-on] { z-index: 4; }
 html[data-world='live'] .beat[data-on] .copy > *, html[data-world='live'] .beat[data-on] .copy a { pointer-events: auto; }
 html[data-world='live'] .beat[data-on] .kicker { opacity: 1; transform: none; transition: opacity 600ms var(--ease-out) 60ms, transform 600ms var(--ease-out) 60ms; }
-html[data-world='live'] .beat[data-on] .ln > span { opacity: 1; transition: opacity 1ms linear calc(330ms + var(--l) * 90ms); }
-html[data-world='live'] .beat[data-on] .ln::after { animation: wipe 760ms var(--ease-in-out) calc(var(--l) * 90ms) both; }
+html[data-world='live'] .beat[data-on] .ln { clip-path: inset(-10% 0 -10% 0); transition: clip-path 900ms var(--ease-in-out) calc(var(--l) * 110ms); }
+html[data-world='live'] .beat[data-on] .ln::after { animation: scan 900ms var(--ease-in-out) calc(var(--l) * 110ms) both; }
 html[data-world='live'] .beat[data-on] .line { opacity: 1; transform: none; transition: opacity 700ms var(--ease-out) 420ms, transform 700ms var(--ease-out) 420ms; }
 html[data-world='live'] .beat[data-on] .go, html[data-world='live'] .beat[data-on] .ends { opacity: 1; transform: none; transition: opacity 700ms var(--ease-out) 520ms, transform 700ms var(--ease-out) 520ms; }
-@keyframes wipe { 0% { transform: scaleX(0); transform-origin: left; } 44% { transform: scaleX(1); transform-origin: left; } 45% { transform: scaleX(1); transform-origin: right; } 100% { transform: scaleX(0); transform-origin: right; } }
+@keyframes scan { 0% { left: 0; opacity: 1; } 99% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
 
 /* Hero */
-.hero-line { font-size: clamp(1.5rem, 2.7vw, 2.9rem); line-height: 1; text-transform: uppercase; max-width: 16ch; }
+.hero-line { font-size: clamp(1.7rem, 3.4vw, 3.8rem); line-height: 1; text-transform: uppercase; max-width: 16ch; }
 .hero-line .black { font-size: 0.56em; display: block; margin-top: 0.5em; letter-spacing: -0.02em; }
 html[data-world='live']:not([data-loaded]) .beat[data-beat='1'] .line { opacity: 0; }
 html[data-world='live'] .beat[data-beat='1'][data-on] .line { transition-delay: 2600ms; }
@@ -272,10 +280,12 @@ a.row:active::before { opacity: 1; }
   .beat .kicker { flex-direction: row !important; }
   .beat .line { margin-left: 0 !important; max-width: 30ch; }
   .head .ln { display: flex; flex-wrap: wrap; gap: 0 0.16em; } .head .ln > span + span { margin-left: 0; }
-  .head[data-size='xl'] { --fs: 21.5vw; } .head[data-size='lg'] { --fs: 13.4vw; } .head[data-size='md'] { --fs: 10.4vw; }
+  .head[data-size='xxl'] { --fs: 30vw; } .head[data-size='xl'] { --fs: 20vw; } .head[data-size='lg'] { --fs: 12.4vw; } .head[data-size='md'] { --fs: 9.6vw; }
   html[data-world='live'] .beat[data-place='c'] { align-items: flex-end !important; }
   .ends { justify-items: start; } .contact { justify-content: flex-start; font-size: 1.15rem; gap: 0 22px; }
   .callout, .scroll-cue { display: none !important; }
+  html[data-world='live'] .beat { --sx: 0%; --sy: 100%; }
+  html[data-world='live'] .beat::before { background: linear-gradient(0deg, rgba(4, 7, 12, 0.78), rgba(4, 7, 12, 0.4) 34%, rgba(4, 7, 12, 0) 58%); }
   .hud-r span { display: none; }
   .spin-pad { left: 0; width: 100%; top: 14%; bottom: 46%; }
 }

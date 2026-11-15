@@ -62,3 +62,10 @@ Ink `#04070c`, steel `#8fa3b8`, bone `#eef1ee`, flare `#ff5a1f`. The sky supplie
 ## Fallbacks
 - No WebGL or reduced motion: every beat becomes a full-screen still rendered from the same scene, with the same copy over it. No flight, no scrub.
 - Phone: same film, portrait camera poses, a quarter of the swarm, copy anchored to the bottom.
+
+## What changed during the build
+- The Merlin beat is a solid engine, not wire: brushed metal that mirrors the sky, with a plume that fires onto the water. The swarm lays it down from the nozzle up and stays on it as a faint scan.
+- The merge beat is shot from above, so it reads as a graph.
+- The finale is a launch arc that bends toward the sun.
+- Headlines are revealed by a scanner line instead of a block wipe.
+- Phone swarm is 21,609 lights (147 squared), not 16,384.

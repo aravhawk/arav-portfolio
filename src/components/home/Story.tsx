@@ -49,7 +49,7 @@ export default function Story() {
       if (hudL.current) hudL.current.textContent = beats[near - 1].label;
       // minutes to first light: the scroll is the clock
       const left = Math.max(0, 1 - (q - 1) / (last - 1)); const secs = Math.round(left * 47 * 60);
-      const t = secs <= 0 ? 'First light' : `${pad2(Math.floor(secs / 60))}:${pad2(secs % 60)}`;
+      const t = secs <= 0 ? 'now' : `in ${pad2(Math.floor(secs / 60))}:${pad2(secs % 60)}`;
       if (t !== lastT && hudT.current) { hudT.current.textContent = t; lastT = t; }
       if (bar.current) bar.current.style.transform = `scaleX(${Math.min(1, (q - 1) / (last - 1))})`;
       if (eng && innerWidth > 720) {
@@ -86,7 +86,7 @@ export default function Story() {
       <h1 className="sr">Arav Jain. Co-founder, Infiniflop Labs.</h1>
       {beats.map((b) => {
         const longest = Math.max(0, ...b.head.map((l) => l.reduce((n, p) => n + p.t.length * (p.w === 'black' ? 1.9 : 1), 0)));
-        const size = longest > 26 ? 'md' : longest > 15 ? 'lg' : 'xl';
+        const size = longest > 19 ? 'md' : longest > 15 ? 'lg' : longest < 10 ? 'xxl' : 'xl';
         return (
           <section key={b.id} className="beat" data-beat={b.n} data-place={b.place} data-on={b.n === 1 ? '' : undefined} aria-label={b.label} style={{ '--still': `url(/stills/${b.n}.jpg)` } as React.CSSProperties}>
             <div className="beat-still" aria-hidden="true" />
@@ -125,7 +125,7 @@ export default function Story() {
       <div className="scroll-cue mono" ref={cue} data-on="" aria-hidden="true">Scroll</div>
       <div className="hud mono" aria-hidden="true">
         <div><b ref={hudN}>01</b> / {pad2(beats.length)}&nbsp;&nbsp;<span ref={hudL}>{beats[0].label}</span></div>
-        <div className="hud-r"><span>First light in </span><b ref={hudT}>47:00</b></div>
+        <div className="hud-r"><span>First light </span><b ref={hudT}>in 47:00</b></div>
       </div>
       <div className="hud-bar" ref={bar} aria-hidden="true" />
     </main>

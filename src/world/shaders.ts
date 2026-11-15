@@ -6,7 +6,7 @@ float fbm(vec2 p){ float a = 0.5, s = 0.0; for(int i=0;i<4;i++){ s += a*vnoise(p
 `;
 
 /* The sky as a function of direction. Shared by the dome and (through the mirror) the water. */
-const SKY_FN = /* glsl */ `
+export const SKY_FN = /* glsl */ `
 uniform vec3 uZen; uniform vec3 uMid; uniform vec3 uHor; uniform vec3 uBand; uniform vec3 uSun; uniform float uStars; uniform float uTod; uniform float uTime;
 ${NOISE}
 vec3 skyColor(vec3 d){
@@ -51,16 +51,24 @@ void main(){ vec3 d = normalize(vDir); gl_FragColor = vec4(skyColor(vec3(d.x, ab
 `;
 
 export const RIDGE_VERT = /* glsl */ `
-varying float vY;
-void main(){ vY = position.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+attribute float crest; varying float vY; varying float vC; varying float vA;
+void main(){ vY = position.y; vC = crest; vA = atan(position.x, -position.z - 900.0); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
 `;
 export const RIDGE_FRAG = /* glsl */ `
-precision highp float; varying float vY;
-uniform vec3 uZen; uniform vec3 uHor; uniform vec3 uBand; uniform float uDark; uniform float uTop;
+precision highp float; varying float vY; varying float vC; varying float vA;
+uniform vec3 uZen; uniform vec3 uHor; uniform vec3 uBand; uniform vec3 uSun; uniform float uDark; uniform float uTop;
+float rh(float n){ return fract(sin(n * 127.1) * 43758.5453); }
+float rn(float x){ float i = floor(x), f = fract(x); f = f*f*(3.0-2.0*f); return mix(rh(i), rh(i+1.0), f); }
 void main(){
   vec3 ink = uZen * 0.5;
   vec3 c = mix(uHor, ink, uDark);
-  c = mix(c, uHor + uBand * 0.05, exp(-max(vY, 0.0) / (uTop * 0.2)) * 0.6);
+  // gullies run down from the crest; faces toward the sun catch the band colour
+  float below = 1.0 - vC;
+  float gully = rn(vA * 260.0 + below * 3.0) * rn(vA * 90.0 + 4.0);
+  c *= 0.82 + 0.3 * gully * smoothstep(0.0, 0.5, below);
+  float sunAz = atan(uSun.x, -uSun.z); float toward = exp(-pow((vA - sunAz) * 1.6, 2.0));
+  c += uBand * 0.05 * toward * smoothstep(0.75, 1.0, vC) * uDark;
+  c = mix(c, uHor + uBand * 0.04, exp(-max(vY, 0.0) / (uTop * 0.22)) * 0.7);
   gl_FragColor = vec4(c, 1.0);
 }
 `;
@@ -85,7 +93,7 @@ void main(){
   vec2 n = vec2(vnoise(p * 0.11 + vec2(t * 0.22, t * 0.1)) - 0.5, vnoise(p * 0.09 + vec2(-t * 0.15, t * 0.2) + 31.0) - 0.5);
   n += 0.5 * vec2(vnoise(p * 0.5 + vec2(t * 0.5, 0.0)) - 0.5, vnoise(p * 0.44 + vec2(0.0, t * 0.45) + 9.0) - 0.5);
   float calm = 1.0 / (1.0 + dist * 0.008);
-  vec4 uv = vUv; uv.xy += n * vec2(0.7, 2.2) * calm * uv.w * 0.011;
+  vec4 uv = vUv; uv.xy += n * vec2(0.6, 1.3) * calm * uv.w * 0.009;
   vec3 refl = texture2DProj(tDiffuse, uv).rgb;
   float fres = 0.34 + 0.66 * pow(1.0 - max(V.y, 0.0), 3.0);
   // salt crust under a skin of water, only where you look down at it
@@ -119,13 +127,13 @@ void main(){
   vec3 A = spin(flowAt(pa.xyz, xa, rnd), uSpinA);
   vec3 B = spin(flowAt(pb.xyz, xb, cb.a), uSpinB);
   // staggered departure: each light leaves on its own cue and eases into its new place
-  float S = 1.25; float loc = clamp(uMix * (1.0 + S) - rnd2 * S, 0.0, 1.0);
+  float S = 0.8; float loc = clamp(uMix * (1.0 + S) - rnd2 * S, 0.0, 1.0);
   float e = loc * loc * (3.0 - 2.0 * loc);
   vec3 p = mix(A, B, e);
   float arc = sin(3.14159 * e);
   float far = clamp(length(B - A) / 160.0, 0.0, 1.0);
-  p += swirl(p * 0.6 + rnd * 20.0 + uTime * 0.2) * arc * (5.0 + 18.0 * far) * (0.4 + rnd);
-  p.y += arc * far * (5.0 + 34.0 * rnd2 * rnd2);
+  p += swirl(p * 0.35 + rnd * 6.0 + uTime * 0.15) * arc * (3.0 + 9.0 * far) * (0.4 + rnd);
+  p.y += arc * far * (4.0 + 16.0 * rnd2 * rnd2);
   // breathing
   p += swirl(p * 2.3 + uTime * 0.6 + rnd * 50.0) * 0.05;
   // the pointer parts the swarm
@@ -141,7 +149,7 @@ void main(){
   float base = size * uPx * 0.0024 * 100.0 / depth;           // diameter in px of the light itself
   float coc = abs(depth - uFocus) / depth * uAperture * uPx * 0.026;  // blur added by the lens
   float d = base + coc;
-  float clampD = min(d, uPx * 0.05);
+  float clampD = min(d, uPx * 0.034);
   gl_PointSize = max(clampD, 1.0);
   float energy = (base * base) / (clampD * clampD + 1e-3);
   float a = pow(clamp(energy, 0.0, 1.0), 0.62) * min(1.0, base * base * 0.9 + 0.12);
@@ -174,7 +182,7 @@ vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59)
 void main(){
   vec2 c = vUv - 0.5; float r2 = dot(c, c);
   // lens fringing grows with speed and toward the edges
-  vec2 off = c * r2 * (0.012 + 0.07 * uMove);
+  vec2 off = c * r2 * (0.004 + 0.05 * uMove);
   vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
   col *= uExp * 1.15;
   col *= 1.0 - r2 * 0.85;

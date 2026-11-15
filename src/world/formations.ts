@@ -93,7 +93,7 @@ class Builder {
       const a = r() * Math.PI * 2; const d = 14 + Math.pow(r(), 0.7) * spread;
       const h = 0.4 + Math.pow(r(), 5) * 46;
       const fa = r() * Math.PI * 2;
-      this.pt([Math.cos(a) * d, h, Math.sin(a) * d * 0.85 + 20], 0.55 + r() * 0.5, r() < 0.2 ? WARM : STEEL, hazeK * (0.25 + r() * 0.6), [Math.cos(fa) * 7, (r() - 0.5) * 1.2, Math.sin(fa) * 7], 0.015 + r() * 0.03);
+      this.pt([Math.cos(a) * d, h, Math.sin(a) * d * 0.85 + 20], 0.55 + r() * 0.5, r() < 0.2 ? WARM : STEEL, hazeK * 0.5 * (0.25 + r() * 0.6), [Math.cos(fa) * 7, (r() - 0.5) * 1.2, Math.sin(fa) * 7], 0.015 + r() * 0.03);
     }
     const have = this.count;
     const idx = new Uint32Array(N);
@@ -363,7 +363,7 @@ export function market(N: number, o: V3): Formation {
 }
 
 /* 7. Engine: a Merlin-class engine as wire, hung nozzle down. Local to a pivot so it can be spun. */
-export const ENGINE_PIVOT: V3 = [0, 22, 0];
+export const ENGINE_PIVOT: V3 = [0, 34, 0];
 export function engine(N: number, o: V3): Formation {
   const b = new Builder(81, o); const r = b.r; const P = ENGINE_PIVOT;
   // Profile: radius as a function of height (y from -19 bottom of bell to +12 top of injector).
@@ -374,14 +374,14 @@ export function engine(N: number, o: V3): Formation {
     if (y < 8) { const t = (y - 5) / 3; return 4.2 * Math.sqrt(Math.max(0, 1 - t * t * 0.86)); } // dome
     return 1.5;
   };
-  const meridians = 40; const perM = Math.floor((N * 0.3) / meridians);
+  const meridians = 40; const perM = Math.floor((N * 0.2) / meridians);
   for (let m = 0; m < meridians; m++) {
     const a = (m / meridians) * Math.PI * 2;
-    b.curve((t) => { const y = -19 + t * 27; const rr = prof(y); return [P[0] + Math.cos(a) * rr, P[1] + y, P[2] + Math.sin(a) * rr]; }, perM, 0.8, m % 4 === 0 ? WHITE : ICE, m % 4 === 0 ? 1.1 : 0.6);
+    b.curve((t) => { const y = -19 + t * 27; const rr = prof(y); return [P[0] + Math.cos(a) * rr, P[1] + y, P[2] + Math.sin(a) * rr]; }, perM, 0.75, m % 4 === 0 ? WHITE : ICE, m % 4 === 0 ? 0.4 : 0.16);
   }
   const ringYs: number[] = []; for (let y = -19; y <= 8; y += y < -3 ? 1.0 : 0.75) ringYs.push(y);
-  const perR = Math.floor((N * 0.3) / ringYs.length);
-  ringYs.forEach((y, i) => { const rim = i === 0; b.ring([P[0], P[1] + y, P[2]], prof(y), rim ? perR * 3 : perR, rim ? 1.2 : 0.8, rim ? WARM : WHITE, rim ? 2.2 : 0.8); });
+  const perR = Math.floor((N * 0.2) / ringYs.length);
+  ringYs.forEach((y, i) => { const rim = i === 0; b.ring([P[0], P[1] + y, P[2]], prof(y), rim ? perR * 3 : perR, rim ? 1.2 : 0.75, rim ? WARM : WHITE, rim ? 2.0 : 0.28); });
   // Stiffener hoops on the bell.
   for (const y of [-15, -11, -7]) b.ring([P[0], P[1] + y, P[2]], prof(y) + 0.35, Math.floor(N * 0.01), 1.0, WARM, 1.3);
   // Turbopump beside the chamber, with its exhaust duct running down past the bell.
@@ -406,7 +406,7 @@ export function engine(N: number, o: V3): Formation {
 /* 8. Launch: the swarm leaves as one column toward the sun. */
 export function launch(N: number, o: V3): Formation {
   const b = new Builder(91, o); const r = b.r;
-  const path = (t: number): V3 => [8 + t * t * 60, 0.4 + Math.pow(t, 1.25) * 760, -40 - t * t * 520];
+  const path = (t: number): V3 => [8 + Math.pow(t, 1.6) * 330, 0.4 + Math.pow(t, 0.8) * 330, -40 - t * 420]; // a gravity turn toward the sun
   const colN = Math.floor(N * 0.62);
   for (let i = 0; i < colN; i++) {
     const t = Math.pow(r(), 1.35); const c = path(t); const q = path(Math.min(1, t + 0.01));
