@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "retrievedAt": "2026-11-15T17:56:53.548Z",
+  "ollama": {
+    "retrievedAt": "2026-11-15T17:56:53.548Z",
+    "source": "https://ollama.com/aravhawk",
+    "endpoints": [
+      "https://ollama.com/aravhawk",
+      "https://ollama.com/aravhawk/<model>"
+    ],
+    "total": 18285,
+    "models": [
+      {
+        "name": "qwen3.5-opus-4.6",
+        "pulls": 9441,
+        "url": "https://ollama.com/aravhawk/qwen3.5-opus-4.6",
+        "uploadedAt": "2026-04-01T03:58:00.000Z"
+      },
+      {
+        "name": "llama4",
+        "pulls": 7363,
+        "url": "https://ollama.com/aravhawk/llama4",
+        "uploadedAt": "2025-04-11T02:23:00.000Z"
+      },
+      {
+        "name": "gemma4",
+        "pulls": 1283,
+        "url": "https://ollama.com/aravhawk/gemma4",
+        "uploadedAt": "2026-04-14T04:54:00.000Z"
+      },
+      {
+        "name": "qwen3.6",
+        "pulls": 198,
+        "url": "https://ollama.com/aravhawk/qwen3.6",
+        "uploadedAt": "2026-04-25T01:34:00.000Z"
+      }
+    ]
+  },
+  "npm": {
+    "retrievedAt": "2026-11-15T17:56:53.548Z",
+    "source": "https://www.npmjs.com/package/@aravhawk/cc-switch",
+    "endpoints": [
+      "https://api.npmjs.org/downloads/range/<start>:<end>/<package>",
+      "https://api.npmjs.org/downloads/point/last-month/<package>"
+    ],
+    "allTime": 9840,
+    "lastMonth": 478,
+    "packages": [
+      {
+        "name": "@aravhawk/cc-switch",
+        "firstPublished": "2026-02-01",
+        "allTime": 9840,
+        "lastMonth": 478,
+        "url": "https://www.npmjs.com/package/@aravhawk/cc-switch"
+      }
+    ]
+  },
+  "contributions": {
+    "retrievedAt": "2026-11-15T17:56:18.000Z",
+    "source": "https://github.com/aravhawk",
+    "endpoints": [
+      "https://github.com/users/aravhawk/contributions?from=<YYYY>-01-01&to=<YYYY>-12-31",
+      "https://github.com/users/aravhawk/contributions"
+    ],
+    "lifetime": 3067,
+    "byYear": {
+      "2021": 11,
+      "2022": 16,
+      "2023": 2,
+      "2024": 162,
+      "2025": 186,
+      "2026": 2690
+    },
+    "last12Months": 2730
+  },
+  "mergedPrs": {
+    "retrievedAt": "2026-11-15T17:56:18.000Z",
+    "source": "https://github.com/search?q=is%3Apr+is%3Amerged+is%3Apublic+author%3Aaravhawk+-user%3Aaravhawk+-user%3Ainfiniflop+-user%3A2ALabz+-user%3Anextup-inspired+-user%3Anavkarcaterers&type=pullrequests",
+    "totalSource": "https://github.com/search?q=is%3Apr+is%3Amerged+is%3Apublic+author%3Aaravhawk&type=pullrequests",
+    "endpoints": [
+      "https://api.github.com/search/issues?q=<query>&per_page=100"
+    ],
+    "query": "is:pr is:merged is:public author:aravhawk -user:aravhawk -user:infiniflop -user:2ALabz -user:nextup-inspired -user:navkarcaterers",
+    "totalQuery": "is:pr is:merged is:public author:aravhawk",
+    "excludedOwners": [
+      "aravhawk",
+      "infiniflop",
+      "2ALabz",
+      "nextup-inspired",
+      "navkarcaterers"
+    ],
+    "requireMergedByOther": false,
+    "upstream": 21,
+    "total": 108,
+    "ledger": [
+      {
+        "repo": "Kanishksasi/Investo",
+        "number": 5,
+        "title": "Hero spacing, word-reveal fix, new Open Graph image",
+        "mergedAt": "2026-11-15T07:15:59Z",
+        "url": "https://github.com/Kanishksasi/Investo/pull/5"
+      },
+      {
+        "repo": "pingdotgg/t3code",
+        "number": 33475,
+        "title": "fix(gitlab): `glab mr new` links the new merge request to the thread",
+        "mergedAt": "2026-11-14T16:40:21Z",
+        "url": "https://github.com/pingdotgg/t3code/pull/33475"
+      },
+      {
+        "repo": "Kanishksasi/Investo",
+        "number": 4,
+        "title": "Redesign the site: sharper hero, cleaner sections, unified pages",
+        "mergedAt": "2026-11-13T13:26:07Z",
+        "url": "https://github.com/Kanishksasi/Investo/pull/4"
+      },
+      {
+        "repo": "pingdotgg/t3code",
+        "number": 33474,
+        "title": "fix(github): `gh pr new` links the new pull request to the thread",
+        "mergedAt": "2026-11-11T23:15:19Z",
+        "url": "https://github.com/pingdotgg/t3code/pull/33474"
+      },
+      {
+        "repo": "pingdotgg/t3code",
+        "number": 19791,
+        "title": "fix(server): PR cache cleanup runs once per shared layer",
+        "mergedAt": "2026-10-20T04:10:12Z",
+        "url": "https://github.com/pingdotgg/t3code/pull/19791"
+      },
+      {
+        "repo": "pingdotgg/t3code",
+        "number": 15886,
+        "title": "fix(server): load merge request diffs on older GitLab",
+        "mergedAt": "2026-10-18T19:29:29Z",
+        "url": "https://github.com/pingdotgg/t3code/pull/15886"
+      },
+      {
+        "repo": "pingdotgg/t3code",
+        "number": 19737,
+        "title": "fix(server): reject unresolved explicit preview tabs",
+        "mergedAt": "2026-10-18T19:13:12Z",
+        "url": "https://github.com/pingdotgg/t3code/pull/19737"
+      },
+      {
+        "repo": "junhoyeo/tokscale",
+        "number": 1397,
+        "title": "fix(cursor): sync a signed-in desktop session into usage reports",
+        "mergedAt": "2026-10-17T17:45:39Z",
+        "url": "https://github.com/junhoyeo/tokscale/pull/1397"
+      },
+      {
+        "repo": "junhoyeo/tokscale",
+        "number": 1430,
+        "title": "fix(cursor): sync incrementally with isolated account caches",
+        "mergedAt": "2026-10-15T16:09:17Z",
+        "url": "https://github.com/junhoyeo/tokscale/pull/1430"
+      },
+      {
+        "repo": "pingdotgg/t3code",
+        "number": 15875,
+        "title": "fix(server): preserve ambient Cursor MCP servers",
+        "mergedAt": "2026-10-11T17:05:19Z",
+        "url": "https://github.com/pingdotgg/t3code/pull/15875"
+      },
+      {
+        "repo": "pingdotgg/t3code",
+        "number": 15876,
+        "title": "fix(server): reject invalid explicit Bitbucket repositories",
+        "mergedAt": "2026-10-06T09:28:50Z",
+        "url": "https://github.com/pingdotgg/t3code/pull/15876"
+      },
+      {
+        "repo": "pingdotgg/t3code",
+        "number": 2981,
+        "title": "fix(web): remember Composer Fast mode across new chats",
+        "mergedAt": "2026-09-07T22:46:16Z",
+        "url": "https://github.com/pingdotgg/t3code/pull/2981"
+      },
+      {
+        "repo": "junhoyeo/tokscale",
+        "number": 1140,
+        "title": "fix(pricing): resolve OpenAI Daybreak Blue alias",
+        "mergedAt": "2026-08-18T12:22:29Z",
+        "url": "https://github.com/junhoyeo/tokscale/pull/1140"
+      },
+      {
+        "repo": "Kilo-Org/kilocode",
+        "number": 6458,
+        "title": "fix: add flexShrink={0} to prompt border box to prevent shrinking",
+        "mergedAt": "2026-04-08T15:40:56Z",
+        "url": "https://github.com/Kilo-Org/kilocode/pull/6458"
+      },
+      {
+        "repo": "fakerybakery/openbridge",
+        "number": 9,
+        "title": "Add a proper license",
+        "mergedAt": "2025-07-17T03:24:35Z",
+        "url": "https://github.com/fakerybakery/openbridge/pull/9"
+      },
+      {
+        "repo": "AvinashDevineni/ThrasherAndChambersWebsite",
+        "number": 10,
+        "title": "Hamburger menu for mobile + sitewide footer",
+        "mergedAt": "2025-05-05T20:44:01Z",
+        "url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/10"
+      },
+      {
+        "repo": "AvinashDevineni/ThrasherAndChambersWebsite",
+        "number": 7,
+        "title": "Modernize UI with fluid design and animations",
+        "mergedAt": "2025-04-20T12:49:25Z",
+        "url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/7"
+      },
+      {
+        "repo": "AvinashDevineni/ThrasherAndChambersWebsite",
+        "number": 6,
+        "title": "Fix image rendering issue",
+        "mergedAt": "2025-04-17T23:37:41Z",
+        "url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/6"
+      },
+      {
+        "repo": "AvinashDevineni/ThrasherAndChambersWebsite",
+        "number": 5,
+        "title": "Easier to follow README with more detailed instructions",
+        "mergedAt": "2025-04-16T22:41:13Z",
+        "url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/5"
+      },
+      {
+        "repo": "AvinashDevineni/ThrasherAndChambersWebsite",
+        "number": 1,
+        "title": "Add compound interest calculator with input validation",
+        "mergedAt": "2025-04-02T04:36:16Z",
+        "url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/1"
+      },
+      {
+        "repo": "devMEremenko/XcodeBenchmark",
+        "number": 575,
+        "title": "Add M3 Pro 12-core MacBook Pro 14\"",
+        "mergedAt": "2025-03-29T15:45:51Z",
+        "url": "https://github.com/devMEremenko/XcodeBenchmark/pull/575"
+      }
+    ]
+  }
+}

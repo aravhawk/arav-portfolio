@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Marks this folder as ES modules so plain `node scripts/refresh-metrics.mjs` can load config.ts without a module-type warning. Not a package: nothing is installed or published from here."
+}

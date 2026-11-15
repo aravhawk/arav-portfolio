@@ -1,0 +1,216 @@
+{
+  "total_count": 21,
+  "incomplete_results": false,
+  "items": [
+    {
+      "repository_url": "https://api.github.com/repos/devMEremenko/XcodeBenchmark",
+      "html_url": "https://github.com/devMEremenko/XcodeBenchmark/pull/575",
+      "number": 575,
+      "title": "Add M3 Pro 12-core MacBook Pro 14\"",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2025-03-29T15:45:51Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/AvinashDevineni/ThrasherAndChambersWebsite",
+      "html_url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/1",
+      "number": 1,
+      "title": "Add compound interest calculator with input validation",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2025-04-02T04:36:16Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/AvinashDevineni/ThrasherAndChambersWebsite",
+      "html_url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/5",
+      "number": 5,
+      "title": "Easier to follow README with more detailed instructions",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2025-04-16T22:41:13Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/AvinashDevineni/ThrasherAndChambersWebsite",
+      "html_url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/6",
+      "number": 6,
+      "title": "Fix image rendering issue",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2025-04-17T23:37:41Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/AvinashDevineni/ThrasherAndChambersWebsite",
+      "html_url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/7",
+      "number": 7,
+      "title": "Modernize UI with fluid design and animations",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2025-04-20T12:49:25Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/AvinashDevineni/ThrasherAndChambersWebsite",
+      "html_url": "https://github.com/AvinashDevineni/ThrasherAndChambersWebsite/pull/10",
+      "number": 10,
+      "title": "Hamburger menu for mobile + sitewide footer",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2025-05-05T20:44:01Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/fakerybakery/openbridge",
+      "html_url": "https://github.com/fakerybakery/openbridge/pull/9",
+      "number": 9,
+      "title": "Add a proper license",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2025-07-17T03:24:35Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/Kilo-Org/kilocode",
+      "html_url": "https://github.com/Kilo-Org/kilocode/pull/6458",
+      "number": 6458,
+      "title": "fix: add flexShrink={0} to prompt border box to prevent shrinking",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-04-08T15:40:56Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/pingdotgg/t3code",
+      "html_url": "https://github.com/pingdotgg/t3code/pull/2981",
+      "number": 2981,
+      "title": "fix(web): remember Composer Fast mode across new chats",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-09-07T22:46:16Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/junhoyeo/tokscale",
+      "html_url": "https://github.com/junhoyeo/tokscale/pull/1140",
+      "number": 1140,
+      "title": "fix(pricing): resolve OpenAI Daybreak Blue alias",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-08-18T12:22:29Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/junhoyeo/tokscale",
+      "html_url": "https://github.com/junhoyeo/tokscale/pull/1397",
+      "number": 1397,
+      "title": "fix(cursor): sync a signed-in desktop session into usage reports",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-10-17T17:45:39Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/pingdotgg/t3code",
+      "html_url": "https://github.com/pingdotgg/t3code/pull/15875",
+      "number": 15875,
+      "title": "fix(server): preserve ambient Cursor MCP servers",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-10-11T17:05:19Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/pingdotgg/t3code",
+      "html_url": "https://github.com/pingdotgg/t3code/pull/15876",
+      "number": 15876,
+      "title": "fix(server): reject invalid explicit Bitbucket repositories",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-10-06T09:28:50Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/pingdotgg/t3code",
+      "html_url": "https://github.com/pingdotgg/t3code/pull/15886",
+      "number": 15886,
+      "title": "fix(server): load merge request diffs on older GitLab",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-10-18T19:29:29Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/junhoyeo/tokscale",
+      "html_url": "https://github.com/junhoyeo/tokscale/pull/1430",
+      "number": 1430,
+      "title": "fix(cursor): sync incrementally with isolated account caches",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-10-15T16:09:17Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/pingdotgg/t3code",
+      "html_url": "https://github.com/pingdotgg/t3code/pull/19737",
+      "number": 19737,
+      "title": "fix(server): reject unresolved explicit preview tabs",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-10-18T19:13:12Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/pingdotgg/t3code",
+      "html_url": "https://github.com/pingdotgg/t3code/pull/19791",
+      "number": 19791,
+      "title": "fix(server): PR cache cleanup runs once per shared layer",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-10-20T04:10:12Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/Kanishksasi/Investo",
+      "html_url": "https://github.com/Kanishksasi/Investo/pull/4",
+      "number": 4,
+      "title": "Redesign the site: sharper hero, cleaner sections, unified pages",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-11-13T13:26:07Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/pingdotgg/t3code",
+      "html_url": "https://github.com/pingdotgg/t3code/pull/33474",
+      "number": 33474,
+      "title": "fix(github): `gh pr new` links the new pull request to the thread",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-11-11T23:15:19Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/pingdotgg/t3code",
+      "html_url": "https://github.com/pingdotgg/t3code/pull/33475",
+      "number": 33475,
+      "title": "fix(gitlab): `glab mr new` links the new merge request to the thread",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-11-14T16:40:21Z"
+      }
+    },
+    {
+      "repository_url": "https://api.github.com/repos/Kanishksasi/Investo",
+      "html_url": "https://github.com/Kanishksasi/Investo/pull/5",
+      "number": 5,
+      "title": "Hero spacing, word-reveal fix, new Open Graph image",
+      "state": "closed",
+      "pull_request": {
+        "merged_at": "2026-11-15T07:15:59Z"
+      }
+    }
+  ]
+}

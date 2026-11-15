@@ -1,0 +1,63 @@
+{
+  "start": "2026-02-01",
+  "end": "2026-02-14",
+  "package": "@aravhawk/cc-switch",
+  "downloads": [
+    {
+      "downloads": 105,
+      "day": "2026-02-01"
+    },
+    {
+      "downloads": 13,
+      "day": "2026-02-02"
+    },
+    {
+      "downloads": 9,
+      "day": "2026-02-03"
+    },
+    {
+      "downloads": 225,
+      "day": "2026-02-04"
+    },
+    {
+      "downloads": 104,
+      "day": "2026-02-05"
+    },
+    {
+      "downloads": 12,
+      "day": "2026-02-06"
+    },
+    {
+      "downloads": 114,
+      "day": "2026-02-07"
+    },
+    {
+      "downloads": 14,
+      "day": "2026-02-08"
+    },
+    {
+      "downloads": 8,
+      "day": "2026-02-09"
+    },
+    {
+      "downloads": 14,
+      "day": "2026-02-10"
+    },
+    {
+      "downloads": 3,
+      "day": "2026-02-11"
+    },
+    {
+      "downloads": 14,
+      "day": "2026-02-12"
+    },
+    {
+      "downloads": 25,
+      "day": "2026-02-13"
+    },
+    {
+      "downloads": 4,
+      "day": "2026-02-14"
+    }
+  ]
+}
