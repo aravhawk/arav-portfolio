@@ -1,0 +1,92 @@
+{
+ "title": "Obys Agency",
+ "generator": null,
+ "canvases": [
+  {
+   "w": 1440,
+   "h": 900,
+   "css": "1440x900",
+   "ctx": "webgl2",
+   "pos": "fixed",
+   "engine": null
+  }
+ ],
+ "three": null,
+ "gsap": null,
+ "lenis": false,
+ "scrollTrigger": false,
+ "nuxt": false,
+ "next": false,
+ "webflow": false,
+ "barba": false,
+ "pixi": false,
+ "ogl": false,
+ "theatre": false,
+ "htmlClass": "",
+ "bodyClass": "",
+ "fonts": [
+  "Obys 400",
+  "ObysSans4 normal"
+ ],
+ "bodyFont": "Obys, serif",
+ "bodyBg": "rgb(255, 255, 255)",
+ "bodyColor": "rgb(0, 0, 0)",
+ "cursor": "auto",
+ "h": null,
+ "biggest": [
+  {
+   "s": 79.9999,
+   "f": "Obys, serif",
+   "ls": "-2.4px",
+   "tt": "none",
+   "t": "Makhno"
+  },
+  {
+   "s": 79.9999,
+   "f": "Obys, serif",
+   "ls": "-2.4px",
+   "tt": "none",
+   "t": "Source Unknown"
+  },
+  {
+   "s": 79.9999,
+   "f": "Obys, serif",
+   "ls": "-2.4px",
+   "tt": "none",
+   "t": "Autex"
+  },
+  {
+   "s": 79.9999,
+   "f": "Obys, serif",
+   "ls": "-2.4px",
+   "tt": "none",
+   "t": "Odin’s Crow"
+  },
+  {
+   "s": 79.9999,
+   "f": "Obys, serif",
+   "ls": "-2.4px",
+   "tt": "none",
+   "t": "Olga Prudka"
+  },
+  {
+   "s": 79.9999,
+   "f": "Obys, serif",
+   "ls": "-2.4px",
+   "tt": "none",
+   "t": "Yulia"
+  }
+ ],
+ "docH": 900,
+ "scrollY": 0,
+ "overflow": "visible/visible",
+ "words": 950,
+ "vids": 0,
+ "imgs": 38,
+ "svgs": 2,
+ "audio": 0,
+ "requests": [
+  "https://obys.agency/font/ObysSans4.woff2",
+  "https://obys.agency/js/d.js"
+ ]
+}

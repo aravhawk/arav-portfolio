@@ -1,0 +1,135 @@
+{
+ "title": "Experience & advantages - David Whyte",
+ "generator": null,
+ "canvases": [
+  {
+   "w": 1440,
+   "h": 900,
+   "css": "1440x900",
+   "ctx": "webgl2",
+   "pos": "fixed",
+   "engine": "three.js r149"
+  }
+ ],
+ "three": "149",
+ "gsap": null,
+ "lenis": true,
+ "scrollTrigger": false,
+ "nuxt": false,
+ "next": false,
+ "webflow": false,
+ "barba": false,
+ "pixi": false,
+ "ogl": false,
+ "theatre": false,
+ "htmlClass": "tablet desktop large notouch lenis",
+ "bodyClass": "wp-singular page-template page-template-unsubscribed page-template-unsubscribed-php page page-id-558 wp-theme-davidwhyte theme-davidwhyte woocommerce-js",
+ "fonts": [
+  "icons 400",
+  "Canela Text 100",
+  "Canela Text Italic 100",
+  "Canela Text 400",
+  "Roobert 400",
+  "Roobert 300"
+ ],
+ "bodyFont": "Times",
+ "bodyBg": "rgba(0, 0, 0, 0)",
+ "bodyColor": "rgb(0, 0, 0)",
+ "cursor": "auto",
+ "h": {
+  "t": "Become a companion to David Whyte's work",
+  "f": "\"Canela Text\"",
+  "s": "52px",
+  "w": "100",
+  "ls": "normal",
+  "lh": "64.48px"
+ },
+ "biggest": [
+  {
+   "s": 86,
+   "f": "\"Canela Text\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "David Whyte"
+  },
+  {
+   "s": 52,
+   "f": "\"Canela Text\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Become a companion to David Whyte's work"
+  },
+  {
+   "s": 52,
+   "f": "\"Canela Text\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Subscriber Benefits"
+  },
+  {
+   "s": 52,
+   "f": "\"Canela Text\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Commonly"
+  },
+  {
+   "s": 52,
+   "f": "\"Canela Text\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Asked Questions"
+  },
+  {
+   "s": 52,
+   "f": "\"Canela Text\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Contact Us"
+  }
+ ],
+ "docH": 5894,
+ "scrollY": 4994,
+ "overflow": "visible/hidden auto",
+ "words": 538,
+ "vids": 2,
+ "imgs": 1,
+ "svgs": 9,
+ "audio": 5,
+ "requests": [
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/fonts/CanelaText-Thin.woff2",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/fonts/CanelaText-Light.woff2",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/fonts/CanelaText-LightItalic.woff2",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/fonts/CanelaText-Regular.woff2",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/fonts/Roobert-Light.woff2",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/fonts/Roobert-Regular.woff2",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/fonts/Roobert-Medium.woff2",
+  "https://davidwhyte.com/wp-includes/js/jquery/jquery.min.js",
+  "https://davidwhyte.com/wp-includes/js/jquery/jquery-migrate.min.js",
+  "https://davidwhyte.com/wp-content/plugins/woocommerce/assets/js/jquery-blockui/jquery.blockUI.min.js",
+  "https://davidwhyte.com/wp-content/plugins/woocommerce/assets/js/frontend/add-to-cart.min.js",
+  "https://davidwhyte.com/wp-content/plugins/woocommerce/assets/js/js-cookie/js.cookie.min.js",
+  "https://davidwhyte.com/wp-content/plugins/woocommerce/assets/js/frontend/woocommerce.min.js",
+  "https://cdn.jsdelivr.net/npm/tarteaucitronjs@1.17.0/tarteaucitron.min.js",
+  "https://reference.dashif.org/dash.js/latest/contrib/akamai/controlbar/ControlBar.js",
+  "https://davidwhyte.com/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js",
+  "https://api.mapbox.com/mapbox-gl-js/v3.14.0/mapbox-gl.js",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/app.js",
+  "https://www.google.com/recaptcha/api.js",
+  "https://davidwhyte.com/wp-content/plugins/woocommerce/assets/js/sourcebuster/sourcebuster.min.js",
+  "https://davidwhyte.com/wp-content/plugins/woocommerce/assets/js/frontend/order-attribution.min.js",
+  "https://js.stripe.com/dahlia/stripe.js",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/fonts/CanelaText-ThinItalic.woff2",
+  "https://www.gstatic.com/recaptcha/releases/4i3aN5wAweL7i3ADI7BSX4B-/recaptcha__en.js",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/xp/models/scene.glb",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/xp/textures/grounds/atlas.ktx2",
+  "https://www.google.com/recaptcha/api2/webworker.js",
+  "https://fonts.gstatic.com/s/roboto/v48/KFO7CnqEu92Fr1ME7kSn66aGLdTylUAMa3yUBHMdazQ.woff2",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/xp/libs/basis/basis_transcoder.js",
+  "https://davidwhyte.com/wp-content/themes/davidwhyte/resources/assets/xp/libs/basis/basis_transcoder.wasm",
+  "https://cdn.jsdelivr.net/npm/tarteaucitronjs@1.17.0/lang/tarteaucitron.en.min.js",
+  "https://cdn.jsdelivr.net/npm/tarteaucitronjs@1.17.0/tarteaucitron.services.min.js",
+  "https://js.stripe.com/v3/fingerprinted/js/m-outer-df5ee3b49f88025f22168cdfc5823764.js",
+  "https://m.stripe.network/out-4.5.45.js"
+ ]
+}

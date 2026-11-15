@@ -1,0 +1,132 @@
+{
+ "title": "Bruno🌳      🚗    🌳        ",
+ "generator": null,
+ "canvases": [
+  {
+   "w": 1440,
+   "h": 900,
+   "css": "1440x900",
+   "ctx": null,
+   "pos": "static",
+   "engine": "three.js r187 webgpu"
+  }
+ ],
+ "three": "187",
+ "gsap": null,
+ "lenis": false,
+ "scrollTrigger": false,
+ "nuxt": false,
+ "next": false,
+ "webflow": false,
+ "barba": false,
+ "pixi": false,
+ "ogl": false,
+ "theatre": false,
+ "htmlClass": "is-started is-server-offline is-gamepad-default input-filter-intro is-mode-mouse-keyboard",
+ "bodyClass": "",
+ "fonts": [
+  "Amatic SC 700",
+  "Nunito 400",
+  "Nunito 700",
+  "Pally-Medium 500"
+ ],
+ "bodyFont": "Nunito, sans-serif",
+ "bodyBg": "rgba(0, 0, 0, 0)",
+ "bodyColor": "rgb(0, 0, 0)",
+ "cursor": "auto",
+ "h": {
+  "t": "Three.js",
+  "f": "\"Amatic SC\", sans-serif",
+  "s": "40px",
+  "w": "700",
+  "ls": "normal",
+  "lh": "normal"
+ },
+ "biggest": [
+  {
+   "s": 50,
+   "f": "\"Amatic SC\", sans-serif",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Your message here"
+  },
+  {
+   "s": 50,
+   "f": "\"Amatic SC\", sans-serif",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Bruno's Home"
+  },
+  {
+   "s": 50,
+   "f": "\"Amatic SC\", sans-serif",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Options"
+  },
+  {
+   "s": 50,
+   "f": "\"Amatic SC\", sans-serif",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Achievements"
+  },
+  {
+   "s": 50,
+   "f": "\"Amatic SC\", sans-serif",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Circuit"
+  },
+  {
+   "s": 50,
+   "f": "\"Amatic SC\", sans-serif",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Leave a whisper"
+  }
+ ],
+ "docH": 900,
+ "scrollY": 0,
+ "overflow": "hidden/hidden",
+ "words": 1,
+ "vids": 0,
+ "imgs": 44,
+ "svgs": 7,
+ "audio": 0,
+ "requests": [
+  "https://bruno-simon.com/respawns/respawnsReferences-compressed.glb",
+  "https://bruno-simon.com/assets/index-DZgz1LCb.js",
+  "https://bruno-simon.com/assets/dist-BiW6BJVu.js",
+  "https://fonts.gstatic.com/s/nunito/v32/XRXV3I6Li01BKofINeaBTMnFcQ.woff2",
+  "https://fonts.gstatic.com/s/amaticsc/v28/TUZ3zwprpvBS1izr_vOMscGKfrUC_2fi-Q.woff2",
+  "https://bruno-simon.com/fonts/Pally-Medium.woff2",
+  "https://bruno-simon.com/draco/draco_wasm_wrapper.js",
+  "https://bruno-simon.com/draco/draco_decoder.wasm",
+  "https://bruno-simon.com/basis/basis_transcoder.js",
+  "https://bruno-simon.com/basis/basis_transcoder.wasm",
+  "https://bruno-simon.com/assets/rapier-DfGXH9Do.js",
+  "https://bruno-simon.com/bushes/bushesReferences-compressed.glb",
+  "https://bruno-simon.com/vehicle/default-compressed.glb",
+  "https://bruno-simon.com/playground/playgroundVisual-compressed.glb",
+  "https://bruno-simon.com/playground/playgroundPhysical-compressed.glb",
+  "https://bruno-simon.com/flowers/flowersReferences-compressed.glb",
+  "https://bruno-simon.com/bricks/bricks-compressed.glb",
+  "https://bruno-simon.com/fences/fences-compressed.glb",
+  "https://bruno-simon.com/benches/benches-compressed.glb",
+  "https://bruno-simon.com/explosiveCrates/explosiveCrates-compressed.glb",
+  "https://bruno-simon.com/lanterns/lanterns-compressed.glb",
+  "https://bruno-simon.com/terrain/terrain-compressed.glb",
+  "https://bruno-simon.com/birchTrees/birchTreesVisual-compressed.glb",
+  "https://bruno-simon.com/birchTrees/birchTreesReferences-compressed.glb",
+  "https://bruno-simon.com/oakTrees/oakTreesVisual-compressed.glb",
+  "https://bruno-simon.com/oakTrees/oakTreesReferences-compressed.glb",
+  "https://bruno-simon.com/cherryTrees/cherryTreesVisual-compressed.glb",
+  "https://bruno-simon.com/cherryTrees/cherryTreesReferences-compressed.glb",
+  "https://bruno-simon.com/scenery/scenery-compressed.glb",
+  "https://bruno-simon.com/areas/areas-compressed.glb",
+  "https://bruno-simon.com/poleLights/poleLights-compressed.glb",
+  "https://bruno-simon.com/tornado/tornadoPathReferences-compressed.glb",
+  "https://bruno-simon.com/assets/rapier_wasm3d_bg-bb0TTxsO.wasm"
+ ]
+}

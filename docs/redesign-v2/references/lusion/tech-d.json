@@ -1,0 +1,133 @@
+{
+ "title": "Lusion - Award Winning 3D and Interactive Web Studio",
+ "generator": null,
+ "canvases": [
+  {
+   "w": 1440,
+   "h": 900,
+   "css": "1440x900",
+   "ctx": "webgl2",
+   "pos": "fixed",
+   "engine": "three.js r158"
+  },
+  {
+   "w": 45,
+   "h": 45,
+   "css": "44.796875x44.796875",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 1442,
+   "h": 902,
+   "css": "0x0",
+   "ctx": "2d",
+   "pos": "fixed",
+   "engine": null
+  }
+ ],
+ "three": "158",
+ "gsap": null,
+ "lenis": false,
+ "scrollTrigger": false,
+ "nuxt": false,
+ "next": false,
+ "webflow": false,
+ "barba": false,
+ "pixi": false,
+ "ogl": false,
+ "theatre": false,
+ "htmlClass": "is-desktop is-ready is-white-bg is-footer-in",
+ "bodyClass": "",
+ "fonts": [
+  "Aeonik 400",
+  "Aeonik 500",
+  "IBMPlexMono 400",
+  "IBMPlexMono 500",
+  "LusionMono 400"
+ ],
+ "bodyFont": "Aeonik",
+ "bodyBg": "rgb(255, 255, 255)",
+ "bodyColor": "rgb(240, 241, 250)",
+ "cursor": "auto",
+ "h": {
+  "t": "We create 3D visual storytellingand interactive web experiencesthat help brands ",
+  "f": "Aeonik",
+  "s": "36px",
+  "w": "400",
+  "ls": "normal",
+  "lh": "39.6px"
+ },
+ "biggest": [
+  {
+   "s": 144,
+   "f": "Aeonik",
+   "ls": "-2.88px",
+   "tt": "none",
+   "t": "Bold"
+  },
+  {
+   "s": 144,
+   "f": "Aeonik",
+   "ls": "-2.88px",
+   "tt": "none",
+   "t": "Ideas,"
+  },
+  {
+   "s": 144,
+   "f": "Aeonik",
+   "ls": "-2.88px",
+   "tt": "none",
+   "t": "Brought"
+  },
+  {
+   "s": 144,
+   "f": "Aeonik",
+   "ls": "-2.88px",
+   "tt": "none",
+   "t": "to"
+  },
+  {
+   "s": 144,
+   "f": "Aeonik",
+   "ls": "-2.88px",
+   "tt": "none",
+   "t": "Life"
+  },
+  {
+   "s": 115.2,
+   "f": "Aeonik",
+   "ls": "-1.152px",
+   "tt": "none",
+   "t": "Where"
+  }
+ ],
+ "docH": 900,
+ "scrollY": 0,
+ "overflow": "hidden/hidden",
+ "words": 893,
+ "vids": 0,
+ "imgs": 0,
+ "svgs": 41,
+ "audio": 0,
+ "requests": [
+  "https://lusion.co/_astro/hoisted.CUO_IjfL.js",
+  "https://lusion.co/assets/fonts/Aeonik-Regular.woff2",
+  "https://lusion.co/assets/fonts/Aeonik-Medium.woff2",
+  "https://lusion.dev/assets/textures/reel/desktop.mp4",
+  "https://lusion.co/assets/fonts/Aeonik-RegularItalic.woff2",
+  "https://lusion.co/assets/fonts/IBMPlexMono-Regular.woff2",
+  "https://lusion.co/assets/fonts/IBMPlexMono-Medium.woff2",
+  "https://lusion.co/assets/fonts/LusionMono.woff2",
+  "https://lusion.dev/assets/textures/home/matcap.exr",
+  "https://f.vimeocdn.com/p/4.46.150/js/player.module.js",
+  "https://f.vimeocdn.com/p/4.46.150/js/vendor.module.js",
+  "https://player.vimeo.com/cdn-cgi/challenge-platform/scripts/precursor/main.js",
+  "https://player.vimeo.com/cdn-cgi/challenge-platform/h/b/scripts/precursor/f8df4d4a0cd6/main.js",
+  "https://f.vimeocdn.com/js_opt/modules/utils/vuid.min.js",
+  "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js",
+  "https://www.gstatic.com/cast/sdk/libs/sender/1.0/cast_framework.js",
+  "https://www.gstatic.com/eureka/clank/141/cast_sender.js"
+ ]
+}
