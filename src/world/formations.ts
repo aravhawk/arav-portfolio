@@ -301,7 +301,7 @@ export function bridge(N: number, o: V3): Formation {
 /* 5. Merge: branches from everywhere fold into one trunk that runs to the horizon. */
 export function merge(N: number, o: V3): Formation {
   const b = new Builder(61, o); const r = b.r;
-  const z0 = 70, z1 = -210; const y = 7;
+  const z0 = 36, z1 = -230; const y = 7;
   const trunkN = Math.floor(N * 0.2);
   for (let i = 0; i < trunkN; i++) {
     const t = r(); const z = z0 + (z1 - z0) * t; const core = r() < 0.6;
@@ -312,7 +312,7 @@ export function merge(N: number, o: V3): Formation {
   for (let i = 0; i < branches; i++) {
     const side = i % 2 ? 1 : -1; const t3 = i < 8; // eight warm branches
     const jz = z0 - 18 - (i / branches) * 190 + (r() - 0.5) * 8;
-    const sx = side * (26 + r() * 62); const sz = jz + 50 + r() * 50; const sy = 1.5 + r() * 22;
+    const sx = side * (26 + r() * 62); const sz = jz + 26 + r() * 34; const sy = 1.5 + r() * 22;
     const p0: V3 = [sx, sy, sz], p1: V3 = [sx * 0.75, sy * 0.8 + 3, jz + 26], p2: V3 = [side * 3.5, y, jz + 14], p3: V3 = [0, y, jz];
     b.curve((t) => {
       const u = 1 - t; const w0 = u * u * u, w1 = 3 * u * u * t, w2 = 3 * u * t * t, w3 = t * t * t;
@@ -413,13 +413,13 @@ export function launch(N: number, o: V3): Formation {
     const d = sub(q, c); const L = len(d) || 1;
     const core = r() < 0.45; const rad = (core ? 0.5 : 1.6 + (1 - t) * 3.2) * (0.3 + r());
     const a = r() * Math.PI * 2;
-    b.pt([c[0] + Math.cos(a) * rad, c[1] + (r() - 0.5) * 2, c[2] + Math.sin(a) * rad], core ? 1.3 : 0.9, core ? WHITE : t < 0.25 ? FLARE : WARM, (core ? 2.6 : 1.2) * (0.55 + t * 0.6), mul(d, 34 / L), 0.3 + r() * 0.4);
+    b.pt([c[0] + Math.cos(a) * rad, c[1] + (r() - 0.5) * 2, c[2] + Math.sin(a) * rad], core ? 1.3 : 0.9, core ? WHITE : t < 0.25 ? FLARE : WARM, (core ? 1.7 : 0.9) * (0.55 + t * 0.6), mul(d, 34 / L), 0.3 + r() * 0.4);
   }
   // Exhaust rolling out across the water.
   const base = path(0);
   for (let i = 0; i < Math.floor(N * 0.2); i++) {
     const a = r() * Math.PI * 2; const d = 3 + Math.pow(r(), 0.6) * 58; const h = 0.3 + Math.pow(r(), 3) * (9 - d * 0.1);
-    b.pt([base[0] + Math.cos(a) * d, Math.max(0.3, h), base[2] + Math.sin(a) * d], 0.9, d < 16 ? FLARE : WARM, d < 16 ? 1.5 : 0.75, [Math.cos(a) * 9, 0, Math.sin(a) * 9], 0.1 + r() * 0.12);
+    b.pt([base[0] + Math.cos(a) * d, Math.max(0.3, h), base[2] + Math.sin(a) * d], 0.9, d < 16 ? FLARE : WARM, d < 16 ? 0.9 : 0.4, [Math.cos(a) * 9, 0, Math.sin(a) * 9], 0.1 + r() * 0.12);
   }
   for (let k = 0; k < 5; k++) b.ring([base[0], 0.3, base[2]], 10 + k * 11, Math.floor(N * 0.01), 0.85, WARM, 1.1 - k * 0.15, 'y', 0.04, 6);
   return b.finish(N, 300, 0.5);

@@ -113,8 +113,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       <a className="skip" href="#main">Skip to content</a>
       <Loader />
       <header className="nav">
-        <TLink href="/" className="mark" aria-label="Arav Jain, home">
-          <span className="black">Arav</span><span className="thin">Jain</span>
+        <TLink href="/" className="mark">
+          <span className="black">Arav</span><span className="sr"> </span><span className="thin">Jain</span>
         </TLink>
         <nav className="nav-links mono" aria-label="Main">
           {LINKS.map((l) => <TLink key={l.href} href={l.href} aria-current={pathname.startsWith(l.href) ? 'page' : undefined}>{l.label}</TLink>)}

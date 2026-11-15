@@ -33,10 +33,10 @@ type Key = { t: number; zen: number[]; mid: number[]; hor: number[]; band: numbe
 const KEYS: Key[] = [
   { t: 0.0, zen: [0.0006, 0.0015, 0.004], mid: [0.001, 0.003, 0.008], hor: [0.003, 0.008, 0.018], band: [0, 0, 0], sunEl: -0.3, exp: 1.25, stars: 1 },
   { t: 0.3, zen: [0.001, 0.004, 0.012], mid: [0.003, 0.011, 0.026], hor: [0.008, 0.026, 0.055], band: [0.02, 0.03, 0.04], sunEl: -0.2, exp: 1.2, stars: 0.95 },
-  { t: 0.5, zen: [0.003, 0.011, 0.03], mid: [0.01, 0.034, 0.066], hor: [0.03, 0.075, 0.12], band: [0.25, 0.15, 0.08], sunEl: -0.13, exp: 1.12, stars: 0.6 },
-  { t: 0.7, zen: [0.005, 0.018, 0.048], mid: [0.014, 0.045, 0.08], hor: [0.05, 0.075, 0.095], band: [0.75, 0.24, 0.05], sunEl: -0.07, exp: 1.08, stars: 0.3 },
-  { t: 0.86, zen: [0.007, 0.027, 0.07], mid: [0.026, 0.066, 0.1], hor: [0.14, 0.11, 0.08], band: [1.35, 0.44, 0.08], sunEl: -0.03, exp: 1.04, stars: 0.1 },
-  { t: 1.0, zen: [0.011, 0.04, 0.1], mid: [0.045, 0.095, 0.125], hor: [0.3, 0.17, 0.07], band: [2.3, 0.85, 0.2], sunEl: 0.022, exp: 1.0, stars: 0 },
+  { t: 0.5, zen: [0.003, 0.011, 0.03], mid: [0.01, 0.034, 0.066], hor: [0.03, 0.075, 0.12], band: [0.25, 0.17, 0.08], sunEl: -0.13, exp: 1.12, stars: 0.6 },
+  { t: 0.7, zen: [0.005, 0.018, 0.048], mid: [0.014, 0.045, 0.08], hor: [0.05, 0.075, 0.095], band: [0.75, 0.34, 0.06], sunEl: -0.07, exp: 1.08, stars: 0.3 },
+  { t: 0.86, zen: [0.007, 0.027, 0.07], mid: [0.026, 0.066, 0.1], hor: [0.14, 0.11, 0.08], band: [1.35, 0.6, 0.1], sunEl: -0.03, exp: 1.04, stars: 0.1 },
+  { t: 1.0, zen: [0.011, 0.04, 0.1], mid: [0.045, 0.095, 0.125], hor: [0.3, 0.17, 0.07], band: [2.3, 1.05, 0.22], sunEl: 0.022, exp: 1.0, stars: 0 },
 ];
 function sky(t: number) {
   let i = 0; while (i < KEYS.length - 2 && t > KEYS[i + 1].t) i++;
@@ -78,7 +78,7 @@ export async function createEngine(canvas: HTMLCanvasElement, opts: { count: num
   [{ r: 9000, h: 950, f: 14, d: 0.5, s: 3 }, { r: 6800, h: 620, f: 22, d: 0.72, s: 17 }, { r: 5000, h: 330, f: 34, d: 0.9, s: 41 }].forEach((L, li) => {
     const M = 720; const pos = new Float32Array((M + 1) * 2 * 3);
     for (let i = 0; i <= M; i++) {
-      const th = (i / M) * Math.PI * 2; const u = (i / M) * L.f;
+      const th = (i / M) * Math.PI * 2 + Math.PI; const u = (i / M) * L.f; // seam sits behind the camera
       let h = 0; let amp = 1; let fr = 1; for (let o = 0; o < 5; o++) { h += (1 - Math.abs(noise1(u * fr + L.s + (i === M ? 0 : 0)) * 2 - 1)) * amp; amp *= 0.5; fr *= 2.03; }
       // keep the ring seamless and open a low pass where the sun comes up
       const az = Math.atan2(Math.sin(th), -Math.cos(th));

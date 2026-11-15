@@ -36,6 +36,7 @@ export const beats: BeatCopy[] = [
     n: 1, id: 'arav', label: 'Arav Jain', place: 'bl',
     head: [],
     line: 'I build AI agents and the tools around them.',
+    callouts: [{ at: [40, 25.5, 3.5], text: '65,536 lights', side: 'r' }],
   },
   {
     n: 2, id: 'infiniview', label: 'Infiniview', place: 'bl', kicker: 'Now. Co-founder, Infiniflop Labs',
@@ -48,7 +49,7 @@ export const beats: BeatCopy[] = [
     n: 3, id: 'developerweek', label: 'DeveloperWeek 2026', place: 'br', kicker: 'DeveloperWeek 2026',
     head: [[{ t: '1st', w: 'black' }], [{ t: 'of 74', w: 'thin' }]],
     line: 'First place out of 74 submissions.',
-    callouts: [{ at: [-34, 6, 26], text: '73', side: 'l' }],
+    callouts: [{ at: [-30, 5, 22], text: '73 entries', side: 'l' }, { at: [0.5, 30, -4], text: '01', side: 'r' }],
   },
   {
     n: 4, id: 'agent-bridge', label: 'agent-bridge', place: 'bl', kicker: 'agent-bridge',
@@ -62,18 +63,20 @@ export const beats: BeatCopy[] = [
     head: [[{ t: '20', w: 'black' }], [{ t: 'merged upstream', w: 'thin' }]],
     line: "Pull requests in other people's repos. 8 of them in T3 Code.",
     link: { label: 'Pull requests', href: 'https://github.com/pulls?q=is%3Apr+author%3Aaravhawk+is%3Amerged+-user%3Aaravhawk' },
+    callouts: [{ at: [0, 7, -150], text: 'main', side: 'r' }],
   },
   {
     n: 6, id: 'markets', label: 'Markets', place: 'tl', kicker: 'Trading',
     head: [[{ t: 'The bot', w: 'thin' }, { t: 'trades.', w: 'black' }]],
     line: 'Equities and options, 14 strategies, on its own. Before it came AlphaPredict, a stock predictor.',
-    callouts: [{ at: [78, 22, -8], text: '14 strategies', side: 'r' }],
+    callouts: [{ at: [84, 31, -6], text: '14 strategies', side: 'r' }],
   },
   {
     n: 7, id: 'merlin', label: 'Merlin 1D', place: 'br', kicker: 'merlin-control',
     head: [[{ t: 'Merlin 1D.', w: 'black' }], [{ t: 'Bare hands.', w: 'thin' }]],
     line: 'A SpaceX engine you spin through a webcam. Drag this one.',
     link: { label: 'merlin.aravhawk.com', href: 'https://merlin.aravhawk.com' },
+    callouts: [{ at: [0, 36, 0], text: 'Gimbal', side: 'l' }, { at: [0, 3, 0], text: 'Nozzle', side: 'l' }],
   },
   {
     n: 8, id: 'early', label: 'First light', place: 'bl',

@@ -15,20 +15,20 @@ vec3 skyColor(vec3 d){
   // the warm band hugs the horizon on the sun's side
   vec2 a = normalize(d.xz + 1e-5); vec2 s = normalize(uSun.xz);
   float az = max(dot(a, s), 0.0);
-  float band = exp(-h * 9.0) * pow(az, 5.0);
+  float band = exp(-h * 15.0) * pow(az, 5.0);
   col += uBand * band * 0.55;
   col += uBand * exp(-h * 30.0) * pow(az, 2.0) * 0.16;
   // sun glow and disc
   float sd = max(dot(normalize(d), uSun), 0.0);
-  col += uBand * pow(sd, 90.0) * 0.9 * smoothstep(0.6, 1.0, uTod);
-  col += vec3(1.0, 0.86, 0.62) * smoothstep(0.99985, 0.99994, sd) * 26.0 * smoothstep(0.86, 1.0, uTod);
+  col += uBand * pow(sd, 260.0) * 0.5 * smoothstep(0.6, 1.0, uTod);
+  col += vec3(1.0, 0.86, 0.62) * smoothstep(0.99988, 0.99995, sd) * 9.0 * smoothstep(0.86, 1.0, uTod);
   // high cloud, lit from below as the sun nears
   if (d.y > 0.012) {
     vec2 p = d.xz / (d.y + 0.14);
     float c = fbm(p * vec2(0.55, 1.5) + vec2(uTime * 0.004, 0.0));
     c = smoothstep(0.5, 0.86, c) * smoothstep(0.012, 0.12, d.y) * (1.0 - smoothstep(0.45, 0.9, d.y));
-    vec3 lit = uHor * 0.4 + uBand * (0.12 + 0.5 * pow(az, 3.0)) * exp(-h * 4.5);
-    col = mix(col, lit, c * 0.5 * (0.35 + 0.65 * pow(az, 2.0)));
+    vec3 lit = col * 0.5 + uBand * 0.05 * pow(az, 3.0) * exp(-h * 4.0);
+    col = mix(col, lit, c * 0.7);
   }
   // stars
   vec3 n = normalize(d); vec3 g = n * 190.0; vec3 id = floor(g); vec3 f = fract(g) - 0.5;
@@ -148,7 +148,8 @@ void main(){
   vBokeh = clamp(coc / (base + 1.0), 0.0, 1.0);
   float tw = 0.82 + 0.18 * sin(uTime * (1.2 + rnd * 3.0) + rnd * 60.0);
   vec3 c = mix(ca.rgb, cb.rgb, e) * (1.0 + arc * 0.5);
-  vCol = c * tw * uGain * exp(-depth * uFog);
+  float sweep = 1.0 + 0.55 * pow(0.5 + 0.5 * sin(p.x * 0.07 + p.y * 0.05 - uTime * 0.9), 12.0);
+  vCol = c * tw * sweep * uGain * exp(-depth * uFog) * smoothstep(3.0, 20.0, depth);
   vAlpha = a;
 }
 `;

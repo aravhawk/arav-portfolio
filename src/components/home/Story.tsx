@@ -88,7 +88,7 @@ export default function Story() {
         const longest = Math.max(0, ...b.head.map((l) => l.reduce((n, p) => n + p.t.length * (p.w === 'black' ? 1.9 : 1), 0)));
         const size = longest > 26 ? 'md' : longest > 15 ? 'lg' : 'xl';
         return (
-          <section key={b.id} className="beat" data-beat={b.n} data-place={b.place} data-on={b.n === 1 ? '' : undefined} aria-label={b.label} style={{ '--still': `url(/stills/${b.n}.webp)` } as React.CSSProperties}>
+          <section key={b.id} className="beat" data-beat={b.n} data-place={b.place} data-on={b.n === 1 ? '' : undefined} aria-label={b.label} style={{ '--still': `url(/stills/${b.n}.jpg)` } as React.CSSProperties}>
             <div className="beat-still" aria-hidden="true" />
             {b.id === 'merlin' && <div className="spin-pad" aria-hidden="true" />}
             <div className="copy">
