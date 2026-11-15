@@ -1,23 +1,5 @@
-import Navigation from '@/components/layout/Navigation';
-import Hero from '@/components/sections/Hero';
-import Ventures from '@/components/sections/Ventures';
-import About from '@/components/sections/About';
-import Contact from '@/components/sections/Contact';
-import Footer from '@/components/layout/Footer';
+import Home from '@/components/home/Home';
 
-export default function Home() {
-  return (
-    <main className="min-h-screen bg-[#050505]">
-      {/* Noise overlay */}
-      <div className="noise-overlay" />
-
-      {/* Content */}
-      <Navigation />
-      <Hero />
-      <Ventures />
-      <About />
-      <Contact />
-      <Footer />
-    </main>
-  );
+export default function Page() {
+  return <Home />;
 }

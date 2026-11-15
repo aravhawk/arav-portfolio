@@ -1,39 +1,35 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ViewTransition } from 'react';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
 import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
-import {
-  getPostBySlug,
-  getAllPostSlugs,
-  getAdjacentPosts,
-} from '@/lib/blog';
+import { getPostBySlug, getAllPostSlugs, getAdjacentPosts } from '@/lib/blog';
 import { mdxComponents } from '@/components/blog/MDXComponents';
 import PostNavigation from '@/components/blog/PostNavigation';
-import Navigation from '@/components/layout/Navigation';
-import Footer from '@/components/layout/Footer';
-import Badge from '@/components/ui/Badge';
-import GridBackground from '@/components/ui/GridBackground';
+import SceneSetter from '@/components/SceneSetter';
+import Footer from '@/components/Footer';
+import Glass from '@/components/Glass';
+import { ArrowLeft } from '@/components/Icons';
+import { formatPostDate } from '@/lib/date';
 import type { BlogFrontmatter } from '@/types';
 
 export async function generateStaticParams() {
   return getAllPostSlugs().map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const post = getPostBySlug(slug);
-  if (!post) return { title: 'Post Not Found' };
+  if (!post) return { title: 'Post not found' };
 
   return {
-    title: `${post.frontmatter.title} - Arav Jain`,
+    title: post.frontmatter.title,
     description: post.frontmatter.description,
+    alternates: { canonical: `/blog/${slug}` },
     openGraph: {
       title: post.frontmatter.title,
       description: post.frontmatter.description,
@@ -41,19 +37,11 @@ export async function generateMetadata({
       publishedTime: post.frontmatter.date,
       tags: post.frontmatter.tags,
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.frontmatter.title,
-      description: post.frontmatter.description,
-    },
+    twitter: { card: 'summary_large_image', title: post.frontmatter.title, description: post.frontmatter.description },
   };
 }
 
-export default async function BlogPostPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = getPostBySlug(slug);
   if (!post) notFound();
@@ -64,78 +52,47 @@ export default async function BlogPostPage({
     options: {
       mdxOptions: {
         remarkPlugins: [remarkGfm],
-        rehypePlugins: [
-          rehypeSlug,
-          [rehypeAutolinkHeadings, { behavior: 'wrap' }],
-          [rehypePrettyCode, { theme: 'github-dark', keepBackground: true }],
-        ],
+        rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, { behavior: 'wrap' }], [rehypePrettyCode, { theme: 'github-dark', keepBackground: true }]],
       },
     },
   });
 
-  const adjacentPosts = getAdjacentPosts(slug);
-  const prev = adjacentPosts.prev
-    ? { ...adjacentPosts.prev, content: '' }
-    : null;
-  const next = adjacentPosts.next
-    ? { ...adjacentPosts.next, content: '' }
-    : null;
-
-  const date = new Date(post.frontmatter.date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const adjacent = getAdjacentPosts(slug);
 
   return (
-    <main className="min-h-screen bg-[#050505]">
-      <div className="noise-overlay" />
-      <Navigation />
-
-      <article className="relative pt-40 pb-20">
-        <GridBackground variant="circuit" fade="both" intensity="dim" />
-
-        <div className="max-w-3xl mx-auto px-6 lg:px-12">
-          {/* Post header */}
-          <header className="mb-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#888888]">
-                {date}
-              </span>
-              <span className="text-[#333333]">/</span>
-              <span className="text-xs font-mono text-[#555555]">
-                {post.readingTime}
-              </span>
+    <>
+      <SceneSetter name="post" />
+      <div className="page">
+        <article className="article layer-ui">
+          <header className="article-head">
+            <Link className="back" href="/blog">
+              <ArrowLeft />
+              Blog
+            </Link>
+            <div className="post-meta mono" style={{ color: 'var(--fg-dim)' }}>
+              <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date)}</time>
+              <span aria-hidden="true">/</span>
+              <span>{post.readingTime}</span>
             </div>
-
-            <h1 className="font-display text-5xl md:text-6xl lg:text-7xl text-[#FAFAFA] mb-6 leading-[1.1]">
-              {post.frontmatter.title}
-            </h1>
-
-            <p className="text-lg md:text-xl text-[#888888] max-w-2xl leading-relaxed mb-8">
-              {post.frontmatter.description}
-            </p>
-
-            <div className="flex flex-wrap gap-2 mb-8">
+            <ViewTransition name={`post-${slug}`} share="title" default="none">
+              <h1 className="article-title">{post.frontmatter.title}</h1>
+            </ViewTransition>
+            <p className="article-desc">{post.frontmatter.description}</p>
+            <ul className="chips">
               {post.frontmatter.tags.map((tag) => (
-                <Badge key={tag} variant="cyan">
+                <li className="chip" key={tag} style={{ color: 'var(--fg)', boxShadow: 'inset 0 0 0 1px var(--line)', background: 'transparent' }}>
                   {tag}
-                </Badge>
+                </li>
               ))}
-            </div>
-
-            <div className="hr-glow" />
+            </ul>
           </header>
-
-          {/* MDX content */}
-          <div className="prose-brutalist">{content}</div>
-
-          {/* Post navigation */}
-          <PostNavigation prev={prev} next={next} />
-        </div>
-      </article>
-
+          <Glass className="article-body" refract>
+            <div className="prose">{content}</div>
+          </Glass>
+          <PostNavigation prev={adjacent.prev ? { slug: adjacent.prev.slug, frontmatter: adjacent.prev.frontmatter } : null} next={adjacent.next ? { slug: adjacent.next.slug, frontmatter: adjacent.next.frontmatter } : null} />
+        </article>
+      </div>
       <Footer />
-    </main>
+    </>
   );
 }

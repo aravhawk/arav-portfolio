@@ -1,25 +1,26 @@
 import Link from 'next/link';
+import SceneSetter from '@/components/SceneSetter';
+import GroundInit from '@/components/GroundInit';
+import { ArrowRight } from '@/components/Icons';
 
 export default function PostNotFound() {
   return (
-    <main className="min-h-screen bg-[#050505] flex items-center justify-center px-6">
-      <div className="text-center">
-        <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#00F0FF] mb-4 block">
-          404
-        </span>
-        <h1 className="font-display text-5xl md:text-6xl text-[#FAFAFA] mb-4">
-          Post Not Found
-        </h1>
-        <p className="text-[#888888] mb-8 max-w-md mx-auto">
-          This blog post doesn&apos;t exist or has been removed.
-        </p>
-        <Link
-          href="/blog"
-          className="inline-flex items-center gap-2 px-6 py-3 text-xs font-mono uppercase tracking-wider text-[#050505] bg-[#00F0FF] hover:bg-[#00D4E0] transition-colors duration-300"
-        >
-          Back to Blog
-        </Link>
+    <>
+      <GroundInit ground="ink" />
+      <SceneSetter name="lost" />
+      <div className="lost">
+        <div className="layer-ui" style={{ display: 'grid', gap: 24 }}>
+          <span className="kicker mono">404</span>
+          <h1 className="article-title">That post does not exist.</h1>
+          <p>It may have been renamed or unpublished.</p>
+          <div className="lost-actions">
+            <Link className="btn btn--solid" href="/blog" data-magnet>
+              All posts
+              <ArrowRight />
+            </Link>
+          </div>
+        </div>
       </div>
-    </main>
+    </>
   );
 }

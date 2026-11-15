@@ -1,25 +1,38 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+import SceneSetter from '@/components/SceneSetter';
+import GroundInit from '@/components/GroundInit';
+import { ArrowRight } from '@/components/Icons';
+
+export const metadata: Metadata = { title: 'Not found' };
 
 export default function NotFound() {
   return (
-    <main className="min-h-screen bg-[#050505] flex items-center justify-center px-6">
-      <div className="text-center">
-        <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#00F0FF] mb-4 block">
-          404
-        </span>
-        <h1 className="font-display text-5xl md:text-6xl text-[#FAFAFA] mb-4">
-          Page Not Found
-        </h1>
-        <p className="text-[#888888] mb-8 max-w-md mx-auto">
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
-        </p>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-6 py-3 text-xs font-mono uppercase tracking-wider text-[#050505] bg-[#00F0FF] hover:bg-[#00D4E0] transition-colors duration-300"
-        >
-          Go Home
-        </Link>
+    <>
+      <GroundInit ground="ink" />
+      <SceneSetter name="lost" />
+      <div className="lost">
+        <div className="layer-type" aria-hidden="true">
+          <div className="word">
+            <span className="line">
+              <span data-refract>404</span>
+            </span>
+          </div>
+        </div>
+        <div className="layer-ui" style={{ display: 'grid', gap: 24 }}>
+          <h1 className="sr-only">Page not found</h1>
+          <p>This page broke before anyone could attack it. Nothing lives at this address.</p>
+          <div className="lost-actions">
+            <Link className="btn btn--solid" href="/" data-magnet>
+              Back home
+              <ArrowRight />
+            </Link>
+            <Link className="btn" href="/work" data-magnet>
+              See the work
+            </Link>
+          </div>
+        </div>
       </div>
-    </main>
+    </>
   );
 }
