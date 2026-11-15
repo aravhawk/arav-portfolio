@@ -46,15 +46,15 @@ html[data-tone="light"] {
 }
 html[data-tone="dark"] {
   --fg: #eef1f3;
-  --fg-dim: rgb(238 241 243 / 0.78);
+  --fg-dim: rgb(238 241 243 / 0.88);
   --line: rgb(238 241 243 / 0.2);
-  --glass-tint: rgb(14 17 22 / 0.52);
+  --glass-tint: rgb(14 17 22 / 0.64);
   --glass-solid: #14181e;
   --glass-fg: #f4f6f8;
-  --glass-dim: rgb(244 246 248 / 0.78);
+  --glass-dim: rgb(244 246 248 / 0.84);
   --glass-line: rgb(244 246 248 / 0.16);
   --glass-shade: rgb(0 0 0 / 0.42);
-  --chip: rgb(255 255 255 / 0.1);
+  --chip: rgb(6 8 12 / 0.34);
   --focus: #ffffff;
 }
 
@@ -180,7 +180,7 @@ main { display: block; }
 /* Chromium: the pane bends what is behind it. The filter carries its own blur. */
 .glass.glass--svg { -webkit-backdrop-filter: var(--lg) saturate(1.6); backdrop-filter: var(--lg) saturate(1.6); }
 html[data-tone="light"] .glass.glass--svg { background: rgb(255 255 255 / 0.56); }
-html[data-tone="dark"] .glass.glass--svg { background: rgb(14 17 22 / 0.6); }
+html[data-tone="dark"] .glass.glass--svg { background: rgb(14 17 22 / 0.66); }
 /* Specular rim. One light for the whole page, from the upper left, pulled toward the cursor. */
 .glass::before {
   content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.25px; pointer-events: none; z-index: 2;
@@ -575,3 +575,8 @@ html[data-tone="dark"] .filter[aria-pressed="true"] { color: var(--ink); }
 /* Wide and narrow variants of the display word. */
 .only-narrow { display: none; }
 @media (max-width: 767px) { .only-wide { display: none; } .only-narrow { display: block; } }
+
+/* Glass buttons that sit directly on the ground: a denser tint so their label always clears 4.5:1. */
+.glass.btn { background: color-mix(in srgb, var(--glass-solid) 90%, transparent); box-shadow: inset 0 0 0 1px var(--glass-line), 0 6px 14px -8px rgb(0 0 0 / 0.4); }
+.glass.btn::after { display: none; }
+@media (hover: hover) and (pointer: fine) { .glass.btn:hover { background: var(--glass-solid); } }

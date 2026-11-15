@@ -244,6 +244,9 @@ vec3 backdrop(vec2 px, float lod){
 vec3 envLight(vec3 r, float rough){
   float up = smoothstep(-0.4, 0.9, r.y);
   vec3 e = mix(uGround * 0.55, mix(uGround, vec3(1.0), 0.7), up) + vec3(0.1, 0.12, 0.16) * up;
+  // A dark card on the horizon, the way glass is lit in a studio: on light grounds it draws the edges.
+  float lum = dot(uGround, vec3(0.3, 0.6, 0.1));
+  e *= 1.0 - 0.62 * lum * (1.0 - smoothstep(0.0, 0.3, abs(r.y + 0.18)));
   float k = max(dot(r, uLight), 0.0);
   e += vec3(1.0) * (pow(k, 110.0) * 5.0 + pow(k, 14.0) * 0.4);
   float box = smoothstep(0.5, 0.62, r.y) * (1.0 - smoothstep(0.18, 0.5, abs(r.x + 0.25)));
