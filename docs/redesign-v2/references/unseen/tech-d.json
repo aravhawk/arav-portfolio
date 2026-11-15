@@ -1,0 +1,138 @@
+{
+ "title": "Unseen Studio® – Brand, Digital & Motion",
+ "generator": null,
+ "canvases": [
+  {
+   "w": 1440,
+   "h": 900,
+   "css": "1440x900",
+   "ctx": "webgl2",
+   "pos": "static",
+   "engine": "three.js r143"
+  }
+ ],
+ "three": "143",
+ "gsap": null,
+ "lenis": false,
+ "scrollTrigger": false,
+ "nuxt": false,
+ "next": false,
+ "webflow": false,
+ "barba": false,
+ "pixi": false,
+ "ogl": false,
+ "theatre": false,
+ "htmlClass": "asscroll-disabled",
+ "bodyClass": "home wp-singular page page-id-7 wp-embed-responsive wp-theme-unseen page-template-home-contact",
+ "fonts": [
+  "Neue Montreal 400",
+  "Saol Display 400"
+ ],
+ "bodyFont": "\"Neue Montreal\", system-ui, -apple-system, \"system-ui\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans\", sans-serif",
+ "bodyBg": "rgba(0, 0, 0, 0)",
+ "bodyColor": "rgb(0, 0, 0)",
+ "cursor": "auto",
+ "h": {
+  "t": "Home",
+  "f": "\"Neue Montreal\", system-ui, -apple-system, \"system-ui\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans\", sans-serif",
+  "s": "28.8px",
+  "w": "700",
+  "ls": "normal",
+  "lh": "43.2px"
+ },
+ "biggest": [
+  {
+   "s": 86.4,
+   "f": "\"Saol Display\", Georgia, Cambria, \"Times New Roman",
+   "ls": "-1.44px",
+   "tt": "none",
+   "t": "Say hello"
+  },
+  {
+   "s": 57.6,
+   "f": "\"Neue Montreal\", system-ui, -apple-system, \"system",
+   "ls": "-1.152px",
+   "tt": "none",
+   "t": "Selected Projects"
+  },
+  {
+   "s": 28.8,
+   "f": "\"Neue Montreal\", system-ui, -apple-system, \"system",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Home"
+  },
+  {
+   "s": 18.72,
+   "f": "\"Neue Montreal\", system-ui, -apple-system, \"system",
+   "ls": "normal",
+   "tt": "none",
+   "t": "01"
+  },
+  {
+   "s": 18.72,
+   "f": "\"Neue Montreal\", system-ui, -apple-system, \"system",
+   "ls": "normal",
+   "tt": "none",
+   "t": "02"
+  },
+  {
+   "s": 18.72,
+   "f": "\"Neue Montreal\", system-ui, -apple-system, \"system",
+   "ls": "normal",
+   "tt": "none",
+   "t": "03"
+  }
+ ],
+ "docH": 900,
+ "scrollY": 0,
+ "overflow": "visible/hidden",
+ "words": 58,
+ "vids": 0,
+ "imgs": 0,
+ "svgs": 30,
+ "audio": 0,
+ "requests": [
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/fonts/NeueMontreal-Regular.woff2",
+  "https://unseen.co/wp-content/themes/unseen/public/scripts/manifest.js",
+  "https://unseen.co/wp-content/themes/unseen/public/scripts/vendor.js",
+  "https://unseen.co/wp-content/themes/unseen/public/scripts/theme.js",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/fonts/SaolDisplay-Light.woff2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/fonts/SaolDisplay-LightItalic.woff2",
+  "https://secure.insightful-cloud-365.com/js/264099.js",
+  "https://tag.demandbase.com/partnertag.min.js",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/audio/audio.webm",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/home/room-1.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/home/room-2.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/home/chair.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/home/pillows.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/home/rocks.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/home/table-3.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/home/land-group.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/home/grass-simple.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/room-1.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/room-2.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/chair.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/pillows.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/rocks.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/table.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/pearl-matcap.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/particles.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/skymap-tile.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/home/ao.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/home/objectsData.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/project-menu/butterfly.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/images/project-menu/arch.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/project-menu/arch-dc.glb",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/models/project-menu/floor-dc.glb",
+  "https://unseen.co/wp-content/uploads/2021/12/rw-2-819x1024.ktx2",
+  "https://unseen.co/wp-content/uploads/2021/12/blue-1-819x1024.ktx2",
+  "https://unseen.co/wp-content/uploads/2021/04/still-card-test-2-819x1024.ktx2",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/fonts/NeueMontreal-Regular.woff",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/fonts/SaolDisplay-LightItalic.woff",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/draco/draco_wasm_wrapper.js",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/draco/draco_decoder.wasm",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/basis/basis_transcoder.js",
+  "https://unseen.co/wp-content/themes/unseen/resources/assets/basis/basis_transcoder.wasm"
+ ]
+}

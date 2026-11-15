@@ -1,0 +1,115 @@
+{
+ "title": "Ravi Klaassens | Web Design, Development & Branding",
+ "generator": null,
+ "canvases": [
+  {
+   "w": 1440,
+   "h": 900,
+   "css": "1440x900",
+   "ctx": "webgl2",
+   "pos": "static",
+   "engine": null
+  }
+ ],
+ "three": null,
+ "gsap": "3.15.1",
+ "lenis": true,
+ "scrollTrigger": true,
+ "nuxt": false,
+ "next": false,
+ "webflow": true,
+ "barba": true,
+ "pixi": false,
+ "ogl": false,
+ "theatre": false,
+ "htmlClass": "w-mod-js w-mod-ix lenis",
+ "bodyClass": "",
+ "fonts": [
+  "ReplicaLL 400",
+  "Reckless Neue 400",
+  "Suisse Intl Book 400"
+ ],
+ "bodyFont": "\"Suisse Intl Book\", Arial, sans-serif",
+ "bodyBg": "rgb(224, 222, 221)",
+ "bodyColor": "rgb(0, 0, 0)",
+ "cursor": "auto",
+ "h": {
+  "t": "Ravi Klaassens.Design & Code for thosewho refuse to settle.",
+  "f": "ReplicaLL, Arial, sans-serif",
+  "s": "30px",
+  "w": "500",
+  "ls": "-1.2px",
+  "lh": "31.2px"
+ },
+ "biggest": [
+  {
+   "s": 33.6,
+   "f": "ReplicaLL, Arial, sans-serif",
+   "ls": "-1.176px",
+   "tt": "none",
+   "t": "GSAP Site of the Week."
+  },
+  {
+   "s": 33.6,
+   "f": "ReplicaLL, Arial, sans-serif",
+   "ls": "-1.176px",
+   "tt": "none",
+   "t": "A24."
+  },
+  {
+   "s": 30,
+   "f": "ReplicaLL, Arial, sans-serif",
+   "ls": "-1.2px",
+   "tt": "none",
+   "t": "Ravi"
+  },
+  {
+   "s": 30,
+   "f": "ReplicaLL, Arial, sans-serif",
+   "ls": "-1.2px",
+   "tt": "none",
+   "t": "Klaassens."
+  },
+  {
+   "s": 30,
+   "f": "ReplicaLL, Arial, sans-serif",
+   "ls": "-1.2px",
+   "tt": "none",
+   "t": "Design"
+  },
+  {
+   "s": 30,
+   "f": "ReplicaLL, Arial, sans-serif",
+   "ls": "-1.2px",
+   "tt": "none",
+   "t": "& Code"
+  }
+ ],
+ "docH": 6989,
+ "scrollY": 6089,
+ "overflow": "visible/visible",
+ "words": 366,
+ "vids": 0,
+ "imgs": 22,
+ "svgs": 88,
+ "audio": 0,
+ "requests": [
+  "https://cloud.umami.is/script.js",
+  "https://d3e54v103j8qbb.cloudfront.net/js/jquery-3.5.1.min.dc5e7f18c8.js",
+  "https://cdn.prod.website-files.com/69905c96f939ade61f497575/js/webflow.schunk.36b8fb49256177c8.js",
+  "https://cdn.prod.website-files.com/69905c96f939ade61f497575/js/webflow.9edeed2a.4f0260e60d413287.js",
+  "https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js",
+  "https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js",
+  "https://cdn.jsdelivr.net/npm/gsap@3/dist/CustomEase.min.js",
+  "https://cdn.jsdelivr.net/npm/gsap@3/dist/SplitText.min.js",
+  "https://cdn.jsdelivr.net/npm/gsap@3/dist/Draggable.min.js",
+  "https://cdn.jsdelivr.net/npm/gsap@3/dist/InertiaPlugin.min.js",
+  "https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.min.js",
+  "https://cdn.jsdelivr.net/npm/@barba/core@2/dist/barba.umd.js",
+  "https://cdn.odyn.dev/auto/krmy/bundle.js",
+  "https://webflow-files-prod.global.ssl.fastly.net/69905c96f939ade61f497575/fonts/6aca98821ce84ee5cdff2fdb-ReplicaLLWeb-Regular.woff2",
+  "https://webflow-files-prod.global.ssl.fastly.net/69905c96f939ade61f497575/fonts/6aca98822700ed15e505689a-SuisseIntl-Book.woff2",
+  "https://webflow-files-prod.global.ssl.fastly.net/69905c96f939ade61f497575/fonts/6aca986469bb83a9dfc93a49-RecklessNeue-Regular.woff2",
+  "https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.4.1/dist/unicornStudio.umd.js"
+ ]
+}

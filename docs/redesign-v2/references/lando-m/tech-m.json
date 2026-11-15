@@ -1,0 +1,286 @@
+{
+ "title": "McLaren Formula 1 Driver — Lando Norris",
+ "generator": null,
+ "canvases": [
+  {
+   "w": 50,
+   "h": 50,
+   "css": "50.90625x50.90625",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 27,
+   "h": 27,
+   "css": "27.078125x27.078125",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 0,
+   "h": 0,
+   "css": "0x0",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 300,
+   "h": 150,
+   "css": "0x0",
+   "ctx": "webgl2",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 390,
+   "h": 844,
+   "css": "390x844",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 0,
+   "h": 0,
+   "css": "0x0",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 0,
+   "h": 0,
+   "css": "0x0",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 312,
+   "h": 222,
+   "css": "312x222.84375",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 50,
+   "h": 26,
+   "css": "50.90625x26.75",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 172,
+   "h": 131,
+   "css": "172.6875x131.34375",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 10,
+   "h": 10,
+   "css": "10.828125x10.828125",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 10,
+   "h": 10,
+   "css": "10.828125x10.828125",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 60,
+   "h": 30,
+   "css": "60.9375x30.46875",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 8,
+   "h": 8,
+   "css": "8.453125x8.453125",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 8,
+   "h": 8,
+   "css": "8.453125x8.453125",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 0,
+   "h": 0,
+   "css": "0x0",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 335,
+   "h": 210,
+   "css": "335.828125x210.328125",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 37,
+   "h": 37,
+   "css": "37.90625x37.90625",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 108,
+   "h": 70,
+   "css": "108.328125x70.484375",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 8,
+   "h": 8,
+   "css": "8.453125x8.453125",
+   "ctx": "2d",
+   "pos": "static",
+   "engine": null
+  },
+  {
+   "w": 390,
+   "h": 844,
+   "css": "390x844",
+   "ctx": "webgl2",
+   "pos": "static",
+   "engine": "three.js r174"
+  }
+ ],
+ "three": "174",
+ "gsap": null,
+ "lenis": true,
+ "scrollTrigger": false,
+ "nuxt": false,
+ "next": false,
+ "webflow": true,
+ "barba": false,
+ "pixi": false,
+ "ogl": false,
+ "theatre": false,
+ "htmlClass": "w-mod-js w-mod-touch is-safari is-iphone lenis",
+ "bodyClass": "",
+ "fonts": [
+  "Brier 700",
+  "Mona Sans Variable 200 900"
+ ],
+ "bodyFont": "\"Mona Sans Variable\", Arial, sans-serif",
+ "bodyBg": "rgb(244, 244, 237)",
+ "bodyColor": "rgb(244, 244, 237)",
+ "cursor": "auto",
+ "h": {
+  "t": "Lando Norris",
+  "f": "\"Mona Sans Variable\", Arial, sans-serif",
+  "s": "38px",
+  "w": "700",
+  "ls": "normal",
+  "lh": "44px"
+ },
+ "biggest": [
+  {
+   "s": 43.3333,
+   "f": "Brier, Arial, sans-serif",
+   "ls": "-1.08333px",
+   "tt": "uppercase",
+   "t": "ON"
+  },
+  {
+   "s": 43.3333,
+   "f": "\"Mona Sans Variable\", Arial, sans-serif",
+   "ls": "-1.08333px",
+   "tt": "uppercase",
+   "t": "TRACK"
+  },
+  {
+   "s": 43.3333,
+   "f": "Brier, Arial, sans-serif",
+   "ls": "-1.08333px",
+   "tt": "uppercase",
+   "t": "OFF"
+  },
+  {
+   "s": 43.3333,
+   "f": "\"Mona Sans Variable\", Arial, sans-serif",
+   "ls": "-1.08333px",
+   "tt": "uppercase",
+   "t": "TRACK"
+  },
+  {
+   "s": 39,
+   "f": "\"Mona Sans Variable\", Arial, sans-serif",
+   "ls": "-2.70833px",
+   "tt": "uppercase",
+   "t": "World"
+  },
+  {
+   "s": 39,
+   "f": "\"Mona Sans Variable\", Arial, sans-serif",
+   "ls": "-2.70833px",
+   "tt": "uppercase",
+   "t": "Drivers'"
+  }
+ ],
+ "docH": 10077,
+ "scrollY": 9233,
+ "overflow": "visible/visible",
+ "words": 495,
+ "vids": 0,
+ "imgs": 198,
+ "svgs": 109,
+ "audio": 0,
+ "requests": [
+  "https://cdn.prod.website-files.com/67b5a02dc5d338960b17a7e9/67bc6274c5b4108b123aa4d5_MonaSans-VariableFont_wdth%2Cwght.woff2",
+  "https://lando.itsoffbrand.io/dev-js/lando-by-OFF+BRAND.05.js",
+  "https://d3e54v103j8qbb.cloudfront.net/js/jquery-3.5.1.min.dc5e7f18c8.js",
+  "https://cdn.prod.website-files.com/67b5a02dc5d338960b17a7e9/js/lando-offbrand.schunk.7321a5097fb66f41.js",
+  "https://cdn.prod.website-files.com/67b5a02dc5d338960b17a7e9/js/lando-offbrand.751e0867.148dc658e77a3916.js",
+  "https://cdn.prod.website-files.com/67b5a02dc5d338960b17a7e9/67b6113a220f85ad6497495a_Brier-Bold.woff2",
+  "https://unpkg.com/@rive-app/canvas-lite@2.26.4/rive.wasm",
+  "https://lando.itsoffbrand.io/gl/textures/head/ktx2/diffuse.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/head/ktx2/depth.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/head/ktx2/alpha.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/head/ktx2/shadow.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/head/ktx2/shadow-softer-edit.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/helmet/ktx2/gold/Norris_Helmet_mat_BaseColor.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/helmet/ktx2/disco/Norris_Helmet_mat_BaseColor.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/helmet/ktx2/Norris_Helmet_mat_Roughness.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/helmet/ktx2/Norris_Helmet_mat_Metallic.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/helmet/ktx2/disco/disco_mask-01.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/glass/ktx2/Norris_Glass_mat_BaseColor.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/glass/ktx2/Norris_Glass_mat_Roughness.ktx2",
+  "https://lando.itsoffbrand.io/gl/textures/glass/ktx2/Norris_Glass_mat_Metallic.ktx2",
+  "https://lando.itsoffbrand.io/gl/models/helmet-21.glb",
+  "https://lando.itsoffbrand.io/gl/models/disco-02.glb",
+  "https://lando.itsoffbrand.io/gl/models/tracks/tracks-06-test.glb",
+  "https://lando.itsoffbrand.io/gl/hdri/studio_small_08_1k--light.hdr",
+  "https://lando.itsoffbrand.io/gl/hdri/studio_small_08_1k--faded.hdr",
+  "https://lando.itsoffbrand.io/gl/basis/basis_transcoder.js",
+  "https://lando.itsoffbrand.io/gl/basis/basis_transcoder.wasm",
+  "https://lando.itsoffbrand.io/gl/draco/draco_wasm_wrapper.js",
+  "https://lando.itsoffbrand.io/gl/draco/draco_decoder.wasm"
+ ]
+}

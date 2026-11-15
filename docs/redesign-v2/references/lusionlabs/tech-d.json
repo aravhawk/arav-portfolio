@@ -1,0 +1,109 @@
+{
+ "title": "Lusion Labs",
+ "generator": null,
+ "canvases": [
+  {
+   "w": 1440,
+   "h": 900,
+   "css": "1440x900",
+   "ctx": "webgl2",
+   "pos": "fixed",
+   "engine": "three.js r138"
+  },
+  {
+   "w": 1440,
+   "h": 900,
+   "css": "0x0",
+   "ctx": "2d",
+   "pos": "fixed",
+   "engine": null
+  }
+ ],
+ "three": "138",
+ "gsap": null,
+ "lenis": false,
+ "scrollTrigger": false,
+ "nuxt": false,
+ "next": false,
+ "webflow": false,
+ "barba": false,
+ "pixi": false,
+ "ogl": false,
+ "theatre": false,
+ "htmlClass": "is-desktop",
+ "bodyClass": "",
+ "fonts": [
+  "Aeonik 400",
+  "Aeonik 500",
+  "Aeonik 900",
+  "IBMPlexMono-Medium 400"
+ ],
+ "bodyFont": "Aeonik, sans-serif",
+ "bodyBg": "rgba(0, 0, 0, 0)",
+ "bodyColor": "rgb(0, 0, 0)",
+ "cursor": "auto",
+ "h": {
+  "t": "Play GroundR&D CollectionExperiments",
+  "f": "Aeonik, sans-serif",
+  "s": "73.8px",
+  "w": "400",
+  "ls": "-1.476px",
+  "lh": "73.8px"
+ },
+ "biggest": [
+  {
+   "s": 73.8,
+   "f": "Aeonik, sans-serif",
+   "ls": "-1.476px",
+   "tt": "uppercase",
+   "t": "Play Ground"
+  },
+  {
+   "s": 73.8,
+   "f": "Aeonik, sans-serif",
+   "ls": "-1.476px",
+   "tt": "uppercase",
+   "t": "R&D Collection"
+  },
+  {
+   "s": 73.8,
+   "f": "Aeonik, sans-serif",
+   "ls": "-1.476px",
+   "tt": "uppercase",
+   "t": "Experiments"
+  },
+  {
+   "s": 46.02,
+   "f": "Aeonik, sans-serif",
+   "ls": "normal",
+   "tt": "uppercase",
+   "t": "©2026"
+  },
+  {
+   "s": 30,
+   "f": "Aeonik, sans-serif",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Trappist-1D UE5"
+  },
+  {
+   "s": 30,
+   "f": "Aeonik, sans-serif",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Trappist-1D UE5"
+  }
+ ],
+ "docH": 900,
+ "scrollY": 0,
+ "overflow": "hidden/hidden",
+ "words": 94,
+ "vids": 0,
+ "imgs": 2,
+ "svgs": 19,
+ "audio": 0,
+ "requests": [
+  "https://labs.lusion.co/assets/index.f4419199.js",
+  "https://platform.twitter.com/widgets.js"
+ ]
+}

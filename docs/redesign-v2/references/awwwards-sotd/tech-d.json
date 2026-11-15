@@ -1,0 +1,104 @@
+{
+ "title": "Sites Of The Day - Awwwards",
+ "generator": null,
+ "canvases": [],
+ "three": null,
+ "gsap": null,
+ "lenis": false,
+ "scrollTrigger": false,
+ "nuxt": false,
+ "next": false,
+ "webflow": false,
+ "barba": false,
+ "pixi": false,
+ "ogl": false,
+ "theatre": false,
+ "htmlClass": "",
+ "bodyClass": "",
+ "fonts": [
+  "Inter Tight 100 900"
+ ],
+ "bodyFont": "\"Inter Tight\"",
+ "bodyBg": "rgb(248, 248, 248)",
+ "bodyColor": "rgb(34, 34, 34)",
+ "cursor": "auto",
+ "h": {
+  "t": "Sites Of The Day",
+  "f": "\"Inter Tight\"",
+  "s": "14px",
+  "w": "600",
+  "ls": "normal",
+  "lh": "18.2px"
+ },
+ "biggest": [
+  {
+   "s": 15,
+   "f": "\"Inter Tight\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Preymaker"
+  },
+  {
+   "s": 15,
+   "f": "\"Inter Tight\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "DashDigital"
+  },
+  {
+   "s": 15,
+   "f": "\"Inter Tight\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Delta Cafés"
+  },
+  {
+   "s": 15,
+   "f": "\"Inter Tight\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "Bürocratik"
+  },
+  {
+   "s": 15,
+   "f": "\"Inter Tight\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "AUGE Experience"
+  },
+  {
+   "s": 15,
+   "f": "\"Inter Tight\"",
+   "ls": "normal",
+   "tt": "none",
+   "t": "AUGE EXPERIENCE"
+  }
+ ],
+ "docH": 5323,
+ "scrollY": 0,
+ "overflow": "visible/hidden",
+ "words": 375,
+ "vids": 0,
+ "imgs": 63,
+ "svgs": 114,
+ "audio": 0,
+ "requests": [
+  "https://www.googletagmanager.com/gtm.js",
+  "https://assets.awwwards.com/dist/js/runtime.bf71a965.js",
+  "https://assets.awwwards.com/dist/js/5880.7efd7b75.js",
+  "https://assets.awwwards.com/dist/js/3495.b5702178.js",
+  "https://assets.awwwards.com/dist/js/7199.20df3d42.js",
+  "https://assets.awwwards.com/dist/js/2378.c565cc8a.js",
+  "https://assets.awwwards.com/dist/js/2440.0fa3c533.js",
+  "https://assets.awwwards.com/dist/js/redesign_grid.7334a677.js",
+  "https://www.google.com/recaptcha/api.js",
+  "https://www.gstatic.com/recaptcha/releases/4i3aN5wAweL7i3ADI7BSX4B-/recaptcha__en.js",
+  "https://connect.facebook.net/en_US/fbevents.js",
+  "https://www.google.com/recaptcha/api2/webworker.js",
+  "https://fonts.gstatic.com/s/roboto/v48/KFO7CnqEu92Fr1ME7kSn66aGLdTylUAMa3yUBHMdazQ.woff2",
+  "https://www.google-analytics.com/analytics.js",
+  "https://snap.licdn.com/li.lms-analytics/insight.min.js",
+  "https://tracker.metricool.com/resources/be.js",
+  "https://www.youtube.com/s/player/fad7e4e9/www-widgetapi.vflset/www-widgetapi.js"
+ ]
+}
