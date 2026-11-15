@@ -16,9 +16,8 @@ export default function Nav() {
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
 
-  // Inner pages: the bar steps aside while reading down and returns on the way up.
+  // The bar steps aside while moving down the page and returns on the way up.
   useEffect(() => {
-    if (pathname === '/') return;
     let last = window.scrollY;
     const onScroll = () => {
       const y = window.scrollY;

@@ -95,7 +95,7 @@ export const projects: Project[] = [
     line: '20 merged pull requests across 7 public upstream repos. 8 of them in T3 Code.',
     body: [
       'I fix things in the tools I use. Most of it lands in T3 Code: linking new pull requests and merge requests to their thread, keeping Cursor MCP servers intact, remembering Composer Fast mode.',
-      'The rest is spread across tokscale, Kilo Code, XcodeBenchmark, openbridge and two friends’ sites.',
+      'The rest is spread across tokscale, Kilo Code, XcodeBenchmark, openbridge and two other sites.',
     ],
     facts: [
       { k: 'pingdotgg/t3code', v: '8 merged' },
@@ -391,7 +391,7 @@ export const scenes = {
   work: { shape: 'slab', ground: 'cloud', d: P(0.72, 0.21, 0.19), m: P(0.74, 0.19, 0.2), yaw: -0.5, pitch: 0.25 },
   blog: { shape: 'slab', ground: 'cloud', d: P(0.32, 0.22, 0.17), m: P(0.78, 0.2, 0.2), yaw: 0.45, pitch: -0.2 },
   post: { shape: 'drop', ground: 'cloud', d: P(0.9, 0.2, 0.1), m: P(0.84, 0.14, 0.12), pitch: 0.1 },
-  lost: { shape: 'split', ground: 'ink', d: P(0.7, 0.42, 0.3), m: P(0.5, 0.5, 0.25), yaw: 0.2 },
+  lost: { shape: 'split', ground: 'ink', d: P(0.82, 0.28, 0.22), m: P(0.5, 0.5, 0.25), yaw: 0.2 },
 } satisfies Record<string, Scene>;
 
 /** Scene for a project page: the same form, parked beside the title. */

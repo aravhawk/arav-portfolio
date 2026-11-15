@@ -43,7 +43,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             {String(i + 1).padStart(2, '0')} · {p.kicker}
           </span>
           <ViewTransition name={`title-${p.slug}`} share="title" default="none">
-            <h1 className="word page-title" style={{ '--w': Math.max(p.name.length * 0.62, 3.2), '--cap': '22svh' } as React.CSSProperties}>
+            <h1 className="word page-title" style={{ '--w': Math.max(p.name.length * 0.72, 3.2), '--cap': '22svh' } as React.CSSProperties}>
               <span className="line">
                 <span data-refract>{p.name}</span>
               </span>
@@ -84,7 +84,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               <dl className="facts">
                 {p.facts.map((f) => (
                   <div key={f.k}>
-                    <dt className="mono">{f.k}</dt>
+                    <dt className="mono">
+                      {f.k.split('/').map((part, n, all) => (
+                        <span key={n}>
+                          {part}
+                          {n < all.length - 1 ? <>/<wbr /></> : null}
+                        </span>
+                      ))}
+                    </dt>
                     <dd>{f.v}</dd>
                   </div>
                 ))}

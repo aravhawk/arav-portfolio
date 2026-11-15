@@ -454,7 +454,7 @@ html[data-tone="dark"] .filter[aria-pressed="true"] { color: var(--ink); }
 .arow-n a { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; text-decoration-thickness: 1px; transition: text-decoration-color var(--dur-fast) var(--ease-out); padding: 10px 0; margin: -10px 0; display: inline-block; }
 @media (hover: hover) and (pointer: fine) { .arow-n a:hover { text-decoration-color: currentColor; } }
 .arow-d { color: var(--fg-dim); min-width: 0; overflow-wrap: anywhere; }
-.arow-y, .arow-k { color: var(--fg-dim); font-size: 12px; }
+.arow-y, .arow-k { color: var(--fg-dim); font-size: 13px; }
 .arow-k { text-align: right; }
 .empty { padding: 48px 0; display: grid; gap: 12px; justify-items: start; border-top: 1px solid var(--line); }
 .empty p { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; }
@@ -471,8 +471,8 @@ html[data-tone="dark"] .filter[aria-pressed="true"] { color: var(--ink); }
 .proj-body p { margin: 0; font-size: 18px; line-height: 28px; text-wrap: pretty; }
 .proj-body blockquote { margin: 0; font-size: 24px; line-height: 32px; font-weight: 700; font-stretch: 112%; letter-spacing: -0.03em; }
 .facts { margin: 0; display: grid; }
-.facts > div { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; padding: 10px 0; border-top: 1px solid var(--glass-line); font-size: 14px; line-height: 20px; }
-.facts dt { color: var(--glass-dim); }
+.facts > div { display: grid; grid-template-columns: minmax(96px, 50%) minmax(0, 1fr); gap: 16px; padding: 10px 0; border-top: 1px solid var(--glass-line); font-size: 14px; line-height: 20px; }
+.facts dt { color: var(--glass-dim); min-width: 0; overflow-wrap: break-word; }
 .facts dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
 .proj-side { display: grid; gap: 16px; align-content: start; }
 .proj-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -554,7 +554,9 @@ html[data-tone="dark"] .filter[aria-pressed="true"] { color: var(--ink); }
 /* ---------- Route transitions ---------- */
 ::view-transition-group(*) { animation-duration: var(--dur-route); animation-timing-function: var(--ease-drawer); }
 ::view-transition-old(root) { animation: vt-out 160ms var(--ease-out) both; }
-::view-transition-new(root) { animation: vt-in 320ms var(--ease-out) 60ms both; }
+::view-transition-new(root) { animation: vt-in 320ms var(--ease-out) 150ms both; }
+::view-transition-old(.page) { animation: vt-out 150ms var(--ease-out) both; }
+::view-transition-new(.page) { animation: vt-in 320ms var(--ease-out) 150ms both; }
 ::view-transition-image-pair(.title) { animation-name: via-blur; }
 ::view-transition-old(.title), ::view-transition-new(.title) { height: 100%; width: auto; object-fit: contain; object-position: left top; }
 ::view-transition-group(.chrome) { animation: none; z-index: 30; }

@@ -333,7 +333,12 @@ export default function Home() {
           state[j] = on;
           const v = String(on);
           if (j > 0) pars[j].words.forEach((w) => (w.dataset.in = v));
-          if (panes[j].wrap && j > 0) panes[j].wrap!.dataset.in = v;
+        }
+        // Panes hold a tighter window than titles: they are gone before the ground changes under them.
+        const pw = panes[j].wrap;
+        if (pw && j > 0) {
+          const pv = String(rr.top < vh * 0.36 && rr.bottom > vh * 0.66);
+          if (pw.dataset.in !== pv) pw.dataset.in = pv;
         }
         if (reduced) continue;
         const p = (c - rr.top) / rr.height - 0.5;

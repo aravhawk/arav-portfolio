@@ -47,22 +47,27 @@ Each beat has one lead (the display word), one support (the pane) and decoration
 
 | Beat | Form | Ground | Word entrance | Pane arrives | Extra |
 |---|---|---|---|---|---|
-| Hero | drop | Cloud | fills from outline as the counter runs | readouts rise from the bottom edge | droplets merge on load |
+| Hero | drop | Cloud | fills from a ghost as the load counter runs | readouts rise from the bottom edge | droplets merge on load |
 | Infiniview | lens with ring, three probes | Signal | lines rise from a clip, 60ms apart | from the right | probes dent the lens |
 | Open source | merge graph | Ink | slides in from the left, tracking closes | from the bottom | PR titles cycle |
 | Kilo Bench | four bars | Cloud | scales down from 1.25 with blur | from the left | bars grow on entry |
 | Agent Bridge | sphere, cube, bridge | Cobalt | two words arrive from opposite sides | from the bottom, with the video | a packet travels the bridge |
-| Open models | four discs sized by pulls | Ink | counter ticks to the total | from the right | discs drop in sequence |
+| Open models | four discs sized by pulls | Ink | rises from a clip | from the left | discs drop in sequence |
 | cc-switch | switch | Signal | letters close up from wide tracking | from the left | click flips it (`spring.throw`) |
 | TensorPoW | 3x3x3 lattice | Cloud | rises per line | from the right | lattice breathes |
 | Merlin | engine bell | Ink | drops in from above | from the bottom | drag spins it with inertia |
 | More | orbit of seven | Cobalt | none, chips materialize in a wave | chips | |
 | Contact | drop | Cloud | words light up one at a time on scroll | links | |
 
+Numbers never count up through values they are not. A readout appears with its pane and shows only the real figure. (An early build ticked them; the critic caught false numbers in mid-scroll frames, so it was removed.)
+
+Beats are 150svh tall with a pinned 100svh stage. The next title starts arriving when its section top passes 72% of the viewport and the previous one leaves when its bottom passes 45%, so type is always on screen. Ground colours change over the middle third of each blend.
+
 ## Route transitions
 
 - React `<ViewTransition>` on route navigations. Shared elements: project title (home beat, /work row, project page), post title (blog index, post page). Group timing `--dur-route` on `--ease-drawer`, image pairs pass through a 3px blur.
 - Page content: old view fades and lifts 8px in 160ms, new view rises 16px in 320ms on `--ease-out`. Exit is shorter than enter.
+- On inner pages the nav bar steps aside on scroll down and returns on scroll up (`--dur-base`, `--ease-out`); the drop belongs to the page header and scrolls away with it, and docks beside the list while a /work row is hovered.
 - The WebGL drop is not part of the snapshot. It stays live and springs (`spring.morph`, `spring.move`) to the form and position the new route asks for.
 
 ## Reduced motion

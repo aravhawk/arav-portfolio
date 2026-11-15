@@ -74,7 +74,7 @@ unseen.co (Highway cross-dissolve between WebGL scenes, fluid sim, `(.16,1,.3,1)
 | One material carries the site: a drop of liquid glass | Igloo (ice only) | Liquid instead of solid, so it can become each project. |
 | Raymarched SDF glass in a single WebGL2 fragment shader, no three.js | ReactBits Fluid Glass, Lusion's one-lookup glass | SDFs morph for free; per-channel exit refraction gives dispersion; total JS stays small. |
 | Per-channel IOR offset for dispersion, mip LOD blur for frost | Igloo, Jesper, Lusion | Three exit rays, one per channel. |
-| Glass refracts large type | Noomo Labs | The type is real DOM text; a half-resolution mask of it is uploaded so the drop bends the same letters you can select. |
+| Glass refracts large type | Noomo Labs | The type is real DOM text; a mask of it is drawn from the live DOM rectangles each time they move and uploaded, so the drop bends the same letters that are on the page. |
 | Flat grounds that switch per beat, four colours total | Lando Norris | Ground colour is blended continuously in JS and in the shader, never cut. |
 | Scroll velocity is an input to the picture | Igloo, Podium, Jesper | Velocity stretches the drop and leans the display type. |
 | Lenis smoothing | Lando, Podium | `lerp 0.1`; native scroll remains the source of truth. |
