@@ -61,10 +61,25 @@ export default function StageRoot() {
       try {
         const probe = document.createElement('canvas').getContext('webgl2');
         if (!probe || !canvas.current || !ground.current) throw new Error('no webgl2');
+        // A software rasteriser cannot run a raymarcher at frame rate: use the CSS glass instead.
+        const dbg = probe.getExtension('WEBGL_debug_renderer_info');
+        const renderer = String(dbg ? probe.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : probe.getParameter(probe.RENDERER));
         probe.getExtension('WEBGL_lose_context')?.loseContext();
+        if (/swiftshader|llvmpipe|software|basic render/i.test(renderer)) throw new Error('software renderer');
         const { GlassEngine } = await import('@/gl/engine');
         if (disposed) return;
-        const e = new GlassEngine({ canvas: canvas.current, ground: ground.current, orbs: orbs.current.filter(Boolean) as HTMLDivElement[] });
+        const e = new GlassEngine({
+          canvas: canvas.current,
+          ground: ground.current,
+          orbs: orbs.current.filter(Boolean) as HTMLDivElement[],
+          // If even the lowest quality tier cannot hold a usable frame rate, stand down.
+          onGiveUp: () => {
+            engine.current?.dispose();
+            engine.current = null;
+            html.dataset.gl = 'off';
+            ground.current?.style.removeProperty('background-color');
+          },
+        });
         await e.ready;
         if (disposed) return e.dispose();
         engine.current = e;

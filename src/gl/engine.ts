@@ -1,7 +1,7 @@
 import { FRAG, VERT } from './shader';
 import { stage } from '@/stage/stage';
 
-type Els = { canvas: HTMLCanvasElement; ground: HTMLElement; orbs: HTMLElement[] };
+type Els = { canvas: HTMLCanvasElement; ground: HTMLElement; orbs: HTMLElement[]; onGiveUp?: () => void };
 
 const TIERS = [
   { scale: 1, steps: 64, inner: 22 },
@@ -271,10 +271,14 @@ export class GlassEngine {
     // Adaptive quality: step down a tier when frames stay long.
     if (dt > 0.026) this.slow++;
     else this.slow = Math.max(0, this.slow - 0.25);
-    if (this.slow > 24 && this.tier < TIERS.length - 1) {
-      this.tier++;
+    if (this.slow > 24) {
       this.slow = 0;
-      this.resize();
+      if (this.tier < TIERS.length - 1) {
+        this.tier++;
+        this.resize();
+      } else if (dt > 0.05) {
+        this.els.onGiveUp?.();
+      }
     }
   }
 

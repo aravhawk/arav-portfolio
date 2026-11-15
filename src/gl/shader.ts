@@ -197,9 +197,12 @@ float map(vec3 p){
   p.xz *= (1.0 + st * 0.5);
   float gs = mix(0.16, 1.0, uGather);
   vec3 q = p / gs;
-  float d = uW.x * shape(uShape.x, q);
-  if (uW.y > 0.002) d += uW.y * shape(uShape.y, q);
-  if (uW.z > 0.002) d += uW.z * shape(uShape.z, q);
+  float d = 0.0;
+  // One call site for all three slots keeps the compiled program small.
+  for (int k = 0; k < 3; k++) {
+    float wk = k == 0 ? uW.x : k == 1 ? uW.y : uW.z;
+    if (wk > 0.002) d += wk * shape(k == 0 ? uShape.x : k == 1 ? uShape.y : uShape.z, q);
+  }
   d += uP.w * 0.05 * sin(q.x * 4.0 + uTime * 1.3) * sin(q.y * 4.2 + uTime * 1.1) * sin(q.z * 3.7 - uTime * 0.9);
   d -= uP.z * 0.05 * sin(length(q) * 9.0 - uTime * 9.0) * exp(-length(q));
   d *= gs;
@@ -218,8 +221,13 @@ float map(vec3 p){
 }
 
 vec3 calcNormal(vec3 p){
-  const vec2 e = vec2(0.0018, -0.0018);
-  return normalize(e.xyy * map(p + e.xyy) + e.yyx * map(p + e.yyx) + e.yxy * map(p + e.yxy) + e.xxx * map(p + e.xxx));
+  const float h = 0.0018;
+  vec3 n = vec3(0.0);
+  for (int i = 0; i < 4; i++) {
+    vec3 e = 0.5773 * (2.0 * vec3(float(((i + 3) >> 1) & 1), float((i >> 1) & 1), float(i & 1)) - 1.0);
+    n += e * map(p + e * h);
+  }
+  return normalize(n);
 }
 
 vec3 backdrop(vec2 px, float lod){
