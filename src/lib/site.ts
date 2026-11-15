@@ -376,7 +376,7 @@ export const archive: ArchiveItem[] = [
 const P = (x: number, y: number, size: number) => ({ x, y, size });
 
 export const scenes = {
-  hero: { shape: 'drop', ground: 'cloud', d: P(0.57, 0.45, 0.31), m: P(0.5, 0.5, 0.36), pitch: 0.1 },
+  hero: { shape: 'drop', ground: 'cloud', d: P(0.53, 0.46, 0.33), m: P(0.5, 0.5, 0.36), pitch: 0.1 },
   infiniview: { shape: 'lens', ground: 'signal', d: P(0.7, 0.5, 0.27), m: P(0.5, 0.47, 0.31), pitch: 0.12, yaw: -0.55 },
   'open-source': { shape: 'merge', ground: 'ink', d: P(0.76, 0.42, 0.25), m: P(0.5, 0.47, 0.3), yaw: 0.35, pitch: 0.05 },
   'kilo-bench': { shape: 'bars', ground: 'cloud', d: P(0.72, 0.52, 0.26), m: P(0.5, 0.47, 0.31), yaw: -0.5, pitch: 0.2 },

@@ -87,7 +87,7 @@ export default function Glass({ as = 'div', className = '', children, refract = 
       const h = Math.round(el.offsetHeight);
       if (w < 40 || h < 40) return;
       const rad = Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius) || radius, h / 2);
-      setMap({ url: buildGlassMap(w, h, rad, Math.min(26, h / 2.4)), w, h });
+      setMap({ url: buildGlassMap(w, h, rad, Math.min(34, h / 2.4)), w, h });
     };
     const ro = new ResizeObserver(() => {
       window.clearTimeout(t);
@@ -102,7 +102,7 @@ export default function Glass({ as = 'div', className = '', children, refract = 
   }, [refract, radius]);
 
   const filterId = `lg${id}`;
-  const scale = 46;
+  const scale = 66;
   const Tag = as as 'div';
   const cls = `glass ${map ? 'glass--svg' : ''} ${className}`.trim();
   const st = map ? ({ ...style, '--lg': `url(#${filterId})` } as CSSProperties) : style;
@@ -112,7 +112,7 @@ export default function Glass({ as = 'div', className = '', children, refract = 
       {map ? (
       <svg className="glass-defs" aria-hidden="true" focusable="false">
         <filter id={filterId} x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="b" />
+          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b" />
           <feImage href={map.url} x="0" y="0" width={map.w} height={map.h} preserveAspectRatio="none" result="m" />
           {/* One displacement per channel, each a little stronger: that spread is the dispersion at the rim. */}
           <feDisplacementMap in="b" in2="m" scale={scale} xChannelSelector="R" yChannelSelector="G" result="dr" />

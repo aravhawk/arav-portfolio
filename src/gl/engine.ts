@@ -34,6 +34,7 @@ export class GlassEngine {
   private h = 0;
   private lastBg = '';
   private lastOrb = '';
+  private lastTop = 0;
   private drag = { id: -1, x: 0, y: 0, t: 0, moved: 0, vx: 0 };
   private cleanup: (() => void)[] = [];
   ready: Promise<void>;
@@ -252,6 +253,14 @@ export class GlassEngine {
     if (++this.frames % 45 === 0) {
       const live = document.querySelectorAll('[data-refract]').length;
       if (live !== this.refract.length || this.refract.some((e) => !e.isConnected)) this.collect();
+    }
+    if (stage.reduced) {
+      // Reduced motion: forms change with a short cross-fade, never a morph.
+      const top = stage.top3().idx[0];
+      if (top !== this.lastTop) {
+        this.lastTop = top;
+        this.els.canvas.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'linear' });
+      }
     }
     this.drawMask();
     this.writeDom();

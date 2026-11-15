@@ -13,7 +13,7 @@ export const GROUNDS: Record<
 > = {
   cloud: { bg: c(232, 236, 239), ink: c(10, 12, 15), tintA: c(255, 226, 210), tintB: c(206, 226, 255), glow: 0.0, shadow: 0.2, tone: 'light', orbs: [c(255, 120, 70), c(60, 130, 255), c(255, 255, 255)], orbA: 0.36 },
   signal: { bg: c(255, 75, 20), ink: c(10, 12, 15), tintA: c(255, 244, 232), tintB: c(20, 51, 255), glow: 0.04, shadow: 0.26, tone: 'light', orbs: [c(255, 138, 60), c(214, 44, 0), c(255, 190, 120)], orbA: 0.6 },
-  ink: { bg: c(10, 12, 15), ink: c(232, 236, 239), tintA: c(255, 140, 80), tintB: c(80, 130, 255), glow: 0.3, shadow: 0, tone: 'dark', orbs: [c(20, 51, 255), c(255, 75, 20), c(40, 48, 64)], orbA: 0.3 },
+  ink: { bg: c(10, 12, 15), ink: c(232, 236, 239), tintA: c(120, 170, 255), tintB: c(255, 150, 96), glow: 0.24, shadow: 0, tone: 'dark', orbs: [c(255, 75, 20), c(20, 51, 255), c(40, 48, 64)], orbA: 0.26 },
   cobalt: { bg: c(20, 51, 255), ink: c(232, 236, 239), tintA: c(255, 75, 20), tintB: c(232, 236, 239), glow: 0.2, shadow: 0.25, tone: 'dark', orbs: [c(80, 120, 255), c(6, 20, 160), c(255, 110, 60)], orbA: 0.5 },
 };
 

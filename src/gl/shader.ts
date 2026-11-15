@@ -235,7 +235,7 @@ vec3 backdrop(vec2 px, float lod){
 
 vec3 envLight(vec3 r, float rough){
   float up = smoothstep(-0.4, 0.9, r.y);
-  vec3 e = mix(uGround * 0.55, mix(uGround, vec3(1.0), 0.7), up);
+  vec3 e = mix(uGround * 0.55, mix(uGround, vec3(1.0), 0.7), up) + vec3(0.1, 0.12, 0.16) * up;
   float k = max(dot(r, uLight), 0.0);
   e += vec3(1.0) * (pow(k, 110.0) * 5.0 + pow(k, 14.0) * 0.4);
   float box = smoothstep(0.5, 0.62, r.y) * (1.0 - smoothstep(0.18, 0.5, abs(r.x + 0.25)));
@@ -350,6 +350,8 @@ void main(){
   vec3 col = mix(refr, refl, F);
   float spec = pow(max(dot(rl, uLight), 0.0), 220.0);
   col += vec3(1.0) * spec * 1.4;
+  // On dark grounds the body is read by its rim: a cool edge light scaled by the glow amount.
+  col += vec3(0.72, 0.86, 1.0) * pow(1.0 - ndv, 3.0) * uGlow * 1.6;
   // Thickness: darken slightly where the body is deep, the way a real pane does at its edge.
   col *= 1.0 - 0.1 * smoothstep(0.6, 0.0, ndv);
 

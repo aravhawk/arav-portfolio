@@ -58,13 +58,9 @@ function Word({ beat }: { beat: Beat }) {
   );
 }
 
-function PaneShell({ p, n, children }: { p: Project; n: number; children: ReactNode }) {
+function PaneShell({ p, children }: { p: Project; children: ReactNode }) {
   return (
     <Glass className="pane" refract>
-      <div className="pane-top mono">
-        <span>{String(n).padStart(2, '0')}</span>
-        <span>{p.kicker}</span>
-      </div>
       <h2 className="sr-only">{p.name}</h2>
       {children}
     </Glass>
@@ -85,22 +81,14 @@ function Links({ p, primary }: { p: Project; primary: { label: string; href: str
   );
 }
 
-function PrTicker() {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const t = window.setInterval(() => setI((v) => (v + 1) % t3Titles.length), 3400);
-    return () => window.clearInterval(t);
-  }, []);
+function PrTitle() {
+  const t = t3Titles[0];
   return (
-    <p className="pr" aria-live="off">
-      {t3Titles.map((t, j) => (
-        <span key={t.n} data-on={i === j} aria-hidden={i !== j}>
-          {t.pre}
-          {t.code ? <code>{t.code}</code> : null}
-          {t.post} <span className="mono">#{t.n}</span>
-        </span>
-      ))}
+    <p className="pr">
+      <span>
+        <code>{t.code}</code>
+        {t.post} <span className="mono">#{t.n}</span>
+      </span>
     </p>
   );
 }
@@ -155,12 +143,12 @@ function BridgeVideo() {
   );
 }
 
-function Pane({ p, n }: { p: Project; n: number }) {
+function Pane({ p }: { p: Project }) {
   switch (p.slug) {
     case 'infiniview':
       return (
-        <PaneShell p={p} n={n}>
-          <p className="pane-say">It deploys your app in a sandbox and runs real attacks against it. You get replayable proof of what broke.</p>
+        <PaneShell p={p}>
+          <p className="pane-say">It attacks your app in a sandbox. You get replayable proof of what broke.</p>
           <ul className="chips">
             <li className="chip">Early access</li>
             <li className="chip">Selected for OpenAI DevDay 2026</li>
@@ -170,22 +158,22 @@ function Pane({ p, n }: { p: Project; n: number }) {
       );
     case 'open-source':
       return (
-        <PaneShell p={p} n={n}>
+        <PaneShell p={p}>
           <div className="stat">
             <Counter value={metrics.mergedUpstream} />
-            <span>merged PRs in {metrics.upstreamRepos} upstream repos</span>
+            <span>PRs merged upstream</span>
           </div>
           <div className="stat">
             <Counter value={metrics.t3Merged} />
-            <span>of them in T3 Code</span>
+            <span>in T3 Code</span>
           </div>
-          <PrTicker />
+          <PrTitle />
           <Links p={p} primary={{ label: 'GitHub', href: p.links[0].href }} />
         </PaneShell>
       );
     case 'kilo-bench':
       return (
-        <PaneShell p={p} n={n}>
+        <PaneShell p={p}>
           <p className="pane-say">Native model benchmarking in Kilo Code.</p>
           <ul className="chips">
             <li className="chip">Won “Kilo - For Devs, By Devs”</li>
@@ -196,7 +184,7 @@ function Pane({ p, n }: { p: Project; n: number }) {
       );
     case 'agent-bridge':
       return (
-        <PaneShell p={p} n={n}>
+        <PaneShell p={p}>
           <BridgeVideo />
           <p className="pane-say">An OpenAI Dot and a Grok Bot share one inbox. Messages are data, never permission.</p>
           <Links p={p} primary={p.links[0]} />
@@ -204,8 +192,8 @@ function Pane({ p, n }: { p: Project; n: number }) {
       );
     case 'open-models':
       return (
-        <PaneShell p={p} n={n}>
-          <p className="pane-say">Pulls of my GGUF builds on Ollama.</p>
+        <PaneShell p={p}>
+          <p className="pane-say">My GGUF builds on Ollama.</p>
           <ul className="rows">
             {metrics.ollamaModels.map((m) => (
               <li key={m.name}>
@@ -219,8 +207,8 @@ function Pane({ p, n }: { p: Project; n: number }) {
       );
     case 'cc-switch':
       return (
-        <PaneShell p={p} n={n}>
-          <p className="pane-say">Claude Code profiles for Anthropic and open-model providers. One command.</p>
+        <PaneShell p={p}>
+          <p className="pane-say">Claude Code profiles across Anthropic and open models. One command.</p>
           <div className="stat">
             <Counter value={metrics.npmDownloads} />
             <span>npm downloads</span>
@@ -230,15 +218,15 @@ function Pane({ p, n }: { p: Project; n: number }) {
       );
     case 'tensorpow':
       return (
-        <PaneShell p={p} n={n}>
-          <p className="pane-say">GPU-native proof of work on deterministic INT8 tensors. Becoming a research paper.</p>
+        <PaneShell p={p}>
+          <p className="pane-say">GPU-native proof of work on INT8 tensors. Becoming a research paper.</p>
           <Links p={p} primary={p.links[0]} />
         </PaneShell>
       );
     default:
       return (
-        <PaneShell p={p} n={n}>
-          <p className="pane-say">A wireframe Merlin 1D engine you fly with your bare hands through a webcam.</p>
+        <PaneShell p={p}>
+          <p className="pane-say">A wireframe Merlin 1D you fly with bare hands, through a webcam.</p>
           <Links p={p} primary={p.links[0]} />
         </PaneShell>
       );
@@ -402,9 +390,11 @@ export default function Home() {
       <div className="layer-ui" ref={uiLayer}>
         <section className="beat" data-k="hero" aria-labelledby="hero-h">
           <div className="pin">
-            <span className="load mono" data-done={revealed} aria-hidden="true">
-              {String(load).padStart(3, '0')}
-            </span>
+            {revealed && load >= 100 ? null : (
+              <span className="load mono" aria-hidden="true">
+                {String(load).padStart(3, '0')}
+              </span>
+            )}
             <div className="hero-foot" data-in={revealed}>
               <div>
                 <h1 id="hero-h" className="sr-only">
@@ -416,8 +406,8 @@ export default function Home() {
                 {[
                   { v: metrics.ollamaPulls, l: 'Ollama pulls' },
                   { v: metrics.npmDownloads, l: 'npm downloads' },
-                  { v: metrics.contributions2026, l: 'contributions, 2026' },
-                  { v: metrics.mergedUpstream, l: 'PRs merged upstream' },
+                  { v: metrics.contributions2026, l: 'contributions 2026' },
+                  { v: metrics.mergedUpstream, l: 'PRs merged' },
                 ].map((r, i) => (
                   <Glass as="li" className="readout rise" key={r.l} style={{ '--i': i + 1 } as CSSProperties}>
                     <Counter value={r.v} />
@@ -429,12 +419,12 @@ export default function Home() {
           </div>
         </section>
 
-        {flagships.map((p, i) => (
+        {flagships.map((p) => (
           <section className="beat" data-k={p.slug} key={p.slug} id={p.slug}>
             <div className="pin">
               <div className="ppar" data-side={layout[p.slug].side}>
                 <div className="pane-wrap">
-                  <Pane p={p} n={i + 1} />
+                  <Pane p={p} />
                 </div>
               </div>
             </div>
@@ -449,7 +439,7 @@ export default function Home() {
                   More work
                 </h2>
                 <ul className="more-chips">
-                  {['RydAR', 'Ask Around', 'ClarifAI', 'fix-it-bot', 'OxyDrop', 'VELOCITY', 'VEX robotics'].map((n) => (
+                  {['RydAR', 'Ask Around', 'ClarifAI', 'fix-it-bot', 'VEX robotics'].map((n) => (
                     <li key={n}>
                       <Glass as="a" className="btn" href={n === 'RydAR' ? '/work/rydar' : '/work#highlights'} radius={999}>
                         {n}
@@ -511,7 +501,6 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <span className="fine mono">© 2026</span>
               </div>
             </div>
           </div>
