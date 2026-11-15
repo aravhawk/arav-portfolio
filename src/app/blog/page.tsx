@@ -1,19 +1,14 @@
 import type { Metadata } from 'next';
 import { getAllPosts, getTagsFromPosts } from '@/lib/blog';
 import BlogIndex from '@/components/blog/BlogIndex';
-import Navigation from '@/components/layout/Navigation';
-import Footer from '@/components/layout/Footer';
+import SceneSetter from '@/components/SceneSetter';
+import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'Blog - Arav Jain',
-  description:
-    'Thoughts on AI agents, security, engineering, and building startups.',
-  openGraph: {
-    title: 'Blog - Arav Jain',
-    description:
-      'Thoughts on AI agents, security, engineering, and building startups.',
-    type: 'website',
-  },
+  title: 'Blog',
+  description: 'Notes on AI agents, agent evaluation, security and shipping software.',
+  alternates: { canonical: '/blog' },
+  openGraph: { title: 'Blog · Arav Jain', description: 'Notes on AI agents, agent evaluation, security and shipping software.', type: 'website' },
 };
 
 export default function BlogPage() {
@@ -21,11 +16,22 @@ export default function BlogPage() {
   const tags = getTagsFromPosts(posts);
 
   return (
-    <main className="min-h-screen bg-[#050505]">
-      <div className="noise-overlay" />
-      <Navigation />
-      <BlogIndex posts={posts} tags={tags} />
+    <>
+      <SceneSetter name="blog" />
+      <div className="page">
+        <header className="page-head layer-type" style={{ pointerEvents: 'auto', userSelect: 'auto' }}>
+          <h1 className="word page-title" style={{ '--w': 2.6 } as React.CSSProperties}>
+            <span className="line">
+              <span data-refract>Blog</span>
+            </span>
+          </h1>
+          <p className="page-lede">Notes on agents, evaluation, security and shipping.</p>
+        </header>
+        <div className="layer-ui" style={{ display: 'grid', gap: 24 }}>
+          <BlogIndex posts={posts} tags={tags} />
+        </div>
+      </div>
       <Footer />
-    </main>
+    </>
   );
 }

@@ -9,7 +9,7 @@ export async function GET() {
   const feed = new Feed({
     title: 'Arav Jain - Blog',
     description:
-      'Thoughts on AI, GPU computing, blockchain, and building startups.',
+      'Notes on AI agents, agent evaluation, security and shipping software.',
     id: SITE_URL,
     link: `${SITE_URL}/blog`,
     language: 'en',
