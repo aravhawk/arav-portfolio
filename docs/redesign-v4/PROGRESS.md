@@ -222,4 +222,34 @@ section I, haptics.
 - Next after K1: K2 (ending: mountains, sun, the top-down phase using the
   page's own caustics; body copy scale; inner pages; small fixes), then a
   third score.
+- 2026-11-16 03:55 CT. Kilo tasks K1, K2 and K3 done, each reviewed here
+  from its captures and pushed as a signed checkpoint (K1 `314c747`, K2
+  `d3914fb`, K3 `0fb181c`; all Kilo commits verify as signed). K1: clear
+  ice, erosion melt, natural deep water without terraces, lit stone, wider
+  streams, real media on Kilo Bench and RydAR, a wake of real ripples,
+  antialiased edges. K2: meltwater without fog, luminous night water, the
+  ending rebuilt (seamless handover, sculpted ranges, sun behind the ridge,
+  the clipped full stop), body copy scale, small fixes. K3: a melt that
+  never breaks into fragments, night caustics as a filled net, live water
+  before the ending. Gates after each: lint, typecheck, 196 tests, overlap
+  test 0 overlaps at seven widths, 197 words on home, p95 16.7 to 16.8 ms.
+- 2026-11-16 04:20 CT. Third independent critic (fresh, through Kilo):
+  5.5 of 10 (`critic/review-3.md`). Ending 7.5 ("the dark ending is the
+  best frame in the build and beats v2"), five-second read 7.5; water 4.5,
+  project pages 4, craft 5. Its project score rests partly on my capture
+  (first and last screen only, so the pages looked like stubs): the next
+  package shows whole pages. Its top finding is the same as the other two
+  critics' in three different builds: the name as raised letters reads as
+  a text effect whatever the material.
+- Decision: stop tuning raised letters. Kilo task K4
+  (`.tools/briefs/K4-frozen-lake.md`): the lake is covered by a sheet of
+  lake ice and the name is cut through it, so the letters are live water
+  seen through the ice; the melt is the sheet breaking up into floes that
+  drift to the outlet. Also in K4: visible flow and a difference between
+  runs and pools, a lit dark ground, a larger Kilo Bench image, the light
+  ending's glints and colour handover, the gutter look on inner pages, a
+  nav that leaves when the page scrolls down, a wake drawn by shading.
+- After K4: review, a fourth and final independent score, then the final
+  gates, the remaining docs and the report, whatever the score is. The
+  report states the scores as they are.
 
