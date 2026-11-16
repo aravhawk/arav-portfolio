@@ -998,7 +998,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // (Steeply under the eye it is a little less of a mirror: you look down into it.)
   fres = mix(fres, max(fres * 1.25 + 0.05, mix(0.97, 0.66, smoothstep(0.27, 0.44, cosi)) * sheetK), uNight);
   // A bank stands over the water at its edge: there the mirror shows the dark bank, not the sky.
-  refl *= 1.0 - 0.3 * uNight * (1.0 - smoothstep(4.0, 46.0, -bw.r)) * (1.0 - sheetK);
+  // (Wider in the walled basin, where the project's words stand over the near bank.)
+  refl *= 1.0 - mix(0.3, 0.8, gWalled) * uNight * (1.0 - smoothstep(4.0, mix(46.0, 150.0, gWalled), -bw.r)) * (1.0 - sheetK);
   // (By day the sheet's own walls stand round that water: less of the pale sky reaches it.)
   gDeep = lakeDay * smoothstep(0.5, 1.0, uGlow);
   // (By day it is dark water you look down into under the eye, and more of a mirror toward the far side of each letter.)
@@ -1097,7 +1098,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   col *= 1.0 - 0.16 * line * (1.0 - uNight);
   float edgeF = (1.0 - smoothstep(1.5 + foot, 5.0 + 2.0 * foot, -bw.r)) * (0.25 + 0.75 * smoothstep(0.2, 0.7, fmag)) * (0.55 + 0.45 * df.r) * (1.0 - smoothstep(14.0, 40.0, footL));
   vec3 edgeC = mix(vec3(0.9, 0.96, 1.0) * (S.amb * 1.2 + S.key * 0.24), vec3(0.3, 0.44, 0.5) * 0.3 + uAurora * 0.12, uNight);
-  col = mix(col, edgeC, edgeF * 0.6 * (1.0 - uEnd) * (1.0 - lakeK * smoothstep(0.0, 0.3, uGlow)));
+  col = mix(col, edgeC, edgeF * mix(0.6, 0.3, uNight) * (1.0 - uEnd) * (1.0 - lakeK * smoothstep(0.0, 0.3, uGlow)));
 
   return col;
 }
