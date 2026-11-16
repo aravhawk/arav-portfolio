@@ -81,6 +81,12 @@ The work is not paused; it is split.
 7. A result below the bar goes back to Kilo with specific notes. It is not
    rewritten here.
 
+8. Effort tiers on the Claude side (t257u, 2026-11-16 12:00 AM CT): this
+   thread stays at High for thinking, planning and review. Non-critical
+   Claude work (running through the app, routine testing, screenshot
+   passes) goes to one Fable 5.2 Medium helper at a time, never more;
+   trivially easy steps may use Low. Kilo is unchanged.
+
 Unchanged: same branch, signed SSH pushes only, no merge, no deploy,
 section I, haptics.
 
@@ -199,4 +205,21 @@ section I, haptics.
   2. Reduced motion, no WebGL, forced colours and print after the layout
      changes (full-bleed lake, new ending, footer).
   3. Whatever the second critic finds.
+- 2026-11-16 00:20 CT. Second independent critic (fresh agent, run through
+  Kilo on Fable 5.2 to spare the Claude allowance, captures only): 5.8 of
+  10 (`critic/review-2.md`). Up on type (6.5), ending (7), legibility (7),
+  phone (7); still low on the name as ice, the water reading as a pool
+  texture in tubes, the flat ground, the melt reading as a fade, and craft
+  against the references (5). Its project sheet was a broken capture (my
+  script, a zsh word-split), so project pages were judged from three.
+- Kilo task K1, "the water world", brief at `.tools/briefs/K1-water-world.md`
+  (git-ignored): ice as clear glacier ice, erosion melt with visible
+  meltwater, natural deep water without terraces, a dark theme lit for
+  night, a lit stone ground with a wet shore, fewer and wider bodies of
+  water with real media on Kilo Bench and RydAR, a wake that bends light
+  instead of a grey veil, antialiased edges. Capture tooling for Kilo is
+  copied into `.tools/` inside the worktree so it never needs an outside path.
+- Next after K1: K2 (ending: mountains, sun, the top-down phase using the
+  page's own caustics; body copy scale; inner pages; small fixes), then a
+  third score.
 
