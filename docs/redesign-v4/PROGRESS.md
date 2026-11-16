@@ -296,4 +296,112 @@ section I, haptics.
   re-run on it (checklist above). Closing independent score 5.8
   (`critic/review-5.md`). No further passes: five scores in a row within
   0.3 of each other say another pass of the same kind will not move it.
+- 2026-11-16 12:05 CT. Full overlap run on the final build finished: 189
+  page runs (Chromium, WebKit, Firefox x seven widths x nine pages), 7,749
+  scroll positions, 0 overlaps; worst ending contrast 3.32 at 320 wide
+  (large type, bar 3). All 36 commits on the branch verify as signed.
+
+## New bar (Arav, t260u and t261u, 2026-11-16 10:22 AM CT)
+
+Do not close out at 5.5 to 5.8. Push v4 until a fresh panel of independent
+critics gives a **median of 9.5 or more with no critic under 9**, same
+rubric, no softening. Rounds: this thread plans, briefs, reviews and tests;
+Kilo implements, one task at a time (same delegate settings as above);
+after each round the full gates, then a fresh panel. Standing rules all
+hold. If the usage limit comes again: push a signed checkpoint and write
+exactly where things stand here first.
+
+## Ranked gap list (from all five reviews, restudied against the references)
+
+Scores so far: 5.5, 5.8, 5.5, 5.8, 5.8. Ranked by how much each theme
+holds the score down, with what the critics said and what the references
+do instead.
+
+### 1. Art direction and identity: it is a relief, the references are worlds (craft 4.5 to 5, water 4.5 to 5.5)
+- "No camera, no lighting change, no depth, no moment of spectacle after
+  the first screen" (1). "A 2D pipe diagram" (4). "Flat next to Igloo's
+  lit 3D scene and Lando's density" (5). "A flat grey page with a tube
+  drawn on it" (2).
+- References: every screen of Igloo, Lusion and Lando has **one large, lit,
+  three-dimensional subject** seen through a real camera, with atmosphere
+  (haze, sky, reflections), and small confident type around it. Igloo puts
+  each portfolio item in the scene as an object with HUD callouts on
+  leader lines. Lusion's pages are led by large rendered media.
+- The one part of this build the critics put at reference level is the
+  ending ("the best frame in the build", "beats v2"): a perspective scene
+  with a sky, ranges, a sun and water. The second is the Infiniview beat:
+  one large real product image standing in water beside one large title.
+- Conclusion: the page has to become what its ending already is. One
+  world seen through a camera that travels, with a horizon and weather,
+  and one large subject per screen.
+
+### 2. Hero and melt craft (the top finding in every review)
+- Three builds of raised letters: "embossed plastic", "2000s 3D text",
+  "WordArt". The ice sheet with the name cut through it: "flat posterised
+  ice", "pixel-stepped", dark "camouflage" then "dated neon".
+- The melt: "font-weight slider" (1), "cross-fade" (2, 3), "cartoon round
+  floes; keep the name legible and break the ice into angular drifting
+  plates" (5). A smudge where the lake meets its outlet.
+- Needed: ice as one lit, refractive surface with real depth, seen at an
+  angle under a sky so it has reflections and a horizon; angular plates;
+  the name legible until the sheet goes; the meltwater visibly becoming
+  the river.
+
+### 3. Water character (4.5 to 5.5)
+- "Uniform pipe", "gel hose", "one repeating caustic texture", "plumbing".
+  The wake and click "nearly invisible" in stills (4, 5).
+- Needed: water as bodies in a landscape (a lake, rapids, pools, a
+  delta), with reflections of the sky and ranges, visible current, and a
+  wake you can see in one frame.
+
+### 4. Project pages and inner pages (4 to 6.5)
+- "A stub template: title, one paragraph, a facts row and NEXT" (3);
+  "narrow column with an empty right half" (5); Kilo Bench "empty teal
+  placeholder", "unreadable screenshot" (4, 5); "the same pipe on every
+  inner page" (3).
+- References: Lusion's case pages are led by large media, full width, with
+  dense, composed sections.
+- Needed: case pages led by large readable media, using the full width, a
+  different composition per project, no placeholder anywhere.
+
+### 5. Typography, spacing and density (5 to 7)
+- The system is now right ("good serif, mono and grotesk system", 5).
+  What is left: "under-scaled at 1440 and 1920", "too much empty space and
+  tiny type", "footer text is tiny", "body small on inner pages".
+- References: Lusion sets 140 px headings against 13 px labels and fills
+  the frame; Lando is dense.
+- Needed: screens composed to the frame, not columns in a tall page.
+
+### 6. Light and dark as two designs (4.5 to 6.5)
+- "Dark is a palette swap" (2); "dark hero reads as camouflage" (4);
+  "light hero reads as camouflage, dark hero as dated neon" (5).
+- Needed: two times of day in one world, each lit on purpose.
+
+### 7. Ending (5.5 to 7.5: the strongest part, still short of 9)
+- "Lost v2's signature element (the falling light stream, the bokeh
+  waterline)" (4, 5); "aliased glitter", "smeared ripples bottom right",
+  "melted-looking mountains", "orphaned RSS" (5); light dawn "purple/pink".
+- Needed: one signature light event, cleaner glitter, firmer ranges, the
+  footer row composed.
+
+### 8. Polish (softness 5 to 7; phone 6 to 7)
+- Stepped or soft edges at 2x; halos; smudges; labels crowding channel
+  ends on phones; dev badge in a capture (mine); a spinner screenshot.
+- Process: critics 4 and 5 could not open four reference images and had
+  the brief cut short by their tools. The next packages use smaller
+  images and shorter files, the same rubric, a panel of three, and finer
+  motion strips. Nothing about the scoring is softened.
+
+### Decision for round 10
+Stop improving the relief. Rebuild the home page as **one flight**: a fixed
+full-screen scene seen through a perspective camera that travels down the
+meltwater river as the page scrolls, from the frozen lake (the name cut
+through the ice, under a sky, ranges on the horizon) through one composed
+station per project (real media standing in the world, data as callouts
+on leader lines) to the sea at dawn, which is the existing ending. The
+engine's planes, distance fields, simulation and materials carry over: a
+pitched camera is a different mapping from pixel to ray, not a different
+renderer. Text is overlaid in composed zones and its contrast is measured
+at every scroll position, as the ending's already is. Built first at a
+temporary route so the shipped home page is not broken while it is judged.
 
