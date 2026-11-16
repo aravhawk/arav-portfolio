@@ -22,7 +22,7 @@
 
 import { ICE_FIELD } from './ice';
 import { PANO, SUN } from './terrain';
-import { BASIN, CONF_Y, ISLAND, STREAM, TRIBS } from '../world';
+import { BASIN, CONF_Y, ISLAND, POOL, SHEET, STREAM, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -69,6 +69,8 @@ uniform sampler2D uCurv;
 uniform sampler2D uGrain;
 uniform sampler2D uHeat;
 uniform sampler2D uSlabTex;
+uniform sampler2D uSheetTex; // the picture on the pool's bed
+uniform float uSheetOn;
 uniform sampler2D uPano;   // the ranges: sun, sky, snow, distance
 uniform sampler2D uGround; // the baked snow: height, slope, a second field
 uniform sampler2D uGlowTex; // the last frame's highlights, small and soft
@@ -812,6 +814,11 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   vec3 r = refract(dir, n, 0.75);
   float sl0;
   float d0p = bedDepth(bedSoft(bw), sl0);
+  // (The clear pool is a foot deep everywhere: the picture on its bed is bent by ripples, not by a deep bed.)
+  if (pw.y > ${(POOL.y - 60).toFixed(1)} && pw.y < ${(POOL.y + POOL.h + 60).toFixed(1)} && pw.x > ${(POOL.x - 60).toFixed(1)}) {
+    vec2 pq0 = abs(pw - vec2(${(POOL.x + POOL.w / 2).toFixed(1)}, ${(POOL.y + POOL.h / 2).toFixed(1)})) - vec2(${(POOL.w / 2).toFixed(1)}, ${(POOL.h / 2).toFixed(1)});
+    d0p = mix(d0p, min(d0p, 14.0), 1.0 - smoothstep(-40.0, 30.0, max(pq0.x, pq0.y)));
+  }
   vec2 pb = pw + r.xy / max(-r.z, 0.35) * d0p;
   vec4 bb = bedAt(pb);
   float sl;
@@ -825,6 +832,24 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   if (lakeK > 0.0) {
     float floorH = textureLod(uDetail, pb / 1700.0 + 0.4, 0.0).r;
     depth = mix(depth, min(depth, 70.0 + 34.0 * floorH), lakeK);
+  }
+  // The clear pool: a foot of still water over a pale bed, and the picture lying on it.
+  float poolK = 0.0;
+  float picK = 0.0;
+  vec3 sheetC = vec3(0.0);
+  if (pb.y > ${(POOL.y - 60).toFixed(1)} && pb.y < ${(POOL.y + POOL.h + 60).toFixed(1)} && pb.x > ${(POOL.x - 60).toFixed(1)}) {
+    vec2 pq = abs(pb - vec2(${(POOL.x + POOL.w / 2).toFixed(1)}, ${(POOL.y + POOL.h / 2).toFixed(1)})) - vec2(${(POOL.w / 2).toFixed(1)}, ${(POOL.h / 2).toFixed(1)});
+    poolK = 1.0 - smoothstep(-40.0, 30.0, max(pq.x, pq.y));
+    depth = mix(depth, min(depth, 14.0), poolK);
+    vec2 su = (pb - vec2(${SHEET.x.toFixed(1)}, ${SHEET.y.toFixed(1)})) / vec2(${SHEET.w.toFixed(1)}, ${SHEET.h.toFixed(1)});
+    vec2 sq = abs(su) - 0.5;
+    float se = max(sq.x * ${SHEET.w.toFixed(1)}, sq.y * ${SHEET.h.toFixed(1)});
+    if (se < 2.0 && uSheetOn > 0.5) {
+      float lodS = clamp(log2(max(footL, 1e-3) * 2000.0 / ${SHEET.w.toFixed(1)}), 0.0, 6.0);
+      vec3 pic = textureLod(uSheetTex, vec2(su.x + 0.5, 0.5 - su.y), lodS).rgb;
+      sheetC = pic * pic;
+      picK = (1.0 - smoothstep(-1.5, 1.5, se)) * poolK;
+    }
   }
   float dn = clamp(depth / DEEP, 0.0, 1.0);
   float shallow = 1.0 - smoothstep(0.08, 0.5, dn);
@@ -840,6 +865,11 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   vec4 gb = textureLod(uGrain, pb / 256.0, lodB);
   vec4 gs = gb;
   vec3 bed = uBed * (1.0 + (gb.r - 0.5) * 0.03 + (gs.b - 0.42) * 0.17 + (gb.a - 0.4) * 0.12);
+  if (poolK > 0.0) {
+    // A pale bed, a few stones; the picture's sheet with a hair of shade along its edge.
+    bed = mix(bed, vec3(0.5, 0.7, 0.72) * (0.86 + 0.28 * gb.g), poolK * 0.75);
+    bed = mix(bed, sheetC, picK);
+  }
   float shadow = 1.0 - 0.6 * shade;
   float fineW = 1.0 - smoothstep(0.12, 0.6, dn);
   float broadW = smoothstep(0.06, 0.4, dn);
@@ -889,12 +919,15 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   } else {
     lightOnBed = vec3(uLight.x * 0.9 + uLight.y * shadow * cheapC);
   }
+  // (Over the picture the net of light is gentler, so it can be read.)
+  lightOnBed = mix(lightOnBed, vec3(uLight.x * 0.9 + uLight.y * shadow) * 1.04, picK * 0.72);
   float caust = dot(lightOnBed, vec3(0.3333)) / (uLight.x * 0.9 + uLight.y);
   bed *= lightOnBed / (uLight.x + uLight.y);
 
   float path = (depth + 7.0) * (1.0 + 1.0 / max(-r.z, 0.35));
   vec3 trans = exp(-uAbsorb * path);
-  float turbid = 1.0 - exp(-path * 0.011);
+  float turbid = (1.0 - exp(-path * 0.011)) * (1.0 - 0.8 * poolK);
+  trans = mix(trans, vec3(0.8, 0.95, 0.97), poolK);
   vec3 body = uScatter * (0.5 + 0.5 * shadow) * (0.5 + 0.62 * min(caust, 3.0));
   vec3 water = bed * trans + body * turbid * (1.0 - trans * 0.35);
   // Before dawn the water has no light of its own: a dark body, a little
@@ -907,6 +940,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     pool += uAurora * 0.05 * nfil;
 
     water = mix(water, pool, uNight * 0.93);
+    // The picture glows softly up through the water.
+    water = mix(water, sheetC * 0.95 + vec3(0.014, 0.028, 0.036) + water * 0.35, picK * uNight * 0.88);
   }
   // The lake is deep: by day its water is dark, and under the sheet, where
   // no wind reaches it, darker still. That is what draws the name.

@@ -37,6 +37,7 @@ const ICE_H = 11;
 export class FlightEngine extends WaterEngine {
   private slabTex: WebGLTexture | null = null;
   private slabTint: V3 = [0.2, 0.2, 0.2];
+  private sheetTex: WebGLTexture | null = null;
   private camKey = '';
 
   constructor(canvas: HTMLCanvasElement, opts: EngineOpts) {
@@ -257,6 +258,24 @@ export class FlightEngine extends WaterEngine {
     this.ptrRadius = Math.min(70, Math.max(12, units));
   }
 
+  /** The picture that lies on the pool's bed. */
+  setSheet(img: HTMLImageElement) {
+    const gl = this.gl;
+    if (this.sheetTex) gl.deleteTexture(this.sheetTex);
+    const tex = gl.createTexture()!;
+    gl.activeTexture(gl.TEXTURE15);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.sheetTex = tex;
+  }
+
   /** The product picture the slab carries. */
   setSlab(img: HTMLImageElement) {
     const gl = this.gl;
@@ -474,6 +493,9 @@ export class FlightEngine extends WaterEngine {
     const bloom = 0.55 * (1 - l2 * (1 - night));
     gl.useProgram(r.prog);
     bindTex(gl, 14, f[3].tex, r.u.uGlowTex);
+    // (Unit 15 is the scratch unit: the pool's picture is put back on it for each draw.)
+    bindTex(gl, 15, (this.sheetTex ?? this.grain.tex) as WebGLTexture, r.u.uSheetTex);
+    gl.uniform1f(r.u.uSheetOn, this.sheetTex ? 1 : 0);
     gl.uniform1f(r.u.uBloom, bloom);
     drawTo(gl, null, w, h);
     if (bloom <= 0.001) return;
@@ -505,6 +527,7 @@ export class FlightEngine extends WaterEngine {
   destroy() {
     for (const t of this.film) freeTarget(this.gl, t);
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
+    if (this.sheetTex) this.gl.deleteTexture(this.sheetTex);
     freeTarget(this.gl, this.ground);
     freeTarget(this.gl, this.pano);
     super.destroy();
@@ -685,6 +708,14 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     if (!destroyed) engine.setSlab(img);
   };
   img.src = root.dataset.slab || '/media/infiniview-hero.webp';
+  if (root.dataset.sheet) {
+    const pic = new Image();
+    pic.decoding = 'async';
+    pic.onload = () => {
+      if (!destroyed) engine.setSheet(pic);
+    };
+    pic.src = root.dataset.sheet;
+  }
 
   const ro = new ResizeObserver(onResize);
   ro.observe(document.body);

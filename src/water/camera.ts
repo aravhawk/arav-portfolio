@@ -146,8 +146,8 @@ export function flightKeys(aspect: number): Key[] {
         // Down the bigger river.
         { s: s3 + 0.3, pos: [860, 7650 + Y, 300], aim: [1000, 8500 + Y, 0], fov: 46 },
         // The pool, looked down into from its rim.
-        { s: s3 + 1.15, pos: [1620, 8700 + Y, 560], aim: [1690, 9230 + Y, 0], fov: 46 },
-        { s: s4 - 0.6, pos: [1625, 8730 + Y, 548], aim: [1692, 9240 + Y, 0], fov: 46 },
+        { s: s3 + 1.15, pos: [1490, 8540 + Y, 560], aim: [1540, 9130 + Y, 0], fov: 46 },
+        { s: s4 - 0.6, pos: [1496, 8565 + Y, 550], aim: [1543, 9140 + Y, 0], fov: 46 },
         { s: s4 + 0.3, pos: [1150, 9700 + Y, 300], aim: [1300, 10500 + Y, 0], fov: 46 },
         // The tarn: one shard near on the left, one far on the right, the ranges beyond.
         { s: s4 + 1.2, pos: [1120, 9900 + Y, 250], aim: [1400, 10950 + Y, 130], fov: 46 },

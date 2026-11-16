@@ -108,8 +108,8 @@ export const TRIBS: { head: Pt; mid: Pt; mouth: Pt }[] = [
 export const tribWidth = (n: number) => 8 + 16 * Math.min(n, 10);
 
 /** Station 3, the clear pool beside the river, and the picture on its bed. */
-export const POOL: Rect = { x: 1230, y: 8840 + DY, w: 1040, h: 800 };
-export const SHEET = { x: 1750, y: 9250 + DY, w: 600, h: 430 };
+export const POOL: Rect = { x: 1380, y: 8900 + DY, w: 800, h: 700 };
+export const SHEET = { x: 1780, y: 9250 + DY, w: 600, h: 440 };
 
 /** Station 4, the tarn, and the two shards of ice that stand in it. */
 export const TARN = { x: 1300, y: 10800 + DY, rx: 820, ry: 640 };
@@ -195,9 +195,9 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
   b.pool(POOL, 300);
   b.disc(pt(POOL.x + 200, POOL.y + 230), 200);
   b.disc(pt(POOL.x + POOL.w - 190, POOL.y + POOL.h - 210), 190);
-  b.channel([pt(860, 8660 + DY), pt(1080, 8770 + DY), pt(1280, 8900 + DY)], { width: [46, 40, 60], speed: 0.7 });
-  b.channel([pt(1340, 9560 + DY), pt(1160, 9700 + DY), pt(1070, 9790 + DY)], { width: [60, 40, 46], speed: 0.7 });
-  b.channel([pt(1300, 8920 + DY), pt(1650, 9200 + DY), pt(1360, 9540 + DY)], { width: 520, speed: 0.12, flowOnly: true });
+  b.channel([pt(860, 8660 + DY), pt(1080, 8770 + DY), pt(1300, 8870 + DY), pt(1450, 8970 + DY)], { width: [46, 40, 44, 60], speed: 0.7 });
+  b.channel([pt(1450, 9540 + DY), pt(1300, 9640 + DY), pt(1160, 9700 + DY), pt(1070, 9790 + DY)], { width: [60, 44, 40, 46], speed: 0.7 });
+  b.channel([pt(1450, 8970 + DY), pt(1780, 9250 + DY), pt(1450, 9540 + DY)], { width: 480, speed: 0.12, flowOnly: true });
 
   // The tarn: wide, dark and still.
   const tarn = new Path2D();
