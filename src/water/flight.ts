@@ -14,8 +14,9 @@ import { haptic } from '@/lib/haptics';
 import { BedPainter } from './bed';
 import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, groundUnder, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
-import { bindTex, drawTo } from './gl';
+import { type Target, bindTex, drawTo, freeTarget, makeTarget } from './gl';
 import { FLIGHT, FLIGHT_FREEBOARD } from './shaders/flight';
+import { GROUND } from './shaders/terrain';
 import { makeSolver } from './stage';
 import { LAKE, OUTLET, SHOAL_Y, SLAB, WORLD, nameLayout, paintWorld, rasterName } from './world';
 
@@ -48,7 +49,39 @@ export class FlightEngine extends WaterEngine {
     const s = super.sources();
     delete s.render;
     s.flight = FLIGHT;
+    s.ground = GROUND;
     return s;
+  }
+
+  /** The snow's relief, baked once. */
+  private ground!: Target;
+
+  /**
+   * Trilinear, and as anisotropic as the device allows: a ground seen at a
+   * low angle is long and thin under each pixel, and this is what keeps it
+   * both sharp and still. Without the extension it is plain trilinear.
+   */
+  private filterGround(t: Target) {
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, t.tex);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    const ext = gl.getExtension('EXT_texture_filter_anisotropic');
+    if (ext) {
+      const max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number;
+      gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(16, max));
+    }
+  }
+
+  protected bake() {
+    super.bake();
+    const gl = this.gl;
+    this.ground = makeTarget(gl, 1024, 1024, { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, wrap: gl.REPEAT });
+    gl.useProgram(this.p.ground.prog);
+    drawTo(gl, this.ground);
+    this.filterGround(this.ground);
+    this.filterGround(this.grain);
+    this.filterGround(this.detail);
   }
 
   protected simCell() {
@@ -240,11 +273,13 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 8, this.heat.read.tex, r.u.uHeat);
     bindTex(gl, 10, this.curv.tex, r.u.uCurv);
     bindTex(gl, 11, (this.slabTex ?? this.grain.tex) as WebGLTexture, r.u.uSlabTex);
+    bindTex(gl, 12, this.ground.tex, r.u.uGround);
     drawTo(gl, null, this.canvas.width, this.canvas.height);
   }
 
   destroy() {
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
+    freeTarget(this.gl, this.ground);
     super.destroy();
   }
 }

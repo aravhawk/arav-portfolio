@@ -55,6 +55,7 @@ uniform sampler2D uCurv;
 uniform sampler2D uGrain;
 uniform sampler2D uHeat;
 uniform sampler2D uSlabTex;
+uniform sampler2D uGround; // the baked snow: height, slope, a second field
 uniform float uIceH;
 uniform float uGlow;       // 0..1: how much of the lake's sheet is still there to glow under
 uniform float uMeltAct;
@@ -305,57 +306,69 @@ vec3 lightOn(vec3 n, float shadow) {
 /* ---------- the ground: wind-packed snow over pale stone ---------- */
 
 const mat2 RW = mat2(0.9563, -0.2924, 0.2924, 0.9563);
+// The baked snow is laid down three times, at scales and headings that do
+// not line up, so no tile is ever seen.
+const mat2 GA = mat2(0.9063, 0.4226, -0.4226, 0.9063);
+const mat2 GB = mat2(0.7547, -0.6561, 0.6561, 0.7547);
+const mat2 GC = mat2(0.9816, 0.1908, -0.1908, 0.9816);
 
-float driftH(vec2 wl) {
-  return textureLod(uSnow, wl / vec2(2290.0, 790.0), 0.0).r * 0.62
-       + textureLod(uSnow, wl / vec2(860.0, 195.0) + vec2(0.37, 0.11), 0.0).g * 0.3
-       + textureLod(uSnow, wl / vec2(310.0, 84.0) + vec2(0.71, 0.29), 0.0).b * 0.1;
+/** The size of a pixel on the ground, as two vectors: set once per pixel. */
+vec2 gGx;
+vec2 gGy;
+
+/** The baked snow at one scale: height, the slope in world terms, the second field. */
+vec4 snowTile(vec2 p, mat2 R, float scale, float amp, vec2 off) {
+  vec4 t = textureGrad(uGround, R * p / scale + off, R * gGx / scale, R * gGy / scale);
+  vec2 g = (t.gb - 0.5) * 16.0 * (amp / scale);
+  return vec4(t.r, g * R, t.a);
 }
 
 vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShade) {
-  vec2 wl = RW * p;
-  // Drift ridges: a slow field stretched along the wind. Its slope is what
-  // the low light finds.
-  float h0 = driftH(wl);
-  const float E = 14.0;
-  float hx = driftH(RW * (p + vec2(E, 0.0)));
-  float hy = driftH(RW * (p + vec2(0.0, E)));
-  float big = 1.0 - smoothstep(60.0, 420.0, foot);
-  vec2 rel = vec2(hx - h0, hy - h0) / E * mix(80.0, 150.0, uNight) * big;
-  // Sastrugi: finer ridges, gone before they are finer than a pixel.
-  float lodM = lodFor(foot, 300.0, 512.0);
-  vec4 dm = textureLod(uDetail, wl / vec2(300.0, 96.0), lodM);
-  rel += (dm.gb - 0.5) * RW * 0.75;
-  float lodF = lodFor(foot, 96.0, 256.0);
-  vec4 g0 = textureLod(uGrain, p / 96.0, lodF);
-  if (uQuality > 0.5) {
-    float gx = textureLod(uGrain, (p + vec2(0.5, 0.0)) / 96.0, lodF).a;
-    float gy = textureLod(uGrain, (p + vec2(0.0, 0.5)) / 96.0, lodF).a;
-    rel += vec2(gx - g0.a, gy - g0.a) * 0.5;
-  }
-  // Bare ground: the wind has scoured the crowns down to pale stone and
-  // old ice. Snow ends at an edge, and the edge is a pixel wide at any range.
-  float scour = textureLod(uDetail, wl / vec2(2100.0, 900.0) + 0.21, 0.0).r + 0.5 * (textureLod(uDetail, wl / vec2(520.0, 210.0), lodFor(foot, 520.0, 512.0)).r - 0.5) - 0.55 * h0;
-  float ew = clamp(foot * 0.004, 0.006, 0.2);
-  float bare = smoothstep(0.66 - ew, 0.66 + ew, scour);
+  // Dunes, the forms on them, and the wind's fine work close by.
+  vec4 a = snowTile(p, GA, 3400.0, 270.0, vec2(0.13, 0.57));
+  vec4 b = snowTile(p, GB, 1130.0, 52.0, vec2(0.71, 0.29));
+  vec4 c = snowTile(p, GC, 263.0, 3.2, vec2(0.37, 0.11));
+  vec2 rel = a.yz + b.yz + c.yz;
   vec3 n = normalize(vec3(-rel, 1.0));
   // The bank rolls over into the cut.
   float ch = 1.0 - smoothstep(0.0, 26.0, sd);
   n = normalize(n + vec3(-grad * ch * ch * 0.9, 0.0));
-  vec3 snow = mix(vec3(0.9, 0.91, 0.93), vec3(0.74, 0.8, 0.9), uNight);
-  vec3 stone = mix(vec3(0.34, 0.35, 0.37), vec3(0.2, 0.22, 0.27), uNight) * (0.8 + 0.5 * g0.g);
-  vec3 alb = mix(snow, stone, bare * 0.85);
-  alb *= 1.0 + (g0.r - 0.5) * 0.05;
-  vec3 col = alb * lightOn(n, slabShade);
-  // Wet shore: the snow gives way to dark wet ice at the water.
+
+  // Near the water the snow thins: bare dark stone, and old blue ice at the edge.
+  float nearW = 1.0 - smoothstep(14.0, 190.0, sd);
+  float lvl = b.w * 0.62 + c.w * 0.38;
+  float ew = clamp(foot * 0.004, 0.004, 0.1);
+  float cut = mix(0.9, 0.52, nearW * nearW);
+  float bare = smoothstep(cut - ew, cut + ew, lvl);
+  float glaze = (1.0 - smoothstep(4.0, 30.0, sd)) * smoothstep(0.38 - ew, 0.38 + ew, b.w);
+
+  vec3 L = keyDir();
+  float ndl = dot(n, L);
+  // Snow is lit through as much as onto: a face turned from a low sun still
+  // glows a little, in the sky's blue. Level snow is the reference.
+  float sun = clamp(ndl / max(L.z, 0.05), 0.0, 2.4);
+  sun = mix(sun, 1.0, 0.1) * slabShade;
+  vec4 gr = textureGrad(uGrain, p / 150.0, gGx / 150.0, gGy / 150.0);
+  vec3 snow = mix(vec3(0.93, 0.94, 0.95), vec3(0.74, 0.8, 0.9), uNight);
+  vec3 stone = mix(vec3(0.085, 0.09, 0.1), vec3(0.05, 0.055, 0.07), uNight) * (0.7 + 0.7 * gr.g);
+  vec3 blue = mix(vec3(0.3, 0.52, 0.62), vec3(0.2, 0.36, 0.46), uNight);
+  vec3 alb = mix(snow, stone, bare);
+  alb = mix(alb, blue, glaze * 0.8);
+  vec3 col = alb * (S.key * L.z * sun + S.amb * (0.62 + 0.38 * n.z));
+  // Hollows hold a little more of the sky's shade than crowns.
+  col *= 1.0 + (a.x - 0.5) * 0.1 + (b.x - 0.5) * 0.05;
+  // Sparkle: single crystals turned to the sun, only close to the eye.
+  float near = 1.0 - smoothstep(0.25, 0.9, foot);
+  if (near > 0.0) {
+    float glint = smoothstep(0.972, 1.0, gr.r) * smoothstep(0.4, 0.9, fract(gr.a * 7.0 + dot(dir.xy, vec2(3.1, 2.3)) * 6.0));
+    col += S.key * 0.5 * glint * near * (1.0 - bare) * step(0.3, sun) * (1.0 - uNight);
+  }
+  // Wet shore: dark and glossy at the water.
   float wet = 1.0 - smoothstep(1.0, 16.0, sd);
   col = mix(col, col * vec3(0.5, 0.62, 0.7), wet * 0.7);
   // A cold sheen: snow is a little glossy at a glancing angle.
   float cosi = clamp(dot(-dir, n), 0.0, 1.0);
-  col += S.hor * pow(1.0 - cosi, 4.0) * mix(0.1, 0.22, uNight) * (1.0 - 0.6 * bare);
-  // Before dawn the lit water throws a little of its light onto its banks.
-  float sdp = max(sd, 0.0);
-  col += POOL * uNight * (0.2 * exp(-sdp / 9.0) + 0.045 * exp(-sdp / 60.0)) * (0.6 + 0.8 * g0.g);
+  col += S.hor * pow(1.0 - cosi, 4.0) * mix(0.08, 0.2, uNight) * (1.0 - 0.6 * bare);
   return col;
 }
 
@@ -724,6 +737,9 @@ void main() {
     float sinE = -dir.z;
     float footL = foot / pow(sinE, 0.75);
     vec2 vd = normalize(dir.xy + 1e-6);
+    float fs = t * dot(dir, uCamF) * uPxAng;
+    gGx = uCamR.xy * fs;
+    gGy = (uCamU.xy + dir.xy * (uCamU.z / -dir.z)) * fs;
 
     vec4 b0 = bedAt(p);
     float sd0 = b0.r;
