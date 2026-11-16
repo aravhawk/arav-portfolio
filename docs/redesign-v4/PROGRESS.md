@@ -207,7 +207,7 @@ section I, haptics.
   2. Reduced motion, no WebGL, forced colours and print after the layout
      changes (full-bleed lake, new ending, footer).
   3. Whatever the second critic finds.
-- 2026-11-16 00:20 CT. Second independent critic (fresh agent, run through
+- 2026-11-16 00:50 CT. Second independent critic (fresh agent, run through
   Kilo on Fable 5.2 to spare the Claude allowance, captures only): 5.8 of
   10 (`critic/review-2.md`). Up on type (6.5), ending (7), legibility (7),
   phone (7); still low on the name as ice, the water reading as a pool
@@ -224,7 +224,7 @@ section I, haptics.
 - Next after K1: K2 (ending: mountains, sun, the top-down phase using the
   page's own caustics; body copy scale; inner pages; small fixes), then a
   third score.
-- 2026-11-16 03:55 CT. Kilo tasks K1, K2 and K3 done, each reviewed here
+- 2026-11-16 03:35 CT. Kilo tasks K1, K2 and K3 done, each reviewed here
   from its captures and pushed as a signed checkpoint (K1 `314c747`, K2
   `d3914fb`, K3 `0fb181c`; all Kilo commits verify as signed). K1: clear
   ice, erosion melt, natural deep water without terraces, lit stone, wider
@@ -235,7 +235,7 @@ section I, haptics.
   never breaks into fragments, night caustics as a filled net, live water
   before the ending. Gates after each: lint, typecheck, 196 tests, overlap
   test 0 overlaps at seven widths, 197 words on home, p95 16.7 to 16.8 ms.
-- 2026-11-16 04:20 CT. Third independent critic (fresh, through Kilo):
+- 2026-11-16 03:54 CT. Third independent critic (fresh, through Kilo):
   5.5 of 10 (`critic/review-3.md`). Ending 7.5 ("the dark ending is the
   best frame in the build and beats v2"), five-second read 7.5; water 4.5,
   project pages 4, craft 5. Its project score rests partly on my capture
@@ -254,20 +254,20 @@ section I, haptics.
 - After K4: review, a fourth and final independent score, then the final
   gates, the remaining docs and the report, whatever the score is. The
   report states the scores as they are.
-- 2026-11-16 06:10 CT. K4 done, reviewed and pushed (`c630b1d`): the frozen
+- 2026-11-16 04:33 CT. K4 done, reviewed and pushed (`c630b1d`): the frozen
   lake (the name cut through a sheet of lake ice as live water; the melt
   is the sheet breaking into floes), runs and pools as different water, a
   lit dark ground, a larger Kilo Bench image, the light ending's sun path
   and colour handover, a wandering stream on inner pages, a nav that
   leaves on scroll down, a wake by shading.
-- 2026-11-16 08:20 CT. K5 done, reviewed and pushed (`5d4be01`): night ice
+- 2026-11-16 06:36 CT. K5 done, reviewed and pushed (`5d4be01`): night ice
   in dark theme (mean ice luminance 0.25, name 3.3 to 1), crisp drifted
   snow over clear ice in light with a lead of open water at the north
   shore (name 5.2 to 1), whole round floes that go largest last, no crease
   or terracing in the stream bed. Kilo caught a frame-time regression of
   its own (the fracture field cost 33 ms p95 under GPU contention) and
   fixed it before handing back.
-- 2026-11-16 09:15 CT. Final gates on the K5 build (production, port 3141):
+- 2026-11-16 07:00 CT. Final gates on the K5 build (production, port 3141):
   perf p95 16.7 to 16.8 ms on all four profiles, tier 0 desktop, one
   backing size each; Lighthouse desktop 99, 100, 100, 100 and mobile 90,
   94, 88, 93 (home, /work, project, post), accessibility, best practices
@@ -275,7 +275,7 @@ section I, haptics.
   197 words; states and haptics wiring pass. Section I re-verified: every
   canonical and OG URL on arav.pro, no stray aravjain.dev. The OG cards
   rendered but still drew the first build's look: sent to Kilo in K6.
-- 2026-11-16 09:25 CT. Fourth independent critic: 5.8 of 10
+- 2026-11-16 07:05 CT. Fourth independent critic: 5.8 of 10
   (`critic/review-4.md`). Four fresh critics, four builds: 5.5, 5.8, 5.5,
   5.8. The target of 8.5 is not met and the report says so. Its real,
   specific findings went to Kilo as K6 (`.tools/briefs/K6-last-fixes.md`):
@@ -287,16 +287,16 @@ section I, haptics.
   overlap run, perf, Lighthouse, matrix), a closing score for the record,
   final screenshots and videos, snapshot refresh, production server on
   3133, the report.
-- 2026-11-16 10:40 CT. K6 done, reviewed and pushed (`e04fcd1`): dark hero
+- 2026-11-16 07:48 CT. K6 done, reviewed and pushed (`e04fcd1`): dark hero
   with the name as lit water (4.5 to 1), crisp ice edges at 2x, cracks that
   route round the name, a stronger wake, a shorter lake, a graded dark
   handover into the ending, the empty spinner image dropped from the Kilo
   Bench page, the five OG cards redrawn.
-- 2026-11-16 11:40 CT. Final build. Snapshot refreshed (`0a374c8`). Gates
+- 2026-11-16 08:09 CT. Final build. Snapshot refreshed (`0a374c8`). Gates
   re-run on it (checklist above). Closing independent score 5.8
   (`critic/review-5.md`). No further passes: five scores in a row within
   0.3 of each other say another pass of the same kind will not move it.
-- 2026-11-16 12:05 CT. Full overlap run on the final build finished: 189
+- 2026-11-16 10:25 CT. Full overlap run on the final build finished: 189
   page runs (Chromium, WebKit, Firefox x seven widths x nine pages), 7,749
   scroll positions, 0 overlaps; worst ending contrast 3.32 at 320 wide
   (large type, bar 3). All 36 commits on the branch verify as signed.
@@ -440,7 +440,7 @@ effects, as igloo.inc and other award sites have.
    critics score **sync and fit** as their own line in the rubric.
 
 ## Round 10 log
-- 2026-11-16 12:40 CT. Kilo task K7 started
+- 2026-11-16 10:30 CT. Kilo task K7 started
   (`.tools/briefs/K7-the-flight.md`): a prototype at `/flight` of the home
   page as one world seen through a travelling perspective camera (frozen
   lake under a sky, melt and descent, the statement on the bank, the
@@ -448,14 +448,14 @@ effects, as igloo.inc and other award sites have.
   existing ending), plus `scripts/legibility-test.mjs` (contrast behind
   every line of text at 40 or more scroll positions, both themes). The
   shipped home page is untouched until the prototype is judged.
-- 2026-11-16 13:45 CT. K7 done and pushed (`222d41c`, signed). Its run sat
+- 2026-11-16 11:40 CT. K7 done and pushed (`222d41c`, signed). Its run sat
   idle for 17 minutes after it had committed and written its report, with
   nothing pending, so the run was closed (first stall of a Kilo task;
   nothing lost). The prototype works: `/flight` is one world through a
   travelling camera, legibility test passes at 390 and 1440 in both
   themes, existing pages untouched. It drops frames at 1728 wide (6
   percent) and under contention (p95 33 ms): a gate for the next task.
-- 2026-11-16 14:20 CT. Interim independent read on the prototype (one
+- 2026-11-16 11:48 CT. Interim independent read on the prototype (one
   critic, all 29 images opened this time): **6.0**, the highest so far.
   "The idea is at reference level; the rendering looks like a real-time
   demo scene." (`critic/review-6.md`). Worst: the hero name pale on pale
@@ -475,7 +475,7 @@ effects, as igloo.inc and other award sites have.
   time of day that moves with the scroll, swap into the home page,
   fallbacks, phone), K10 (project and inner pages led by large media),
   then a panel of three critics.
-- 2026-11-16 14:55 CT. K8 failed before changing anything: the Kilo
+- 2026-11-16 12:29 CT. K8 failed before changing anything: the Kilo
   gateway stops any single response at 600 seconds, and its first big
   edit ran past that. Nothing lost (tree clean at `0b4ec0d`). Relaunched
   as two smaller tasks with an instruction to edit in small steps and
@@ -484,7 +484,7 @@ effects, as igloo.inc and other award sites have.
   anamorphic name, the river and the melt's plates, the project object,
   the small named faults. Briefs for Kilo from here on always carry the
   small-steps instruction.
-- 2026-11-16 17:35 CT. K8a done, reviewed and pushed (`b84354f`, seven
+- 2026-11-16 14:35 CT. K8a done, reviewed and pushed (`b84354f`, seven
   signed commits): baked snow with form, real ranges from a marched
   height field baked to a panorama, a sun in frame, an aurora and stars
   that open water mirrors, a film finish on a float target, no world
@@ -495,12 +495,12 @@ effects, as igloo.inc and other award sites have.
   My review of the frames: the world now reads as a film; the hero's
   composition, the river's surface and the object are still the
   prototype's.
-- 2026-11-16 17:40 CT. K8b started (`.tools/briefs/K8b-hero-water-object.md`):
+- 2026-11-16 14:40 CT. K8b started (`.tools/briefs/K8b-hero-water-object.md`):
   the hero as a poster with the name cut anamorphically, water that reads
   as water in both themes, angular plates, the object as a monolith in a
   walled basin, and a governor that drops a shading tier under contention
   (never resolution) so the fourth profile passes.
-- 2026-11-16 20:10 CT. K8b done, reviewed and pushed (`9a96439`, five
+- 2026-11-16 15:30 CT. K8b done, reviewed and pushed (`9a96439`, five
   signed commits): the hero as a poster (a vast lake to the far shore,
   the name cut anamorphically, measured 5.6 to 6.9 to 1 by day and 4.7 to
   5.9 at night), a river with current and wet banks, a night reflection
@@ -510,7 +510,7 @@ effects, as igloo.inc and other award sites have.
   profiles pass; the contended one still misses (8.4 percent of scroll
   frames) even at the leanest step. Kilo measured the cause: fill at
   full size with two windows on the GPU, not the shading maths.
-- 2026-11-16 20:40 CT. Second interim independent read: **6.7**
+- 2026-11-16 15:54 CT. Second interim independent read: **6.7**
   (`critic/review-7.md`). Sub-scores: water 6, legibility 7.5, sharpness
   6.5, type 7.5, five-second read 8.5, ending 7, light and dark 7.5,
   project pages 7, phone 6.5, craft 6.5. Series so far: 5.5, 5.8, 5.5,
@@ -536,7 +536,7 @@ effects, as igloo.inc and other award sites have.
   media (staged in `.tools/assets/` with their sources).
   Then a panel of three critics; rounds continue until the median is 9.5
   with none under 9. Then the sound phase.
-- 2026-11-16 23:05 CT. K8c done, reviewed and pushed (`30f77ee`, eight
+- 2026-11-16 17:00 CT. K8c done, reviewed and pushed (`30f77ee`, eight
   signed commits): the name as open water with a bright recessed rim on
   the far side only (no dark wall), the camera holding the hero's view
   until the name's ice has gone, wandering fractures into plates of
@@ -551,5 +551,9 @@ effects, as igloo.inc and other award sites have.
   time per frame at 2880 x 1800 is close to the budget on this machine.
   A later task must find a leaner tier that is a real saving. Not
   relaxed, not hidden.
-- 2026-11-16 23:10 CT. K9a started (`.tools/briefs/K9a-stations-2-4.md`).
+- 2026-11-16 17:02 CT. K9a started (`.tools/briefs/K9a-stations-2-4.md`).
+- Note on times: until 2026-11-16 17:30 CT the times in this log from
+  round 6 on were written from memory and had drifted by up to six
+  hours. They are now corrected from the commit timestamps (central
+  time). From here each entry's time is read from the clock.
 
