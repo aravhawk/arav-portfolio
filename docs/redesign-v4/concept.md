@@ -23,49 +23,49 @@ From the owner's words:
 
 ## Concept A: Meltwater (chosen)
 
-The page is one machined mineral slab seen from straight above. A deep pool
-is cut into its head, and the name sits in that pool as a block of ice.
-Scrolling melts it. The meltwater leaves through an outlet and runs down a
-channel milled through the whole page.
+The page is one slab of honed stone seen from above, a little from the
+south. A lake runs across its head from bank to bank, and the name stands
+in that lake as a block of clear ice. Scrolling melts it. The meltwater
+leaves through an outlet and runs down the whole page as one stream.
 
-The channel is not drawn around the content: **the content carves it.** Every
+The stream is not drawn around the content: **the content carves it.** Every
 text block is registered as dry land and raised out of the bed, so water can
-only be where no word is. Each project then shapes the same water into its
-own diagram, by the shape of the ground:
+only be where no word is. Each project then shapes the same water, by the
+shape of the ground, and every shape is tied to something real:
 
 | Project | The bed | Why that shape |
 |---|---|---|
-| Infiniview | The real product UI on an island in a sealed basin, the water around it never still | A sandbox, under attack from every side |
+| Infiniview | The real product on an island in a sealed basin, the water around it never still | A sandbox, under attack from every side |
 | Upstream (T3 Code and others) | Seven tributaries, each as wide as its merged pull request count, joining the main stream | Merging upstream, literally |
-| Kilo Bench | One header trough feeding parallel flumes of different reach | A benchmark: the same input down several lanes |
-| Agent Bridge | Two round pools and a canal, ripples sent each way | Two peers and one inbox between them |
+| Kilo Bench | One wide pool, the benchmark's real results standing on a point of the bank | The result is the thing to look at |
+| Agent Bridge | Two round pools and a canal, ripples sent each way, the launch film on the bank | Two peers and one inbox between them |
 | Open models | Four basins whose areas are the four models' pull counts | Data as an object |
-| cc-switch | A fork with three branches and real gates; picking a profile re-carves the bed and reroutes the flow | The product, as a thing you can do |
-| TensorPoW | A 4 by 4 grid of cells the stream threads in order | A tensor |
-| RydAR | Two tight bends back to back | The road it warns you about |
+| cc-switch | A header, three straight branches under the three options of the switch, one running | The product, as a thing you can do |
+| TensorPoW | A grid of cells the stream threads in order | A tensor |
+| RydAR | One wide meander with two tight bends, the app standing inside them | The road it warns you about |
 
-At the foot of the slab the stream opens into a body of water that fills the
-right side of the view. There the camera, which has looked straight down for
-the whole page, sinks and pitches up, and a horizon, a low sun and a sky
-appear for the first and only time. That picture is v2's ending screen,
-kept and rebuilt.
+At the foot of the slab the stream opens into water from bank to bank.
+There the camera, which has looked down for the whole page, sinks and
+pitches up, and a horizon, a low sun and a sky appear for the first and
+only time. That picture is v2's ending screen, kept and rebuilt, with the
+words set in it as v2 had them.
 
 Why it is his and not a copy of Igloo: Igloo is ice as an object in a snowy
 void, seen through a flying perspective camera, with a mono HUD. This is
-water as a medium on an engineered table, seen from above like a site model
-or a circuit board, where the ice exists only to become the stream. The
-material story is "frozen, then shipped": the name is potential, the water
-is the work.
+water as a medium in a stone landscape, seen from above like a site model,
+where the ice exists only to become the stream. The material story is
+"frozen, then shipped": the name is potential, the water is the work.
 
 Against the references:
 
 - Igloo: one world, scroll as a timeline, a self-assembling subject. Met:
   one continuous bed, melt and ending scrubbed by scroll, the bed assembles
-  each project's diagram. Not met: Igloo's free camera; v4's camera moves
-  once, at the end, on purpose.
+  each project's figure. Not met: Igloo's free camera and lit volumes; v4's
+  camera moves once, at the end, on purpose, and its world is a relief, not
+  a scene you fly through.
 - Lando Norris: one irresistible hero interaction, data art-directed as
-  objects, footer as poster. Met: the pointer drags a real wake through the
-  lake and warms the ice where it rests; basins sized by pulls and
+  objects, footer as poster. Met: the pointer drags real ripples through
+  the lake and warms the ice where it rests; basins sized by pulls and
   tributaries sized by pull requests; the ending.
 - Lusion: a quiet DOM frame around one loud canvas, per-chapter material
   propositions. Met: land is the quiet frame, and every chapter is a new
@@ -76,15 +76,30 @@ Risks, and how each was closed:
 
 - A full-screen shader at full resolution is exactly what made v3 lag. The
   fluid runs at a third to a sixth of screen resolution; the one full-size
-  pass does at most about fifteen texture reads and early-outs on land.
-  Measured (perf.md): 16.7 ms at p95 and p99 on an M4 at 2880 x 2232.
-- A top-down view can read as a flat map. Depth comes from parallax through
-  the water to a terraced bed, bank shadows, caustics that sharpen with
-  depth, a chamfered edge that catches a fixed key light, and a small
-  perspective tilt away from the optical centre.
+  pass early-outs on land and keeps its loops inside the ice's bounding
+  box. Measured (perf.md): 16.7 to 16.8 ms at p95 on an M4 at 2880 x 2232.
+- A top-down view can read as a flat map. Two independent critics said
+  exactly that about the first build ("a flat grey page with a tube drawn
+  on it"). What changed: the camera is oblique, so the north wall of every
+  cut shows, the water sits visibly below the slab and the bed below the
+  water, and all three slide against each other as the page scrolls; the
+  ice stands out of the water and throws a shadow onto the bed; the bed
+  shelves from clear shallows to a dark middle; the ground is lit stone
+  with a wet shore; the streams are two to three times as wide and their
+  banks are natural. It is still a relief seen from above, by design. It
+  is not a perspective scene, and the review says so.
 - Text registration can drift. The canvas is not fixed to the viewport: it
-  is a strip that lives in the document and travels with it, so water and
-  words stay registered even when the browser scrolls between frames.
+  is a strip that lives in the document and travels with it, and the land
+  plane maps one to one to the document, so water and words stay registered
+  even when the browser scrolls between frames.
+- Ice that reads as a text effect. The first build's name was called
+  "WordArt" and "an ice text effect". It is now a clear block (you see the
+  bed and its light through it, bent), frosted only at its edges and in
+  its fracture planes, with cut faces and a shadow.
+- A melt that reads as a weight slider or as a fade. Both were said, of two
+  different attempts. The melt now erodes the letters with rounding while
+  every stroke is still whole, sinks them to the waterline, and lets what
+  is left go quickly, all together.
 
 ## Concept B: Cold shelf (rejected)
 

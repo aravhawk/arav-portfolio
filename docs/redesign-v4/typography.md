@@ -1,6 +1,6 @@
 # aravjain.dev v4: typography
 
-Status: draft from the typography research pass, 2026-11-15. Sections up to "Pre-bake-off read" are complete. "Bake-off", "Blind ranking" and "The pick" are left for the in-site round.
+Status: final. Research and candidates from the typography pass, the bake-off in the real pages, the blind ranking by an independent critic, and the pick as shipped (2026-11-16).
 
 Evidence lives outside git in `~/.t3/portfolio-redesign-v4/`:
 
@@ -477,74 +477,103 @@ What the real pages showed that the flat specimens could not:
 
 ## Blind ranking
 
-The brief asks for an independent critic to rank the systems blind. Under
-the working rules for this build only one helper may run, at the final
-review, so the blind ranking is part of that critic's brief: it receives
-the three sheets labelled X, Y and Z with no names and ranks them before it
-sees anything else. Its ranking and reasons are recorded in
-`design-review.md` under "Independent critic", and copied here:
+An independent critic with no access to the build's reasoning was given the
+three sheets labelled X, Y and Z, with no face names, before it saw anything
+else, and was asked to rank them for this owner and this site. The key:
+X is Orbiter (TASA Orbiter with Spline Sans Mono), Y is Atelier (Zalando
+Sans with Newsreader), Z is Martian (Martian Grotesk with Martian Mono).
 
-_Filled in after the final review (see the end of this file)._
+Its ranking was **X, then Y, then Z.**
+
+- **X (Orbiter):** "The only sheet that reads as one system": the name, the
+  big figure and the blog title are visibly the same voice at three sizes,
+  and the tight, compact blog title is a dense, confident block. Its stated
+  risk: at thumbnail size it sits close to the Inter and Geist look, so it
+  wins on coherence and restraint and has to prove character at full size.
+- **Y (Atelier):** "The most characterful, and the most broken." The light
+  serif statement was "the single most premium line on any of the three
+  sheets" and the serif headline over the sea "lovely", but the sheet used
+  four voices, the expanded grotesk fused "21" into a logo-like shape, and
+  the name was set with a word gap "wide enough to park a car in".
+- **Z (Martian):** a wide, quirky geometric grotesk that "reads most as AI
+  startup template", runs wide so headings wrap badly, and looks like a UI
+  font asked to do long reading.
+
+The build at that point shipped Z, the one ranked last. My own reading from
+the bake-off table above had put Martian first for the ice name's mass and
+its engineered voice. The blind ranking says that reasoning was mine and not
+a reader's, so the pick changed.
 
 ## The pick
 
-**Martian Grotesk for display and text, Martian Mono for labels, live
-readouts and code.** Both are by Evil Martians, both SIL OFL 1.1 with no
-Reserved Font Name, both self hosted from `src/fonts`.
+**TASA Orbiter for display and text, Spline Sans Mono for labels, live
+readouts and code, and Newsreader as an accent for exactly two sentences.**
+All three are SIL OFL 1.1 and self hosted from `src/fonts`.
+
+This is the system the blind ranking put first, with one thing taken from
+the system it put second: the serif, which the critic called the most
+premium line on any sheet, used the way Linear uses Tiempos, rarely. It
+sets the statement on the home page ("Agents that break software before
+attackers do. Tools developers run daily.") and the closing line ("It's
+still early."). Those are the two sentences in his own voice. Everything
+else is one grotesk and one mono.
 
 Why, in plain terms:
 
-1. **It says the right thing in five seconds.** The takeaway is "AI and
-   developer tooling builder". Martian Grotesk is a wide, engineered
-   grotesque drawn by a studio that makes developer tools, with squared
-   curves, flat terminals and ink traps. It looks built, not styled. A serif
-   takeaway line (Atelier) said "essayist"; a neutral geometric (Orbiter)
-   said nothing in particular.
-2. **It is the best material for ice.** The name is cast from the display
-   face's outlines, then bevelled, frosted and melted. That needs thick,
-   even strokes and generous joins. At width 112 and weight 760 Martian has
-   the most mass, so the frosted core stays broad and legible at rest and
-   the letterforms survive longest as they thin.
-3. **One superfamily, two axes, so the scale has real steps.** Width runs
-   75 to 200 and weight 100 to 1000. The site uses width 112 for display and
-   100 for reading, and weights that are deliberately not 400 and 700: 420
-   for body, 440 for leads, 560 for controls, 620 to 680 for titles, 760 for
-   display. Those in-between weights are a large part of what reads as
-   expensive.
-4. **The mono is the same hand.** Martian Mono was drawn as the grotesque's
-   companion, so labels and live numbers feel like instruments on the same
-   machine, not a second brand.
-5. **Nothing in the licence can bite a public repository.**
+1. **It reads as one system.** One family carries the name, the project
+   names, the figures and the reading text, so the page gets its variety
+   from size and weight, which is what the references do (Apple with SF,
+   Linear with Inter, Lusion with Aeonik).
+2. **It is drawn for exactly this register.** TASA Orbiter was made by
+   Local Remote for the Taiwan Space Agency: geometric, thick, a double
+   storey "a" (so "Arav" never reads as "Arov"), tabular figures, a slashed
+   zero and case-sensitive forms. It says engineer without saying startup.
+3. **It answers the critic's own risk.** The worry was that it sits near
+   the Inter look. Three things move it away: the weight (780 for display,
+   800 for the ice name, where Inter sites sit at 500 to 600), the scale
+   contrast (a 248px name beside 11px mono labels), and the serif accent.
+4. **It sets well.** It is narrower than Martian, so "Kilo Bench" and
+   "Agent Bridge" stay on one line where they used to break, long
+   repository names fit their column, and a blog title is a compact block.
+5. **It is light.** 52 KB for the family, 59 KB for the mono, 48 KB for the
+   serif accent (one display-size instance, Latin only, weights 300 to
+   500), 31 KB for the static cut the ice name is drawn from.
+6. **Nothing in the licence can bite a public repository.** No Reserved
+   Font Name on any of the three as shipped.
 
 What it costs, and what was done about it:
 
-- **No tabular figures in the grotesque.** Live figures are set in fixed
-  one-`ch` cells per digit (`.digit`), so a number that counts up never
-  changes width; small readouts use Martian Mono.
-- **Dense body text.** Long reading runs at 18px on a 1.68 line with a
-  43rem measure, weight 420, which opens it up; headings in posts drop to
-  width 100.
-- **Canvas cannot set variable axes.** The ice name uses a static instance
-  (width 112, weight 760, `MartianGrotesk-Ice.woff2`, 28 KB) so the canvas
-  and the DOM agree in every browser.
+- **Less mass in the name than Martian had.** The ice is drawn at weight
+  800 from a static instance (`TASAOrbiter-Ice.woff2`) so the canvas and the
+  DOM agree in every browser, and the name is larger (17.2vw, 38vw stacked
+  on phones).
+- **Only one axis.** There is no width axis to play with, so hierarchy is
+  size, weight and the accent, nothing else.
+- **Tracking.** The critic flagged letters colliding at the old tracking.
+  Display is set at -0.036em with a 0.94 line; the big figure keeps -0.06em
+  because digits take it.
 
 The scale as shipped (`src/app/globals.css`):
 
-| Role | Size | Weight | Width | Tracking | Leading |
+| Role | Face | Size | Weight | Tracking | Leading |
 |---|---|---|---|---|---|
-| Ice name | 14.6vw (33vw stacked on phones) | 760 | 112 | -0.045em | 1.0 |
-| Big figure | 4.5rem to 13.5rem | 760 | 112 | -0.06em | 0.82 |
-| Display (project names) | 2.9rem to 7.5rem, capped by the column | 760 | 112 | -0.045em | 0.9 |
-| Statement | 2rem to 4.6rem | 620 | 100 | -0.04em | 1.02 |
-| Title | 1.5rem to 2.25rem | 620 | 100 | -0.025em | 1.1 |
-| Lead | 1.125rem to 1.375rem | 440 | 100 | -0.008em | 1.42 |
-| Body | 1.0625rem | 420 | 100 | 0 | 1.5 to 1.55 |
-| Small | 0.875rem | 420 | 100 | 0 | 1.45 |
-| Label (mono, uppercase) | 0.6875rem | 480 | | +0.07em | 1.35 |
+| Ice name | Orbiter (static 800) | 17.2vw, 5rem to 22rem (38vw stacked on phones) | 800 | -0.045em | 1.0 |
+| Big figure | Orbiter | 4.5rem to 13.5rem | 780 | -0.06em | 0.82 |
+| Display (project names) | Orbiter | 2.9rem to 7.5rem, capped by the column | 780 | -0.036em | 0.94 |
+| Statement (home) | Newsreader | 2.4rem to 6rem | 360 | -0.03em | 0.98 |
+| Closing line | Newsreader | 3.1rem to 7.6rem | 380 | -0.032em | 0.94 |
+| Statement role (hero takeaway) | Orbiter | 1.75rem to 3.5rem | 560 | -0.032em | 1.06 |
+| Title | Orbiter | 1.5rem to 2.25rem | 620 | -0.025em | 1.1 |
+| Lead | Orbiter | 1.125rem to 1.375rem (22px at 1440) | 440 | -0.008em | 1.42 |
+| Body | Orbiter | 1.0625rem to 1.125rem | 400 | 0 | 1.55 |
+| Small | Orbiter | 0.875rem | 400 | 0 | 1.45 |
+| Label (uppercase) | Spline Sans Mono | 0.6875rem to 0.75rem | 480 | +0.07em | 1.35 |
 
-Tracking tightens as size grows and leading closes with it, headings use
-`text-wrap: balance` and body `pretty`, and the fallbacks are metric-matched
-by `next/font` so there is no swap shift (measured CLS is 0).
+Past 1440 wide the root size grows with the viewport, so every rem above
+grows with it and a 1920 or 2560 screen does not get 1440's sizes in a
+bigger room. Tracking tightens as size grows and leading closes with it,
+headings use `text-wrap: balance` and body `pretty`, and the fallbacks are
+metric-matched by `next/font` so there is no swap shift (measured CLS is 0).
 
-The two losing systems are still wired behind `?type=a` and `?type=f` until
-the critic has ranked the sheets; they are removed from the final build.
+The two systems that lost, and the `?type=` switch used for the bake-off,
+are removed from the build.
