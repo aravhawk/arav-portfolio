@@ -22,7 +22,7 @@
 
 import { ICE_FIELD } from './ice';
 import { PANO, SUN } from './terrain';
-import { BASIN, ISLAND, STREAM } from '../world';
+import { BASIN, CONF_Y, ISLAND, STREAM, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -89,6 +89,7 @@ uniform vec3 uAbsorb;
 uniform vec3 uScatter;
 uniform vec3 uIceCol;
 uniform vec4 uLight;       // x: ambient, y: key, z: caustic gain, w: glint gain
+uniform float uTribW[${TRIBS.length}]; // each stream's width at its mouth, 0 where there is none
 
 const float FREEBOARD = ${FLIGHT_FREEBOARD}.0;
 const float DEEP = 130.0;
@@ -1045,7 +1046,11 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     float along = pw.y;
     float across = pw.x - streamX(pw.y);
     // (The threads keep to the stream itself, and are gone where it opens out.)
-    runK *= (1.0 - smoothstep(150.0, 300.0, abs(across))) * (1.0 - smoothstep(${(BASIN.y + BASIN.h + 350).toFixed(1)}, ${(BASIN.y + BASIN.h + 800).toFixed(1)}, pw.y));
+    if (pw.y < ${(BASIN.y + BASIN.h + 300).toFixed(1)}) runK *= (1.0 - smoothstep(150.0, 300.0, abs(across)));
+    // (Where the river runs across the valley its threads run across too.)
+    else if (abs(flow.x) > abs(flow.y)) { across = pw.y; along = flow.x > 0.0 ? pw.x : -pw.x; }
+    // (On a diagonal neither frame fits: the threads rest there.)
+    if (pw.y > ${(BASIN.y + BASIN.h + 300).toFixed(1)}) runK *= smoothstep(0.1, 0.5, abs(abs(flow.x) - abs(flow.y)) / max(fmag, 1e-3));
     float run = uTime * uFlowSpeed * (0.35 + 0.65 * fmag);
     float fadeT = 1.0 - smoothstep(2.5, 7.0, footL);
     // (Thin lines are where a smooth field crosses its middle; drawn long along the stream.)
@@ -1071,6 +1076,35 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       vec3 plate = mix(vec3(0.86, 0.92, 0.96) * (S.amb * 1.3 + S.key * 0.3), vec3(0.2, 0.26, 0.34) * 0.2 + uAurora * 0.05, uNight);
       col = mix(col * (1.0 - 0.35 * (1.0 - smoothstep(-0.5, 5.0, chip)) * runK * mid), plate, aC);
     }
+  }
+  // The confluence: each stream drops into the river over a short fall,
+  // white at its foot, and its paler meltwater trails away downstream.
+  if (pw.y > ${(CONF_Y - 260).toFixed(1)} && pw.y < ${(CONF_Y + 420).toFixed(1)} && pw.x > 300.0) {
+    const vec2 M[${TRIBS.length}] = vec2[${TRIBS.length}](${TRIBS.map((t) => `vec2(${t.mouth.x.toFixed(1)}, ${t.mouth.y.toFixed(1)})`).join(', ')});
+    float fall = 0.0;
+    float plume = 0.0;
+    for (int i = 0; i < ${TRIBS.length}; i++) {
+      float w = uTribW[i];
+      if (w <= 0.0) continue;
+      vec2 d = pw - M[i];
+      // The fall: a bar of broken water across the stream's mouth.
+      float bar = (1.0 - smoothstep(w * 0.5, w * 0.62 + 4.0, abs(d.x + d.y * 0.3))) * exp(-abs(d.y - 4.0) / (9.0 + w * 0.16));
+      // Its boil below: a fan that spreads and thins.
+      float boil = exp(-dot(d, d) / (w * w * 0.5 + 900.0)) * step(d.y, 14.0);
+      fall += bar * 1.4 + boil * (0.22 + 0.012 * w);
+      // The plume: carried down the river (toward -x), spreading as it goes.
+      float dn = max(-d.x, 0.0);
+      float half_ = w * 0.4 + 10.0 + dn * 0.07;
+      float lat = (d.y + 75.0 - dn * 0.3) / half_;
+      plume += exp(-lat * lat) * exp(-dn / (260.0 + 5.0 * w)) * smoothstep(-w * 0.5, w * 0.3, -d.x) * (0.45 + 0.012 * w);
+    }
+    plume = clamp(plume, 0.0, 1.0);
+    vec3 milk = mix(vec3(0.5, 0.86, 0.9) * (S.amb * 1.1 + S.key * 0.17), vec3(0.04, 0.1, 0.11) + uAurora * 0.07, uNight);
+    float streak = 0.6 + 0.4 * smoothstep(0.3, 0.7, textureLod(uDetail, vec2(pw.y / 90.0, (pw.x + uTime * uFlowSpeed * 0.7) / 900.0), lodFor(footL, 90.0, 512.0)).r);
+    col = mix(col, milk, plume * streak * 0.42 * (1.0 - smoothstep(20.0, 60.0, footL)));
+    vec3 white = mix(vec3(0.94, 0.97, 1.0) * (S.amb * 1.25 + S.key * 0.3), vec3(0.36, 0.5, 0.56) * 0.3 + uAurora * 0.15, uNight);
+    float churn = smoothstep(0.3, 0.62, mix(df.r, dw2.r, 0.5) + 0.45 * clamp(fall, 0.0, 1.0) - 0.12);
+    col = mix(col, white, clamp(fall, 0.0, 1.0) * churn * 0.92);
   }
   // White water where the basin's waves strike the block's footing: it
   // comes and goes round the shore with each wave.

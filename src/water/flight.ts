@@ -12,6 +12,7 @@
 import { onFrame } from '@/lib/frame';
 import { haptic } from '@/lib/haptics';
 import { BedPainter } from './bed';
+import { makeCallouts } from './callouts';
 import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
@@ -19,7 +20,7 @@ import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
-import { LAKE, OUTLET, SHOAL_Y, SLAB, WORLD, paintWorld, rasterName } from './world';
+import { LAKE, OUTLET, SHOAL_Y, SLAB, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -221,6 +222,9 @@ export class FlightEngine extends WaterEngine {
     return { ...super.info, tier: Math.max(this.tier, this.lean), simTier: this.tier, lean: this.lean, leanLog: this.leanLog.slice(-12) };
   }
 
+  /** Each stream's width at the confluence. */
+  tribW = new Float32Array(TRIBS.length);
+
   /** The camera the name is cut for (see the ice field). */
   nameCut: [number, number, number, number] = [0, 0, 1, 0];
   /** How much deeper than true the name lies on the lake, so that camera sees it true. */
@@ -419,6 +423,7 @@ export class FlightEngine extends WaterEngine {
     if (behind > 0) gl.uniform4f(r.u.uSlabBox, 0, 0, 1, 1);
     else gl.uniform4f(r.u.uSlabBox, x0 - 0.01, y0 - 0.01, x1 + 0.01, y1 + 0.01);
     gl.uniform3fv(r.u.uSlabTint, this.slabTint);
+    if (r.u.uTribW) gl.uniform1fv(r.u.uTribW, this.tribW);
 
     bindTex(gl, 0, this.bedA!.tex, r.u.uBedA);
     bindTex(gl, 1, this.bedB!.tex, r.u.uBedB);
@@ -541,6 +546,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   }
   root.appendChild(canvas);
   const solver = makeSolver();
+  const tribCounts = (root.dataset.tribs || '').split(',').map(Number).filter((n) => n > 0);
 
   let viewW = 1;
   let viewH = 1;
@@ -564,6 +570,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   }));
   words.forEach((w) => (w.on = null));
 
+  const callouts = makeCallouts();
+
   let meltFelt = false;
   engine.onMelt = (done) => {
     if (done && !meltFelt) {
@@ -583,17 +591,19 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const first = sections[0];
     // (Each section but the last is one screen longer than its stretch of scroll, so its words can stay pinned to the end of it.)
     unit = first ? first.offsetHeight / (SECTIONS.hero + 1) : viewH;
+    callouts.measure();
   }
 
   /** The bed is the same for every screen; it is carved once. */
   async function buildBed() {
     const rows = Math.min(engine.maxTexture, coarse ? 4096 : 8192) - 8;
-    const cells = coarse ? 1.2e6 : 3.0e6;
+    // (As many cells to a stretch of river as when the world was shorter.)
+    const cells = (coarse ? 1.2e6 : 3.0e6) * (WORLD.h / 12400);
     const div = Math.max(3, WORLD.h / rows, Math.sqrt((WORLD.w * WORLD.h) / cells));
     const painter = new BedPainter(WORLD.w, WORLD.h, div);
     const tick = () => new Promise<void>((res) => setTimeout(res, 0));
     let t = performance.now();
-    paintWorld(painter);
+    paintWorld(painter, tribCounts.length ? tribCounts : undefined);
     lap('paint', t);
     await tick();
     t = performance.now();
@@ -611,6 +621,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     engine.setBed(bed);
     lap('setBed', t);
     engine.shoalY = SHOAL_Y;
+    (tribCounts.length ? tribCounts : [9, 5, 3, 2, 1, 1, 1]).slice(0, TRIBS.length).forEach((n, i) => (engine.tribW[i] = tribWidth(n)));
     engine.lake = { y0: LAKE.y0, y1: LAKE.y1 };
     engine.meltPath = { x: OUTLET.x, y: OUTLET.y, reach: 900, w: OUTLET.w };
     return true;
@@ -723,7 +734,10 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       }
     }
     // Under the ending's picture there is nothing of the flight to see.
-    if (raw > FLIGHT_SCREENS + 0.25) return;
+    if (raw > FLIGHT_SCREENS + 0.25) {
+      callouts.frame(cam, aspect, viewW, viewH, -1);
+      return;
+    }
     // Nothing may glide when motion is reduced: each section shows its
     // composed frame.
     const s = mqStill.matches ? stillScroll(raw) : raw;
@@ -731,6 +745,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     cam = basisOf(poseAt(keys, s));
     const melt = (s - MELT.from) / (MELT.to - MELT.from);
     const end = smooth(FLIGHT_SCREENS - 1.7, FLIGHT_SCREENS - 1, s);
+    callouts.frame(cam, aspect, viewW, viewH, raw);
     engine.frame(now, cam, aspect, melt, end);
   }, 10);
 

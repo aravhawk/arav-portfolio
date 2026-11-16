@@ -7,7 +7,7 @@
  * so a held frame still drifts.
  */
 
-import { DY, NAME, type NameLayout, SLAB } from './world';
+import { DY, EXT, NAME, type NameLayout, SLAB } from './world';
 
 export type V3 = [number, number, number];
 
@@ -24,9 +24,9 @@ export interface Key extends Pose {
 }
 
 /** How long each section of the page is, in screens. */
-export const SECTIONS = { hero: 2.4, say: 2.2, infiniview: 2.6, runout: 2.0 };
+export const SECTIONS = { hero: 2.4, say: 2.2, infiniview: 2.6, upstream: 2.8, bench: 2.6, bridge: 2.8, runout: 2.0 };
 /** The whole flight's length in screens. The last screen of it is the hand-over to the ending. */
-export const FLIGHT_SCREENS = SECTIONS.hero + SECTIONS.say + SECTIONS.infiniview + SECTIONS.runout;
+export const FLIGHT_SCREENS = SECTIONS.hero + SECTIONS.say + SECTIONS.infiniview + SECTIONS.upstream + SECTIONS.bench + SECTIONS.bridge + SECTIONS.runout;
 /** Scroll (in screens) over which the lake's ice melts. */
 export const MELT = { from: 0.1, to: 2.0 };
 /** Until here the first camera only drifts: the name is still letters. */
@@ -79,7 +79,11 @@ export function flightKeys(aspect: number): Key[] {
   const h = SECTIONS.hero;
   const s1 = h + SECTIONS.say;
   const s2 = s1 + SECTIONS.infiniview;
+  const s3 = s2 + SECTIONS.upstream;
+  const s4 = s3 + SECTIONS.bench;
+  const s5 = s4 + SECTIONS.bridge;
   const end = FLIGHT_SCREENS - 1;
+  const Y = DY;
 
   // The poster, held (with a slow push) until the letters have run together.
   const hero = heroDesign(aspect).pose;
@@ -105,8 +109,20 @@ export function flightKeys(aspect: number): Key[] {
         { s: s2 - 0.55, pos: [1030, 3530 + DY, 445], aim: [slabAim[0] - 10, slabAim[1] - 40, 40], fov: 50 },
         // Out past the island's left side, so the slab is never flown through.
         { s: s2 - 0.1, pos: [900, 4900 + DY, 330], aim: [1250, 5900 + DY, 0], fov: 54 },
-        { s: s2 + 0.45, pos: [1380, 5950 + DY, 420], aim: [1330, 6700 + DY, 0], fov: 50 },
-        { s: end, pos: [1300, 7300 + DY, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)) + DY, 0], fov: 40 },
+        { s: s2 + 0.4, pos: [1380, 5700 + Y, 330], aim: [1560, 6300 + Y, 0], fov: 56 },
+        // The confluence: streams above, the river across the middle, the bank at the foot.
+        { s: s2 + 1.25, pos: [1380, 6080 + Y, 520], aim: [1400, 7150 + Y, 0], fov: 58 },
+        { s: s3 - 0.6, pos: [1390, 6140 + Y, 505], aim: [1400, 7190 + Y, 0], fov: 58 },
+        { s: s3 + 0.3, pos: [900, 7700 + Y, 380], aim: [1100, 8500 + Y, 0], fov: 58 },
+        // The pool, looked down into from its rim.
+        { s: s3 + 1.15, pos: [1750, 8560 + Y, 900], aim: [1750, 9200 + Y, 0], fov: 52 },
+        { s: s4 - 0.6, pos: [1750, 8600 + Y, 880], aim: [1750, 9215 + Y, 0], fov: 52 },
+        { s: s4 + 0.3, pos: [1200, 9650 + Y, 360], aim: [1300, 10500 + Y, 0], fov: 58 },
+        // The tarn: both shards, the far shore, the ranges.
+        { s: s4 + 1.2, pos: [1300, 9560 + Y, 420], aim: [1310, 10900 + Y, 120], fov: 60 },
+        { s: s5 - 0.6, pos: [1300, 9620 + Y, 405], aim: [1310, 10930 + Y, 120], fov: 60 },
+        { s: s5 + 0.35, pos: [1300, 11300 + Y, 420], aim: [1300, 12100 + Y, 0], fov: 50 },
+        { s: end, pos: [1300, 7300 + DY + EXT, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)) + DY + EXT, 0], fov: 40 },
       ]
     : [
         { s: 0, ...hero },
@@ -123,25 +139,47 @@ export function flightKeys(aspect: number): Key[] {
         // Out wide of the island's left side: the slab leaves the frame whole
         // and at a distance, never as an edge sliding past the lens.
         { s: s2 - 0.1, pos: [900, 4950 + DY, 250], aim: [1250, 5900 + DY, 0], fov: 42 },
-        { s: s2 + 0.45, pos: [1380, 5950 + DY, 300], aim: [1330, 6800 + DY, 0], fov: 40 },
+        { s: s2 + 0.4, pos: [1400, 5720 + Y, 230], aim: [1620, 6350 + Y, 0], fov: 46 },
+        // The confluence: the river crosses the frame, the streams fan down to it from the snowfield.
+        { s: s2 + 1.25, pos: [1300, 5930 + Y, 470], aim: [1680, 7170 + Y, 0], fov: 52 },
+        { s: s3 - 0.6, pos: [1314, 5980 + Y, 458], aim: [1686, 7200 + Y, 0], fov: 52 },
+        // Down the bigger river.
+        { s: s3 + 0.3, pos: [860, 7650 + Y, 300], aim: [1000, 8500 + Y, 0], fov: 46 },
+        // The pool, looked down into from its rim.
+        { s: s3 + 1.15, pos: [1620, 8700 + Y, 560], aim: [1690, 9230 + Y, 0], fov: 46 },
+        { s: s4 - 0.6, pos: [1625, 8730 + Y, 548], aim: [1692, 9240 + Y, 0], fov: 46 },
+        { s: s4 + 0.3, pos: [1150, 9700 + Y, 300], aim: [1300, 10500 + Y, 0], fov: 46 },
+        // The tarn: one shard near on the left, one far on the right, the ranges beyond.
+        { s: s4 + 1.2, pos: [1120, 9900 + Y, 250], aim: [1400, 10950 + Y, 130], fov: 46 },
+        { s: s5 - 0.6, pos: [1135, 9950 + Y, 242], aim: [1405, 10975 + Y, 130], fov: 46 },
+        { s: s5 + 0.35, pos: [1300, 11300 + Y, 320], aim: [1300, 12200 + Y, 0], fov: 40 },
         // Open water seen from above: the ending's first frame.
-        { s: end, pos: [1300, 7300 + DY, 1100], aim: [1300, 7300 + 1100 / Math.tan(rad(57)) + DY, 0], fov: 36 },
+        { s: end, pos: [1300, 7300 + DY + EXT, 1100], aim: [1300, 7300 + 1100 / Math.tan(rad(57)) + DY + EXT, 0], fov: 36 },
       ];
   return keys;
 }
 
+/** Where each section begins, in screens. */
+export function sectionStarts(): number[] {
+  const out: number[] = [];
+  let at = 0;
+  for (const v of Object.values(SECTIONS)) {
+    out.push(at);
+    at += v;
+  }
+  return out;
+}
+
 /** The scroll position of each section's composed frame, for a still (reduced motion) flight. */
 export function stillStops(): number[] {
-  const h = SECTIONS.hero;
-  const s1 = h + SECTIONS.say;
-  const s2 = s1 + SECTIONS.infiniview;
-  return [0, h + 0.7, s1 + 1.0, FLIGHT_SCREENS - 1];
+  const [, say, view, up, bench, bridge] = sectionStarts();
+  return [0, say + 0.7, view + 1.0, up + 1.25, bench + 1.15, bridge + 1.2, FLIGHT_SCREENS - 1];
 }
 
 /** Which composed frame a scroll position shows when nothing may glide. */
 export function stillScroll(s: number): number {
   const stops = stillStops();
-  const edges = [SECTIONS.hero, SECTIONS.hero + SECTIONS.say, SECTIONS.hero + SECTIONS.say + SECTIONS.infiniview];
+  const edges = sectionStarts().slice(1);
   let i = 0;
   while (i < edges.length && s >= edges[i] - 0.5) i++;
   return stops[i];
