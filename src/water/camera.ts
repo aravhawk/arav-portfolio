@@ -63,7 +63,7 @@ export function flightKeys(aspect: number): Key[] {
   const hero = tall
     ? fit([NAME.x, NAME.y], name.width, 0.68, 44, 37.5, 64, aspect)
     : fit([NAME.x, NAME.y + 10], name.width, Math.min(0.64, 0.4 * aspect), 36, 26.5, 58, aspect);
-  if (!tall) {
+  if (aspect >= 1.2) {
     // The sky needs room for the ranges: from the same place, a wider lens
     // held a little higher. The name stays where it was in the frame.
     hero.fov = 64;
