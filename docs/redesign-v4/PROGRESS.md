@@ -500,4 +500,40 @@ effects, as igloo.inc and other award sites have.
   as water in both themes, angular plates, the object as a monolith in a
   walled basin, and a governor that drops a shading tier under contention
   (never resolution) so the fourth profile passes.
+- 2026-11-16 20:10 CT. K8b done, reviewed and pushed (`9a96439`, five
+  signed commits): the hero as a poster (a vast lake to the far shore,
+  the name cut anamorphically, measured 5.6 to 6.9 to 1 by day and 4.7 to
+  5.9 at night), a river with current and wet banks, a night reflection
+  that reads as water, the object as a monolith on rock, a governor that
+  drops shading and never resolution. Gates: legibility passes at four
+  widths in both themes, existing pages untouched. Frame rate: three
+  profiles pass; the contended one still misses (8.4 percent of scroll
+  frames) even at the leanest step. Kilo measured the cause: fill at
+  full size with two windows on the GPU, not the shading maths.
+- 2026-11-16 20:40 CT. Second interim independent read: **6.7**
+  (`critic/review-7.md`). Sub-scores: water 6, legibility 7.5, sharpness
+  6.5, type 7.5, five-second read 8.5, ending 7, light and dark 7.5,
+  project pages 7, phone 6.5, craft 6.5. Series so far: 5.5, 5.8, 5.5,
+  5.8, 5.8 (the relief), 6.0, 6.7 (the flight). Top findings: the name
+  squashes as the camera descends and still reads as extruded lettering;
+  the object is "a stock floating monitor"; hexagon lines in the ice;
+  saw-toothed shorelines; the unbuilt stretches are empty; inner pages
+  are "white paper with a gel tube ... a different world from the home".
+- Next, one Kilo task at a time:
+  K8c (`.tools/briefs/K8c-name-object-polish.md`): the name as open water
+  that mirrors the scene with a bright recessed rim; the camera holds the
+  hero's view until the name's ice has gone; cracks and shorelines; the
+  first object as a block of ice with the product frozen inside; one
+  full-size pass (bloom from the previous frame) for the contended
+  profile; the start-up long task.
+  K9a (`.tools/briefs/K9a-stations-2-4.md`): callouts on leader lines;
+  Upstream as a confluence of seven streams; Kilo Bench; Agent Bridge as
+  two lights across still water.
+  K9b: Open models, cc-switch, TensorPoW, RydAR.
+  K9c: interests, the ending inside the same world (no top-down caustic
+  screens), the swap into the home page, fallbacks, phone paths.
+  K10: project and inner pages in the home's world, led by large real
+  media (staged in `.tools/assets/` with their sources).
+  Then a panel of three critics; rounds continue until the median is 9.5
+  with none under 9. Then the sound phase.
 
