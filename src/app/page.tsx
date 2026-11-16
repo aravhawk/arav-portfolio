@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { Arrow, Slab } from '@/components/bits';
 import { Ending } from '@/components/ending/Ending';
 import { Basins, Fork, Tributaries } from '@/components/features';
-import { Statement } from '@/components/home/Statement';
 import { LiveNumber } from '@/components/LiveNumber';
 import { INTERESTS, PROJECTS, type Project } from '@/content/projects';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
@@ -17,24 +16,26 @@ const P = Object.fromEntries(PROJECTS.map((p) => [p.slug, p])) as Record<string,
 function Copy({ p, children }: { p: Project; children?: React.ReactNode }) {
   return (
     <div className="beat-copy">
-      <p className="label beat-label" data-reveal="fade">
-        <span>{p.n}</span>
-        {p.kicker ? <span>{p.kicker}</span> : null}
-      </p>
+      {p.kicker ? (
+        <p className="label beat-label" data-reveal="fade">
+          {p.kicker}
+        </p>
+      ) : null}
+      {/* The name is the way in: one link, no separate button. */}
       <h2
         className="display beat-name"
         data-reveal="lead"
         style={{ '--len': Math.max(...p.name.split(' ').map((w) => w.length)) } as React.CSSProperties}
       >
-        {p.name}
+        <Link className="beat-link" href={`/work/${p.slug}`}>
+          {p.name}
+          <Arrow />
+        </Link>
       </h2>
       <p className="lead beat-line" data-reveal style={{ '--i': 1 } as React.CSSProperties}>
         {p.line}
       </p>
       {children}
-      <Link className="go" href={`/work/${p.slug}`} aria-label={`Open ${p.name}`} data-reveal style={{ '--i': 2 } as React.CSSProperties}>
-        <Arrow />
-      </Link>
     </div>
   );
 }
@@ -63,10 +64,9 @@ export default async function Home() {
 
         {/* ---------- statement ---------- */}
         <section className="say wrap" aria-label="What I do">
-          <Statement
-            className="statement"
-            text="Agents that break software before attackers do. Tools developers run daily."
-          />
+          <p className="say-text" data-reveal="lead">
+            Agents that break software before attackers do. Tools developers run daily.
+          </p>
         </section>
 
         {/* ---------- 01 Infiniview ---------- */}
@@ -81,8 +81,7 @@ export default async function Home() {
         <section className="beat wrap" data-side="left" aria-label="Open source">
           <div className="beat-copy">
             <p className="label beat-label" data-reveal="fade">
-              <span>{P['open-source'].n}</span>
-              <span>Open source</span>
+              Open source
             </p>
             <h2 className="beat-figure" data-reveal="lead">
               <LiveNumber
@@ -115,8 +114,8 @@ export default async function Home() {
               />{' '}
               contributions.
             </p>
-            <Link className="go" href="/work/open-source" aria-label="Open the upstream work" data-reveal style={{ '--i': 2 } as React.CSSProperties}>
-              <Arrow />
+            <Link className="link beat-more" href="/work/open-source" data-reveal style={{ '--i': 2 } as React.CSSProperties}>
+              Upstream <Arrow />
             </Link>
           </div>
           <Tributaries repos={repos} />
@@ -142,8 +141,7 @@ export default async function Home() {
         <section className="beat wrap" data-side="right" aria-label="Open models">
           <div className="beat-copy">
             <p className="label beat-label" data-reveal="fade">
-              <span>{P.ollama.n}</span>
-              <span>Ollama</span>
+              Ollama
             </p>
             <h2 className="beat-figure" data-reveal="lead">
               <LiveNumber
@@ -156,8 +154,8 @@ export default async function Home() {
               />
               <span className="title beat-unit">pulls, four open models</span>
             </h2>
-            <Link className="go" href="/work/ollama" aria-label="Open the open models" data-reveal style={{ '--i': 2 } as React.CSSProperties}>
-              <Arrow />
+            <Link className="link beat-more" href="/work/ollama" data-reveal style={{ '--i': 2 } as React.CSSProperties}>
+              Open models <Arrow />
             </Link>
           </div>
           <Basins models={m.ollama.models} />
@@ -217,7 +215,7 @@ export default async function Home() {
         </section>
         <div className="delta" data-bed="delta" aria-hidden="true" />
       </main>
-      <Ending variant="full" />
+      <Ending />
     </>
   );
 }

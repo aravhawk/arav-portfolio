@@ -47,12 +47,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     <PageShell
       head={{
         back: { href: '/work', label: 'Work' },
-        label: (
-          <>
-            {p.n}
-            {p.kicker ? ` / ${p.kicker}` : ''}
-          </>
-        ),
+        label: p.kicker || 'Work',
         title: p.name,
         vt: `title-${p.slug}`,
         lead: p.summary,
@@ -240,7 +235,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       </section>
 
       <nav className="next" aria-label="Next project">
-        <span className="label">Next / {next.n}</span>
+        <span className="label">Next</span>
         <Link className="display next-link" href={`/work/${next.slug}`}>
           {next.name} <Arrow />
         </Link>

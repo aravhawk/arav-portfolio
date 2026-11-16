@@ -1,19 +1,20 @@
-/* The ending. Composition kept from v2: one picture, one headline, one row
-   of links on a single left edge, chrome on the frame. No card, no border,
-   no blur. */
+/* The ending. Composition kept from v2: one picture, the headline set in
+   it, one row of links on a single left edge, chrome on the frame. No card,
+   no border, no blur. The words are light in both themes: they stand over
+   the near, dark reach of the water, which the shader keeps calm and in
+   shade for them. */
 
 .ending {
   position: relative;
   z-index: 2;
-  color: var(--ink);
+  --end-ink: #f4f7f8;
+  --end-ink-2: #dfe6ea;
+  --end-line: rgba(244, 247, 248, 0.34);
+  color: var(--end-ink);
 }
 .ending-full {
   /* One extra screen of scroll drives the camera up. */
-  height: 210svh;
-}
-.ending-band {
-  height: 64svh;
-  min-height: 420px;
+  height: 165svh;
 }
 .ending-pin {
   position: sticky;
@@ -21,37 +22,28 @@
   height: 100svh;
   overflow: hidden;
 }
-.ending-band .ending-pin {
-  position: relative;
-  height: 100%;
-}
 
 .ending-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  /* The top edge feathers into the page's own water. */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 9%);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 9%);
-}
-.ending-band .ending-canvas {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22%);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 22%);
+  /* The top edge feathers into the page's own water while the camera is
+     coming down (the script closes it on arrival). */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather, 9%));
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather, 9%));
 }
 
-/* Without WebGL the picture is a still: the same sky as a gradient, the
-   same land under the words. */
+/* Without WebGL the picture is a still: the same sky and the same dark
+   water as gradients. */
 .ending[data-gl='off'] .ending-canvas,
 html:not([data-js]) .ending-canvas {
-  background:
-    linear-gradient(to top, var(--land) 0 34%, transparent 34%),
-    linear-gradient(to bottom, #2b5f9a 0%, #a9c6e0 46%, #efe7da 66%);
+  -webkit-mask-image: none;
+  mask-image: none;
+  background: linear-gradient(to bottom, #0b2350 0%, #3d5590 24%, #d89a8c 40.5%, #e8b9a0 41.5%, #14305a 42.5%, #0b2143 64%, #050f22 100%);
 }
 :root[data-theme='dark'] .ending[data-gl='off'] .ending-canvas {
-  background:
-    linear-gradient(to top, var(--land) 0 34%, transparent 34%),
-    linear-gradient(to bottom, #0a1730 0%, #24364a 44%, #a8683a 64%, #d98a45 66%);
+  background: linear-gradient(to bottom, #050c1c 0%, #16263c 24%, #b9652c 40.5%, #e19a4e 41.5%, #0e2a3a 42.5%, #071925 64%, #03090f 100%);
 }
 
 .ending-copy {
@@ -71,21 +63,25 @@ html:not([data-js]) .ending-canvas {
   display: grid;
   gap: clamp(10px, 1.4vw, 20px);
   justify-items: start;
-  /* The block sits on the land, left of the shoreline. */
-  max-width: min(46vw, 760px);
-  margin-bottom: clamp(40px, 9vh, 110px);
+  /* The block keeps to the left; the sun and its path keep to the right. */
+  max-width: min(50vw, 800px);
+  margin-bottom: clamp(36px, 8vh, 96px);
 }
 .ending-kicker {
-  color: var(--ink-2);
+  color: var(--end-ink);
+  font-size: 0.75rem;
 }
 .ending-head {
-  font-size: clamp(2.6rem, 5.4vw, 6rem);
-  line-height: 0.9;
+  font-family: var(--font-accent);
+  font-weight: 380;
+  font-size: clamp(3.1rem, 6.8vw, 7.6rem);
+  line-height: 0.94;
+  letter-spacing: -0.032em;
 }
 .ending-line {
   display: block;
-  padding: 0.08em 0.06em 0.14em 0;
-  margin: -0.08em 0 -0.14em 0;
+  padding: 0.08em 0.06em 0.16em 0;
+  margin: -0.08em 0 -0.16em 0;
 }
 
 .ending-links {
@@ -101,7 +97,6 @@ html:not([data-js]) .ending-canvas {
   gap: 0.4em;
   min-height: 46px;
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' var(--display-wdth);
   font-weight: 700;
   font-size: clamp(1.05rem, 1.55vw, 1.6rem);
   letter-spacing: -0.035em;
@@ -149,8 +144,8 @@ html:not([data-js]) .ending-canvas {
   min-height: 44px;
   padding: 0 12px;
   border-radius: var(--r-pill);
-  box-shadow: inset 0 0 0 1px var(--line);
-  color: var(--ink-2);
+  box-shadow: inset 0 0 0 1px var(--end-line, var(--line));
+  color: var(--end-ink-2, var(--ink-2));
   transition:
     transform var(--t-press) var(--ease-out),
     background-color var(--t-fast) ease;
@@ -160,7 +155,7 @@ html:not([data-js]) .ending-canvas {
 }
 @media (hover: hover) and (pointer: fine) {
   .end-copy:hover {
-    background: var(--line-2);
+    background: color-mix(in srgb, currentColor 12%, transparent);
   }
 }
 
@@ -169,10 +164,11 @@ html:not([data-js]) .ending-canvas {
   flex-wrap: wrap;
   align-items: center;
   gap: 0 28px;
-  max-width: min(46vw, 760px);
-  color: var(--ink-2);
+  max-width: min(50vw, 800px);
+  color: var(--end-ink-2);
 }
-.ending-foot span:first-child {
+.ending-foot span:first-child,
+.foot-meta span:first-child {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 0 22px;
@@ -183,21 +179,45 @@ html:not([data-js]) .ending-canvas {
   text-transform: inherit;
 }
 .ending-foot a,
+.foot-meta a,
 .end-haptics {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: var(--ink-2);
+  color: inherit;
   transition: color var(--t-fast) ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .ending-foot a:hover,
-  .end-haptics:hover {
+  .ending-foot .end-haptics:hover {
+    color: var(--end-ink);
+  }
+  .foot-meta a:hover,
+  .foot-meta .end-haptics:hover {
     color: var(--ink);
   }
 }
-/* The readout stays on the land with everything else. */
-.ending-note {
+
+/* Inner pages: a plain footer on dry land, beside the stream. */
+.foot {
+  display: grid;
+  gap: var(--s-3);
+  padding-top: clamp(56px, 9vh, 110px);
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+  color: var(--ink);
+}
+.foot .ending-links {
+  max-width: 62%;
+}
+.foot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 28px;
+  max-width: 62%;
+  color: var(--ink-2);
+}
+.foot .ending-note {
   color: var(--ink-2);
 }
 
@@ -232,32 +252,22 @@ html[data-js] .ending-full[data-gl='on'][data-arrived] .ending-foot {
   transition-delay: 560ms;
 }
 
-/* Tall screens: the horizon drops and the words rise into the sky, where
-   the picture is calm. The sky is always darker or lighter than the ink in
-   the right direction for each theme. */
+/* Narrow screens: the same picture, the words still in the near water. */
 @media (max-width: 719px) {
-  .ending-copy {
-    justify-content: space-between;
-    padding-top: max(96px, calc(env(safe-area-inset-top) + 84px));
-  }
   .ending-block {
-    max-width: none;
-    margin-bottom: 0;
+    max-width: 68vw;
+    margin-bottom: clamp(18px, 4vh, 40px);
   }
   .ending-head {
-    font-size: clamp(2.4rem, 12.4vw, 4rem);
+    font-size: clamp(2.9rem, 14vw, 4.6rem);
   }
   .ending-foot {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0;
-    max-width: 58vw;
+    max-width: 68vw;
   }
-  .ending-note {
-    max-width: 52vw;
-  }
-  .ending-band {
-    height: 78svh;
+  .foot .ending-links,
+  .foot-meta {
+    max-width: none;
+    padding-right: 72px;
   }
 }
 

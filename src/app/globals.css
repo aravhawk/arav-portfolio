@@ -28,10 +28,9 @@
   --font-display: var(--f-display), system-ui, sans-serif;
   --font-text: var(--f-text), system-ui, sans-serif;
   --font-mono: var(--f-mono), ui-monospace, 'SF Mono', Menlo, monospace;
-  --display-wdth: 112;
-  --display-wght: 760;
-  --ice-size: clamp(4.6rem, 14.6vw, 19rem);
-  --ice-size-stacked: 33vw;
+  --display-wght: 780;
+  --ice-size: clamp(5rem, 17.2vw, 22rem);
+  --ice-size-stacked: 38vw;
 
   /* Fluid scale. Tracking tightens and leading closes as size grows. */
   --fs-label: 0.6875rem;
@@ -93,53 +92,10 @@
 }
 
 :root {
-  --f-display: var(--f-martian);
-  --f-text: var(--f-martian);
-  --f-mono: var(--f-martian-mono);
-}
-:root[data-type='a'] {
-  --f-ice: var(--f-tasa);
-  --f-display: var(--f-tasa);
-  --f-text: var(--f-tasa);
+  --f-display: var(--f-orbiter);
+  --f-text: var(--f-orbiter);
   --f-mono: var(--f-spline);
-}
-:root[data-type='f'] {
-  --f-ice: var(--f-zalando);
-  --f-display: var(--f-zalando);
-  --f-text: var(--f-zalando);
-  --f-mono: var(--f-sometype);
-  --f-accent: var(--f-newsreader);
-}
-
-/* Type systems under test (typography.md). The pick becomes the default. */
-:root[data-type='a'] {
-  --display-wdth: 100;
-  --display-wght: 780;
-  --ice-size: clamp(5rem, 17.6vw, 22rem);
-  --ice-size-stacked: 39vw;
-}
-:root[data-type='f'] {
-  --display-wdth: 125;
-  --display-wght: 780;
-  --ice-size: clamp(4.4rem, 14.8vw, 19rem);
-  --ice-size-stacked: 34vw;
-}
-/* Atelier sets the takeaway, the statement, the closing line and long
-   reading in its serif. */
-:root[data-type='f'] .hero-role,
-:root[data-type='f'] .say-text,
-:root[data-type='f'] .ending-head,
-:root[data-type='f'] .quote,
-:root[data-type='f'] .into-next {
-  font-family: var(--f-accent), Georgia, serif;
-  font-variation-settings: normal;
-  font-weight: 400;
-  letter-spacing: -0.025em;
-}
-:root[data-type='f'] .prose {
-  font-family: var(--f-accent), Georgia, serif;
-  font-size: 1.25rem;
-  line-height: 1.56;
+  --font-accent: var(--f-accent), Georgia, 'Times New Roman', serif;
 }
 
 /* ---------- base ---------- */
@@ -333,7 +289,6 @@ html:not([data-water='on']) [data-bed][data-basin] {
   font-family: var(--font-display);
   font-size: var(--fs-display);
   font-weight: var(--display-wght);
-  font-variation-settings: 'wdth' var(--display-wdth);
   line-height: 0.9;
   letter-spacing: -0.045em;
   text-wrap: balance;
@@ -342,7 +297,6 @@ html:not([data-water='on']) [data-bed][data-basin] {
   font-family: var(--font-display);
   font-size: var(--fs-number);
   font-weight: var(--display-wght);
-  font-variation-settings: 'wdth' var(--display-wdth);
   line-height: 0.82;
   letter-spacing: -0.06em;
   font-variant-numeric: tabular-nums lining-nums;
@@ -351,7 +305,6 @@ html:not([data-water='on']) [data-bed][data-basin] {
   font-family: var(--font-display);
   font-size: var(--fs-statement);
   font-weight: 560;
-  font-variation-settings: 'wdth' 100;
   line-height: 1.06;
   letter-spacing: -0.032em;
 }
@@ -359,7 +312,6 @@ html:not([data-water='on']) [data-bed][data-basin] {
   font-family: var(--font-display);
   font-size: var(--fs-title);
   font-weight: 620;
-  font-variation-settings: 'wdth' 100;
   line-height: 1.1;
   letter-spacing: -0.025em;
 }
@@ -656,6 +608,11 @@ html[data-measuring] [data-reveal] {
   body {
     background: #fff !important;
     color: #000 !important;
+  }
+  .ending {
+    --end-ink: #000;
+    --end-ink-2: #000;
+    --end-line: #000;
   }
   [data-reveal] {
     opacity: 1 !important;

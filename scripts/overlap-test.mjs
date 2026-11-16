@@ -7,8 +7,13 @@
  * (water and ice, the same shader that draws the frame, read back from a
  * target) and compares that mask with the bounding boxes of every visible
  * text line, collected independently of the engine by walking text nodes.
- * The ending's own canvas is checked analytically with the same projection
- * its shader uses. Any text pixel that sits on water fails the run.
+ * Any text pixel that sits on water fails the run.
+ *
+ * The ending is the one place words are set in a picture (v2's composition,
+ * kept on purpose). There the test measures instead: it hides the words,
+ * photographs the picture behind each line three times as the water moves,
+ * and fails any line whose contrast against the worst pixels behind it is
+ * under WCAG AA (4.5 to 1, or 3 to 1 for large type).
  *
  * Playwright is not a dependency of this repo. Point NODE_PATH at an install
  * that has it:
@@ -106,54 +111,96 @@ function hitTest(boxes) {
   return { hits, tier: info.tier };
 }
 
-/**
- * Runs in the page: the ending's water region at its resting pose, from the
- * same projection as src/components/ending/shader.ts. Returns boxes whose
- * corners land on water.
- */
-function endingTest(boxes) {
-  const sec = document.querySelector('.ending');
-  const cv = document.querySelector('.ending-canvas');
-  if (!sec || !cv) return [];
-  const r = cv.getBoundingClientRect();
-  const W = r.width;
-  const H = r.height;
-  const TAN = 0.3249;
-  const band = sec.classList.contains('ending-band');
-  const horizon = W < 720 ? -0.34 : band ? 0.36 : -0.16;
-  const pitch = Math.atan(-horizon * TAN);
-  const aspect = W / H;
-  const shoreX = 0.19 * 8 * TAN * aspect;
-  const water = (px, py) => {
-    const u = (px / W) * 2 - 1;
-    const v = 1 - (py / H) * 2;
-    let dx = u * aspect * TAN;
-    let dy = v * TAN;
-    let dz = 1;
-    const l = Math.hypot(dx, dy, dz);
-    dx /= l;
-    dy /= l;
-    dz /= l;
-    const y2 = dy * Math.cos(pitch) + dz * Math.sin(pitch);
-    if (y2 >= 0) return false; // sky
-    const t = 1 / -y2;
-    return dx * t - shoreX > 0;
+/** Runs in the page: every line of text in the ending, with its colour and size. */
+function endingText() {
+  const copy = document.querySelector('.ending .ending-copy');
+  if (!copy) return [];
+  const lum = (rgb) => {
+    const m = rgb.match(/[\d.]+/g).map(Number);
+    const c = m.slice(0, 3).map((v) => {
+      const x = v / 255;
+      return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+    });
+    // An alpha below 1 is composited over the picture: treat it as its own
+    // colour scaled, which is the pessimistic reading for light text.
+    const a = m.length > 3 ? m[3] : 1;
+    return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * a;
   };
-  const hits = [];
-  for (const b of boxes) {
-    if (!b.ending) continue;
-    const left = b.x - scrollX - r.left;
-    const top = b.y - scrollY - r.top;
-    const pts = [
-      [left, top],
-      [left + b.w, top],
-      [left, top + b.h],
-      [left + b.w, top + b.h],
-      [left + b.w / 2, top + b.h / 2],
-    ];
-    if (pts.some(([x, y]) => x >= 0 && x <= W && y >= 0 && y <= H && water(x, y))) hits.push({ text: b.text, x: Math.round(left), y: Math.round(top), w: Math.round(b.w), h: Math.round(b.h) });
+  const out = [];
+  const walker = document.createTreeWalker(copy, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.nodeValue || !node.nodeValue.trim()) continue;
+    const el = node.parentElement;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    const px = parseFloat(cs.fontSize);
+    const bold = Number(cs.fontWeight) >= 700;
+    range.selectNodeContents(node);
+    for (const r of range.getClientRects()) {
+      if (r.width < 1 || r.height < 1 || r.bottom < 0 || r.top > innerHeight) continue;
+      out.push({ x: r.left, y: r.top, w: r.width, h: r.height, text: node.nodeValue.trim().slice(0, 40), ink: lum(cs.color), large: px >= 24 || (bold && px >= 18.66) });
+    }
   }
-  return hits;
+  return out;
+}
+
+/** Runs in the page: the brightest and darkest the picture gets behind each box. */
+async function behind({ b64, boxes }) {
+  const img = new Image();
+  img.src = 'data:image/png;base64,' + b64;
+  await img.decode();
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(img, 0, 0);
+  const k = img.naturalWidth / innerWidth;
+  const lin = (v) => {
+    const x = v / 255;
+    return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+  };
+  return boxes.map((b) => {
+    const x = Math.max(0, Math.floor(b.x * k));
+    const y = Math.max(0, Math.floor(b.y * k));
+    const w = Math.max(1, Math.min(c.width - x, Math.ceil(b.w * k)));
+    const h = Math.max(1, Math.min(c.height - y, Math.ceil(b.h * k)));
+    const d = g.getImageData(x, y, w, h).data;
+    const ls = new Float32Array(d.length / 4);
+    for (let i = 0; i < ls.length; i++) ls[i] = 0.2126 * lin(d[i * 4]) + 0.7152 * lin(d[i * 4 + 1]) + 0.0722 * lin(d[i * 4 + 2]);
+    ls.sort();
+    // The 99.5th and 0.5th percentiles: the worst the line meets, ignoring a lone pixel.
+    return { hi: ls[Math.min(ls.length - 1, Math.floor(ls.length * 0.995))], lo: ls[Math.floor(ls.length * 0.005)] };
+  });
+}
+
+async function endingContrast(page) {
+  // Let the words finish arriving, then measure where they rest.
+  await page.waitForTimeout(1700);
+  const boxes = await page.evaluate(endingText);
+  if (!boxes.length) return { lines: 0, fails: [], worst: null };
+  const style = await page.addStyleTag({ content: '.ending .ending-copy{visibility:hidden!important}nextjs-portal{display:none!important}' });
+  const worst = boxes.map(() => ({ hi: 0, lo: 1 }));
+  for (let i = 0; i < 3; i++) {
+    await page.waitForTimeout(i ? 650 : 120);
+    const b64 = (await page.screenshot({ type: 'png' })).toString('base64');
+    const res = await page.evaluate(behind, { b64, boxes });
+    res.forEach((r, j) => {
+      worst[j].hi = Math.max(worst[j].hi, r.hi);
+      worst[j].lo = Math.min(worst[j].lo, r.lo);
+    });
+  }
+  await style.evaluate((el) => el.remove());
+  const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  const fails = [];
+  let min = Infinity;
+  boxes.forEach((b, j) => {
+    const cr = Math.min(ratio(b.ink, worst[j].hi), ratio(b.ink, worst[j].lo));
+    min = Math.min(min, cr);
+    const need = b.large ? 3 : 4.5;
+    if (cr < need) fails.push({ text: b.text, contrast: +cr.toFixed(2), need, x: Math.round(b.x), y: Math.round(b.y) });
+  });
+  return { lines: boxes.length, fails, worst: +min.toFixed(2) };
 }
 
 const results = [];
@@ -215,18 +262,28 @@ for (const name of browsers) {
           }
           for (const h of res.hits) row.overlaps.push({ scroll: y, ...h });
         }
-        // The ending, at rest at the bottom of the page.
-        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-        await page.waitForTimeout(300);
-        const endBoxes = await page.evaluate(collectText);
-        row.ending = await page.evaluate(endingTest, endBoxes);
+        // The ending, at rest at the bottom of the page, in both themes.
+        if (await page.evaluate(() => !!document.querySelector('.ending'))) {
+          for (const theme of ['light', 'dark']) {
+            await page.evaluate((t) => {
+              document.documentElement.dataset.theme = t;
+              window.dispatchEvent(new Event('themechange'));
+            }, theme);
+            await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+            await page.waitForTimeout(700);
+            const e = await endingContrast(page);
+            row.endingLines = (row.endingLines || 0) + e.lines;
+            row.endingWorst = Math.min(row.endingWorst ?? Infinity, e.worst ?? Infinity);
+            for (const f of e.fails) row.ending.push({ theme, ...f });
+          }
+        }
       } catch (err) {
         row.error = String(err).slice(0, 200);
       }
       const bad = row.overlaps.length + row.ending.length + (row.error ? 1 : 0);
       failures += bad;
       results.push(row);
-      console.log(`${bad ? 'FAIL' : 'ok  '} ${name.padEnd(8)} ${String(width).padStart(4)} ${path.padEnd(44)} steps ${row.steps}${row.engine ? '' : ' (static fallback, no water to overlap)'}${bad ? `  overlaps ${row.overlaps.length} ending ${row.ending.length}${row.error ? ' error ' + row.error : ''}` : ''}`);
+      console.log(`${bad ? 'FAIL' : 'ok  '} ${name.padEnd(8)} ${String(width).padStart(4)} ${path.padEnd(44)} steps ${row.steps}${row.engine ? '' : ' (static fallback, no water to overlap)'}${row.endingLines ? `  ending: ${row.endingLines} lines, worst contrast ${row.endingWorst}` : ''}${bad ? `  overlaps ${row.overlaps.length} ending ${row.ending.length}${row.error ? ' error ' + row.error : ''}` : ''}`);
       if (bad) for (const o of [...row.overlaps.slice(0, 4), ...row.ending.slice(0, 4)]) console.log('       ', JSON.stringify(o));
       await page.close();
     }

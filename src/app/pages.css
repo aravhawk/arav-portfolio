@@ -19,7 +19,6 @@
 }
 .page-title-long {
   font-size: clamp(2rem, 3.4vw + 0.6rem, 4.1rem);
-  font-variation-settings: 'wdth' 100;
   font-weight: 680;
   line-height: 1;
   letter-spacing: -0.038em;
@@ -36,6 +35,11 @@
 }
 .page-head-pool .slab {
   width: 78%;
+}
+/* No media: the stream runs in from above the page through this column. */
+.page-head-spring {
+  grid-column: 9 / span 4;
+  align-self: stretch;
 }
 
 .back {
@@ -116,7 +120,6 @@
   overflow-wrap: anywhere;
   min-width: 0;
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' var(--display-wdth);
   font-weight: 700;
   font-size: clamp(1.35rem, 1.8vw + 0.6rem, 2.3rem);
   line-height: 1;
@@ -124,7 +127,7 @@
 }
 .row-line {
   color: var(--ink-2);
-  font-size: var(--fs-small);
+  font-size: 0.9375rem;
   line-height: 1.45;
   max-width: 54ch;
 }
@@ -314,7 +317,6 @@ a.row:active .row-go {
 
 .quote {
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' 100;
   font-size: clamp(1.8rem, 3.4vw + 0.5rem, 3.6rem);
   font-weight: 620;
   line-height: 1.04;
@@ -416,7 +418,6 @@ a.row:active .row-go {
 }
 .post-row h2 {
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' 100;
   font-size: clamp(1.5rem, 2.2vw + 0.6rem, 2.7rem);
   font-weight: 680;
   line-height: 1.02;
@@ -457,7 +458,6 @@ a.row:active .row-go {
 .prose h3,
 .prose h4 {
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' 100;
   color: var(--ink);
   letter-spacing: -0.03em;
   line-height: 1.1;
@@ -586,7 +586,6 @@ a.row:active .row-go {
 }
 .post-nav strong {
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' 100;
   font-size: 1.2rem;
   font-weight: 660;
   line-height: 1.12;
@@ -596,6 +595,7 @@ a.row:active .row-go {
 /* ---------- simple states: 404, error ---------- */
 
 .state {
+  position: relative;
   min-height: 100svh;
   display: grid;
   align-content: center;
@@ -603,10 +603,13 @@ a.row:active .row-go {
   gap: var(--s-5);
   padding-block: 140px 80px;
 }
-.state-pool {
-  width: min(520px, 100%);
-  height: clamp(160px, 24vh, 240px);
-  margin-top: var(--s-5);
+/* The stream runs past on the right, top to bottom. */
+.state-lane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: var(--gutter);
+  width: clamp(120px, 24vw, 380px);
 }
 .state-actions {
   display: flex;
@@ -624,12 +627,18 @@ a.row:active .row-go {
 /* ---------- narrow ---------- */
 
 @media (max-width: 859px) {
+  .state {
+    padding-right: calc(var(--gutter) + 72px);
+  }
   .page-head {
     display: block;
     padding-top: 112px;
   }
   .page-head-copy {
     padding-right: 0;
+  }
+  .page-head:has(.page-head-spring) .page-head-copy {
+    padding-right: 72px;
   }
   .page-head-pool {
     margin-top: var(--s-6);

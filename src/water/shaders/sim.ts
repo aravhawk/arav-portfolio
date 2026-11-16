@@ -89,6 +89,24 @@ void main() {
   o = vec4(acc / wsum, 0.0, 0.0, 1.0);
 }`;
 
+/** Average K x K blocks of a distance field into a small one. */
+export const SD_DOWN = `${HEAD}
+uniform sampler2D uSd;
+uniform int uK;
+void main() {
+  ivec2 sz = textureSize(uSd, 0);
+  ivec2 p = ivec2(gl_FragCoord.xy) * uK;
+  float acc = 0.0;
+  for (int y = 0; y < 12; y++) {
+    if (y >= uK) break;
+    for (int x = 0; x < 12; x++) {
+      if (x >= uK) break;
+      acc += texelFetch(uSd, clamp(p + ivec2(x, y), ivec2(0), sz - 1), 0).r;
+    }
+  }
+  o = vec4(acc / float(uK * uK), 0.0, 0.0, 1.0);
+}`;
+
 export const BED_B = `${HEAD}
 uniform sampler2D uRaw;  // RGBA8 flow raster
 void main() {
@@ -372,8 +390,7 @@ void main() {
  * map, |(1 + D hxx)(1 + D hyy) - (D hxy)^2|. Where the Jacobian folds to
  * zero, light piles up into the bright filaments.
  */
-export const DETAIL = `${HEAD}
-// Periodic gradient noise with quintic fade, so second derivatives are
+const DETAIL_FIELD = `// Periodic gradient noise with quintic fade, so second derivatives are
 // continuous and the caustic has no lattice seams.
 vec2 g2(vec2 p, float per) {
   p = mod(p, per);
@@ -400,6 +417,10 @@ float field(vec2 p) {
   h += 0.13 * gn(q * 19.0 + 7.9, 19.0);
   return h * 1.25;
 }
+`;
+
+export const DETAIL = `${HEAD}
+${DETAIL_FIELD}
 void main() {
   float e = 1.0 / 512.0;
   float c = field(vUv);
@@ -420,6 +441,33 @@ void main() {
   float I = 1.0 / max(abs(J), 0.11);
   // Packed for RGBA8: height, gradient / 16, caustic / 6.
   o = vec4(c * 0.5 + 0.5, clamp(g / 16.0 * 0.5 + 0.5, 0.0, 1.0), clamp(I / 6.0, 0.0, 1.0));
+}`;
+
+
+/**
+ * The curvature of the same field (its Hessian, times the focal length the
+ * caustic above was baked at). Layers of this add, where baked caustics do
+ * not: the shading pass sums the curvature of every moving layer and takes
+ * one Jacobian, so the light on the bed is a single coherent net.
+ */
+export const DETAIL_CURV = `${HEAD}
+${DETAIL_FIELD}
+void main() {
+  float e = 1.0 / 512.0;
+  float c = field(vUv);
+  float l = field(vUv - vec2(e, 0.0));
+  float r = field(vUv + vec2(e, 0.0));
+  float u = field(vUv - vec2(0.0, e));
+  float d = field(vUv + vec2(0.0, e));
+  float ul = field(vUv + vec2(-e, -e));
+  float ur = field(vUv + vec2(e, -e));
+  float dl = field(vUv + vec2(-e, e));
+  float dr = field(vUv + vec2(e, e));
+  const float D = 0.00115;
+  float hxx = (l + r - 2.0 * c) / (e * e);
+  float hyy = (u + d - 2.0 * c) / (e * e);
+  float hxy = (dr - dl - ur + ul) / (4.0 * e * e);
+  o = vec4(D * hxx, D * hyy, D * hxy, 1.0);
 }`;
 
 /** Tileable grain: stone speckle, mottling, ice inclusions, dither. */

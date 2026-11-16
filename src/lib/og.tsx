@@ -20,9 +20,9 @@ function loadFonts() {
   if (!fonts) {
     const dir = join(process.cwd(), 'src', 'fonts', 'og');
     fonts = Promise.all([
-      readFile(join(dir, 'MartianGrotesk-Display.ttf')),
-      readFile(join(dir, 'MartianGrotesk-Text.ttf')),
-      readFile(join(dir, 'MartianMono-Label.ttf')),
+      readFile(join(dir, 'TASAOrbiter-Display.ttf')),
+      readFile(join(dir, 'TASAOrbiter-Text.ttf')),
+      readFile(join(dir, 'SplineSansMono-Label.ttf')),
     ]).then(([display, text, mono]) => [
       { name: 'Display', data: display, weight: 700 as const, style: 'normal' as const },
       { name: 'Text', data: text, weight: 400 as const, style: 'normal' as const },

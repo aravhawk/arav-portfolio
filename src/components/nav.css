@@ -33,7 +33,6 @@ html[data-nav-hidden] .nav:not(:focus-within) {
 .nav-mark {
   padding: 0 18px;
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' var(--display-wdth);
   font-weight: 700;
   font-size: 0.9375rem;
   letter-spacing: -0.03em;

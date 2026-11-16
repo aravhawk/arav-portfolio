@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ViewTransition } from 'react';
-import { Ending } from '@/components/ending/Ending';
+import { Footer } from '@/components/ending/Ending';
 import '@/app/home.css';
 import '@/app/pages.css';
 
@@ -18,8 +18,9 @@ interface HeadProps {
 }
 
 /**
- * Inner pages share the home page's world: a head pool, a stream down a
- * lane beside the content, and the same ending as a band.
+ * Inner pages share the home page's world: the stream runs in from the top
+ * (through a pool, where the page has media to stand in one), down a lane
+ * beside the content, and off the bottom past a plain footer.
  */
 export function PageShell({ head, children, note, feature }: { head: HeadProps; children: React.ReactNode; note?: string; feature?: React.ReactNode }) {
   return (
@@ -42,9 +43,13 @@ export function PageShell({ head, children, note, feature }: { head: HeadProps; 
             )}
             {head.lead ? <p className="lead page-lead">{head.lead}</p> : null}
           </div>
-          <div className="page-head-pool" data-bed="head" data-basin>
-            {head.children}
-          </div>
+          {head.children ? (
+            <div className="page-head-pool" data-bed="head" data-basin>
+              {head.children}
+            </div>
+          ) : (
+            <div className="page-head-spring" data-bed="spring" aria-hidden="true" />
+          )}
         </header>
         {/* A project's own bed gets a row to itself, so the stream can cross
             to it and back to the lane without passing through copy. */}
@@ -54,7 +59,7 @@ export function PageShell({ head, children, note, feature }: { head: HeadProps; 
           <div className="page-lane" data-bed="feat:pass" aria-hidden="true" />
         </div>
       </main>
-      <Ending variant="band" note={note} />
+      <Footer note={note} />
     </>
   );
 }

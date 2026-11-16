@@ -12,7 +12,7 @@
 import type { BedData } from './bed';
 import { type GL, type Program, type Target, Swap, bindTex, bindTriangle, compile, drawTo, freeTarget, makeTarget, makeTexture } from './gl';
 import { RENDER } from './shaders/render';
-import { BED_A, BED_B, DETAIL, DYE, GRAIN, SD_BLUR, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
+import { BED_A, BED_B, DETAIL, DETAIL_CURV, DYE, GRAIN, SD_BLUR, SD_DOWN, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
 
 export interface Palette {
   land: [number, number, number];
@@ -41,28 +41,32 @@ const srgb = (hex: string): [number, number, number] => {
 export const PALETTES: Record<'light' | 'dark', Palette> = {
   light: {
     land: srgb('#E4E7E8'),
-    bed: srgb('#D3DADC'),
-    absorb: [0.052, 0.0205, 0.0138],
-    scatter: [0.004, 0.046, 0.07],
+    bed: srgb('#D9E2E4'),
+    absorb: [0.04, 0.0135, 0.0082],
+    scatter: [0.003, 0.05, 0.108],
     sky: [1.0, 1.0, 1.0],
     foam: [1.0, 1.0, 1.0],
-    ice: srgb('#F4FAFC'),
-    light: [0.5, 0.78, 0.66, 1.2],
-    grain: [0.045, 0.04, 0.12],
+    ice: srgb('#F2F9FC'),
+    light: [0.5, 0.78, 1.5, 1.25],
+    grain: [0.05, 0.05, 0.2],
   },
   dark: {
     land: srgb('#15181B'),
-    bed: srgb('#4A5E6A'),
-    absorb: [0.044, 0.017, 0.0115],
-    scatter: [0.003, 0.038, 0.066],
-    sky: [0.62, 0.78, 0.86],
-    foam: [0.55, 0.7, 0.76],
-    ice: srgb('#DDEEF4'),
-    light: [0.3, 1.0, 1.3, 1.6],
-    grain: [0.1, 0.1, 0.3],
+    bed: srgb('#5E8496'),
+    absorb: [0.046, 0.0165, 0.0098],
+    scatter: [0.003, 0.046, 0.105],
+    sky: [0.78, 0.92, 1.0],
+    foam: [0.6, 0.76, 0.82],
+    ice: srgb('#E4F3F9'),
+    light: [0.22, 1.08, 2.1, 1.8],
+    grain: [0.12, 0.12, 0.42],
   },
 };
 
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
 const mix3 = (a: number[], b: number[], t: number) => a.map((v, i) => v + (b[i] - v) * t);
 
 export interface IceInput {
@@ -102,11 +106,13 @@ export class WaterEngine {
   readonly maxTexture: number;
   private p: Record<string, Program> = {};
   private detail!: Target;
+  private curv!: Target;
   private grain!: Target;
   private bedA: Target | null = null;
   private bedB: Target | null = null;
   private bedMeta = { w: 1, h: 1, div: 4 };
   private iceTex: Target | null = null;
+  private iceLow: Target | null = null;
   private iceMeta: IceInput | null = null;
   private heat: Swap;
   private ready = false;
@@ -200,6 +206,7 @@ export class WaterEngine {
       bedA: BED_A,
       bedB: BED_B,
       sdBlur: SD_BLUR,
+      sdDown: SD_DOWN,
       wave: WAVE,
       waveGrad: WAVE_GRAD,
       velAdvect: VEL_ADVECT,
@@ -208,6 +215,7 @@ export class WaterEngine {
       velProject: VEL_PROJECT,
       dye: DYE,
       detail: DETAIL,
+      detailCurv: DETAIL_CURV,
       grain: GRAIN,
       heat: HEAT,
     };
@@ -224,6 +232,9 @@ export class WaterEngine {
     drawTo(gl, this.detail);
     gl.useProgram(this.p.grain.prog);
     drawTo(gl, this.grain);
+    this.curv = makeTarget(gl, 512, 512, { ...this.f16(), wrap: gl.REPEAT });
+    gl.useProgram(this.p.detailCurv.prog);
+    drawTo(gl, this.curv);
     for (const t of [this.detail, this.grain]) {
       gl.bindTexture(gl.TEXTURE_2D, t.tex);
       gl.generateMipmap(gl.TEXTURE_2D);
@@ -273,7 +284,9 @@ export class WaterEngine {
   setIce(ice: IceInput | null) {
     const gl = this.gl;
     freeTarget(gl, this.iceTex);
+    freeTarget(gl, this.iceLow);
     this.iceTex = null;
+    this.iceLow = null;
     this.iceMeta = ice;
     if (!ice) return;
     const sdTex = makeTexture(gl, ice.w, ice.h, {
@@ -292,6 +305,23 @@ export class WaterEngine {
     gl.useProgram(this.p.bedA.prog);
     bindTex(gl, 0, soft.tex, this.p.bedA.u.uSd);
     drawTo(gl, this.iceTex);
+    // The same field smoothed across about half a stroke: the shape a
+    // melting edge rounds toward, so strokes soften instead of thinning to
+    // hairlines.
+    const texel = this.iceRect.w > 0 ? this.iceRect.w / ice.w : 1;
+    const k = Math.min(12, Math.max(2, Math.round(-ice.minSd / texel / 3)));
+    const lw = Math.max(2, Math.ceil(ice.w / k));
+    const lh = Math.max(2, Math.ceil(ice.h / k));
+    const down = makeTarget(gl, lw, lh, { ...this.f16(), filter: gl.NEAREST });
+    gl.useProgram(this.p.sdDown.prog);
+    bindTex(gl, 0, sdTex, this.p.sdDown.u.uSd);
+    gl.uniform1i(this.p.sdDown.u.uK, k);
+    drawTo(gl, down);
+    this.iceLow = makeTarget(gl, lw, lh, this.f16());
+    gl.useProgram(this.p.sdBlur.prog);
+    bindTex(gl, 0, down.tex, this.p.sdBlur.u.uSd);
+    drawTo(gl, this.iceLow);
+    freeTarget(gl, down);
     gl.deleteTexture(sdTex);
     freeTarget(gl, soft);
     this.dirty = true;
@@ -431,20 +461,22 @@ export class WaterEngine {
 
   private iceUniforms(scrollY: number) {
     const ice = this.iceMeta;
-    if (!ice || !this.iceTex) return { rect: [0, 0, 0, 0], state: [0, 0, 0, 0], erode: 0 };
+    if (!ice || !this.iceTex) return { rect: [0, 0, 0, 0], state: [0, 0, 0, 0], alive: 0, erode: 0 };
     // The floe drifts with the camera while it melts, so it stays in view.
-    const drift = Math.min(scrollY, this.meltRange) * 0.9;
+    const drift = Math.min(scrollY, this.meltRange) * 0.74;
     const r = this.iceRect;
     const m = this.melt;
-    const full = (-ice.minSd + 3) / 0.94;
-    // Slow at first, quicker as the ice thins (less of it is left to absorb
-    // the heat): the name stays bold for the first half of the melt.
-    const erode = Math.pow(m, 2.3) * full;
-    // Past 88% the last slivers thin to nothing, so no ghost outline stays.
-    const alive = 1 - Math.min(1, Math.max(0, (m - 0.88) / 0.12));
-    const thick = (1 - 0.7 * m) * alive;
-    const frost = 1 - 0.28 * Math.max(0, (m - 0.5) / 0.5);
-    return { rect: [r.x, r.y + drift, r.w, r.h], state: [erode, thick, Math.max(0, -ice.minSd - erode * 0.8), frost], erode };
+    const half = -ice.minSd;
+    // Ice in water does not get thinner strokes, it gets lower and clearer.
+    // The letters keep nearly their whole outline (so the name reads to the
+    // end), sink to the waterline, lose their frost, and are last seen as
+    // clear glass bending the light under them before that goes too.
+    const erode = Math.pow(m, 1.5) * half * 0.26;
+    const round = 0.4 * smooth(0.05, 0.8, m);
+    const height = 1 - smooth(0.04, 0.72, m);
+    const frost = 1 - smooth(0.18, 0.84, m);
+    const alive = 1 - smooth(0.8, 0.985, m);
+    return { rect: [r.x, r.y + drift, r.w, r.h], state: [erode, height, round, frost], alive, erode };
   }
 
   private simulate(dt: number, top: number) {
@@ -514,7 +546,7 @@ export class WaterEngine {
       bindTex(gl, 0, this.wave!.read.tex, w.u.uWave);
       gl.uniform2f(w.u.uShift, 0, i === 0 ? shift : 0);
       gl.uniform1f(w.u.uTime, this.time + i * sub);
-      gl.uniform2f(w.u.uPtrForce, moving ? (0.25 + 0.75 * Math.min(speed / 700, 1)) * 0.075 : 0, 12);
+      gl.uniform2f(w.u.uPtrForce, moving ? (0.25 + 0.75 * Math.min(speed / 700, 1)) * 0.17 : 0, 15);
       const d = this.drop;
       gl.uniform4f(w.u.uDrop, d.x, d.y, d.r, i === 0 ? d.s : 0);
       drawTo(gl, this.wave!.write);
@@ -597,20 +629,17 @@ export class WaterEngine {
     gl.uniform4f(r.u.uSim, this.simTop, tier.simDiv, this.simW, this.simH);
     gl.uniform2f(r.u.uBedSize, this.bedMeta.w, this.bedMeta.h);
     gl.uniform1f(r.u.uBedDiv, this.bedMeta.div);
-    gl.uniform3f(r.u.uCam, this.cssW / 2, scrollY + viewH / 2, Math.max(2300, this.cssW * 1.7));
-    // The soft light overhead is placed so its reflection sits in the upper
-    // left third of the view at any size.
-    const camH = Math.max(2300, this.cssW * 1.7);
-    const px = (-0.2 * this.cssW) / camH;
-    const py = (-0.2 * viewH) / camH;
-    const pl = Math.hypot(px, py, 1);
-    gl.uniform3f(r.u.uPanel, px / pl, py / pl, 1 / pl);
+    // The eye stands above the middle of the view. Its height sets how
+    // much the walls and the bed slide as the page scrolls.
+    gl.uniform3f(r.u.uCam, this.cssW / 2, scrollY + viewH / 2, Math.max(1500, this.cssW * 1.25));
     gl.uniform1f(r.u.uTime, this.time);
     gl.uniform1f(r.u.uFlowSpeed, FLOW_SPEED);
     gl.uniform1f(r.u.uQuality, tier.quality);
     gl.uniform1i(r.u.uMode, mode);
+    gl.uniform1f(r.u.uScale, this.cssW < 860 ? 0.5 : 1);
     gl.uniform4f(r.u.uIce, ice.rect[0], ice.rect[1], ice.rect[2], ice.rect[3]);
     gl.uniform4f(r.u.uIceState, ice.state[0], ice.state[1], ice.state[2], ice.state[3]);
+    gl.uniform1f(r.u.uIceAlive, ice.alive);
     gl.uniform3fv(r.u.uLand, pal.land);
     gl.uniform3fv(r.u.uBed, pal.bed);
     gl.uniform3fv(r.u.uAbsorb, pal.absorb);
@@ -629,6 +658,8 @@ export class WaterEngine {
     bindTex(gl, 6, this.grain.tex, r.u.uGrain);
     bindTex(gl, 7, (this.iceTex ?? this.grain).tex, r.u.uIceSdf);
     bindTex(gl, 8, this.heat.read.tex, r.u.uHeat);
+    bindTex(gl, 9, (this.iceLow ?? this.grain).tex, r.u.uIceLow);
+    bindTex(gl, 10, this.curv.tex, r.u.uCurv);
   }
 
   private render(top: number, scrollY: number, viewH: number) {

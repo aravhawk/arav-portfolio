@@ -6,7 +6,7 @@ import './pages.css';
 
 export const metadata: Metadata = { title: 'Not found' };
 
-/** 404: the stream does not run here. A still pool and two ways back. */
+/** 404: the stream runs past, not to, this address. Two ways back. */
 export default function NotFound() {
   return (
     <main id="main" data-scene="page" className="state wrap">
@@ -21,7 +21,7 @@ export default function NotFound() {
           See the work <Arrow />
         </Link>
       </div>
-      <div className="state-pool" data-bed="head" data-basin aria-hidden="true" />
+      <div className="state-lane" data-bed="spring" aria-hidden="true" />
     </main>
   );
 }

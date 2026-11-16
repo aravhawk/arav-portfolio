@@ -46,7 +46,7 @@ interface Ports {
 
 type Feature = (c: Ctx, r: Rect, el: HTMLElement) => Ports;
 
-const streamW = (viewW: number) => Math.round(Math.max(24, Math.min(44, viewW * 0.03)));
+const streamW = (viewW: number) => Math.round(Math.max(30, Math.min(84, viewW * 0.055)));
 
 function within(a: Anchors, prefix: string, r: Rect): Anchor[] {
   return a.all(prefix).filter((x) => cy(x.rect) >= r.y - 2 && cy(x.rect) <= r.y + r.h + 2);
@@ -101,7 +101,7 @@ const tributaries: Feature = (c, r) => {
   b.channel([pt(xm, r.y - 6), pt(xm, r.y + r.h + 6)], { width: c.w * 1.15, straight: true });
   for (const t of tribs) {
     const n = Number(t.el.dataset.n || 1);
-    const tw = Math.round(11 + Math.sqrt(n) * 9);
+    const tw = Math.round((c.narrow ? 11 : 15) + Math.sqrt(n) * (c.narrow ? 9 : 12));
     const y = cy(t.rect);
     // The head of each tributary sits just past its label.
     const hx = leftSide ? t.rect.x + t.rect.w + 34 : t.rect.x - 34;
@@ -216,9 +216,8 @@ const fork: Feature = (c, r, el) => {
     const open = i === active;
     const path = [pt(xin, yFork), pt(x, yFork + (yJoin - yFork) * 0.3), pt(x, yFork + (yJoin - yFork) * 0.7), pt(xin, yJoin)];
     b.channel(path, { width: c.w * 0.92, speed: open ? 1 : 0 });
+    // The open branch runs; the other two stand still.
     if (open) b.agitate(pt(x, yFork + (yJoin - yFork) * 0.34), c.w, 0.6);
-    // A closed gate is a bar of dry land across the mouth of the branch.
-    else b.dry({ x: lerp(xin, x, 0.42) - c.w * 0.75, y: yFork + (yJoin - yFork) * 0.13 - 4, w: c.w * 1.5, h: 8 }, 0, 3);
     void br;
   });
   b.disc(pt(xin, yJoin), c.w * 0.9);
@@ -322,8 +321,8 @@ function run(c: Ctx, start: Pt | null) {
   const delta = a.rect('delta');
   if (delta) {
     // The mouth: the stream opens out into the water of the ending.
-    if (from) connect(c, from, pt(c.narrow ? c.lane : cx(delta), delta.y + 8));
-    c.b.pool({ x: delta.x - 40, y: delta.y, w: delta.w + 80, h: delta.h + 60 }, 0);
+    if (from) connect(c, from, pt(c.narrow ? c.lane : from.x, delta.y + 8));
+    c.b.pool({ x: -120, y: delta.y, w: a.viewW + 240, h: delta.h + 200 }, 0);
   } else if (from) {
     c.b.channel([pt(from.x, from.y - 6), pt(from.x, a.docH + 40)], { width: c.w, straight: true });
   }
@@ -334,7 +333,9 @@ const home: Scene = (b, a) => {
   const lake = a.rect('lake');
   let from: Pt | null = null;
   if (lake) {
-    b.pool(lake, c.narrow ? 26 : 44);
+    // The lake runs off both sides of the page: only its north and south
+    // shores are land.
+    b.pool({ x: -120, y: lake.y, w: a.viewW + 240, h: lake.h }, 0);
     // The outlet lines up with the first feature below, so the stream runs
     // down beside the statement instead of through it.
     const first = a.all('feat:').find((f) => f.rect.w > 2);
@@ -367,6 +368,14 @@ const page: Scene = (b, a) => {
     b.channel([pt(head.x + head.w * 0.2, cy(head)), pt(outX, head.y + head.h - 16)], { width: head.h * 0.5, speed: 0.3, flowOnly: true });
     b.agitate(pt(outX, head.y + head.h - 8), c.w * 1.4, 0.6);
     from = pt(outX, head.y + head.h);
+  } else {
+    // No pool: the stream simply runs in from above the page.
+    const spring = a.rect('spring');
+    if (spring && spring.w > 2) {
+      const x = c.narrow ? c.lane : cx(spring);
+      b.channel([pt(x, -60), pt(x, spring.y + spring.h + 6)], { width: c.w, straight: true });
+      from = pt(x, spring.y + spring.h);
+    }
   }
   run(c, from);
 };

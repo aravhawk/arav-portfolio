@@ -5,7 +5,6 @@
 .hero {
   --hero-top: 232px;
   position: relative;
-  padding: 0 var(--gutter);
 }
 .hero-top {
   display: grid;
@@ -15,7 +14,7 @@
   /* A floor, not a fixed height: at 200% text size the block grows and the
      lake starts lower instead of the copy running under the nav. */
   min-height: var(--hero-top);
-  padding: 92px 0 26px;
+  padding: 92px var(--gutter) 26px;
   max-width: none;
 }
 .hero-role {
@@ -31,8 +30,8 @@
   position: relative;
   /* The lake runs well past the first screen: the name drifts down it as it
      melts, so the melt stays in view. */
-  height: calc(176svh - var(--hero-top));
-  min-height: 900px;
+  height: calc(134svh - var(--hero-top));
+  min-height: 760px;
 }
 
 .ice {
@@ -46,7 +45,7 @@
   white-space: nowrap;
   font-family: var(--f-ice), var(--font-display);
   font-size: var(--ice-size);
-  font-weight: 760;
+  font-weight: 800;
   line-height: 1;
   letter-spacing: -0.045em;
   color: #eef6f9;
@@ -67,22 +66,16 @@ html[data-water='on'] [data-ice] [data-ice-line] {
 .say {
   padding-block: clamp(96px, 16vh, 190px) clamp(72px, 12vh, 150px);
 }
+/* His own sentence, in the serif: the one other voice on the page. */
 .say-text {
-  max-width: min(19ch, 58vw);
+  max-width: min(17ch, 62vw);
   text-wrap: balance;
-  font-size: clamp(2rem, 4.3vw + 0.5rem, 4.6rem);
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-  font-weight: 620;
-}
-/* Unlit words are dim but still pass 3:1 as large text in both themes. */
-.say-word {
-  color: var(--ink-dim);
-  transition: color 520ms var(--ease-out);
-}
-.say-word[data-lit],
-html:not([data-js]) .say-word {
-  color: var(--ink);
+  font-family: var(--font-accent);
+  font-weight: 360;
+  font-size: clamp(2.4rem, 5.4vw + 0.5rem, 6rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  padding-bottom: 0.08em;
 }
 
 /* ---------- beats ---------- */
@@ -113,13 +106,6 @@ html:not([data-js]) .say-word {
   grid-column: 1 / span 6;
 }
 
-.beat-label {
-  display: inline-flex;
-  gap: 14px;
-}
-.beat-label span:first-child {
-  color: var(--ink);
-}
 .beat-copy {
   container-type: inline-size;
 }
@@ -149,31 +135,32 @@ html:not([data-js]) .say-word {
   font-size: clamp(3.6rem, 9.4vw + 0.5rem, 10.2rem);
 }
 
-/* The way into a project: one round control, no words. */
-.go {
-  display: inline-grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--land);
+/* The way into a project is its name. The arrow says so. */
+.beat-link {
+  transition: transform var(--t-press) var(--ease-out);
+}
+.beat-link .arrow {
+  display: inline-block;
+  width: 0.36em;
+  height: 0.36em;
+  margin-left: 0.16em;
+  vertical-align: 0.12em;
+  color: var(--ink-3);
   transition:
-    transform var(--t-press) var(--ease-out),
-    background-color var(--t-fast) ease;
+    transform var(--t-ui) var(--ease-out),
+    color var(--t-fast) ease;
 }
-.go .arrow {
-  width: 18px;
-  height: 18px;
-  transition: transform var(--t-ui) var(--ease-out);
-}
-.go:active {
-  transform: scale(0.94);
+.beat-link:active {
+  transform: scale(0.985);
 }
 @media (hover: hover) and (pointer: fine) {
-  .go:hover .arrow {
-    transform: translateX(4px);
+  .beat-link:hover .arrow {
+    transform: translateX(0.12em);
+    color: var(--ink);
   }
+}
+.beat-more {
+  font-size: var(--fs-lead);
 }
 
 /* ---------- live readouts ---------- */
@@ -262,20 +249,36 @@ html:not([data-js]) .say-word {
 .slab-video {
   background: #0b0d0f;
 }
+.slab-bar {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
 .slab-play {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  display: inline-grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  color: var(--ink);
-  transition: transform var(--t-press) var(--ease-out);
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 14px 0 12px;
+  border-radius: var(--r-pill);
+  color: #eef2f3;
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 480;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  transition:
+    transform var(--t-press) var(--ease-out),
+    background-color var(--t-fast) ease;
 }
 .slab-play:active {
-  transform: scale(0.94);
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .slab-play:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .feat-sandbox {
@@ -305,7 +308,7 @@ html:not([data-js]) .say-word {
   padding: 0 2px;
 }
 .trib-repo {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 520;
   color: var(--ink);
   display: inline-flex;
@@ -313,7 +316,7 @@ html:not([data-js]) .say-word {
   min-height: 44px;
 }
 .trib-n {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   color: var(--ink-3);
 }
 @media (hover: hover) and (pointer: fine) {
@@ -370,7 +373,7 @@ html:not([data-js]) .say-word {
   border-radius: 50%;
 }
 .model-name {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 520;
   min-height: 44px;
   display: inline-flex;
@@ -443,21 +446,10 @@ html:not([data-js]) .say-word {
   gap: var(--s-6);
 }
 .into-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 0;
-  max-width: 26ch;
+  display: grid;
+  gap: 2px;
   font-size: clamp(1.6rem, 2.6vw + 0.6rem, 3rem);
-  line-height: 1.08;
-}
-.into-list li {
-  margin-right: 0.32em;
-}
-.into-list li:not(:last-child)::after {
-  content: '/';
-  margin-left: 0.32em;
-  color: var(--ink-3);
-  font-weight: 300;
+  line-height: 1.1;
 }
 .into-next {
   max-width: 32ch;
@@ -468,11 +460,10 @@ html:not([data-js]) .say-word {
   grid-row: 1;
   height: 100%;
 }
-/* The mouth: land on the left, open water on the right, where the ending's
-   shoreline will be. */
+/* The mouth: the stream opens into open water from bank to bank, and the
+   ending takes over from there. */
 .delta {
-  height: 46svh;
-  margin-left: 59.5%;
+  height: 24svh;
 }
 
 /* ---------- narrow ---------- */
@@ -494,8 +485,8 @@ html:not([data-js]) .say-word {
   }
   .hero-lake {
     --bed-r: 26px;
-    height: calc(134svh - var(--hero-top));
-    min-height: 600px;
+    height: calc(122svh - var(--hero-top));
+    min-height: 560px;
   }
   .ice {
     font-size: var(--ice-size-stacked);
@@ -583,15 +574,11 @@ html:not([data-js]) .say-word {
     display: none;
   }
   .delta {
-    height: 34svh;
+    height: 20svh;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .say-word {
-    color: var(--ink);
-    transition: none;
-  }
   .switch-thumb {
     transition: none;
   }

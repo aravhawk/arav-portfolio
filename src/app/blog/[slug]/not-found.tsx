@@ -17,7 +17,7 @@ export default function PostNotFound() {
           All writing <Arrow />
         </Link>
       </div>
-      <div className="state-pool" data-bed="head" data-basin aria-hidden="true" />
+      <div className="state-lane" data-bed="spring" aria-hidden="true" />
     </main>
   );
 }

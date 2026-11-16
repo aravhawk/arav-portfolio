@@ -46,7 +46,7 @@ export interface BedData {
   docH: number;
 }
 
-const SD_CLAMP_PX = 100;
+const SD_CLAMP_PX = 200;
 
 export class BedPainter {
   readonly div: number;

@@ -21,5 +21,5 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const p = projectBySlug(slug);
   if (!p) return renderOg({ kicker: 'Work', title: 'Arav Jain' });
   // The name keeps its non-breaking hyphen so it never splits across lines.
-  return renderOg({ kicker: p.kicker ? `${p.n} / ${p.kicker}` : `${p.n} / Work`, title: p.name, line: p.line });
+  return renderOg({ kicker: p.kicker || 'Work', title: p.name, line: p.line });
 }

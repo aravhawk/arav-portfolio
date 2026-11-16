@@ -54,11 +54,16 @@ export function VideoSlab({ media }: { media: ProjectMedia }) {
         preload="none"
         aria-label={media.alt}
       />
-      <button type="button" className="slab-play glass" onClick={toggle} aria-label={playing ? 'Pause the video' : 'Play the video'} aria-pressed={playing}>
-        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-          {playing ? <path d="M3 2h3v10H3zM8 2h3v10H8z" fill="currentColor" /> : <path d="M3.5 1.8v10.4L12 7z" fill="currentColor" />}
-        </svg>
-      </button>
+      {/* The control sits under the picture, never on it: the film has its
+          own captions and nothing may cover them. */}
+      <div className="slab-bar">
+        <button type="button" className="slab-play" onClick={toggle} aria-label={playing ? 'Pause the video' : 'Play the video'} aria-pressed={playing}>
+          <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+            {playing ? <path d="M3 2h3v10H3zM8 2h3v10H8z" fill="currentColor" /> : <path d="M3.5 1.8v10.4L12 7z" fill="currentColor" />}
+          </svg>
+          <span>{playing ? 'Pause' : 'Play'}</span>
+        </button>
+      </div>
     </figure>
   );
 }

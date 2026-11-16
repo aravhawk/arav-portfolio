@@ -296,7 +296,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
     engine.setBed(painter.assemble(bedSd.sd, r.flow));
     if (ice && iceSd) {
       engine.iceRect = ice.rect;
-      engine.meltRange = Math.round(viewH * 0.82);
+      engine.meltRange = Math.round(viewH * 0.64);
       engine.setIce({ sd: iceSd.sd, w: ice.tw, h: ice.th, minSd: iceSd.min });
     } else {
       engine.setIce(null);

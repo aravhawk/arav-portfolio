@@ -17,12 +17,11 @@ const lin = (hex: string) => {
     return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
   });
 };
-const LAND = { light: lin('#E4E7E8'), dark: lin('#15181B') };
-const DEEP = { light: [0.012, 0.11, 0.15], dark: [0.004, 0.03, 0.05] };
+/* The page's water from above, and open water, per theme (linear). */
+const SHALLOW = { light: lin('#2a7fc4'), dark: lin('#1f6fae') };
+const DEEP = { light: [0.005, 0.034, 0.085], dark: [0.004, 0.028, 0.05] };
 
 interface Props {
-  /** `full`: the home page finale, scrubbed by scroll. `band`: inner pages. */
-  variant?: 'full' | 'band';
   /** e.g. "Numbers read Nov 15, 2026, 4:40 AM CT" */
   note?: string;
 }
@@ -81,9 +80,55 @@ function HapticsSetting() {
   );
 }
 
-export function Ending({ variant = 'full', note }: Props) {
+function Contact() {
+  return (
+    <ul className="ending-links">
+      <li>
+        <a className="end-link" href={CONTACT.github} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
+          GitHub <Arrow out />
+        </a>
+      </li>
+      <li>
+        <a className="end-link" href={CONTACT.x} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
+          X <Arrow out />
+        </a>
+      </li>
+      <li>
+        <a className="end-link" href={CONTACT.linkedin} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
+          LinkedIn <Arrow out />
+        </a>
+      </li>
+      <li>
+        <CopyEmail />
+      </li>
+    </ul>
+  );
+}
+
+/** Inner pages end quietly: the same contact row, on dry land beside the stream. */
+export function Footer({ note }: Props) {
+  return (
+    <footer className="foot wrap" aria-label="Contact">
+      <Contact />
+      <div className="foot-meta label">
+        <span>
+          <Link href="/">Home</Link>
+          <Link href="/work">Work</Link>
+          <Link href="/blog">Writing</Link>
+          <a href="/feed.xml">RSS</a>
+          <HapticsSetting />
+        </span>
+        {note ? <span className="ending-note">{note}</span> : null}
+      </div>
+    </footer>
+  );
+}
+
+/** The home page finale, scrubbed by scroll. */
+export function Ending({ note }: Props) {
   const section = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const block = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const sec = section.current;
@@ -109,7 +154,6 @@ export function Ending({ variant = 'full', note }: Props) {
     sec.dataset.gl = 'on';
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const scrub = variant === 'full';
     let visible = false;
     let top = 0;
     let span = 1;
@@ -123,6 +167,9 @@ export function Ending({ variant = 'full', note }: Props) {
     let dirty = true;
     let lastP = -1;
     let narrow = false;
+    let calm = 0.6;
+    let aspect = 1.6;
+    let feather = -1;
 
     const measure = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -134,6 +181,10 @@ export function Ending({ variant = 'full', note }: Props) {
       top = r.top + window.scrollY;
       span = Math.max(1, r.height - window.innerHeight);
       narrow = w < 720;
+      aspect = w / Math.max(h, 1);
+      // The words keep to the left; the water there is kept calm for them.
+      const b = block.current?.getBoundingClientRect();
+      calm = b && w > 0 ? Math.min(0.9, (b.right - cv.getBoundingClientRect().left) / w + 0.03) : 0.6;
       dirty = true;
     };
     measure();
@@ -156,15 +207,22 @@ export function Ending({ variant = 'full', note }: Props) {
       const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
       last = now;
       const still = reduced.matches;
-      const p = !scrub || still ? 1 : Math.min(1, Math.max(0, (window.scrollY - top) / span));
+      const p = still ? 1 : Math.min(1, Math.max(0, (window.scrollY - top) / span));
       if (p !== lastP) dirty = true;
       lastP = p;
+      // The top edge feathers into the page's water while the camera is
+      // still coming down, and is a clean edge once it has arrived.
+      const f = Math.round(9 * (1 - Math.min(1, p / 0.45)) * 10) / 10;
+      if (f !== feather) {
+        feather = f;
+        cv.style.setProperty('--feather', `${f}%`);
+      }
       const here = p > 0.86;
       if (here !== arrived) {
         arrived = here;
         sec.toggleAttribute('data-arrived', here);
         // One light tick, once, when the horizon settles into place.
-        if (here && !buzzed && scrub) {
+        if (here && !buzzed) {
           buzzed = true;
           haptic('light');
         }
@@ -190,12 +248,14 @@ export function Ending({ variant = 'full', note }: Props) {
       gl.uniform1f(u.uProg, p);
       gl.uniform1f(u.uTheme, theme);
       gl.uniform1f(u.uSunUp, still ? 1 : sunUp);
-      gl.uniform3f(u.uLand, LAND.light[0] + (LAND.dark[0] - LAND.light[0]) * theme, LAND.light[1] + (LAND.dark[1] - LAND.light[1]) * theme, LAND.light[2] + (LAND.dark[2] - LAND.light[2]) * theme);
-      gl.uniform3f(u.uDeep, DEEP.light[0] + (DEEP.dark[0] - DEEP.light[0]) * theme, DEEP.light[1] + (DEEP.dark[1] - DEEP.light[1]) * theme, DEEP.light[2] + (DEEP.dark[2] - DEEP.light[2]) * theme);
-      // Bands (inner pages) put the horizon high so the words sit on land.
-      // Wide screens: horizon low, words on the land below it. Tall
-      // screens: horizon lower still, words up in the calm of the sky.
-      gl.uniform1f(u.uHorizon, narrow ? -0.34 : variant === 'band' ? 0.36 : -0.16);
+      const mixc = (a: number[], bb: number[], i: number) => a[i] + (bb[i] - a[i]) * theme;
+      gl.uniform3f(u.uShallow, mixc(SHALLOW.light, SHALLOW.dark, 0), mixc(SHALLOW.light, SHALLOW.dark, 1), mixc(SHALLOW.light, SHALLOW.dark, 2));
+      gl.uniform3f(u.uDeep, mixc(DEEP.light, DEEP.dark, 0), mixc(DEEP.light, DEEP.dark, 1), mixc(DEEP.light, DEEP.dark, 2));
+      // The horizon rests above the middle; the words stand in the water's
+      // near, dark reach below it. The sun keeps to the right of them.
+      gl.uniform1f(u.uHorizon, narrow ? 0.3 : 0.24);
+      gl.uniform1f(u.uSunAz, Math.atan((narrow ? 0.7 : 0.46) * aspect * 0.3249));
+      gl.uniform1f(u.uCalm, calm);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }, 40);
 
@@ -209,49 +269,22 @@ export function Ending({ variant = 'full', note }: Props) {
       // it is not thrown away here: an effect that re-runs gets it back.
       gl.deleteProgram(prog.prog);
     };
-  }, [variant]);
+  }, []);
 
   return (
-    <footer ref={section} className={`ending ending-${variant}`} aria-label="Contact">
+    <footer ref={section} className="ending ending-full" aria-label="Contact">
       <div className="ending-pin">
         <canvas ref={canvas} className="ending-canvas" aria-hidden="true" />
         <div className="ending-copy wrap" data-chrome>
-          <div className="ending-block">
-            {variant === 'full' ? (
-              <p className="label ending-kicker">Selected for OpenAI DevDay 2026</p>
-            ) : null}
-            <h2 className="ending-head display">
+          <div className="ending-block" ref={block}>
+            <h2 className="ending-head">
               <span className="ending-line">It&apos;s still early.</span>
             </h2>
-            <ul className="ending-links">
-              <li>
-                <a className="end-link" href={CONTACT.github} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
-                  GitHub <Arrow out />
-                </a>
-              </li>
-              <li>
-                <a className="end-link" href={CONTACT.x} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
-                  X <Arrow out />
-                </a>
-              </li>
-              <li>
-                <a className="end-link" href={CONTACT.linkedin} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
-                  LinkedIn <Arrow out />
-                </a>
-              </li>
-              <li>
-                <CopyEmail />
-              </li>
-            </ul>
+            <p className="label ending-kicker">Selected for OpenAI DevDay 2026</p>
+            <Contact />
           </div>
           <div className="ending-foot label">
             <span>
-              {variant === 'band' ? (
-                <>
-                  <Link href="/work">Work</Link>
-                  <Link href="/blog">Writing</Link>
-                </>
-              ) : null}
               <a href="/feed.xml">RSS</a>
               <HapticsSetting />
             </span>
