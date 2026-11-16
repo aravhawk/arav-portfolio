@@ -128,9 +128,9 @@ export const PROJECTS: Project[] = [
     n: '03',
     name: 'Kilo Bench',
     kicker: 'DeveloperWeek 2026',
-    line: 'Model benchmarking in Kilo Code. Won "Kilo - For Devs, By Devs".',
+    line: 'Model benchmarking in Kilo Code. Won “Kilo - For Devs, By Devs”.',
     summary:
-      'Kilo Bench is a benchmarking feature built into Kilo Code. It reads your workspace, writes coding challenges that fit your actual codebase, runs the models you pick through them, and tells you which one works best for your code. It won the prize category "Kilo - For Devs, By Devs" at the DeveloperWeek 2026 Hackathon.',
+      'Kilo Bench is a benchmarking feature built into Kilo Code. It reads your workspace, writes coding challenges that fit your actual codebase, runs the models you pick through them, and tells you which one works best for your code. It won the prize category “Kilo - For Devs, By Devs” at the DeveloperWeek 2026 Hackathon.',
     how: [
       {
         title: 'Read the workspace',
@@ -146,7 +146,7 @@ export const PROJECTS: Project[] = [
       },
     ],
     facts: [
-      { label: 'Result', value: 'Winner, prize category "Kilo - For Devs, By Devs"' },
+      { label: 'Result', value: 'Winner, prize category “Kilo - For Devs, By Devs”' },
       { label: 'Built', value: 'February 2026' },
     ],
     links: [
