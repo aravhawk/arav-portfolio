@@ -625,9 +625,11 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   col *= 1.0 - lee * mix(0.2, 0.42, uNight);
   col *= 1.0 + ((g.r - 0.5) * mix(0.03, 0.085, drift) + (g.a - 0.45) * 0.05);
   if (uQuality > 0.5 && gL1 < 1.0 && drift < 0.99 && foot < 2.2) {
-    vec3 fr = fracture(il / 210.0 + vec2(3.7, 1.9));
+    // (Hairlines: short wandering threads, a few to a plate; never a closed cell.)
+    vec2 hw2 = (textureLod(uDetail, il / 900.0 + 0.4, 0.0).gb - 0.5) * 420.0 + (g.gb - 0.5) * 30.0;
+    vec3 fr = fracture((il + hw2) / 330.0 + vec2(3.7, 1.9));
     float hw = 0.006 * max(1.0, foot);
-    float hair = (1.0 - smoothstep(0.0, hw, fr.x)) * step(0.55, fr.y) * (1.0 - drift) * smoothstep(18.0, 70.0, nameD) * (1.0 - smoothstep(1.2, 2.2, foot)) * (1.0 - gL1);
+    float hair = (1.0 - smoothstep(0.0, hw, fr.x)) * step(0.7, fr.y) * step(fr.z, 0.5) * (1.0 - drift) * smoothstep(18.0, 70.0, nameD) * (1.0 - smoothstep(1.2, 2.2, foot)) * (1.0 - gL1);
     // (Before dawn a hairline is a faint thread: nothing on the dark ice is bright but the name.)
     col = mix(col, uIceCol * mix(1.04, 0.2, uNight), hair * mix(0.55, 0.3, uNight));
   }

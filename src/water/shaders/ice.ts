@@ -145,6 +145,16 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   bool cracks = uIceP.y <= 0.0 || (uIceC.y < 1.0 && !(uIceLean >= 2.0 && uIceA.y <= 0.0));
   if (cracks) {
   vec2 wob = textureLod(uSnow, il / (cellA * 5.0), 0.0).rg * cellA * 0.12;
+  // (Seen from the ground the sheet breaks as lake ice does: the field the
+  // cells are found in is bent, broadly and then finely, so each fracture
+  // wanders and the plates between them are of very different sizes.)
+  float jit = 0.72;
+  if (uIceP.y > 0.0) {
+    vec2 q = il / cellA;
+    wob += cellA * (0.5 * vec2(sin(q.y * 1.13 + 0.7) + 0.6 * sin(q.x * 0.71 + q.y * 0.4 + 2.1), sin(q.x * 0.93 + 1.9) + 0.6 * sin(q.y * 0.63 - q.x * 0.5 + 0.3))
+         + 0.075 * vec2(sin(q.y * 5.3 + q.x * 2.1 + 1.0) + sin(q.y * 9.7 + 0.4) * 0.5, sin(q.x * 4.7 - q.y * 1.9 + 2.6) + sin(q.x * 11.3 + 1.7) * 0.5));
+    jit = 0.94;
+  }
   vec2 x = (il + wob) / cellA + vec2(3.37, 1.83);
   vec2 n = floor(x);
   vec2 fr = fract(x);
@@ -158,7 +168,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   for (int j = 0; j < 3; j++) {
     for (int i = 0; i < 3; i++) {
       vec2 g = vec2(float(i - 1), float(j - 1));
-      vec2 r = g + 0.14 + 0.72 * ih2(n + g) - fr;
+      vec2 r = g + 0.5 - 0.5 * jit + jit * ih2(n + g) - fr;
       // A cell whose middle would lie in or by the name's plate is not
       // there: the plate has that ground.
       if (nearPlate && plateSd(il + r * cellA).x < cellA * 0.12) r = vec2(40.0);
