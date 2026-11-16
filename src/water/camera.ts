@@ -28,9 +28,13 @@ export const SECTIONS = { hero: 2.4, say: 2.2, infiniview: 2.6, runout: 2.0 };
 /** The whole flight's length in screens. The last screen of it is the hand-over to the ending. */
 export const FLIGHT_SCREENS = SECTIONS.hero + SECTIONS.say + SECTIONS.infiniview + SECTIONS.runout;
 /** Scroll (in screens) over which the lake's ice melts. */
-export const MELT = { from: 0.12, to: 1.95 };
+export const MELT = { from: 0.1, to: 2.0 };
 /** Until here the first camera only drifts: the name is still letters. */
-const HOLD = 1.1;
+// (The name is cut for that camera alone, so the camera stays with it until the letters have run together into one pool.)
+const HOLD = 1.22;
+
+/** Where the descent from the hero arrives low over the outlet: while the last plates are still adrift, so no stretch of scroll is plain water. */
+const OUTLET_AT = 1.82;
 
 const rad = (d: number) => (d * Math.PI) / 180;
 
@@ -79,7 +83,7 @@ export function flightKeys(aspect: number): Key[] {
 
   // The poster, held (with a slow push) until the letters have run together.
   const hero = heroDesign(aspect).pose;
-  const hero2: Pose = { pos: [hero.pos[0], hero.pos[1] + 70, hero.pos[2] * 0.97], aim: [hero.aim[0], hero.aim[1] + 60, 0], fov: hero.fov };
+  const hero2: Pose = { pos: [hero.pos[0], hero.pos[1] + 26, hero.pos[2] * 0.988], aim: [hero.aim[0], hero.aim[1] + 24, 0], fov: hero.fov };
 
   // An upright screen that is not a phone (a tablet held tall) flies the
   // phone's path after the hero: its copy sits at the foot, where that
@@ -92,7 +96,7 @@ export function flightKeys(aspect: number): Key[] {
         { s: 0, ...hero },
         { s: HOLD, ...hero2 },
         // Low over the lake's south end, looking down the river.
-        { s: h - 0.25, pos: [1440, 1560 + DY, 250], aim: [1530, 2200 + DY, 0], fov: wideFov },
+        { s: OUTLET_AT, pos: [1440, 1560 + DY, 250], aim: [1530, 2200 + DY, 0], fov: wideFov },
         // The statement: the near bank fills the foot of the frame, the river crosses beyond it.
         { s: h + 0.75, pos: [1180, 2180 + DY, 250], aim: [1470, 2820 + DY, 0], fov: wideFov },
         { s: s1 - 0.5, pos: [1200, 2400 + DY, 240], aim: [1500, 3020 + DY, 0], fov: wideFov },
@@ -108,7 +112,7 @@ export function flightKeys(aspect: number): Key[] {
         { s: 0, ...hero },
         { s: HOLD, ...hero2 },
         // Low over the lake's south end, looking down the river toward the ranges.
-        { s: h - 0.25, pos: [1380, 1640 + DY, 200], aim: [1500, 2190 + DY, 0], fov: wideFov },
+        { s: OUTLET_AT, pos: [1380, 1640 + DY, 200], aim: [1500, 2190 + DY, 0], fov: wideFov },
         // The statement: gliding down the first reach, river on the right, the bank on the left.
         { s: h + 0.7, pos: [1080, 2250 + DY, 158], aim: [1320, 2740 + DY, 0], fov: 48 },
         { s: s1 - 0.5, pos: [1090, 2440 + DY, 152], aim: [1325, 2930 + DY, 0], fov: 48 },

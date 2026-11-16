@@ -179,13 +179,18 @@ export function rasterName(layout: NameLayout, fontFamily: string): NameRaster {
   const rect = { x: NAME.x - w / 2, y: NAME.y - h / 2, w, h };
   const tw = Math.min(1536, Math.max(256, Math.round(w)));
   const scale = w / tw;
-  const th = Math.max(16, Math.round(h / scale));
+  // The raster is the name at its true proportions: a texel is `scale`
+  // units across and `scale * stretch` units deep on the lake. Distances
+  // measured in it are therefore the ones the first camera sees, so an
+  // opening that grows as the ice melts grows evenly round every stroke
+  // in the picture, and the letters keep their shape while they do.
+  const th = Math.max(16, Math.round(h / (scale * layout.stretch)));
   const c = document.createElement('canvas');
   c.width = tw;
   c.height = th;
   const ctx = c.getContext('2d', { willReadFrequently: true })!;
   // World x grows with text x; world y falls as text y grows.
-  ctx.setTransform(k / scale, 0, 0, (-k * layout.stretch) / scale, tw / 2, th / 2);
+  ctx.setTransform(k / scale, 0, 0, -k / scale, tw / 2, th / 2);
   ctx.font = font;
   ctx.fillStyle = '#fff';
   ctx.textBaseline = 'alphabetic';

@@ -204,13 +204,16 @@ export class FlightEngine extends WaterEngine {
 
   /** The camera the name is cut for (see the ice field). */
   nameCut: [number, number, number, number] = [0, 0, 1, 0];
+  /** How much deeper than true the name lies on the lake, so that camera sees it true. */
+  nameStretch = 1;
 
   protected bindIce(prog: Parameters<WaterEngine['bindIce']>[0], ice: Parameters<WaterEngine['bindIce']>[1], sdfUnit: number, snowUnit: number) {
     super.bindIce(prog, ice, sdfUnit, snowUnit);
     // (The cut is a hair wider than the drawn letter: its edge is blended over a pixel, and the blend belongs to the ice.)
     if (ice.rect[2] > 0) this.gl.uniform4f(prog.u.uIceA, ice.a[0] + 3, ice.a[1], ice.a[2], ice.a[3]);
     if (prog.u.uIceP) this.gl.uniform4fv(prog.u.uIceP, this.nameCut);
-    if (prog.u.uIceRim) this.gl.uniform1f(prog.u.uIceRim, ICE_H);
+    // (The far wall of a cut is seen across this much of the lake from the first camera.)
+    if (prog.u.uIceRim) this.gl.uniform1f(prog.u.uIceRim, ICE_H * this.nameStretch);
     if (prog.u.uIceLean) this.gl.uniform1f(prog.u.uIceLean, this.leanNow);
   }
 
@@ -591,6 +594,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     if (destroyed || token !== buildToken) return;
     engine.iceRect = ice.rect;
     engine.nameCut = hero.cut;
+    engine.nameStretch = hero.name.stretch;
     engine.setIce({ sd: sd.sd, w: ice.tw, h: ice.th, minSd: sd.min });
   }
 
