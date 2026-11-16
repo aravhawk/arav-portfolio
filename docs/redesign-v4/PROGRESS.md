@@ -448,4 +448,31 @@ effects, as igloo.inc and other award sites have.
   existing ending), plus `scripts/legibility-test.mjs` (contrast behind
   every line of text at 40 or more scroll positions, both themes). The
   shipped home page is untouched until the prototype is judged.
+- 2026-11-16 13:45 CT. K7 done and pushed (`222d41c`, signed). Its run sat
+  idle for 17 minutes after it had committed and written its report, with
+  nothing pending, so the run was closed (first stall of a Kilo task;
+  nothing lost). The prototype works: `/flight` is one world through a
+  travelling camera, legibility test passes at 390 and 1440 in both
+  themes, existing pages untouched. It drops frames at 1728 wide (6
+  percent) and under contention (p95 33 ms): a gate for the next task.
+- 2026-11-16 14:20 CT. Interim independent read on the prototype (one
+  critic, all 29 images opened this time): **6.0**, the highest so far.
+  "The idea is at reference level; the rendering looks like a real-time
+  demo scene." (`critic/review-6.md`). Worst: the hero name pale on pale
+  and stepped; the ground "one striped noise texture"; the object "a flat
+  screenshot rectangle on a snow disc"; dark "reads as neon"; the river
+  "a uniform band"; smeared mountains.
+- Kilo task K8 (`.tools/briefs/K8-from-demo-to-film.md`): render quality.
+  Baked, mip-mapped, anisotropically filtered ground; real ranges; a sun,
+  an aurora at night that open water mirrors (in place of water that
+  glows by itself), a film finish; the hero as a binding composition with
+  the name cut anamorphically and 4.5 to 1 measured in both themes; a
+  river with visible current and angular plates; the object as a thing
+  with a body, light and a clean reflection; frame rate as a hard gate
+  (p95 16.7 ms or under and under 1 percent of frames over 25 ms on every
+  profile).
+- Then: K9 (the other seven stations, the ending inside the same world,
+  time of day that moves with the scroll, swap into the home page,
+  fallbacks, phone), K10 (project and inner pages led by large media),
+  then a panel of three critics.
 
