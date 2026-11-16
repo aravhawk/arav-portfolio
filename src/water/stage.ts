@@ -146,6 +146,16 @@ export function mountWater(root: HTMLElement): StageHandle {
 
   function build() {
     if (destroyed) return;
+    // Measure text where it rests, not where a pending reveal has parked it.
+    html.setAttribute('data-measuring', '');
+    try {
+      measureAndPaint();
+    } finally {
+      html.removeAttribute('data-measuring');
+    }
+  }
+
+  function measureAndPaint() {
     const sx = window.scrollX;
     const sy = window.scrollY;
     const docW = html.clientWidth;
@@ -186,6 +196,9 @@ export function mountWater(root: HTMLElement): StageHandle {
       if (!el.hasAttribute('data-dry') && !hasOwnText(el) && !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) continue;
       const r = docRect(el, sx, sy);
       if (r.w < 2 || r.h < 2) continue;
+      // A reveal starts a little low and rises: keep that travel dry too.
+      const rev = el.closest<HTMLElement>('[data-reveal]');
+      if (rev) r.h += rev.dataset.reveal === 'lead' ? 34 : rev.dataset.reveal === 'fade' ? 0 : 18;
       painter.dry(r, DRY_PAD, 10);
     }
 

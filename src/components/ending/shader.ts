@@ -137,7 +137,7 @@ void main() {
       float sunny = max(s.sun.y, 0.0) * 2.2 + 0.25;
       vec3 land = uLand * (1.0 + grain * 0.03) * mix(1.0, 0.75 + 0.5 * sunny, 0.5);
       // Warm grazing light from the sun's side.
-      land += s.band * 0.012 * mix(0.25, 1.0, uTheme) * smoothstep(-6.0, 0.0, edge);
+      land += s.band * mix(0.003, 0.0022, uTheme) * smoothstep(-5.0, 0.0, edge) * e;
       // The chamfer at the water's edge.
       float ch = smoothstep(-0.05 - pix * 2.0, 0.0, edge);
       land *= 1.0 + 0.16 * ch;
@@ -161,6 +161,10 @@ void main() {
       vec3 refl = withRidges(skyColor(r, s), r, s);
       // Seen from above the water shows its depth; at a glancing angle, the sky.
       vec3 body = uDeep * (0.5 + 0.5 * max(s.sun.y * 3.0, 0.3));
+      // From straight above, the same caustic light the page's water has.
+      float cn = fbm2(q * 2.6 + vec2(tt * 0.4, -tt * 0.3));
+      float cl = 1.0 - abs(cn * 2.0 - 1.0);
+      body *= 1.0 + (1.0 - e) * (pow(cl, 5.0) * 2.2 - 0.25);
       col = mix(body, refl, clamp(fres + 0.06, 0.0, 1.0));
       // Sun glitter: a broken streak toward the sun, not a bloom disc.
       float sd = max(dot(r, s.sun), 0.0);

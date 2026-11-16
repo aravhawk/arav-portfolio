@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { CONTACT } from '@/content/projects';
 import { onFrame } from '@/lib/frame';
-import { haptic } from '@/lib/haptics';
+import { haptic, hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/lib/haptics';
 import { compile, type Program } from '@/water/gl';
 import { Arrow } from '../bits';
 import { ENDING_FRAG } from './shader';
@@ -52,6 +52,32 @@ function CopyEmail() {
         <span aria-live="polite">{state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed. Use the link.' : 'Copy'}</span>
       </button>
     </span>
+  );
+}
+
+/** The user's own switch for haptics. Shown only where a device can buzz. */
+type HapticsState = 'hidden' | 'on' | 'off';
+const subscribeHaptics = (cb: () => void) => {
+  window.addEventListener('hapticschange', cb);
+  return () => window.removeEventListener('hapticschange', cb);
+};
+const readHaptics = (): HapticsState => (hapticsAvailable() ? (hapticsEnabled() ? 'on' : 'off') : 'hidden');
+const readHapticsServer = (): HapticsState => 'hidden';
+
+function HapticsSetting() {
+  const state = useSyncExternalStore(subscribeHaptics, readHaptics, readHapticsServer);
+  if (state === 'hidden') return null;
+  const toggle = () => {
+    const on = state !== 'on';
+    setHapticsEnabled(on);
+    window.dispatchEvent(new Event('hapticschange'));
+    // Turning it on answers with the thing itself.
+    if (on) haptic('light');
+  };
+  return (
+    <button type="button" className="end-haptics" role="switch" aria-checked={state === 'on'} onClick={toggle}>
+      Haptics {state}
+    </button>
   );
 }
 
@@ -222,6 +248,7 @@ export function Ending({ variant = 'full', note }: Props) {
               <Link href="/work">Work</Link>
               <Link href="/blog">Writing</Link>
               <a href="/feed.xml">RSS</a>
+              <HapticsSetting />
             </span>
             {note ? <span className="ending-note">{note}</span> : null}
           </div>

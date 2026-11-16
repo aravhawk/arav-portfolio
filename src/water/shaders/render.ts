@@ -276,21 +276,28 @@ void main() {
     vec4 gi = texture(uGrain, p / 420.0);
     vec4 gf = texture(uGrain, p / 96.0);
     // Cloudy core, clear bevel: how real ice freezes, and what keeps the
-    // letterforms solid and readable.
-    float core = smoothstep(0.1, 0.95, x);
-    float frost = core * (0.74 + 0.2 * gi.g + 0.06 * gf.b) * uIceState.w;
-    float lit = 0.74 + 0.3 * max(dot(iceN, L), 0.0) / L.z * 0.6;
+    // letterforms solid and readable. Refraction is strong only in the
+    // bevel band; the interior stays calm.
+    float core = smoothstep(0.12, 0.92, x);
+    float frost = core * (0.8 + 0.14 * gi.g + 0.06 * gf.b) * uIceState.w;
+    vec2 nxy = normalize(iceN.xy + 1e-4);
+    float toLight = dot(nxy, normalize(L.xy));
+    float lit = 0.86 + 0.16 * max(dot(iceN, L), 0.0) / L.z;
     vec3 body = uIceCol * lit;
-    col = mix(col * (0.86 + 0.14 * (1.0 - core)), body, clamp(frost, 0.0, 0.96));
-    // Trapped air: fine pale veins through the core.
+    // The clear band at the edge shows the deep water, darker and bent.
+    col = mix(col * mix(0.62, 1.0, core), body, clamp(frost, 0.0, 0.97));
+    // Fracture planes and trapped air through the core.
+    float crack = (1.0 - smoothstep(0.0, 0.035, abs(gi.b - 0.42))) * core;
     float vein = smoothstep(0.1, 0.0, abs(gf.a - 0.34)) * core;
-    col += uIceCol * vein * 0.07 * uIceState.w;
-    vec3 rf = reflect(dir, iceN);
-    float sp = pow(max(dot(rf, LS), 0.0), 60.0) * 0.5 + pow(max(dot(rf, L), 0.0), 24.0) * 0.55;
-    float lip = smoothstep(0.0, 0.07, x) * (1.0 - smoothstep(0.07, 0.34, x));
-    col += uSky * (sp * (1.0 - core * 0.7) + lip * 0.3) * uIceState.y;
-    // The far bevel falls into shade.
-    col *= 1.0 - 0.3 * (1.0 - core) * max(dot(normalize(iceN.xy + 1e-4), -normalize(L.xy)), 0.0);
+    col += uIceCol * (vein * 0.05 + crack * 0.09) * uIceState.w;
+    col *= 1.0 - 0.07 * core * smoothstep(0.35, 0.75, gi.g);
+    // The bevel that faces the light flashes; the far one falls into shade.
+    float rim = (1.0 - core) * smoothstep(0.02, 0.2, x);
+    col += uSky * rim * pow(max(toLight, 0.0), 1.6) * 0.62 * uIceState.y;
+    col *= 1.0 - 0.42 * rim * max(-toLight, 0.0);
+    // A hairline of light right on the edge keeps every letter crisp.
+    float lip = smoothstep(0.0, 0.06, x) * (1.0 - smoothstep(0.06, 0.22, x));
+    col += uSky * lip * 0.22 * uIceState.y;
   }
 
   // Display transform and a blue-noise-ish dither against banding.

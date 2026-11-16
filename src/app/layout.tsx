@@ -25,19 +25,19 @@ const martianMono = localFont({
   preload: false,
   fallback: ['ui-monospace', 'Menlo', 'monospace'],
 });
+/* Bake-off candidates. Only the pick stays in the final build. */
 const tasa = localFont({ src: '../fonts/TASAOrbiter-VF.woff2', variable: '--f-tasa', weight: '400 800', display: 'swap', preload: false });
-const hanken = localFont({ src: '../fonts/HankenGrotesk-VF.woff2', variable: '--f-hanken', weight: '100 900', display: 'swap', preload: false });
-const sometype = localFont({ src: '../fonts/SometypeMono-VF.woff2', variable: '--f-sometype', weight: '400 700', display: 'swap', preload: false });
-const science = localFont({
-  src: '../fonts/ScienceGothic-VF.woff2',
-  variable: '--f-science',
-  weight: '100 900',
+const spline = localFont({ src: '../fonts/SplineSansMono-VF.woff2', variable: '--f-spline', weight: '300 700', display: 'swap', preload: false });
+const zalando = localFont({
+  src: '../fonts/ZalandoSans-VF.woff2',
+  variable: '--f-zalando',
+  weight: '200 900',
   display: 'swap',
   preload: false,
-  declarations: [{ prop: 'font-stretch', value: '50% 200%' }],
+  declarations: [{ prop: 'font-stretch', value: '75% 125%' }],
 });
-const schibsted = localFont({ src: '../fonts/SchibstedGrotesk-VF.woff2', variable: '--f-schibsted', weight: '400 900', display: 'swap', preload: false });
-const commit = localFont({ src: '../fonts/CommitMono-VF.woff2', variable: '--f-commit', weight: '200 700', display: 'swap', preload: false });
+const newsreader = localFont({ src: '../fonts/Newsreader-VF.woff2', variable: '--f-newsreader', weight: '200 800', display: 'swap', preload: false });
+const sometype = localFont({ src: '../fonts/SometypeMono-VF.woff2', variable: '--f-sometype', weight: '400 700', display: 'swap', preload: false });
 
 const SITE = 'https://aravjain.dev';
 const DESCRIPTION =
@@ -81,7 +81,7 @@ export const viewport: Viewport = {
    theme never flashes. The type switch is for the bake-off only. */
 const boot = `(function(){var d=document.documentElement;try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light';var t=new URLSearchParams(location.search).get('type');if(t)d.dataset.type=t}catch(e){d.dataset.theme='light'}})()`;
 
-const fontVars = [martian, martianMono, tasa, hanken, sometype, science, schibsted, commit].map((f) => f.variable).join(' ');
+const fontVars = [martian, martianMono, tasa, spline, zalando, newsreader, sometype].map((f) => f.variable).join(' ');
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -95,31 +95,47 @@
   --f-text: var(--f-martian);
   --f-mono: var(--f-martian-mono);
 }
-:root[data-type='t'] {
+:root[data-type='a'] {
   --f-display: var(--f-tasa);
-  --f-text: var(--f-hanken);
-  --f-mono: var(--f-sometype);
+  --f-text: var(--f-tasa);
+  --f-mono: var(--f-spline);
 }
-:root[data-type='s'] {
-  --f-display: var(--f-science);
-  --f-text: var(--f-schibsted);
-  --f-mono: var(--f-commit);
+:root[data-type='f'] {
+  --f-display: var(--f-zalando);
+  --f-text: var(--f-zalando);
+  --f-mono: var(--f-sometype);
+  --f-accent: var(--f-newsreader);
 }
 
 /* Type systems under test (typography.md). The pick becomes the default. */
-:root[data-type='t'] {
+:root[data-type='a'] {
   --display-wdth: 100;
   --display-wght: 780;
-  --ice-size: clamp(5rem, 17.4vw, 22rem);
+  --ice-size: clamp(5rem, 17.6vw, 22rem);
   --ice-size-stacked: 39vw;
 }
-:root[data-type='s'] {
-  --display-wdth: 150;
-  --display-wght: 760;
-  --ice-size: clamp(3.6rem, 10.9vw, 14.5rem);
-  --ice-size-stacked: 25vw;
-  --fs-display: clamp(2.3rem, 5.2vw + 0.5rem, 6rem);
-  --fs-number: clamp(3.6rem, 10vw + 0.5rem, 11rem);
+:root[data-type='f'] {
+  --display-wdth: 125;
+  --display-wght: 780;
+  --ice-size: clamp(4.4rem, 14.8vw, 19rem);
+  --ice-size-stacked: 34vw;
+}
+/* Atelier sets the takeaway, the statement, the closing line and long
+   reading in its serif. */
+:root[data-type='f'] .hero-role,
+:root[data-type='f'] .say-text,
+:root[data-type='f'] .ending-head,
+:root[data-type='f'] .quote,
+:root[data-type='f'] .into-next {
+  font-family: var(--f-accent), Georgia, serif;
+  font-variation-settings: normal;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+:root[data-type='f'] .prose {
+  font-family: var(--f-accent), Georgia, serif;
+  font-size: 1.25rem;
+  line-height: 1.56;
 }
 
 /* ---------- base ---------- */
@@ -290,6 +306,8 @@ html[data-water='on'] .water-canvas {
 .shell {
   position: relative;
   z-index: 1;
+  /* Clip, not hidden: nothing can widen the page, and sticky still works. */
+  overflow-x: clip;
 }
 
 /* Static basins: what a pool looks like before the water arrives, and all
@@ -510,6 +528,12 @@ html[data-js] [data-reveal='fade'] {
 html[data-js] [data-reveal][data-in] {
   opacity: 1;
   transform: none;
+}
+
+/* While the bed is being measured, text sits at its resting place. */
+html[data-measuring] [data-reveal] {
+  transform: none !important;
+  transition: none !important;
 }
 
 /* ---------- reduced motion, contrast, forced colours, print ---------- */

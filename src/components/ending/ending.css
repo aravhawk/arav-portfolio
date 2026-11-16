@@ -166,16 +166,24 @@ html:not([data-js]) .ending-canvas {
 
 .ending-foot {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 0 28px;
+  max-width: min(46vw, 760px);
   color: var(--ink-2);
 }
 .ending-foot span:first-child {
   display: inline-flex;
-  gap: 22px;
+  flex-wrap: wrap;
+  gap: 0 22px;
 }
-.ending-foot a {
+.end-haptics {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.ending-foot a,
+.end-haptics {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -183,19 +191,14 @@ html:not([data-js]) .ending-canvas {
   transition: color var(--t-fast) ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .ending-foot a:hover {
+  .ending-foot a:hover,
+  .end-haptics:hover {
     color: var(--ink);
   }
 }
-/* The readout sits over open water on the right, so it carries its own
-   small glass plate. */
+/* The readout stays on the land with everything else. */
 .ending-note {
-  padding: 8px 12px;
-  border-radius: var(--r-pill);
-  background: var(--glass);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  color: var(--ink);
+  color: var(--ink-2);
 }
 
 /* Entrance: the headline wipes in, the links follow. It leaves fast. */
@@ -247,7 +250,11 @@ html[data-js] .ending-full[data-gl='on'][data-arrived] .ending-foot {
   .ending-foot {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 0;
+    max-width: 58vw;
+  }
+  .ending-note {
+    max-width: 52vw;
   }
   .ending-band {
     height: 78svh;

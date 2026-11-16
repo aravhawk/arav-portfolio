@@ -42,23 +42,23 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
   light: {
     land: srgb('#E4E7E8'),
     bed: srgb('#D3DADC'),
-    absorb: [0.036, 0.0135, 0.0096],
-    scatter: [0.007, 0.066, 0.092],
+    absorb: [0.052, 0.0205, 0.0138],
+    scatter: [0.004, 0.046, 0.07],
     sky: [1.0, 1.0, 1.0],
     foam: [1.0, 1.0, 1.0],
     ice: srgb('#F4FAFC'),
-    light: [0.5, 0.78, 0.8, 1.2],
+    light: [0.5, 0.78, 0.66, 1.2],
     grain: [0.035, 0.03, 0.07],
   },
   dark: {
     land: srgb('#15181B'),
     bed: srgb('#7C8C94'),
-    absorb: [0.044, 0.017, 0.011],
-    scatter: [0.002, 0.026, 0.046],
+    absorb: [0.05, 0.021, 0.0135],
+    scatter: [0.0015, 0.02, 0.036],
     sky: [0.62, 0.78, 0.86],
     foam: [0.55, 0.7, 0.76],
     ice: srgb('#DDEEF4'),
-    light: [0.3, 1.0, 1.0, 1.6],
+    light: [0.3, 1.0, 0.85, 1.6],
     grain: [0.07, 0.06, 0.22],
   },
 };
@@ -687,6 +687,8 @@ export class WaterEngine {
       backing: [this.canvas.width, this.canvas.height],
       sim: [this.simW, this.simH],
       melt: this.melt,
+      margin: this.margin,
+      cssH: this.cssH,
     };
   }
 
