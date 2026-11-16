@@ -4,17 +4,13 @@ import { Arrow } from '@/components/bits';
 import { PageShell } from '@/components/PageShell';
 import { getAllPosts } from '@/lib/blog';
 import { formatPostDate } from '@/lib/dates';
+import { pageMeta } from '@/lib/meta';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: 'Writing',
   description: 'Notes on AI agents, evaluation, security and shipping software.',
-  alternates: { canonical: '/blog' },
-  openGraph: {
-    title: 'Writing · Arav Jain',
-    description: 'Notes on AI agents, evaluation, security and shipping software.',
-    type: 'website',
-  },
-};
+  path: '/blog',
+});
 
 export default function BlogPage() {
   const posts = getAllPosts();

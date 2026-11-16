@@ -56,7 +56,7 @@ export const REVALIDATE_SECONDS = 3600;
 /** Cache tag on every metrics fetch, for revalidateTag('metrics'). */
 export const CACHE_TAG = 'metrics';
 
-export const USER_AGENT = 'aravjain.dev-metrics/1.0 (+https://aravjain.dev)';
+export const USER_AGENT = 'arav.pro-metrics/1.0 (+https://arav.pro)';
 
 export const FETCH_TIMEOUT_MS = 5000;
 

@@ -15,29 +15,38 @@ unchecked item. Do not restart.
   `content/posts` and `blog-editor` (diff against 9a487fb must stay empty).
 - Captures, traces, specimens and reference material stay outside git.
 
-## Orchestrator guardrail (2026-11-15, binding until the final review)
+## Working rules (orchestrator, corrected 2026-11-15 evening; these replace the earlier guardrail)
 
 At 2:30 PM CT the limit auto-resume restarted this thread and all seven
 helpers at once, and eight agents in parallel spent the whole 5-hour window
-in 23 minutes. Rules since then:
+in 23 minutes. Arav's rule: never cut quality or depth, just do not be
+wasteful.
 
-1. One task at a time. No `delegate_task`, no background helpers, no
-   subagents of any kind until the final review.
-2. The failed helper "v4 refs: new SOTD sites + Apple" is cancelled
-   (`task_cancel`), and `task_status` on all seven shows none running
-   (checked 2026-11-15, after the guardrail arrived). The SOTD and Apple
-   study is skipped; do not redo it.
-3. Reuse the six finished helpers' outputs. Do not redo references,
-   typography research, metrics, content or carry-over.
-4. At the final review: at most one critic helper, medium effort, nothing
-   else running.
-5. Three review rounds, not five. Per round capture only 390, 768, 1440 and
-   1920 in Chromium. The full cross-browser pass (Chromium, WebKit, Firefox,
-   all widths, touch) runs once, at the end.
-6. Commit and push signed work at each milestone
+1. Work serially, one task at a time, no parallel helpers. A helper is fine
+   only if it runs alone while the main thread waits or stays light.
+2. The failed helper "v4 refs: new SOTD sites + Apple" is cancelled and must
+   not be restarted (its queued notice is stale). `task_status` on all seven
+   showed none running. The SOTD and Apple study is NOT skipped: I redo it
+   myself, serially, before design decisions lock, reusing the captures and
+   measurements that helper left in `references/` and `tools/refs-b`.
+3. Reuse the six finished helpers' outputs on disk; take a second look only
+   where it adds value.
+4. Full review depth as the brief says: five rounds, an independent critic,
+   and full browser coverage. Avoid pure waste (duplicate captures,
+   re-running unchanged checks).
+5. Push signed checkpoints at each milestone
    (`git push -u origin redesign/fable-v4b-20261115`, SSH, that branch only,
    no force-push, no PR, no merge).
-7. Do not change model or effort.
+6. Do not change model or effort.
+7. New scope, section I of the brief: **arav.pro is the primary canonical
+   domain.** One config constant for the site URL; every canonical, sitemap,
+   robots, JSON-LD, feed and OG URL points at https://arav.pro; host-based
+   308s from aravjain.dev, www.aravjain.dev and www.arav.pro as a backup;
+   per-page Open Graph images with `next/og` in the v4 language with real
+   fonts; favicon, apple-touch-icon, theme-color for both themes. Verify
+   rendered OG images and built meta tags, and grep for leftover
+   aravjain.dev. Do not touch Vercel domain settings; list dashboard steps
+   in the final report.
 
 ## Checklist
 
@@ -53,7 +62,7 @@ in 23 minutes. Rules since then:
 
 ### 1. Study
 - [~] Skills loaded (taste, Emil set, landing-page, ui-ux-pro-max, apple-design); `skills-evidence.md` owed
-- [~] Reference study: parts 01 and 03 written by helpers; `reference-study.md` index and decision map owed (part 02 skipped by guardrail)
+- [x] Reference study: parts 01 and 03 by helpers, part 02 by me, `reference-study.md` index and decision map
 - [x] v2/v3 carry-over, `carry-over.md`
 - [x] v3 lag root cause in `perf.md` (v4 measurements owed)
 
@@ -75,6 +84,12 @@ in 23 minutes. Rules since then:
 - [ ] Theme (system + toggle, no flash), haptics, reduced motion,
       reduced transparency, forced colors, print
 
+### 4b. Domains and sharing (section I)
+- [x] One site URL constant (`src/lib/site.ts`); canonical, sitemap, robots, feed, JSON-LD on arav.pro
+- [x] Host redirects (backup) in next.config: aravjain.dev, www.aravjain.dev, www.arav.pro, 308, path kept
+- [x] OG images per page with next/og and real fonts (`src/lib/og.tsx`); apple-touch-icon; theme-color
+- [~] Verified once (rendered cards in `~/.t3/portfolio-redesign-v4/og/`, built meta tags, grep); re-verify on the final build
+
 ### 5. Gates
 - [ ] lint, typecheck, build, unit tests
 - [ ] Overlap test (zero overlaps)
@@ -84,7 +99,7 @@ in 23 minutes. Rules since then:
 - [ ] Greps (dashes, banned words), word count, blog/editor diff empty
 
 ### 6. Review
-- [ ] Rounds 1 to 5, `design-review.md`
+- [~] Rounds 1 to 5, `design-review.md` (round 1 done and fixed; write-up owed)
 - [ ] Independent critic, fixes, re-score
 
 ### 7. Finish

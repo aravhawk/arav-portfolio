@@ -20,7 +20,7 @@ export const TEST_CONFIG: MetricsConfig = {
   githubUser: 'aravhawk',
   githubAccountCreatedYear: 2021,
   ollamaUser: 'aravhawk',
-  userAgent: 'aravjain.dev-metrics/1.0 (+https://aravjain.dev)',
+  userAgent: 'arav.pro-metrics/1.0 (+https://arav.pro)',
   fetchTimeoutMs: 5000,
   minRatioOfSnapshot: 0.9,
   maxLedgerPages: 2,

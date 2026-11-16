@@ -18,7 +18,7 @@ interface HeadProps {
  * Inner pages share the home page's world: a head pool, a stream down a
  * lane beside the content, and the same ending as a band.
  */
-export function PageShell({ head, children, note }: { head: HeadProps; children: React.ReactNode; note?: string }) {
+export function PageShell({ head, children, note, feature }: { head: HeadProps; children: React.ReactNode; note?: string; feature?: React.ReactNode }) {
   return (
     <>
       <main id="main" data-scene="page">
@@ -37,11 +37,13 @@ export function PageShell({ head, children, note }: { head: HeadProps; children:
             {head.children}
           </div>
         </header>
+        {/* A project's own bed gets a row to itself, so the stream can cross
+            to it and back to the lane without passing through copy. */}
+        {feature ? <div className="page-feature wrap">{feature}</div> : null}
         <div className="page-body wrap">
           <div className="page-main">{children}</div>
           <div className="page-lane" data-bed="feat:pass" aria-hidden="true" />
         </div>
-        <div className="delta" data-bed="delta" aria-hidden="true" />
       </main>
       <Ending variant="band" note={note} />
     </>

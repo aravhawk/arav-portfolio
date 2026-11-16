@@ -141,7 +141,7 @@ describe('@/lib/metrics (Next-facing entry)', () => {
     for (const call of calls) {
       expect(call.init.next).toEqual({ revalidate: 3600, tags: ['metrics'] });
       expect((call.init.headers as Record<string, string>)['User-Agent']).toBe(
-        'aravjain.dev-metrics/1.0 (+https://aravjain.dev)',
+        'arav.pro-metrics/1.0 (+https://arav.pro)',
       );
       expect((call.init.headers as Record<string, string>).Authorization).toBeUndefined();
     }

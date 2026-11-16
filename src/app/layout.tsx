@@ -5,6 +5,8 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Nav } from '@/components/Nav';
 import { Runtime } from '@/components/Runtime';
 import { WaterStage } from '@/components/WaterStage';
+import { CONTACT } from '@/content/projects';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
 import './globals.css';
 
 /* Type: see docs/redesign-v4/typography.md and font-licenses.md.
@@ -39,32 +41,58 @@ const zalando = localFont({
 const newsreader = localFont({ src: '../fonts/Newsreader-VF.woff2', variable: '--f-newsreader', weight: '200 800', display: 'swap', preload: false });
 const sometype = localFont({ src: '../fonts/SometypeMono-VF.woff2', variable: '--f-sometype', weight: '400 700', display: 'swap', preload: false });
 
-const SITE = 'https://aravjain.dev';
-const DESCRIPTION =
-  'Arav Jain builds AI and developer tooling: Infiniview, agents that attack your app to prove what breaks, plus open source that developers run every day.';
-
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE),
-  title: { default: 'Arav Jain: AI and developer tooling builder', template: '%s · Arav Jain' },
-  description: DESCRIPTION,
-  authors: [{ name: 'Arav Jain', url: SITE }],
-  openGraph: {
-    title: 'Arav Jain: AI and developer tooling builder',
-    description: DESCRIPTION,
-    type: 'website',
-    url: SITE,
-    siteName: 'Arav Jain',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Arav Jain: AI and developer tooling builder',
-    description: DESCRIPTION,
-    creator: '@aravhawk',
-  },
+  metadataBase: new URL(SITE_URL),
+  title: { default: `${SITE_NAME}: ${SITE_TAGLINE}`, template: `%s · ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
   alternates: {
     canonical: '/',
     types: { 'application/rss+xml': '/feed.xml' },
   },
+  openGraph: {
+    title: `${SITE_NAME}: ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    url: '/',
+    siteName: SITE_NAME,
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME}: ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    creator: '@aravhawk',
+    site: '@aravhawk',
+  },
+};
+
+/* Structured data: who this is and which address is the real one. */
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Person',
+      '@id': `${SITE_URL}/#person`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      description: SITE_TAGLINE,
+      jobTitle: 'Co-founder, Infiniflop Labs',
+      worksFor: { '@type': 'Organization', name: 'Infiniflop Labs', url: 'https://infiniflop.com' },
+      sameAs: [CONTACT.github, CONTACT.x, CONTACT.linkedin],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      inLanguage: 'en',
+      publisher: { '@id': `${SITE_URL}/#person` },
+    },
+  ],
 };
 
 export const viewport: Viewport = {
@@ -88,6 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={fontVars} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: boot }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body>
         <a className="skip" href="#main">

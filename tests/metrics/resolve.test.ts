@@ -137,7 +137,7 @@ describe('requests', () => {
     expect(calls.length).toBeGreaterThan(0);
     for (const call of calls) {
       const headers = call.init.headers as Record<string, string>;
-      expect(headers['User-Agent']).toBe('aravjain.dev-metrics/1.0 (+https://aravjain.dev)');
+      expect(headers['User-Agent']).toBe('arav.pro-metrics/1.0 (+https://arav.pro)');
       expect(call.init.signal).toBeInstanceOf(AbortSignal);
       expect(call.init.next).toEqual({ revalidate: 3600, tags: ['metrics'] });
       expect(headers.Authorization).toBeUndefined();

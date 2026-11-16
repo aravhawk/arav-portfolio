@@ -21,7 +21,11 @@ function Copy({ p, children }: { p: Project; children?: React.ReactNode }) {
         <span>{p.n}</span>
         <span>{p.kicker}</span>
       </p>
-      <h2 className="display beat-name" data-reveal="lead">
+      <h2
+        className="display beat-name"
+        data-reveal="lead"
+        style={{ '--len': Math.max(...p.name.split(' ').map((w) => w.length)) } as React.CSSProperties}
+      >
         {p.name}
       </h2>
       <p className="lead beat-line" data-reveal style={{ '--i': 1 } as React.CSSProperties}>

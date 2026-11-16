@@ -1,12 +1,13 @@
 import type { MetadataRoute } from 'next';
 import { PROJECTS } from '@/content/projects';
 import { getAllPosts } from '@/lib/blog';
+import { abs } from '@/lib/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const posts = getAllPosts();
 
   const blogEntries: MetadataRoute.Sitemap = posts.map((post) => ({
-    url: `https://aravjain.dev/blog/${post.slug}`,
+    url: abs(`/blog/${post.slug}`),
     lastModified: new Date(post.frontmatter.date),
     changeFrequency: 'monthly',
     priority: 0.7,
@@ -14,25 +15,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [
     {
-      url: 'https://aravjain.dev',
+      url: abs('/'),
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: 'https://aravjain.dev/blog',
+      url: abs('/blog'),
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
-      url: 'https://aravjain.dev/work',
+      url: abs('/work'),
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     ...PROJECTS.map((p) => ({
-      url: `https://aravjain.dev/work/${p.slug}`,
+      url: abs(`/work/${p.slug}`),
       lastModified: new Date(),
       changeFrequency: 'monthly' as const,
       priority: 0.8,

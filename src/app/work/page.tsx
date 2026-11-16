@@ -4,16 +4,17 @@ import { Arrow } from '@/components/bits';
 import { PageShell } from '@/components/PageShell';
 import { ArchiveList } from '@/components/work/ArchiveList';
 import { ARCHIVE, MORE, PROJECTS } from '@/content/projects';
+import { pageMeta } from '@/lib/meta';
 import { formatAsOf, formatCount, getMetrics } from '@/lib/metrics';
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: 'Work',
   description:
     'Everything Arav Jain has built: Infiniview, upstream open source, Kilo Bench, Agent Bridge, open models on Ollama, cc-switch, TensorPoW, RydAR and an archive.',
-  alternates: { canonical: '/work' },
-};
+  path: '/work',
+});
 
 export default async function Work() {
   const m = await getMetrics();

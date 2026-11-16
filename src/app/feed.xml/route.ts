@@ -1,17 +1,16 @@
 import { Feed } from 'feed';
 import { getAllPosts } from '@/lib/blog';
-
-const SITE_URL = 'https://aravjain.dev';
+import { SITE_URL } from '@/lib/site';
 
 export async function GET() {
   const posts = getAllPosts();
 
   const feed = new Feed({
-    title: 'Arav Jain - Blog',
-    description:
-      'Thoughts on AI, GPU computing, blockchain, and building startups.',
+    title: 'Arav Jain: Writing',
+    description: 'Notes on AI agents, evaluation, security and shipping software.',
     id: SITE_URL,
     link: `${SITE_URL}/blog`,
+    feedLinks: { rss2: `${SITE_URL}/feed.xml` },
     language: 'en',
     copyright: `All rights reserved ${new Date().getFullYear()}, Arav Jain`,
     author: {

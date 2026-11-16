@@ -120,7 +120,7 @@ function endingTest(boxes) {
   const H = r.height;
   const TAN = 0.3249;
   const band = sec.classList.contains('ending-band');
-  const horizon = band ? -0.08 : W < 720 ? -0.34 : -0.16;
+  const horizon = W < 720 ? -0.34 : band ? 0.36 : -0.16;
   const pitch = Math.atan(-horizon * TAN);
   const aspect = W / H;
   const shoreX = 0.19 * 8 * TAN * aspect;

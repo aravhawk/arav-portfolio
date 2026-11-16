@@ -192,9 +192,10 @@ export function Ending({ variant = 'full', note }: Props) {
       gl.uniform1f(u.uSunUp, still ? 1 : sunUp);
       gl.uniform3f(u.uLand, LAND.light[0] + (LAND.dark[0] - LAND.light[0]) * theme, LAND.light[1] + (LAND.dark[1] - LAND.light[1]) * theme, LAND.light[2] + (LAND.dark[2] - LAND.light[2]) * theme);
       gl.uniform3f(u.uDeep, DEEP.light[0] + (DEEP.dark[0] - DEEP.light[0]) * theme, DEEP.light[1] + (DEEP.dark[1] - DEEP.light[1]) * theme, DEEP.light[2] + (DEEP.dark[2] - DEEP.light[2]) * theme);
+      // Bands (inner pages) put the horizon high so the words sit on land.
       // Wide screens: horizon low, words on the land below it. Tall
       // screens: horizon lower still, words up in the calm of the sky.
-      gl.uniform1f(u.uHorizon, variant === 'band' ? -0.08 : narrow ? -0.34 : -0.16);
+      gl.uniform1f(u.uHorizon, narrow ? -0.34 : variant === 'band' ? 0.36 : -0.16);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }, 40);
 

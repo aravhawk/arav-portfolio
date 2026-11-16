@@ -141,7 +141,7 @@ void main() {
       // The chamfer at the water's edge.
       float ch = smoothstep(-0.05 - pix * 2.0, 0.0, edge);
       land *= 1.0 + 0.16 * ch;
-      col = mix(land, s.hor, fog * 0.9);
+      col = mix(land, s.hor, fog * 0.9 * e);
     } else {
       // Water: ripples compress with distance; reflect the sky; add the body.
       vec2 q = P.xz;
@@ -162,9 +162,9 @@ void main() {
       // Seen from above the water shows its depth; at a glancing angle, the sky.
       vec3 body = uDeep * (0.5 + 0.5 * max(s.sun.y * 3.0, 0.3));
       // From straight above, the same caustic light the page's water has.
-      float cn = fbm2(q * 2.6 + vec2(tt * 0.4, -tt * 0.3));
+      float cn = n2(q * 11.0 + vec2(tt * 0.5, -tt * 0.35)) * 0.55 + n2(q * 23.0 - vec2(tt * 0.3, tt * 0.45)) * 0.45;
       float cl = 1.0 - abs(cn * 2.0 - 1.0);
-      body *= 1.0 + (1.0 - e) * (pow(cl, 5.0) * 2.2 - 0.25);
+      body *= 1.0 + (1.0 - e) * (pow(cl, 9.0) * 0.34 - 0.02);
       col = mix(body, refl, clamp(fres + 0.06, 0.0, 1.0));
       // Sun glitter: a broken streak toward the sun, not a bloom disc.
       float sd = max(dot(r, s.sun), 0.0);

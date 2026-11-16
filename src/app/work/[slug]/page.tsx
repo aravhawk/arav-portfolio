@@ -7,6 +7,7 @@ import { LiveNumber } from '@/components/LiveNumber';
 import { PageShell } from '@/components/PageShell';
 import { PROJECTS, projectBySlug } from '@/content/projects';
 import { formatPostDate } from '@/lib/dates';
+import { pageMeta } from '@/lib/meta';
 import { formatAsOf, formatCount, getMetrics, type Metric } from '@/lib/metrics';
 
 export const revalidate = 3600;
@@ -20,13 +21,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const p = projectBySlug(slug);
   if (!p) return { title: 'Not found' };
-  const name = p.name.replace('‑', '-');
-  return {
-    title: name,
-    description: p.line,
-    alternates: { canonical: `/work/${p.slug}` },
-    openGraph: { title: `${name} · Arav Jain`, description: p.line, type: 'article' },
-  };
+  const name = p.name.replace('\u2011', '-');
+  return pageMeta({ title: name, description: p.line, path: `/work/${p.slug}`, type: 'article' });
 }
 
 function Readout({ metric, what, unit }: { metric: Metric; what: string; unit: string }) {
@@ -61,6 +57,15 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         children: lead && lead.kind === 'image' ? <Slab media={lead} priority sizes="(max-width: 860px) 70vw, 26vw" /> : null,
       }}
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
+      feature={
+        p.slug === 'open-source' ? (
+          <Tributaries repos={m.mergedPrs.byRepo} />
+        ) : p.slug === 'ollama' ? (
+          <Basins models={m.ollama.models} />
+        ) : p.slug === 'cc-switch' ? (
+          <Fork />
+        ) : null
+      }
     >
       {/* Live numbers, where the project has them. */}
       {p.slug === 'open-source' ? (
@@ -86,23 +91,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             <Readout metric={m.npm.lastMonth} what="npm downloads of cc-switch in the last month" unit="in the last month" />
           </div>
         </section>
-      ) : null}
-
-      {/* The project's bed, for the ones drawn from data. */}
-      {p.slug === 'open-source' ? (
-        <div className="project-feat">
-          <Tributaries repos={m.mergedPrs.byRepo} />
-        </div>
-      ) : null}
-      {p.slug === 'ollama' ? (
-        <div className="project-feat">
-          <Basins models={m.ollama.models} />
-        </div>
-      ) : null}
-      {p.slug === 'cc-switch' ? (
-        <div className="project-feat">
-          <Fork />
-        </div>
       ) : null}
 
       <section className="block" aria-labelledby="p-how">

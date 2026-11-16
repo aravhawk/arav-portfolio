@@ -10,6 +10,8 @@ import { getPostBySlug, getAllPostSlugs, getAdjacentPosts } from '@/lib/blog';
 import { mdxComponents } from '@/components/blog/MDXComponents';
 import { PageShell } from '@/components/PageShell';
 import { formatPostDate } from '@/lib/dates';
+import { pageMeta } from '@/lib/meta';
+import { SITE_NAME, SITE_URL, abs } from '@/lib/site';
 import type { BlogFrontmatter } from '@/types';
 
 export async function generateStaticParams() {
@@ -21,23 +23,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = getPostBySlug(slug);
   if (!post) return { title: 'Post not found' };
 
-  return {
+  return pageMeta({
     title: post.frontmatter.title,
     description: post.frontmatter.description,
-    alternates: { canonical: `/blog/${slug}` },
-    openGraph: {
-      title: post.frontmatter.title,
-      description: post.frontmatter.description,
-      type: 'article',
-      publishedTime: post.frontmatter.date,
-      tags: post.frontmatter.tags,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.frontmatter.title,
-      description: post.frontmatter.description,
-    },
-  };
+    path: `/blog/${slug}`,
+    type: 'article',
+    publishedTime: post.frontmatter.date,
+    tags: post.frontmatter.tags,
+  });
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -62,6 +55,19 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   const { prev, next } = getAdjacentPosts(slug);
 
+  const articleLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.frontmatter.title,
+    description: post.frontmatter.description,
+    datePublished: post.frontmatter.date,
+    url: abs(`/blog/${slug}`),
+    mainEntityOfPage: abs(`/blog/${slug}`),
+    keywords: post.frontmatter.tags.join(', '),
+    author: { '@type': 'Person', '@id': `${SITE_URL}/#person`, name: SITE_NAME, url: SITE_URL },
+    publisher: { '@id': `${SITE_URL}/#person` },
+  };
+
   return (
     <PageShell
       head={{
@@ -76,6 +82,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         lead: post.frontmatter.description,
       }}
     >
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
       <article className="article">
         <ul className="tags label" aria-label="Tags">
           {post.frontmatter.tags.map((tag) => (

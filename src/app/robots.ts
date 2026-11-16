@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { SITE_URL, abs } from '@/lib/site';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -6,6 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
     },
-    sitemap: 'https://aravjain.dev/sitemap.xml',
+    sitemap: abs('/sitemap.xml'),
+    host: SITE_URL,
   };
 }
