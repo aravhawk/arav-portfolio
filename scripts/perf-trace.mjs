@@ -40,6 +40,9 @@ const PROFILES = [
   { name: 'desktop-1440-dpr2', viewport: { width: 1440, height: 900 }, dpr: 2, throttle: 1, touch: false },
   { name: 'desktop-1728-dpr2', viewport: { width: 1728, height: 1117 }, dpr: 2, throttle: 1, touch: false },
   { name: 'phone-390-dpr3-cpu4x', viewport: { width: 390, height: 844 }, dpr: 3, throttle: 4, touch: true },
+  // The same desktop run while a second copy of the site renders its own
+  // water in another window: frame rate may fall, sharpness may not.
+  { name: 'desktop-1440-dpr2-contended', viewport: { width: 1440, height: 900 }, dpr: 2, throttle: 1, touch: false, contend: true },
 ].filter((p) => !only || p.name.includes(only));
 
 const pct = (sorted, p) => (sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] : 0);
@@ -90,6 +93,12 @@ for (const prof of PROFILES) {
     hasTouch: prof.touch,
     isMobile: prof.touch,
   });
+  if (prof.contend) {
+    const other = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+    const rival = await other.newPage();
+    await rival.goto(base + '/', { waitUntil: 'load' });
+    await rival.waitForTimeout(1500);
+  }
   await ctx.addInitScript(instrument);
   const page = await ctx.newPage();
   const cdp = await ctx.newCDPSession(page);

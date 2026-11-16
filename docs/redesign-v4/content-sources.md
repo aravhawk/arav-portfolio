@@ -278,3 +278,23 @@ Caution for the writer: the repo's GitHub "homepage" URL, its first commit messa
 | Article details | Headline: "AI coders are carrying half-open laptops through airports, offices, and ice rinks". By Henry Chandonnet. Published 2026-05-12. | same | 2026-11-15 14:36 | OK |
 
 Personal details in that article (age, city, school, grade) were deliberately not recorded here and must not appear on the site.
+
+
+## 4. What the v4 build did with these findings
+
+Added by the build thread on 2026-11-15 after reading this file.
+
+| Finding | Decision on the site |
+|---|---|
+| flux.ai/aravhawk/velocity-flex-2350 renders "Project not found" | The VELOCITY flight computers entry is dropped from /work. "Flight computers" stays only as an interest word |
+| Infiniview one-liner is not verbatim on a public page | Used as the description, never set as a quotation |
+| Infiniview site says "early access", docs say "public beta" | "Early access", as the brief specifies and the product site shows |
+| Scanner count differs between site (26) and docs (25) | No scanner count is shown |
+| Kilo Bench upstream pull request #6425 was closed unmerged | Not mentioned. The win is stated exactly as Devpost shows it: prize category "Kilo - For Devs, By Devs" at the DeveloperWeek 2026 Hackathon |
+| Agent Bridge video: "v4 cut" not confirmable from the repo | The repo's current `docs/media/demo.mp4` is embedded as the launch video (4.36 MB web copy, poster frame, not fetched until played); no claim about which cut it is |
+| Agent Bridge repo homepage URL and early history contain banned names | Only the GitHub repo and the X post are linked |
+| Ask Around: README says "Built at", the organiser's post says "our winner" | "Won Belweave's Notify Weekend 01 hackathon", as the brief states, with both links |
+| LinkedIn returns HTTP 999 to automated requests | Kept as a contact link (it is the brief's contact list and a known bot wall); flagged in the final report for a manual click |
+| clarifai-now.vercel.app is 404 | Not linked; ClarifAI links to its repo and Devpost |
+| Live numbers drift during the day (contributions 3,085, merged in all 112, Ollama 18,287 at the last read) | Expected: the site reads them hourly. `content/metrics.snapshot.json` is refreshed once more at the end of the build |
+| arav.pro is now the canonical domain (owner, same day) | Every absolute URL comes from `src/lib/site.ts`; the blog link in row 2.4 is served at https://arav.pro/blog/three-ai-agents-five-saas-products |
