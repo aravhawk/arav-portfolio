@@ -31,6 +31,8 @@ const arg = (name, def) => {
   const i = process.argv.indexOf(`--${name}`);
   return i < 0 ? def : process.argv[i + 1];
 };
+/** The page to trace: `--path /flight` for the flight, the home page by default. */
+const route = arg('path', '/');
 const base = arg('base', 'http://localhost:3133');
 const outDir = arg('out', join(homedir(), '.t3/portfolio-redesign-v4/traces/v4')).replace(/^~/, homedir());
 const only = arg('profile', '');
@@ -68,7 +70,7 @@ function instrument() {
   const tick = (t) => {
     if (last) log.frames.push(t - last);
     last = t;
-    const c = document.querySelector('.water-canvas');
+    const c = document.querySelector('.water-canvas, .flight-canvas');
     if (c) log.sizes.push(c.width * 10000 + c.height);
     requestAnimationFrame(tick);
   };
@@ -104,10 +106,10 @@ for (const prof of PROFILES) {
   const cdp = await ctx.newCDPSession(page);
   if (prof.throttle > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: prof.throttle });
 
-  await page.goto(base + '/', { waitUntil: 'load' });
-  await page.waitForFunction(() => document.documentElement.dataset.water, null, { timeout: 20000 }).catch(() => {});
+  await page.goto(base + route, { waitUntil: 'load' });
+  await page.waitForFunction(() => document.documentElement.dataset.water || document.documentElement.dataset.flight, null, { timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(2500);
-  const state = await page.evaluate(() => document.documentElement.dataset.water);
+  const state = await page.evaluate(() => document.documentElement.dataset.water || document.documentElement.dataset.flight);
 
   // Trace.
   const chunks = [];

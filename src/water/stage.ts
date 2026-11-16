@@ -55,7 +55,7 @@ interface SdResult {
   min: number;
 }
 
-function makeSolver() {
+export function makeSolver() {
   let worker: Worker | null = null;
   let seq = 0;
   const waiting = new Map<number, (r: SdResult) => void>();

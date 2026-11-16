@@ -103,7 +103,7 @@ interface Tier {
   quality: number;
 }
 
-const TIERS: Tier[] = [
+export const TIERS: Tier[] = [
   { simDiv: 3, jacobi: 12, quality: 2 },
   { simDiv: 4, jacobi: 8, quality: 1 },
   { simDiv: 5, jacobi: 5, quality: 1 },
@@ -115,49 +115,49 @@ export class WaterEngine {
   readonly canvas: HTMLCanvasElement;
   /** Largest texture side this device allows. */
   readonly maxTexture: number;
-  private p: Record<string, Program> = {};
-  private detail!: Target;
-  private curv!: Target;
-  private grain!: Target;
-  private snow!: Target;
-  private bedA: Target | null = null;
-  private bedB: Target | null = null;
-  private bedMeta = { w: 1, h: 1, div: 4 };
-  private iceTex: Target | null = null;
-  private iceMeta: IceInput | null = null;
+  protected p: Record<string, Program> = {};
+  protected detail!: Target;
+  protected curv!: Target;
+  protected grain!: Target;
+  protected snow!: Target;
+  protected bedA: Target | null = null;
+  protected bedB: Target | null = null;
+  protected bedMeta = { w: 1, h: 1, div: 4 };
+  protected iceTex: Target | null = null;
+  protected iceMeta: IceInput | null = null;
   /** The letters' own box inside their raster: centre x, y and half size, as shares of it. */
-  private iceBox = [0.5, 0.5, 0.5, 0.5];
-  private heat: Swap;
-  private ready = false;
-  private wave: Swap | null = null;
-  private waveOut: Target | null = null;
-  private vel: Swap | null = null;
-  private maskTarget: Target | null = null;
-  private hf: number;
+  protected iceBox = [0.5, 0.5, 0.5, 0.5];
+  protected heat: Swap;
+  protected ready = false;
+  protected wave: Swap | null = null;
+  protected waveOut: Target | null = null;
+  protected vel: Swap | null = null;
+  protected maskTarget: Target | null = null;
+  protected hf: number;
 
   // view
-  private cssW = 1;
-  private cssH = 1;
-  private margin = 0;
-  private dpr = 1;
-  private simW = 1;
-  private simH = 1;
-  private simTop = 0;
-  private hasSimTop = false;
+  protected cssW = 1;
+  protected cssH = 1;
+  protected margin = 0;
+  protected dpr = 1;
+  protected simW = 1;
+  protected simH = 1;
+  protected simTop = 0;
+  protected hasSimTop = false;
 
   // state
   tier = 0;
-  private theme: number;
-  private themeTarget: number;
-  private still: boolean;
-  private time = 0;
-  private last = 0;
-  private dirty = true;
-  private lastScroll = -1;
+  protected theme: number;
+  protected themeTarget: number;
+  protected still: boolean;
+  protected time = 0;
+  protected last = 0;
+  protected dirty = true;
+  protected lastScroll = -1;
 
   // pointer (world px)
-  private ptr = { x: -1e4, y: -1e4, px: -1e4, py: -1e4, vx: 0, vy: 0, active: false, fresh: false };
-  private drop = { x: 0, y: 0, r: 0, s: 0 };
+  protected ptr = { x: -1e4, y: -1e4, px: -1e4, py: -1e4, vx: 0, vy: 0, active: false, fresh: false };
+  protected drop = { x: 0, y: 0, r: 0, s: 0 };
 
   // ice
   /** Where the name's raster rests at scroll 0, in world px. */
@@ -173,19 +173,19 @@ export class WaterEngine {
   meltPath = { x: 0, y: 0, reach: 0, w: 0 };
   /** World y where the wide shallows before the ending begin; far away when the page has none. */
   shoalY = 1e9;
-  private melt = 0;
-  private meltRate = 0;
+  protected melt = 0;
+  protected meltRate = 0;
   /** 0..1: how hard the ice is melting right now. It falls to nothing in under a second. */
-  private meltAct = 0;
+  protected meltAct = 0;
   /** Called once when the melt completes going down, and when it resets. */
   onMelt: ((done: boolean) => void) | null = null;
-  private meltDone = false;
+  protected meltDone = false;
 
   // governor
-  private slow = 0;
-  private fast = 0;
-  private base = 16.7;
-  private samples: number[] = [];
+  protected slow = 0;
+  protected fast = 0;
+  protected base = 16.7;
+  protected samples: number[] = [];
   /** Frame intervals in ms, for the perf harness. */
   frameLog: number[] | null = null;
 
@@ -224,7 +224,17 @@ export class WaterEngine {
    */
   async prepare(): Promise<void> {
     const gl = this.gl;
-    const src: Record<string, string> = {
+    const src = this.sources();
+    for (const k of Object.keys(src)) {
+      this.p[k] = compile(gl, src[k], k);
+      await new Promise<void>((r) => setTimeout(r, 0));
+    }
+    this.bake();
+  }
+
+  /** The programs this engine runs. A subclass may swap the shading pass for its own. */
+  protected sources(): Record<string, string> {
+    return {
       render: RENDER,
       bedA: BED_A,
       bedB: BED_B,
@@ -241,12 +251,11 @@ export class WaterEngine {
       snow: SNOW,
       heat: HEAT,
     };
-    for (const k of Object.keys(src)) {
-      this.p[k] = compile(gl, src[k], k);
-      await new Promise<void>((r) => setTimeout(r, 0));
-    }
+  }
 
-    // Baked tileable textures.
+  /** The baked tileable textures. */
+  protected bake() {
+    const gl = this.gl;
     const rep = { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, wrap: gl.REPEAT };
     this.detail = makeTarget(gl, 512, 512, rep);
     this.grain = makeTarget(gl, 256, 256, rep);
@@ -268,7 +277,7 @@ export class WaterEngine {
     this.ready = true;
   }
 
-  private f16() {
+  protected f16() {
     const gl = this.gl;
     return { internal: gl.RGBA16F, format: gl.RGBA, type: this.hf };
   }
@@ -380,11 +389,32 @@ export class WaterEngine {
     this.dirty = true;
   }
 
-  private allocSim() {
+  /** The size of one simulation cell, in world px. */
+  protected simCell(): number {
+    return TIERS[this.tier].simDiv;
+  }
+
+  /** The stretch of the world the simulation covers: on a page, the canvas. */
+  protected simSpan(): [number, number] {
+    return [this.cssW, this.cssH];
+  }
+
+  /** The width of the field the ice is laid out on: on a page, the page's. */
+  protected get fieldW(): number {
+    return this.cssW;
+  }
+
+  /** The pressure cracks' cell in world px; 0 lets the lake's size decide. */
+  protected crackCell = 0;
+  /** How far the pointer's push reaches, world px. */
+  protected ptrRadius = 15;
+
+  protected allocSim() {
     const gl = this.gl;
-    const dx = TIERS[this.tier].simDiv;
-    const w = Math.max(4, Math.ceil(this.cssW / dx));
-    const h = Math.max(4, Math.ceil(this.cssH / dx) + 2);
+    const dx = this.simCell();
+    const [spanW, spanH] = this.simSpan();
+    const w = Math.max(4, Math.ceil(spanW / dx));
+    const h = Math.max(4, Math.ceil(spanH / dx) + 2);
     if (this.wave && w === this.simW && h === this.simH) return;
     this.simW = w;
     this.simH = h;
@@ -490,7 +520,7 @@ export class WaterEngine {
    * The state of the sheet at a scroll position. Every number is a function
    * of the melt alone, so scrolling back up refreezes the lake exactly.
    */
-  private iceUniforms(scrollY: number) {
+  protected iceUniforms(scrollY: number) {
     const ice = this.iceMeta;
     const none = { rect: [0, 0, 0, 0], a: [0, 0, 0, 0], b: [0, 0, 1, 1], c: [0, 0, 0, 0], l: [1, 0, 0, 0], k: 1, box: [0, 0, 1, 1], lake: [this.lake.y0, this.lake.y1, 0, 0], h: 1, shed: 0 };
     const m = this.melt;
@@ -531,8 +561,8 @@ export class WaterEngine {
     const poolM = openAt(ISLANDS) + 0.8 * edgeAt(ISLANDS) + 12;
     const bandTop = this.lake.y0 + bankM;
     const band = Math.max(80, r.y + drift0 + (bx[1] - bx[3]) * r.h - poolM - bandTop);
-    const cols = Math.max(3, Math.round(this.cssW / (band * 1.2)));
-    const cell = this.cssW / cols;
+    const cols = Math.max(3, Math.round(this.fieldW / (band * 1.2)));
+    const cell = this.fieldW / cols;
     const rows = Math.max(1, Math.floor(band / (cell * 0.95)));
     const cellH = Math.max(band / rows, cell * 0.95);
     const phaseY = 0.5 - (bandTop + (0.5 * band) / rows - (r.y + drift0)) / cellH;
@@ -543,7 +573,7 @@ export class WaterEngine {
       a: [open, lead, m, gap],
       b: [this.meltPath.x, this.lake.y1 - lakeH * 0.16, gather, cell],
       c: [narrow ? 20 : 32, smooth(0.5, 0.55, m), smooth(0.505, 0.57, m), edgeAt(m)],
-      k: Math.max(this.cssW * 0.42, lakeH * 0.42),
+      k: this.crackCell || Math.max(this.fieldW * 0.42, lakeH * 0.42),
       l: [cellH / cell, (0.2 * band) / rows / cellH, r.x / cell, phaseY],
       box: [bx[0] * r.w, bx[1] * r.h, bx[2] * r.w, bx[3] * r.h],
       lake: [this.lake.y0, this.lake.y1, wet, 1],
@@ -553,14 +583,14 @@ export class WaterEngine {
     };
   }
 
-  private bindIce(prog: Program, ice: ReturnType<WaterEngine['iceUniforms']>, sdfUnit: number, snowUnit: number) {
+  protected bindIce(prog: Program, ice: ReturnType<WaterEngine['iceUniforms']>, sdfUnit: number, snowUnit: number) {
     const gl = this.gl;
     gl.uniform4fv(prog.u.uIce, ice.rect);
     gl.uniform4fv(prog.u.uIceA, ice.a);
     gl.uniform4fv(prog.u.uIceB, ice.b);
     gl.uniform4fv(prog.u.uIceC, ice.c);
     gl.uniform4fv(prog.u.uIceBox, ice.box);
-    gl.uniform1f(prog.u.uIceW, this.cssW);
+    gl.uniform1f(prog.u.uIceW, this.fieldW);
     gl.uniform1f(prog.u.uIceK, ice.k);
     gl.uniform4fv(prog.u.uIceL, ice.l);
     gl.uniform4fv(prog.u.uLake, ice.lake);
@@ -568,10 +598,10 @@ export class WaterEngine {
     bindTex(gl, snowUnit, this.snow.tex, prog.u.uSnow);
   }
 
-  private simulate(dt: number, top: number) {
+  protected simulate(dt: number, top: number) {
     const gl = this.gl;
     const tier = TIERS[this.tier];
-    const dx = tier.simDiv;
+    const dx = this.simCell();
     const newTop = Math.floor(top / dx) * dx - dx;
     let shift = 0;
     if (this.hasSimTop) shift = Math.round((newTop - this.simTop) / dx);
@@ -612,7 +642,7 @@ export class WaterEngine {
       bindTex(gl, 0, this.heat.read.tex, pr.u.uHeat);
       const lh = Math.max(1, this.lake.y1 - this.lake.y0);
       const on = p.active && ice.rect[2] > 0;
-      gl.uniform3f(pr.u.uPtr, on ? p.x / this.cssW : -9, on ? (p.y - this.lake.y0) / lh : -9, lh / this.cssW);
+      gl.uniform3f(pr.u.uPtr, on ? p.x / this.fieldW : -9, on ? (p.y - this.lake.y0) / lh : -9, lh / this.fieldW);
       gl.uniform1f(pr.u.uDt, dt);
       drawTo(gl, this.heat.write);
       this.heat.swap();
@@ -634,7 +664,7 @@ export class WaterEngine {
       bindTex(gl, 0, this.wave!.read.tex, w.u.uWave);
       gl.uniform2f(w.u.uShift, 0, i === 0 ? shift : 0);
       gl.uniform1f(w.u.uTime, this.time + i * sub);
-      gl.uniform2f(w.u.uPtrForce, moving ? (0.25 + 0.75 * Math.min(speed / 700, 1)) * 0.22 : 0, 15);
+      gl.uniform2f(w.u.uPtrForce, moving ? (0.25 + 0.75 * Math.min(speed / 700, 1)) * 0.22 : 0, this.ptrRadius);
       const d = this.drop;
       gl.uniform4f(w.u.uDrop, d.x, d.y, d.r, i === 0 ? d.s : 0);
       drawTo(gl, this.wave!.write);
@@ -682,7 +712,7 @@ export class WaterEngine {
     p.fresh = false;
   }
 
-  private bindRender(top: number, scrollY: number, viewH: number, mode: number) {
+  protected bindRender(top: number, scrollY: number, viewH: number, mode: number) {
     const gl = this.gl;
     const r = this.p.render;
     const tier = TIERS[this.tier];
@@ -736,12 +766,12 @@ export class WaterEngine {
     bindTex(gl, 10, this.curv.tex, r.u.uCurv);
   }
 
-  private render(top: number, scrollY: number, viewH: number) {
+  protected render(top: number, scrollY: number, viewH: number) {
     this.bindRender(top, scrollY, viewH, 0);
     drawTo(this.gl, null, this.canvas.width, this.canvas.height);
   }
 
-  private palette(): Palette {
+  protected palette(): Palette {
     const a = PALETTES.light;
     const b = PALETTES.dark;
     const t = this.theme;
@@ -783,7 +813,7 @@ export class WaterEngine {
   }
 
   /** Step quality down when frames run long. Resolution is never touched. */
-  private govern(ms: number) {
+  protected govern(ms: number) {
     if (ms > 250) return; // tab switch or a stall, not a signal
     const s = this.samples;
     s.push(ms);
@@ -831,12 +861,12 @@ export class WaterEngine {
 }
 
 /** The melt at which the last floe is gone. The rest of the scroll range is open water. */
-const ICE_GONE = 0.9;
+export const ICE_GONE = 0.9;
 /** The melt at which the sheet has become separate floes. */
 const ISLANDS = 0.58;
 
 /** Speed of the current where the flow map is 1, in CSS px per second. */
-const FLOW_SPEED = 78;
+export const FLOW_SPEED = 78;
 
 /** Warmth left by the pointer on the ice. It soaks in, then refreezes. */
 const HEAT = `#version 300 es

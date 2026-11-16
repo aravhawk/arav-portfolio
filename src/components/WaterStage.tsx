@@ -19,11 +19,13 @@ export function WaterStage() {
   const root = useRef<HTMLDivElement>(null);
   const handle = useRef<StageHandle | null>(null);
   const pathname = usePathname();
+  // The flight has its own world and its own canvas: this one stays out.
+  const away = pathname === '/flight';
 
   useEffect(() => {
     let cancelled = false;
     const el = root.current;
-    if (!el) return;
+    if (!el || away) return;
     const start = () => {
       import('@/water/stage')
         .then(({ mountWater }) => mountWater(el, () => cancelled))
@@ -52,7 +54,7 @@ export function WaterStage() {
       handle.current = null;
       delete window.__water;
     };
-  }, []);
+  }, [away]);
 
   // A new route is a new layout: carve the bed again.
   useEffect(() => {

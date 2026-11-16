@@ -1,0 +1,256 @@
+/* The flight. One fixed picture behind the page; the sections only give the
+   scroll its length and carry the words. Each section's words sit in a
+   pinned, full-viewport layer and come in and go out with its stretch of
+   scroll (transform and opacity only). */
+
+.flight-root {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+}
+.flight-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out);
+}
+html[data-flight='on'] .flight-canvas {
+  opacity: 1;
+}
+
+.fl {
+  position: relative;
+}
+
+/* A section is one screen longer than its stretch of scroll and the next
+   one starts a screen early, so its pinned layer holds to the very end of
+   its stretch instead of sliding away over the last screen. */
+.fl-sec {
+  position: relative;
+  height: calc(var(--len, 2) * 100svh);
+  pointer-events: none;
+}
+.fl-sec + .fl-sec {
+  margin-top: -100svh;
+}
+.fl-pin {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* ---------- words ---------- */
+
+.fl-words {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: 0 var(--gutter);
+  color: var(--ink);
+}
+.fl-words > * {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  transition:
+    opacity 320ms var(--ease-out),
+    transform 320ms var(--ease-out);
+}
+.fl-words[data-on] > * {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity 620ms var(--ease-out),
+    transform 700ms var(--ease-out);
+}
+.fl-words[data-on] > :nth-child(2) {
+  transition-delay: 70ms;
+}
+.fl-words[data-on] > :nth-child(3) {
+  transition-delay: 140ms;
+}
+
+/* The first frame: two lines at the foot, over the near ice, clear of the name. */
+.fl-hero-words {
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-7);
+  padding-bottom: max(clamp(22px, 5.2vh, 56px), env(safe-area-inset-bottom));
+}
+.fl-role {
+  max-width: 14ch;
+}
+.fl-intro {
+  max-width: 34ch;
+  color: var(--ink);
+}
+
+/* His sentence stands on the bank, left of the river. */
+.fl-say-words {
+  align-items: flex-end;
+  padding-bottom: clamp(40px, 11vh, 120px);
+}
+.fl-say-text {
+  max-width: min(15ch, 47vw);
+}
+
+/* The project's label, name and one line, lower left, over the bank. */
+.fl-view-words {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--s-4);
+  padding-bottom: max(clamp(28px, 8vh, 96px), env(safe-area-inset-bottom));
+}
+.fl-label {
+  color: var(--ink);
+}
+.fl-view-name {
+  padding-bottom: 0.06em;
+}
+.fl-view-line {
+  max-width: 26ch;
+  color: var(--ink);
+}
+
+/* ---------- the name ---------- */
+
+/* The heading stays in the document for assistive tech, selection and
+   search. It shows as type until the canvas is running (and for good where
+   it cannot run); the canvas then draws the name cut through the ice. */
+.fl-lake {
+  position: absolute;
+  inset: 0;
+}
+.fl .fl-name {
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+html[data-flight='on'] .fl-name [data-ice-line] {
+  opacity: 0;
+}
+html[data-flight='on'] .fl-lake[data-basin],
+html:not([data-flight]) .fl-lake[data-basin] {
+  background: none;
+  box-shadow: none;
+}
+.fl .fl-still {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .fl .fl-name {
+    white-space: normal;
+    font-size: var(--ice-size-stacked);
+    line-height: 0.9;
+  }
+  .fl-name [data-ice-line] {
+    display: block;
+  }
+  .fl-hero-words {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: var(--s-3);
+  }
+  .fl-say-words {
+    align-items: flex-end;
+    padding-top: 0;
+    padding-bottom: 9vh;
+  }
+  .fl-say-text {
+    max-width: 13ch;
+  }
+  .fl-view-words {
+    gap: var(--s-3);
+  }
+}
+
+/* ---------- without the canvas: a plain, designed page ---------- */
+
+html[data-flight='off'] .fl-sec {
+  height: auto;
+  margin-top: 0;
+  pointer-events: auto;
+}
+html[data-flight='off'] .fl-pin {
+  position: relative;
+  height: auto;
+  min-height: 72svh;
+  display: grid;
+  align-content: center;
+  gap: var(--s-7);
+  padding-block: var(--beat-pad);
+}
+html[data-flight='off'] .fl-hero .fl-pin {
+  min-height: 100svh;
+  padding-block: 0;
+}
+html[data-flight='off'] .fl-words {
+  position: relative;
+  inset: auto;
+}
+html[data-flight='off'] .fl-words > * {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+html[data-flight='off'] .fl-lake {
+  border-radius: 0;
+  background:
+    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.5) 46%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #e3eef3, #edf5f8 40%, #dcebf1);
+  box-shadow: inset 0 10px 24px -14px rgba(20, 60, 75, 0.45);
+}
+:root[data-theme='dark'][data-flight='off'] .fl-lake {
+  background:
+    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.22) 46%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #a9c0ca, #b6cbd3 40%, #9fb9c4);
+}
+html[data-flight='off'] .fl-hero-words {
+  position: absolute;
+  inset: 0;
+  color: #0a0c0e;
+}
+html[data-flight='off'] .fl-hero-words .fl-intro {
+  color: #0a0c0e;
+}
+html[data-flight='off'] .fl .fl-still {
+  display: grid;
+  margin-inline: var(--gutter);
+  padding: clamp(28px, 6vw, 90px);
+  border-radius: 28px;
+}
+html[data-flight='off'] .fl-out {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-words > *,
+  .fl-words[data-on] > * {
+    transform: none;
+    transition: opacity 200ms linear;
+    transition-delay: 0s;
+  }
+  .flight-canvas {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .flight-root {
+    display: none;
+  }
+}
+@media print {
+  .flight-root {
+    display: none !important;
+  }
+}
