@@ -484,4 +484,20 @@ effects, as igloo.inc and other award sites have.
   anamorphic name, the river and the melt's plates, the project object,
   the small named faults. Briefs for Kilo from here on always carry the
   small-steps instruction.
+- 2026-11-16 17:35 CT. K8a done, reviewed and pushed (`b84354f`, seven
+  signed commits): baked snow with form, real ranges from a marched
+  height field baked to a panorama, a sun in frame, an aurora and stars
+  that open water mirrors, a film finish on a float target, no world
+  edge in the run-out, legibility passing at 390, 768, 1440 and 2560 in
+  both themes. Frame rate: the two desktop profiles and the throttled
+  phone hold p95 16.7 to 16.8 ms with 0.1 to 0.3 percent slow frames on
+  tier 0; the contended profile does not (7 percent of scroll frames).
+  My review of the frames: the world now reads as a film; the hero's
+  composition, the river's surface and the object are still the
+  prototype's.
+- 2026-11-16 17:40 CT. K8b started (`.tools/briefs/K8b-hero-water-object.md`):
+  the hero as a poster with the name cut anamorphically, water that reads
+  as water in both themes, angular plates, the object as a monolith in a
+  walled basin, and a governor that drops a shading tier under contention
+  (never resolution) so the fourth profile passes.
 
