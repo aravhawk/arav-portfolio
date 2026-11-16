@@ -430,6 +430,14 @@ effects, as igloo.inc and other award sites have.
    reviews by measurement (waveform and loudness analysis, clipping,
    level balance between bed and effects) and adds sound to the critics'
    rubric.
+7. **Sync and fit (Arav, t263u): the sound is not a background layer.**
+   igloo.inc is the primary audio benchmark: study its audio behaviour in
+   detail and match its level of integration. Every effect is driven by
+   the same interaction and animation state as the picture (scroll
+   velocity, melt progress, hover and press, transitions, the pointer's
+   wake), timed to the frame, with its parameters modulated live (pitch,
+   filter, gain, stereo position) instead of fixed one-shots. The
+   critics score **sync and fit** as their own line in the rubric.
 
 ## Round 10 log
 - 2026-11-16 12:40 CT. Kilo task K7 started
