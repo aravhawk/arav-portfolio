@@ -89,6 +89,7 @@ html[data-flight='on'] .flight-canvas {
 .fl-intro {
   max-width: 34ch;
   color: var(--ink);
+  font-weight: 500;
 }
 
 /* His sentence stands on the bank, left of the river. */
@@ -113,6 +114,12 @@ html[data-flight='on'] .flight-canvas {
 }
 .fl-view-name {
   padding-bottom: 0.06em;
+}
+/* The arrow beside the name is text: the text's colour. */
+.fl-view-name .beat-link svg,
+.fl-view-name .beat-link .arrow {
+  color: var(--ink);
+  opacity: 1;
 }
 .fl-view-line {
   max-width: 26ch;

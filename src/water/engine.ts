@@ -696,7 +696,8 @@ export class WaterEngine {
     this.vel!.swap();
     const vp = this.p.velPressure;
     gl.useProgram(vp.prog);
-    for (let i = 0; i < tier.jacobi; i++) {
+    const rounds = this.jacobi();
+    for (let i = 0; i < rounds; i++) {
       bindTex(gl, 0, this.vel!.read.tex, vp.u.uVel);
       drawTo(gl, this.vel!.write);
       this.vel!.swap();
@@ -810,6 +811,11 @@ export class WaterEngine {
     }
     this.dirty = true;
     return { w, h, scale, data };
+  }
+
+  /** How many rounds the pressure solve runs each frame. */
+  protected jacobi() {
+    return TIERS[this.tier].jacobi;
   }
 
   /** Step quality down when frames run long. Resolution is never touched. */

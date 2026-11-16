@@ -117,6 +117,85 @@ export class FlightEngine extends WaterEngine {
     freeTarget(gl, raw);
   }
 
+  /**
+   * The flight's governor. When frames are missed the shading gets leaner by
+   * a step; nothing is resized and the simulation's grid is left alone, so
+   * nothing jumps. `lean` is the step asked for, `leanNow` what is drawn:
+   * the dropped terms are cross-faded over a few hundred milliseconds.
+   *
+   * Step 1 drops: the thin cloud and the aurora's rays in the water's mirror
+   * (it keeps the curtain's wash), the ice's hairlines and the sheet's cast
+   * shade, the second layer of current threads, the widest bloom level, and
+   * a third of the pressure solve's rounds.
+   * Step 2 also drops: the focused net of light on the bed (the baked net
+   * stands in), the snow's finest relief and its sparkle, the drift edges'
+   * lit lip and lee, and more of the pressure solve.
+   */
+  private lean = 0;
+  private leanNow = 0;
+  private gov = { n: 0, missed: 0, prev: 0, clean: 0, need: 10000, lastUp: -1e9, age: 0 };
+
+  protected jacobi() {
+    const full = super.jacobi();
+    return this.lean >= 2 ? Math.min(full, 5) : this.lean >= 1 ? Math.min(full, 8) : full;
+  }
+
+  protected govern(ms: number) {
+    if (ms > 250) return; // a tab switch or a stall, not a signal
+    const g = this.gov;
+    // The dropped terms fade; they do not switch.
+    if (this.leanNow !== this.lean) {
+      const step = ms / 400;
+      this.leanNow = this.leanNow < this.lean ? Math.min(this.lean, this.leanNow + step) : Math.max(this.lean, this.leanNow - step);
+      this.dirty = true;
+    }
+    g.age += ms;
+    // (The first seconds are the page settling, not the picture's cost.)
+    if (g.age < 2500) return;
+    const s = this.samples;
+    s.push(ms);
+    if (ms > Math.max(this.base * 1.45, 12)) g.missed++;
+    if (s.length < 60) return;
+    const med = s.slice().sort((a, b) => a - b)[30];
+    const span = s.reduce((a, b) => a + b, 0);
+    s.length = 0;
+    // The display's own interval: the fastest steady median seen so far.
+    if (med < this.base * 0.9 && med > 5) this.base = med;
+    const missed = g.missed;
+    g.missed = 0;
+    // About a second of misses: three in one window, or two in each of two running.
+    if ((missed >= 3 || (missed >= 2 && g.prev >= 2)) && this.lean < 2) {
+      this.lean++;
+      g.clean = 0;
+      // Stepped back up not long ago and it did not hold: wait longer before trying again.
+      if (this.time - g.lastUp < 40) g.need = Math.min(g.need * 2, 80000);
+      g.prev = 0;
+      return;
+    }
+    g.prev = missed;
+    if (missed === 0) g.clean += span;
+    else g.clean = 0;
+    if (g.clean >= g.need && this.lean > 0) {
+      this.lean--;
+      g.clean = 0;
+      g.lastUp = this.time;
+    }
+  }
+
+  /** For the checks: hold a shading step (null hands it back to the governor). */
+  holdLean(step: number | null) {
+    if (step === null) {
+      this.gov.age = 2500;
+      return;
+    }
+    this.lean = Math.min(2, Math.max(0, step));
+    this.gov.age = -1e12;
+  }
+
+  get info() {
+    return { ...super.info, tier: Math.max(this.tier, this.lean), simTier: this.tier, lean: this.lean };
+  }
+
   /** The camera the name is cut for (see the ice field). */
   nameCut: [number, number, number, number] = [0, 0, 1, 0];
 
@@ -262,6 +341,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uTime, this.time);
     gl.uniform1f(r.u.uFlowSpeed, FLOW_SPEED);
     gl.uniform1f(r.u.uQuality, tier.quality);
+    gl.uniform1f(r.u.uLean, this.leanNow);
     gl.uniform1f(r.u.uNight, night);
     gl.uniform1f(r.u.uWorldW, WORLD.w);
     gl.uniform1f(r.u.uShoal, this.shoalY);
@@ -351,7 +431,9 @@ export class FlightEngine extends WaterEngine {
     drawTo(gl, f[0]);
     const d = this.p.bloomDown;
     gl.useProgram(d.prog);
-    for (let i = 1; i < 4; i++) {
+    // (Leaner: the widest level is not made; its share goes to the next.)
+    const wide = 1 - Math.min(1, this.leanNow);
+    for (let i = 1; i < (wide > 0 ? 4 : 3); i++) {
       bindTex(gl, 0, f[i - 1].tex, d.u.uSrc);
       gl.uniform2f(d.u.uTexel, 0.5 / f[i - 1].w, 0.5 / f[i - 1].h);
       // By day only what outshines sunlit snow blooms; before dawn, the aurora and its mirror.
@@ -364,7 +446,7 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 0, f[2].tex, up.u.uA);
     bindTex(gl, 1, f[3].tex, up.u.uB);
     gl.uniform2f(up.u.uTexelB, 1 / f[3].w, 1 / f[3].h);
-    gl.uniform2f(up.u.uW, 0.5, 0.5);
+    gl.uniform2f(up.u.uW, 1 - 0.5 * wide, 0.5 * wide);
     drawTo(gl, f[4]);
     bindTex(gl, 0, f[1].tex, up.u.uA);
     bindTex(gl, 1, f[4].tex, up.u.uB);
