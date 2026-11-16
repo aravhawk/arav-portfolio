@@ -28,6 +28,8 @@ vec3 keep(vec3 c) {
   return c * (k * k / (k + 0.5 * uCut)) / max(l, 1e-4);
 }
 void main() {
+  // The first step down from full size is one read: the mean of the four texels under it.
+  if (uCut > 0.0) { o = vec4(keep(texture(uSrc, vUv).rgb), 1.0); return; }
   vec3 s = keep(texture(uSrc, vUv + uTexel * vec2(-1.0, -1.0)).rgb)
          + keep(texture(uSrc, vUv + uTexel * vec2(1.0, -1.0)).rgb)
          + keep(texture(uSrc, vUv + uTexel * vec2(-1.0, 1.0)).rgb)
@@ -35,13 +37,25 @@ void main() {
   o = vec4(s * 0.25, 1.0);
 }`;
 
+/** Two levels into one: the finer as it is, the coarser read as a tent so its texels never show. */
+export const BLOOM_UP = `#version 300 es
+precision highp float;
+uniform sampler2D uA;
+uniform sampler2D uB;
+uniform vec2 uTexelB;  // one texel of the coarser level
+uniform vec2 uW;       // the share of each
+in vec2 vUv;
+out vec4 o;
+void main() {
+  vec3 wide = texture(uB, vUv + uTexelB * vec2(-0.5, -0.5)).rgb + texture(uB, vUv + uTexelB * vec2(0.5, -0.5)).rgb
+            + texture(uB, vUv + uTexelB * vec2(-0.5, 0.5)).rgb + texture(uB, vUv + uTexelB * vec2(0.5, 0.5)).rgb;
+  o = vec4(texture(uA, vUv).rgb * uW.x + wide * 0.25 * uW.y, 1.0);
+}`;
+
 export const FINISH = `#version 300 es
 precision highp float;
 uniform sampler2D uScene;
-uniform sampler2D uB1;
-uniform sampler2D uB2;
-uniform sampler2D uB3;
-uniform vec2 uTexel3;  // one texel of the smallest bloom level
+uniform sampler2D uGlow;   // the gathered highlights, at half size
 uniform float uBloom;
 uniform float uTime;
 uniform float uEnd;    // 1: the top-down last frame, which is the page's own water and takes no finish
@@ -52,13 +66,7 @@ vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59
 void main() {
   vec3 col = texelFetch(uScene, ivec2(gl_FragCoord.xy), 0).rgb;
   float fin = 1.0 - uEnd;
-  if (uBloom > 0.0) {
-    // The widest level is read as a tent, so its texels never show.
-    vec3 wide = texture(uB3, vUv + uTexel3 * vec2(-0.5, -0.5)).rgb + texture(uB3, vUv + uTexel3 * vec2(0.5, -0.5)).rgb
-              + texture(uB3, vUv + uTexel3 * vec2(-0.5, 0.5)).rgb + texture(uB3, vUv + uTexel3 * vec2(0.5, 0.5)).rgb;
-    vec3 bloom = texture(uB1, vUv).rgb * 0.34 + texture(uB2, vUv).rgb * 0.33 + wide * 0.25 * 0.33;
-    col += bloom * uBloom * fin;
-  }
+  if (uBloom > 0.0) col += texture(uGlow, vUv).rgb * uBloom * fin;
   vec2 c = vUv - 0.5;
   col *= 1.0 - dot(c, c) * 0.42 * fin;
   col = mix(aces(col * 1.12), col, uEnd);

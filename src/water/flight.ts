@@ -15,7 +15,7 @@ import { BedPainter } from './bed';
 import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, groundUnder, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Target, bindTex, drawTo, freeTarget, makeTarget } from './gl';
-import { BLOOM_DOWN, FINISH } from './shaders/finish';
+import { BLOOM_DOWN, BLOOM_UP, FINISH } from './shaders/finish';
 import { FLIGHT, FLIGHT_FREEBOARD } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
@@ -55,6 +55,7 @@ export class FlightEngine extends WaterEngine {
     s.mountPano = MOUNT_PANO;
     s.mountEdge = MOUNT_EDGE;
     s.bloomDown = BLOOM_DOWN;
+    s.bloomUp = BLOOM_UP;
     s.finish = FINISH;
     return s;
   }
@@ -77,7 +78,7 @@ export class FlightEngine extends WaterEngine {
     const ext = gl.getExtension('EXT_texture_filter_anisotropic');
     if (ext) {
       const max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number;
-      gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(16, max));
+      gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, max));
     }
   }
 
@@ -257,6 +258,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uEnd, end);
     this.bindIce(r, ice, 7, 9);
     gl.uniform1f(r.u.uIceH, ICE_H);
+    gl.uniform1f(r.u.uIceOn, this.iceTex && this.melt < 0.999 ? 1 : 0);
     gl.uniform1f(r.u.uGlow, this.iceTex ? 1 - smooth(0.5, 1, this.melt) : 0);
     gl.uniform1f(r.u.uMeltAct, this.meltAct);
     gl.uniform3fv(r.u.uBed, pal.bed);
@@ -323,6 +325,8 @@ export class FlightEngine extends WaterEngine {
       const th = Math.max(1, Math.round(h / (1 << i)));
       this.film.push(makeTarget(gl, tw, th, { ...this.f16(), filter: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE }));
     }
+    // Two more, at a quarter and a half, to gather the levels into one.
+    for (const i of [2, 1]) this.film.push(makeTarget(gl, this.film[i].w, this.film[i].h, { ...this.f16(), filter: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE }));
   }
 
   /** Draw the scene to the float target, gather its highlights, and make the picture. */
@@ -344,13 +348,23 @@ export class FlightEngine extends WaterEngine {
       gl.uniform1f(d.u.uCut, i === 1 ? 1.9 - 1.5 * night : 0);
       drawTo(gl, f[i]);
     }
+    // Gathered back up at small sizes, so the full-size pass reads the glow once.
+    const up = this.p.bloomUp;
+    gl.useProgram(up.prog);
+    bindTex(gl, 0, f[2].tex, up.u.uA);
+    bindTex(gl, 1, f[3].tex, up.u.uB);
+    gl.uniform2f(up.u.uTexelB, 1 / f[3].w, 1 / f[3].h);
+    gl.uniform2f(up.u.uW, 0.5, 0.5);
+    drawTo(gl, f[4]);
+    bindTex(gl, 0, f[1].tex, up.u.uA);
+    bindTex(gl, 1, f[4].tex, up.u.uB);
+    gl.uniform2f(up.u.uTexelB, 1 / f[4].w, 1 / f[4].h);
+    gl.uniform2f(up.u.uW, 0.34, 0.66);
+    drawTo(gl, f[5]);
     const p = this.p.finish;
     gl.useProgram(p.prog);
     bindTex(gl, 0, f[0].tex, p.u.uScene);
-    bindTex(gl, 1, f[1].tex, p.u.uB1);
-    bindTex(gl, 2, f[2].tex, p.u.uB2);
-    bindTex(gl, 3, f[3].tex, p.u.uB3);
-    gl.uniform2f(p.u.uTexel3, 1 / f[3].w, 1 / f[3].h);
+    bindTex(gl, 1, f[5].tex, p.u.uGlow);
     gl.uniform1f(p.u.uBloom, 0.55);
     gl.uniform1f(p.u.uTime, this.time);
     gl.uniform1f(p.u.uEnd, end);

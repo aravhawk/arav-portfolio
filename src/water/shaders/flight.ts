@@ -59,6 +59,7 @@ uniform sampler2D uSlabTex;
 uniform sampler2D uPano;   // the ranges: sun, sky, snow, distance
 uniform sampler2D uGround; // the baked snow: height, slope, a second field
 uniform float uIceH;
+uniform float uIceOn;      // 0 once the whole sheet has melted: the field is not asked at all
 uniform float uGlow;       // 0..1: how much of the lake's sheet is still there to glow under
 uniform float uMeltAct;
 
@@ -133,7 +134,12 @@ vec3 keyDir() {
 }
 
 vec3 sunBloom(float sd) {
-  return S.band * (pow(sd, 9.0) * 0.07 + pow(sd, 60.0) * 0.22 + pow(sd, 420.0) * 0.5 + pow(sd, 2600.0) * 0.5);
+  // (Powers by squaring: 8, 64, 512, 2048.)
+  float a = sd * sd; a *= a; a *= a;
+  float b = a * a; b *= b; b *= b;
+  float c = b * b; c *= c; c *= c;
+  float e = c * c; e *= e;
+  return S.band * (a * 0.07 + b * 0.22 + c * 0.5 + e * 0.5);
 }
 
 /** The colour of the air at the horizon toward a bearing: what distance fades to. */
@@ -148,19 +154,30 @@ vec3 airAt(vec2 dxy) {
  * and it is made of rays, which drift. The low one stands behind the
  * ranges; the high one is what the water and the ice mirror.
  */
+// A dull mirror (the ice) shows the aurora without its rays: only the high curtain's wash.
+bool gDull = false;
 vec3 aurora(vec3 d) {
   float h = max(d.z, 0.0);
+  if (gDull) {
+    float up = h - 0.27;
+    return mix(vec3(0.16, 0.92, 0.6), vec3(0.42, 0.22, 0.9), smoothstep(0.0, 1.32, up)) * (smoothstep(-0.05, 0.03, up) * exp(-max(up, 0.0) / 0.55) * 0.55);
+  }
   float az = atan(d.x, d.y);
   vec3 sum = vec3(0.0);
   for (int i = 0; i < 2; i++) {
     float k = float(i);
+    // (Each curtain is only looked for where it can be: the low one low, the high one above its hem.)
+    if (i == 0 ? h > 0.5 : h < 0.16) continue;
     float a = az * mix(1.0, 0.8, k) + k * 1.9;
     float hem = mix(0.065, 0.27, k) + mix(0.03, 0.07, k) * sin(a * 1.9 + 0.6 + uTime * 0.011) + 0.02 * sin(a * 5.3 - uTime * 0.017);
     float up = h - hem;
     float tall = mix(0.1, 0.55, k);
     float prof = smoothstep(-0.012, 0.006, up) * exp(-max(up, 0.0) / tall);
     float fold = n1(a * 3.1 + uTime * 0.02 + k * 7.0);
-    float rays = mix(0.45, 0.16, k) + mix(0.55, 0.95, k) * n1(a * 46.0 + fold * 9.0 + uTime * 0.05) * (0.6 + 0.4 * n1(a * 131.0 - uTime * 0.08));
+    float rays = mix(0.45, 0.4, k) + mix(0.55, 0.6, k) * n1(a * mix(46.0, 19.0, k) + fold * 9.0 + uTime * 0.05) * (0.6 + 0.4 * n1(a * mix(131.0, 57.0, k) - uTime * 0.08));
+    // Overhead the rays run together into a soft, dimmer wash.
+    float over = k * smoothstep(0.4, 0.95, h);
+    rays = mix(rays, 0.62, over * 0.6) * (1.0 - 0.6 * over);
     float reach = mix(smoothstep(0.2, 0.62, fold + 0.25 * sin(a * 0.9 + 1.0)), 0.55 + 0.45 * fold, k);
     vec3 tint = mix(vec3(0.16, 0.92, 0.6), vec3(0.42, 0.22, 0.9), smoothstep(0.0, tall * mix(1.5, 2.4, k), up));
     sum += tint * prof * rays * reach * mix(0.55, 1.2, k);
@@ -203,8 +220,10 @@ vec3 skyColor(vec3 d, float clouds) {
   if (clouds > 0.0) {
     // Thin high cloud: white where the sun finds it by day, a faint warm
     // underside before dawn.
-    float c = fbm2(vec2(atan(d.x, d.y) * 3.2 + uTime * 0.004, h * 8.0));
-    float cloud = smoothstep(0.48, 0.86, c) * smoothstep(0.03, 0.2, h) * (1.0 - smoothstep(0.4, 0.85, h));
+    // (Two reads of the baked noise, laid over the dome from above so there is no seam.)
+    vec2 cu = d.xy / (0.35 + d.z);
+    float c = 0.62 * textureLod(uDetail, cu * 0.11 + vec2(uTime * 0.0006, 0.0), 1.0).r + 0.38 * textureLod(uDetail, cu * 0.37 + 0.31, 2.0).r;
+    float cloud = smoothstep(0.5, 0.74, c) * smoothstep(0.03, 0.2, h) * (1.0 - smoothstep(0.4, 0.85, h));
     vec3 lit = mix(vec3(0.82, 0.86, 0.92) + S.band * 0.1 * pow(az, 2.0), col * 0.8 + S.band * 0.07 * pow(az, 3.0), uNight);
     col = mix(col, lit, cloud * mix(0.42, 0.55, uNight) * clouds);
   }
@@ -220,6 +239,8 @@ vec3 skyColor(vec3 d, float clouds) {
  * soft: how many levels blunter to read it (a mirror image in moving water is not sharp).
  */
 vec3 withRidges(vec3 col, vec3 d, float soft) {
+  // (Well above the ranges and their mist there is only sky.)
+  if (d.z > 0.14) return col;
   float el = asin(clamp(d.z, -1.0, 1.0));
   vec3 air = airAt(d.xy);
   if (el < PANO_EL) {
@@ -303,7 +324,11 @@ vec3 slabColor(vec2 uv, float face, float t, vec3 rd) {
 float bedShore;
 vec4 bedAt(vec2 w) {
   vec4 b = textureLod(uBedA, bedUv(w), 0.0);
-  bedShore = (textureLod(uGrain, w / 800.0, 0.0).g - 0.5) * 9.0 + (textureLod(uGrain, w / 2600.0 + 0.3, 0.0).b - 0.5) * 22.0;
+  // The shoreline's own unevenness: read only within reach of a shore,
+  // easing out past it, where nothing can show it.
+  float nearShore = 1.0 - smoothstep(70.0, 130.0, abs(b.r));
+  bedShore = 0.0;
+  if (nearShore > 0.0) bedShore = ((textureLod(uGrain, w / 800.0, 0.0).g - 0.5) * 9.0 + (textureLod(uGrain, w / 2600.0 + 0.3, 0.0).b - 0.5) * 22.0) * nearShore;
   b.r += bedShore;
   b.g += bedShore;
   return b;
@@ -359,8 +384,14 @@ vec4 snowTile(vec2 p, mat2 R, float scale, float amp, vec2 off) {
 vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShade) {
   // Dunes, the forms on them, and the wind's fine work close by.
   vec4 a = snowTile(p, GA, 3400.0, 270.0, vec2(0.13, 0.57));
-  vec4 b = snowTile(p, GB, 1130.0, 52.0, vec2(0.71, 0.29));
-  vec4 c = snowTile(p, GC, 263.0, 3.2, vec2(0.37, 0.11));
+  // (A layer whose whole tile is smaller than a few pixels has eased to
+  // its mean: it is not read. Each fades out before it is dropped.)
+  float fb = 1.0 - smoothstep(40.0, 80.0, foot);
+  float fc = 1.0 - smoothstep(9.0, 18.0, foot);
+  vec4 b = vec4(0.5, 0.0, 0.0, 0.5);
+  vec4 c = b;
+  if (fb > 0.0) b = mix(b, snowTile(p, GB, 1130.0, 52.0, vec2(0.71, 0.29)), fb);
+  if (fc > 0.0) c = mix(c, snowTile(p, GC, 263.0, 3.2, vec2(0.37, 0.11)), fc);
   vec2 rel = a.yz + b.yz + c.yz;
   vec3 n = normalize(vec3(-rel, 1.0));
   // The bank rolls over into the cut.
@@ -381,7 +412,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   // glows a little, in the sky's blue. Level snow is the reference.
   float sun = clamp(ndl / max(L.z, 0.05), 0.0, 2.4);
   sun = mix(sun, 1.0, 0.1) * slabShade;
-  vec4 gr = textureGrad(uGrain, p / 150.0, gGx / 150.0, gGy / 150.0);
+  vec4 gr = textureLod(uGrain, p / 150.0, lodFor(foot, 150.0, 256.0));
   vec3 snow = mix(vec3(0.93, 0.94, 0.95), vec3(0.74, 0.8, 0.9), uNight);
   vec3 stone = mix(vec3(0.085, 0.09, 0.1), vec3(0.05, 0.055, 0.07), uNight) * (0.7 + 0.7 * gr.g);
   vec3 blue = mix(vec3(0.3, 0.52, 0.62), vec3(0.2, 0.36, 0.46), uNight);
@@ -525,7 +556,9 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   vec3 rf = reflect(dir, nr);
   rf.z = abs(rf.z) + 0.02;
   // (Ice is a poorer mirror than water, and before dawn that difference is what draws the name.)
+  gDull = true;
   col = mix(col, skyAll(normalize(rf), 0.0), fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.72 * uNight));
+  gDull = false;
   // The lip of a cut: a hair of snow, then the edge itself.
   float edge = 1.0 - smoothstep(0.0, 2.2 * cw, -f0);
   col *= 1.0 + 0.07 * edge;
@@ -624,35 +657,47 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // The bank on the light's side shades the water below it. The light is
   // low, so the shade is long; it is kept to a few bank heights.
   vec2 toSun = LXY * min(L.z > 0.0 ? length(L.xy) / L.z : 0.0, 2.6);
-  float bankShade = smoothstep(-5.0, 5.0, textureLod(uBedA, bedUv(pw + toSun * FREEBOARD), 0.0).r);
+  // (Far from any bank there is no bank's shade to look for.)
+  float bankShade = bw.r > -(2.6 * FREEBOARD + 12.0) ? smoothstep(-5.0, 5.0, textureLod(uBedA, bedUv(pw + toSun * FREEBOARD), 0.0).r) : 0.0;
   float shade = max(bankShade, iceShade) * (1.0 - 0.6 * uNight);
 
   float lodB = lodFor(footL, 256.0, 256.0);
   vec4 gb = textureLod(uGrain, pb / 256.0, lodB);
-  vec4 gs = textureLod(uGrain, pb / 330.0, lodB);
+  vec4 gs = gb;
   vec3 bed = uBed * (1.0 + (gb.r - 0.5) * 0.03 + (gs.b - 0.42) * 0.17 + (gb.a - 0.4) * 0.12);
   float shadow = 1.0 - 0.6 * shade;
   float fineW = 1.0 - smoothstep(0.12, 0.6, dn);
   float broadW = smoothstep(0.06, 0.4, dn);
   float net = 1.0 - smoothstep(0.55, 0.96, dn);
-  float shaft = 0.45 + 1.1 * textureLod(uDetail, R2 * pw / 2300.0 + vec2(0.006, -0.004) * uTime, 0.0).r;
+  // Broad, slow unevenness in the light under water: the wide ripple layer's own field.
+  float shaft = 0.45 + 1.1 * dw.r;
   vec3 lightOnBed;
   float nfil = 0.0;
   // The net of light on the bed: one focus of the summed curvature of the
   // moving layers. Each layer is read at the level its pixel covers, so far
   // off the net eases to even light before it can shimmer.
   if (uQuality > 0.5) {
-    vec3 t = mix(textureLod(uCurv, uv0, lod0).rgb, textureLod(uCurv, uv1, lod0).rgb, wphase) * (fa * fineW);
-    t += turn(textureLod(uCurv, wuv2, lod2).rgb, R2) * (0.5 * fineW);
-    t += turn(textureLod(uCurv, wuv1, lod1).rgb, R1) * (0.95 * broadW);
-    // (The curvature texture has no finer levels of its own: fade it by hand.)
-    t *= 1.0 - smoothstep(0.35, 1.6, footL / 9.0);
-    vec2 e = 1.6 / uSim.zw;
-    float gx1 = textureLod(uWave, suv + vec2(e.x, 0.0), 0.0).b;
-    float gx0 = textureLod(uWave, suv - vec2(e.x, 0.0), 0.0).b;
-    float gy1 = textureLod(uWave, suv + vec2(0.0, e.y), 0.0).a;
-    float gy0 = textureLod(uWave, suv - vec2(0.0, e.y), 0.0).a;
-    t.xy -= vec2(gx1 - gx0, gy1 - gy0) * 5.0 * inSim;
+    vec3 t = vec3(0.0);
+    // (The curvature texture has no finer levels of its own: fade it by hand.
+    // Where it has faded out, or the water is too deep for a net, it is not read.)
+    float fadeC = 1.0 - smoothstep(0.35, 1.6, footL / 9.0);
+    if (fadeC > 0.0 && net > 0.0) {
+      if (fineW > 0.0) {
+        t = mix(textureLod(uCurv, uv0, lod0).rgb, textureLod(uCurv, uv1, lod0).rgb, wphase) * (fa * fineW);
+        t += turn(textureLod(uCurv, wuv2, lod2).rgb, R2) * (0.5 * fineW);
+      }
+      if (broadW > 0.0) t += turn(textureLod(uCurv, wuv1, lod1).rgb, R1) * (0.95 * broadW);
+      t *= fadeC;
+    }
+    // (Still water has no ripple to focus: its neighbours are not read.)
+    if (inSim > 0.0 && net > 0.0 && dot(wv, wv) > 2e-9) {
+      vec2 e = 1.6 / uSim.zw;
+      float gx1 = textureLod(uWave, suv + vec2(e.x, 0.0), 0.0).b;
+      float gx0 = textureLod(uWave, suv - vec2(e.x, 0.0), 0.0).b;
+      float gy1 = textureLod(uWave, suv + vec2(0.0, e.y), 0.0).a;
+      float gy0 = textureLod(uWave, suv - vec2(0.0, e.y), 0.0).a;
+      t.xy -= vec2(gx1 - gx0, gy1 - gy0) * 5.0 * inSim;
+    }
     float f = uLight.z * mix(0.46, 0.8, dn);
     float caust = focus(t, f);
     vec3 c3 = vec3(caust);
@@ -698,7 +743,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   vec3 rf = reflect(dir, nr);
   rf.z = abs(rf.z) + 0.015;
   rf = normalize(rf);
-  vec3 refl = skyAll(rf, uQuality > 1.5 ? 1.0 : 0.0);
+  // (Before dawn the thin cloud is too faint to be seen in moving water: it is not asked for.)
+  vec3 refl = withRidges(skyColor(rf, uQuality > 1.5 ? 1.0 - uNight : 0.0), rf, uQuality > 1.5 ? 0.0 : 1.5);
   // The slab stands in the water: its mirror image, broken by the ripples.
   if (slabOn > 0.0) {
     vec2 suvS;
@@ -711,7 +757,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // Still dark water is a better mirror than this angle alone would make
   // it: before dawn the surface is held to at least that much mirror, so
   // the aurora is what the water and the name show.
-  fres = mix(fres, max(fres, 0.64), uNight);
+  fres = mix(fres, max(fres, 0.52), uNight);
   fres *= 1.0 - 0.7 * uEnd;
   vec3 col = mix(water, refl, fres);
   // The sun on ripple faces turned toward it: a broad, graded sheen.
@@ -793,19 +839,23 @@ void main() {
     float f0 = 1e3;
     vec3 cr = vec3(1e3, 0.0, 0.0);
     vec2 il = vec2(0.0);
-    bool hasIce = uIce.z > 0.0 && p.y > uLake.x - 80.0 && p.y < uLake.y + 80.0 && sd0 < 40.0;
+    bool hasIce = uIceOn > 0.5 && uIce.z > 0.0 && p.y > uLake.x - 80.0 && p.y < uLake.y + 80.0 && sd0 < 40.0;
     if (hasIce) {
       f0 = iceF(p, sd0, cr, il);
       float aaI = 0.75 * foot / mix(1.0, sinE, 0.6);
       aIce = 1.0 - smoothstep(-aaI, aaI, f0);
-      if (aIce < 1.0) {
+      // The cut face and the sheet's shade lie within a known reach of the
+      // edge (the field is a distance, near enough): past it, open water
+      // is only open water, and the field is not asked again.
+      float reach = length(tilt) * uIceH * 1.5 + 2.0 * aaI + 6.0;
+      if (aIce < 1.0 && f0 < reach) {
         vec3 c1;
         vec2 i1;
         vec2 pf = p + tilt * uIceH;
         float f1 = iceF(pf, bedAt(pf).r, c1, i1);
         aCut = (1.0 - aIce) * (1.0 - smoothstep(-aaI, aaI, f1));
         cutS = clamp(f0 / max(f0 - f1, 1e-3), 0.0, 1.0);
-        if (aCut < 1.0 && uQuality > 0.5) {
+        if (aCut < 1.0 && uQuality > 0.5 && min(f0, f1) < uIceH * 1.6) {
           vec3 L = keyDir();
           vec2 ps = pf + normalize(L.xy) * min(length(L.xy) / L.z, 1.5) * uIceH * 0.5;
           float fs = iceF(ps, bedAt(ps).r, c1, i1);
