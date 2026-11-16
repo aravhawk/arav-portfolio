@@ -106,20 +106,21 @@ void main() {
       vec4 it = texture(uIceSdf, iuv);
       float heat = texture(uHeat, iuv).r;
       float rough = texture(uGrain, p / 300.0).g;
-      float erode = uIceState.x * (0.8 + 0.4 * rough) + heat * 26.0;
+      float erode = uIceState.x * (0.9 + 0.2 * rough) + heat * 26.0;
       float isd = it.r + erode;
       if (isd < 0.0) {
         iceIn = -isd;
-        float bev = clamp(uIceState.z * 0.9, 3.0, 22.0);
+        // A block of ice: a flat top face and a narrow, steep bevel.
+        float bev = clamp(uIceState.z * 0.42, 2.5, 7.5);
         float x = clamp(iceIn / bev, 0.0, 1.0);
         iceX = x;
         float inv = 1.0 - x;
-        float slope = inv / sqrt(max(1.0 - inv * inv, 0.02)) * 0.9 * uIceState.y;
+        float slope = inv / sqrt(max(1.0 - inv * inv, 0.04)) * 1.25 * uIceState.y;
         // Fine pitting on the top face keeps the big flat counters alive.
         vec4 pit = texture(uDetail, p / 190.0);
-        vec2 pg = (pit.gb - 0.5) * 0.5 * smoothstep(0.3, 1.0, x);
+        vec2 pg = (pit.gb - 0.5) * 0.22 * smoothstep(0.6, 1.0, x);
         iceN = normalize(vec3(it.ba * slope + pg, 1.0));
-        q = p - iceN.xy * (26.0 * uIceState.y + 6.0);
+        q = p - iceN.xy * (30.0 * uIceState.y + 4.0);
       }
       // Contact shadow the ice throws on the water, toward the lower right.
       vec2 suv = (p + L.xy * 16.0 - uIce.xy) / uIce.zw;
@@ -249,17 +250,18 @@ void main() {
       // Deep water still carries soft shafts of the light above it.
       vec3 body = uScatter * (0.55 + 0.45 * shadow) * (0.82 + 0.3 * caust);
       col = bed * trans + body * turbid * (1.0 - trans * 0.35);
-      // Meltwater silt clouds the column.
-      col = mix(col, uIceCol * 0.82, clamp(dye.g * 0.42, 0.0, 0.55));
+      // Meltwater is cold and clear: it lifts the water's own colour a
+      // little where it runs, it does not fog it.
+      col += uScatter * clamp(dye.g, 0.0, 1.0) * 0.55;
 
       // ---- the surface
       float cosi = clamp(dot(-dir, n), 0.0, 1.0);
       float fres = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
       vec3 rf = reflect(dir, n);
-      float panel = smoothstep(0.9905, 0.9992, dot(rf, LS));
+      float panel = smoothstep(0.972, 1.0, dot(rf, LS));
       // Ripple faces turned toward the key light flash; calm water does not.
       float crest = smoothstep(0.035, 0.2, dot(slope, -normalize(L.xy)));
-      col += uSky * (fres * 0.6 + panel * 0.05 + crest * crest * 0.5 * uLight.w);
+      col += uSky * (fres * 0.6 + panel * panel * 0.045 + crest * crest * 0.5 * uLight.w);
       // Foam rides the current as broken cells, not a white wash.
       float cells = texture(uGrain, (pw - vel * 0.35) / 150.0).a;
       float foam = clamp(dye.r, 0.0, 1.0);
@@ -278,23 +280,23 @@ void main() {
     // Cloudy core, clear bevel: how real ice freezes, and what keeps the
     // letterforms solid and readable. Refraction is strong only in the
     // bevel band; the interior stays calm.
-    float core = smoothstep(0.12, 0.92, x);
-    float frost = core * (0.8 + 0.14 * gi.g + 0.06 * gf.b) * uIceState.w;
+    float core = smoothstep(0.4, 1.0, x);
+    float frost = core * (0.86 + 0.1 * gi.g + 0.04 * gf.b) * uIceState.w;
     vec2 nxy = normalize(iceN.xy + 1e-4);
     float toLight = dot(nxy, normalize(L.xy));
-    float lit = 0.86 + 0.16 * max(dot(iceN, L), 0.0) / L.z;
-    vec3 body = uIceCol * lit;
+    vec3 body = uIceCol * (0.97 + 0.05 * gi.g);
     // The clear band at the edge shows the deep water, darker and bent.
-    col = mix(col * mix(0.62, 1.0, core), body, clamp(frost, 0.0, 0.97));
+    col = mix(col * mix(0.55, 1.0, core), body, clamp(frost, 0.0, 0.97));
     // Fracture planes and trapped air through the core.
-    float crack = (1.0 - smoothstep(0.0, 0.035, abs(gi.b - 0.42))) * core;
+    float crack = (1.0 - smoothstep(0.0, 0.014, abs(gi.g - 0.5))) * core;
     float vein = smoothstep(0.1, 0.0, abs(gf.a - 0.34)) * core;
-    col += uIceCol * (vein * 0.05 + crack * 0.09) * uIceState.w;
-    col *= 1.0 - 0.07 * core * smoothstep(0.35, 0.75, gi.g);
+    // Cracks read as fine darker seams in the white, like real fractures.
+    col *= 1.0 - (crack * 0.16 + vein * 0.05) * uIceState.w;
+    col *= 1.0 - 0.05 * core * smoothstep(0.4, 0.8, gi.g);
     // The bevel that faces the light flashes; the far one falls into shade.
-    float rim = (1.0 - core) * smoothstep(0.02, 0.2, x);
-    col += uSky * rim * pow(max(toLight, 0.0), 1.6) * 0.62 * uIceState.y;
-    col *= 1.0 - 0.42 * rim * max(-toLight, 0.0);
+    float rim = (1.0 - core) * smoothstep(0.0, 0.25, x);
+    col += uSky * rim * pow(max(toLight, 0.0), 1.4) * 0.8 * uIceState.y;
+    col *= 1.0 - 0.5 * rim * max(-toLight, 0.0);
     // A hairline of light right on the edge keeps every letter crisp.
     float lip = smoothstep(0.0, 0.06, x) * (1.0 - smoothstep(0.06, 0.22, x));
     col += uSky * lip * 0.22 * uIceState.y;

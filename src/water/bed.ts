@@ -8,8 +8,6 @@
  * word at any scroll position.
  */
 
-import { signedDistance } from './sdf';
-
 export interface Pt {
   x: number;
   y: number;
@@ -174,15 +172,18 @@ export class BedPainter {
     ctx.fill();
   }
 
-  finish(): BedData {
-    const m = this.mask.getImageData(0, 0, this.w, this.h).data;
-    const f = this.flow.getImageData(0, 0, this.w, this.h).data;
-    const clampTexels = SD_CLAMP_PX / this.div;
-    // signedDistance: negative inside the shape. Water is the shape.
-    const sdTexels = signedDistance(m, this.w, this.h, 4, 0, clampTexels);
-    const sd = sdTexels;
-    for (let i = 0; i < sd.length; i++) sd[i] *= this.div;
-    return { w: this.w, h: this.h, div: this.div, sd, flow: f, docW: this.docW, docH: this.docH };
+  /** The painted rasters, ready for the distance transform. */
+  rasters(): { mask: Uint8ClampedArray; flow: Uint8ClampedArray; clampTexels: number } {
+    return {
+      mask: this.mask.getImageData(0, 0, this.w, this.h).data,
+      flow: this.flow.getImageData(0, 0, this.w, this.h).data,
+      clampTexels: SD_CLAMP_PX / this.div,
+    };
+  }
+
+  /** Assemble the bed once the signed distance (CSS px) has been computed. */
+  assemble(sd: Float32Array, flow: Uint8ClampedArray): BedData {
+    return { w: this.w, h: this.h, div: this.div, sd, flow, docW: this.docW, docH: this.docH };
   }
 }
 

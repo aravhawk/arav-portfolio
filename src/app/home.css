@@ -42,10 +42,9 @@
   margin: 0;
   text-align: center;
   white-space: nowrap;
-  font-family: var(--font-display);
+  font-family: var(--f-ice), var(--font-display);
   font-size: var(--ice-size);
-  font-weight: var(--display-wght);
-  font-variation-settings: 'wdth' var(--display-wdth);
+  font-weight: 760;
   line-height: 1;
   letter-spacing: -0.045em;
   color: #eef6f9;
@@ -74,14 +73,14 @@ html[data-water='on'] [data-ice] [data-ice-line] {
   letter-spacing: -0.04em;
   font-weight: 620;
 }
+/* Unlit words are dim but still pass 3:1 as large text in both themes. */
 .say-word {
-  color: var(--ink);
-  opacity: 0.26;
-  transition: opacity 520ms var(--ease-out);
+  color: var(--ink-dim);
+  transition: color 520ms var(--ease-out);
 }
 .say-word[data-lit],
 html:not([data-js]) .say-word {
-  opacity: 1;
+  color: var(--ink);
 }
 
 /* ---------- beats ---------- */
@@ -569,7 +568,7 @@ html:not([data-js]) .say-word {
 
 @media (prefers-reduced-motion: reduce) {
   .say-word {
-    opacity: 1;
+    color: var(--ink);
     transition: none;
   }
   .switch-thumb {

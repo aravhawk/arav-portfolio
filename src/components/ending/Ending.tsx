@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { CONTACT } from '@/content/projects';
 import { onFrame } from '@/lib/frame';
 import { haptic, hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/lib/haptics';
-import { compile, type Program } from '@/water/gl';
+import { bindTriangle, compile, type Program } from '@/water/gl';
 import { Arrow } from '../bits';
 import { ENDING_FRAG } from './shader';
 import './ending.css';
@@ -105,7 +105,7 @@ export function Ending({ variant = 'full', note }: Props) {
       sec.setAttribute('data-arrived', '');
       return;
     }
-    gl.bindVertexArray(gl.createVertexArray());
+    bindTriangle(gl);
     sec.dataset.gl = 'on';
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');

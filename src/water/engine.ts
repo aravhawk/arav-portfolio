@@ -10,9 +10,9 @@
  */
 
 import type { BedData } from './bed';
-import { type GL, type Program, type Target, Swap, bindTex, compile, drawTo, freeTarget, makeTarget, makeTexture } from './gl';
+import { type GL, type Program, type Target, Swap, bindTex, bindTriangle, compile, drawTo, freeTarget, makeTarget, makeTexture } from './gl';
 import { RENDER } from './shaders/render';
-import { BED_A, BED_B, DETAIL, DYE, GRAIN, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
+import { BED_A, BED_B, DETAIL, DYE, GRAIN, SD_BLUR, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
 
 export interface Palette {
   land: [number, number, number];
@@ -107,6 +107,7 @@ export class WaterEngine {
   private iceTex: Target | null = null;
   private iceMeta: IceInput | null = null;
   private heat: Swap;
+  private ready = false;
   private wave: Swap | null = null;
   private waveOut: Target | null = null;
   private vel: Swap | null = null;
@@ -180,13 +181,22 @@ export class WaterEngine {
 
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
-    const vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
+    bindTriangle(gl);
 
+    this.heat = new Swap(gl, 256, 64, this.f16());
+  }
+
+  /**
+   * Compile the shaders and bake the two tileable textures. One program per
+   * task, so the page stays responsive while the world is being prepared.
+   */
+  async prepare(): Promise<void> {
+    const gl = this.gl;
     const src: Record<string, string> = {
       render: RENDER,
       bedA: BED_A,
       bedB: BED_B,
+      sdBlur: SD_BLUR,
       wave: WAVE,
       waveGrad: WAVE_GRAD,
       velAdvect: VEL_ADVECT,
@@ -198,7 +208,10 @@ export class WaterEngine {
       grain: GRAIN,
       heat: HEAT,
     };
-    for (const k of Object.keys(src)) this.p[k] = compile(gl, src[k], k);
+    for (const k of Object.keys(src)) {
+      this.p[k] = compile(gl, src[k], k);
+      await new Promise<void>((r) => setTimeout(r, 0));
+    }
 
     // Baked tileable textures.
     const rep = { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, wrap: gl.REPEAT };
@@ -213,7 +226,7 @@ export class WaterEngine {
       gl.generateMipmap(gl.TEXTURE_2D);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     }
-    this.heat = new Swap(gl, 256, 64, this.f16());
+    this.ready = true;
   }
 
   private f16() {
@@ -267,11 +280,17 @@ export class WaterEngine {
       filter: gl.NEAREST,
       data: ice.sd,
     });
+    // Letters need cleaner normals than banks do: smooth the field first.
+    const soft = makeTarget(gl, ice.w, ice.h, { ...this.f16(), filter: gl.NEAREST });
+    gl.useProgram(this.p.sdBlur.prog);
+    bindTex(gl, 0, sdTex, this.p.sdBlur.u.uSd);
+    drawTo(gl, soft);
     this.iceTex = makeTarget(gl, ice.w, ice.h, this.f16());
     gl.useProgram(this.p.bedA.prog);
-    bindTex(gl, 0, sdTex, this.p.bedA.u.uSd);
+    bindTex(gl, 0, soft.tex, this.p.bedA.u.uSd);
     drawTo(gl, this.iceTex);
     gl.deleteTexture(sdTex);
+    freeTarget(gl, soft);
     this.dirty = true;
   }
 
@@ -360,7 +379,7 @@ export class WaterEngine {
   tick(now: number, scrollY: number, viewH: number): number {
     const gl = this.gl;
     const top = scrollY - this.margin;
-    if (!this.bedA || !this.bedB || !this.wave || gl.isContextLost()) return top;
+    if (!this.ready || !this.bedA || !this.bedB || !this.wave || gl.isContextLost()) return top;
 
     let dt = this.last ? (now - this.last) / 1000 : 1 / 60;
     this.last = now;
@@ -379,7 +398,7 @@ export class WaterEngine {
     // Melt follows scroll. It is a function of position, so it reverses exactly.
     const m = this.iceTex ? Math.min(1, Math.max(0, scrollY / this.meltRange)) : 0;
     const rate = Math.abs(m - this.melt) / Math.max(dt, 1e-3);
-    this.meltRate += (Math.min(rate, 2.5) - this.meltRate) * (1 - Math.exp(-dt * 6));
+    this.meltRate += (Math.min(rate, 1.1) - this.meltRate) * (1 - Math.exp(-dt * 6));
     this.melt = m;
     if (m >= 1 && !this.meltDone) {
       this.meltDone = true;
@@ -414,14 +433,14 @@ export class WaterEngine {
     const drift = Math.min(scrollY, this.meltRange) * 0.9;
     const r = this.iceRect;
     const m = this.melt;
-    const full = -ice.minSd / 0.8 + 5;
-    // Ease so the first scroll shows change at once and the last slivers linger.
-    const e = 1 - Math.pow(1 - m, 1.6);
-    const erode = e * full;
+    const full = (-ice.minSd + 3) / 0.94;
+    // Slow at first, quicker as the ice thins (less of it is left to absorb
+    // the heat): the name stays bold for the first half of the melt.
+    const erode = Math.pow(m, 2.3) * full;
     // Past 88% the last slivers thin to nothing, so no ghost outline stays.
     const alive = 1 - Math.min(1, Math.max(0, (m - 0.88) / 0.12));
     const thick = (1 - 0.7 * m) * alive;
-    const frost = 1 - 0.55 * Math.max(0, (m - 0.35) / 0.65);
+    const frost = 1 - 0.28 * Math.max(0, (m - 0.5) / 0.5);
     return { rect: [r.x, r.y + drift, r.w, r.h], state: [erode, thick, Math.max(0, -ice.minSd - erode * 0.8), frost], erode };
   }
 

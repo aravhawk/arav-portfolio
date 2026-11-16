@@ -27,6 +27,17 @@ const martianMono = localFont({
   preload: false,
   fallback: ['ui-monospace', 'Menlo', 'monospace'],
 });
+/* The name in ice is drawn on a canvas from this face. A static instance
+   (width 112, weight 760) so the canvas and the DOM agree in every browser:
+   canvas text cannot set variable axes. */
+const ice = localFont({
+  src: '../fonts/MartianGrotesk-Ice.woff2',
+  variable: '--f-ice',
+  weight: '760',
+  display: 'swap',
+  fallback: ['system-ui', 'Arial', 'sans-serif'],
+});
+
 /* Bake-off candidates. Only the pick stays in the final build. */
 const tasa = localFont({ src: '../fonts/TASAOrbiter-VF.woff2', variable: '--f-tasa', weight: '400 800', display: 'swap', preload: false });
 const spline = localFont({ src: '../fonts/SplineSansMono-VF.woff2', variable: '--f-spline', weight: '300 700', display: 'swap', preload: false });
@@ -109,7 +120,7 @@ export const viewport: Viewport = {
    theme never flashes. The type switch is for the bake-off only. */
 const boot = `(function(){var d=document.documentElement;try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light';var t=new URLSearchParams(location.search).get('type');if(t)d.dataset.type=t}catch(e){d.dataset.theme='light'}})()`;
 
-const fontVars = [martian, martianMono, tasa, spline, zalando, newsreader, sometype].map((f) => f.variable).join(' ');
+const fontVars = [martian, martianMono, ice, tasa, spline, zalando, newsreader, sometype].map((f) => f.variable).join(' ');
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -126,8 +137,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Nav />
         <div className="shell">{children}</div>
         <Runtime />
-        <Analytics />
-        <SpeedInsights />
+        {/* These endpoints exist only on Vercel; elsewhere they would 404. */}
+        {process.env.VERCEL ? <Analytics /> : null}
+        {process.env.VERCEL ? <SpeedInsights /> : null}
       </body>
     </html>
   );

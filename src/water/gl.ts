@@ -18,13 +18,29 @@ export interface Program {
 
 const VERT = `#version 300 es
 precision highp float;
+layout(location = 0) in vec2 aPos;
 out vec2 vUv;
 void main() {
   // One oversized triangle covers the viewport.
-  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
-  vUv = p;
-  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+  vUv = aPos;
+  gl_Position = vec4(aPos * 2.0 - 1.0, 0.0, 1.0);
 }`;
+
+/**
+ * The one piece of geometry every pass draws: a triangle that covers the
+ * viewport, bound to attribute 0 (drawing without attribute 0 enabled makes
+ * some desktop drivers fall back to slow emulation).
+ */
+export function bindTriangle(gl: GL): WebGLVertexArrayObject {
+  const vao = gl.createVertexArray()!;
+  gl.bindVertexArray(vao);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 2, 0, 0, 2]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  return vao;
+}
 
 export function compile(gl: GL, frag: string, name: string): Program {
   const vs = gl.createShader(gl.VERTEX_SHADER)!;

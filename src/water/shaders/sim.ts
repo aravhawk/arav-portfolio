@@ -62,6 +62,24 @@ void main() {
   o = vec4(s, 0.0, g);
 }`;
 
+/** A small Gaussian on a distance field, so its gradient is clean. */
+export const SD_BLUR = `${HEAD}
+uniform sampler2D uSd;
+void main() {
+  ivec2 sz = textureSize(uSd, 0);
+  ivec2 p = ivec2(gl_FragCoord.xy);
+  float acc = 0.0;
+  float wsum = 0.0;
+  for (int y = -3; y <= 3; y++) {
+    for (int x = -3; x <= 3; x++) {
+      float w = exp(-float(x * x + y * y) / 5.0);
+      acc += texelFetch(uSd, clamp(p + ivec2(x, y), ivec2(0), sz - 1), 0).r * w;
+      wsum += w;
+    }
+  }
+  o = vec4(acc / wsum, 0.0, 0.0, 1.0);
+}`;
+
 export const BED_B = `${HEAD}
 uniform sampler2D uRaw;  // RGBA8 flow raster
 void main() {
@@ -143,10 +161,15 @@ void main() {
   h *= exp(-uDt * 0.35);
 
   // Pointer: a finger pushed through water leaves a trough along its path.
+  // The pointer is a body moving through the water: it pushes water out
+  // of where it is going and lets it back in where it has been.
   if (uPtrForce.x > 0.0) {
     float d = segDist(world, uPtr.xy, uPtr.zw);
     float g = exp(-d * d / (uPtrForce.y * uPtrForce.y));
-    h -= uPtrForce.x * g;
+    vec2 back = uPtr.xy - normalize(uPtr.zw - uPtr.xy + 1e-4) * uPtrForce.y * 1.6;
+    float dbk = length(world - back);
+    float gb = exp(-dbk * dbk / (uPtrForce.y * uPtrForce.y * 1.8));
+    h += uPtrForce.x * (gb * 0.7 - g);
   }
   // One discrete splash (a tap, a gate closing).
   if (uDrop.w != 0.0) {
@@ -322,7 +345,7 @@ void main() {
     vec2 iuv = (world - uIce.xy) / uIce.zw;
     if (iuv.x > 0.0 && iuv.x < 1.0 && iuv.y > 0.0 && iuv.y < 1.0) {
       float isd = texture(uIceSdf, iuv).r + uIceMelt.x;
-      silt += exp(-isd * isd / 60.0) * uIceMelt.y * 0.9;
+      silt += exp(-isd * isd / 160.0) * uIceMelt.y * 0.5;
     }
   }
   o = vec4(min(foam, 1.5), min(silt, 1.5), 0.0, 0.0);

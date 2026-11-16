@@ -26,16 +26,18 @@ export function WaterStage() {
     if (!el) return;
     const start = () => {
       import('@/water/stage')
-        .then(({ mountWater }) => {
-          if (cancelled) return;
-          try {
-            handle.current = mountWater(el);
-            window.__water = handle.current;
-          } catch {
-            document.documentElement.dataset.water = 'off';
+        .then(({ mountWater }) => mountWater(el, () => cancelled))
+        .then((h) => {
+          if (!h) return;
+          if (cancelled) {
+            h.destroy();
+            return;
           }
+          handle.current = h;
+          window.__water = h;
         })
         .catch(() => {
+          // No WebGL2 or no float targets: the static design stays.
           document.documentElement.dataset.water = 'off';
         });
     };
