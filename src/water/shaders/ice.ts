@@ -22,6 +22,7 @@ uniform float uIceK;       // the pressure cracks' cell px
 uniform float uIceW;       // the lake's width px: the page's
 uniform vec4 uIceBox;      // the letters' own box in the sheet's frame: centre xy, half size zw, px
 uniform vec4 uIceP;        // the camera the name is cut for: its y, its height, the cosine and sine of its pitch (all 0: the name lies flat and true)
+uniform float uIceLean;    // the flight's governor: at 2 the cracks are let go while they are only hairlines (0 everywhere else)
 uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet is 0..1, w: 1 while the sheet is whole, 0 once it is gone
 uniform sampler2D uIceSdf; // signed distance to the letters px (negative inside), _, gradient
 uniform sampler2D uDetail;
@@ -102,12 +103,19 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     nk = zc / z0;
   }
   vec2 iuv = nl / uIce.zw;
-  vec2 cl = clamp(iuv, 0.002, 0.998);
-  float lsd = (texture(uIceSdf, cl).r + length((iuv - cl) * uIce.zw)) * nk;
   // The raster's distances stop at a ceiling; past it the distance to the
   // letters' own box carries on, so no opening ever ends on the raster's edge.
   vec2 bq = abs(nl - uIceBox.xy) - uIceBox.zw;
-  if (lsd > 0.0) lsd = max(lsd, length(max(bq, 0.0)) + min(max(bq.x, bq.y), 0.0));
+  float boxD = length(max(bq, 0.0)) + min(max(bq.x, bq.y), 0.0);
+  float lsd = boxD;
+  // (Seen from the ground most of the lake is far from the name: there the
+  // box's distance is the whole answer and the raster is not read.)
+  bool nearName = uIceP.y <= 0.0 || boxD < 420.0;
+  if (nearName) {
+    vec2 cl = clamp(iuv, 0.002, 0.998);
+    lsd = (texture(uIceSdf, cl).r + length((iuv - cl) * uIce.zw)) * nk;
+    if (lsd > 0.0) lsd = max(lsd, boxD);
+  }
   float cell = uIceB.w;
   // Half way through, the letters stop being letters: their openings run
   // together into one pool with an uneven, rounded edge. Nothing of their
@@ -123,11 +131,20 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // Pressure cracks: the walls of a few large, irregular cells. Early in the
   // melt they are where leads of water open.
   float cellA = uIceK;
+  cr = vec3(1e3, 0.5, 0.0);
+  // (Seen from the ground: once the sheet is plates no crack is left to
+  // draw or to open, and a lean frame lets the hairlines go before the melt
+  // needs them. Then the cells are not looked for at all.)
+  bool cracks = uIceP.y <= 0.0 || (uIceC.y < 1.0 && !(uIceLean >= 2.0 && uIceA.y <= 0.0));
+  if (cracks) {
   vec2 wob = textureLod(uSnow, il / (cellA * 5.0), 0.0).rg * cellA * 0.12;
   vec2 x = (il + wob) / cellA + vec2(3.37, 1.83);
   vec2 n = floor(x);
   vec2 fr = fract(x);
   vec2 pts[9];
+  // (Only cells within reach of the name's plate can be claimed by it.)
+  vec2 pq = abs(il - uIceBox.xy) - uIceBox.zw;
+  bool nearPlate = uIceP.y <= 0.0 || max(pq.x, pq.y) < cellA * 2.6 + 40.0;
   float md = 64.0;
   vec2 mr = vec2(0.0);
   vec2 mg = vec2(0.0);
@@ -137,7 +154,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
       vec2 r = g + 0.14 + 0.72 * ih2(n + g) - fr;
       // A cell whose middle would lie in or by the name's plate is not
       // there: the plate has that ground.
-      if (plateSd(il + r * cellA).x < cellA * 0.12) r = vec2(40.0);
+      if (nearPlate && plateSd(il + r * cellA).x < cellA * 0.12) r = vec2(40.0);
       pts[j * 3 + i] = r;
       float d = dot(r, r);
       if (d < md) { md = d; mr = r; mg = g; }
@@ -153,11 +170,15 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // every point nearer the plate than any cell's middle belongs to it. So
   // the cracks, and the leads that open along them, run round the name and
   // never through a letter or between two.
-  vec3 pl = plateSd(il);
-  float d1 = sqrt(md) * cellA;
-  float turnK = max(length(-mr / max(sqrt(md), 1e-3) - pl.yz), 0.35);
-  if (pl.x < d1) cr = vec3((d1 - pl.x) / turnK, 0.3, 0.0);
-  else cr.x = min(cr.x, (pl.x - d1) / turnK);
+  if (nearPlate) {
+    vec3 pl = plateSd(il);
+    float d1 = sqrt(md) * cellA;
+    float turnK = max(length(-mr / max(sqrt(md), 1e-3) - pl.yz), 0.35);
+    if (pl.x < d1) cr = vec3((d1 - pl.x) / turnK, 0.3, 0.0);
+    else cr.x = min(cr.x, (pl.x - d1) / turnK);
+  }
+
+  }
 
   // The bank lets go unevenly: more here, less there.
   // (Looked up only where the sheet has a bank to let go of.)

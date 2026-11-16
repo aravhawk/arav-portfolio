@@ -134,6 +134,8 @@ export class FlightEngine extends WaterEngine {
   private lean = 0;
   private leanNow = 0;
   private gov = { n: 0, missed: 0, prev: 0, clean: 0, need: 10000, lastUp: -1e9, age: 0 };
+  /** When the governor stepped, and to what: seconds of running time, step. */
+  private leanLog: [number, number][] = [];
 
   protected jacobi() {
     const full = super.jacobi();
@@ -155,17 +157,20 @@ export class FlightEngine extends WaterEngine {
     const s = this.samples;
     s.push(ms);
     if (ms > Math.max(this.base * 1.45, 12)) g.missed++;
-    if (s.length < 60) return;
-    const med = s.slice().sort((a, b) => a - b)[30];
-    const span = s.reduce((a, b) => a + b, 0);
+    // Looked at twice a second.
+    if (s.length < 30) return;
+    const med = s.slice().sort((x, y) => x - y)[15];
+    const span = s.reduce((x, y) => x + y, 0);
     s.length = 0;
     // The display's own interval: the fastest steady median seen so far.
     if (med < this.base * 0.9 && med > 5) this.base = med;
     const missed = g.missed;
     g.missed = 0;
-    // About a second of misses: three in one window, or two in each of two running.
-    if ((missed >= 3 || (missed >= 2 && g.prev >= 2)) && this.lean < 2) {
+    // About a second of misses (two half-seconds running, each with two or
+    // more), or half a second in which a quarter of the frames were late.
+    if (((missed >= 2 && g.prev >= 2) || missed >= 8) && this.lean < 2) {
       this.lean++;
+      this.leanLog.push([+this.time.toFixed(1), this.lean]);
       g.clean = 0;
       // Stepped back up not long ago and it did not hold: wait longer before trying again.
       if (this.time - g.lastUp < 40) g.need = Math.min(g.need * 2, 80000);
@@ -177,6 +182,7 @@ export class FlightEngine extends WaterEngine {
     else g.clean = 0;
     if (g.clean >= g.need && this.lean > 0) {
       this.lean--;
+      this.leanLog.push([+this.time.toFixed(1), this.lean]);
       g.clean = 0;
       g.lastUp = this.time;
     }
@@ -193,7 +199,7 @@ export class FlightEngine extends WaterEngine {
   }
 
   get info() {
-    return { ...super.info, tier: Math.max(this.tier, this.lean), simTier: this.tier, lean: this.lean };
+    return { ...super.info, tier: Math.max(this.tier, this.lean), simTier: this.tier, lean: this.lean, leanLog: this.leanLog.slice(-12) };
   }
 
   /** The camera the name is cut for (see the ice field). */
@@ -204,6 +210,7 @@ export class FlightEngine extends WaterEngine {
     // (The cut is a hair wider than the drawn letter: its edge is blended over a pixel, and the blend belongs to the ice.)
     if (ice.rect[2] > 0) this.gl.uniform4f(prog.u.uIceA, ice.a[0] + 3, ice.a[1], ice.a[2], ice.a[3]);
     if (prog.u.uIceP) this.gl.uniform4fv(prog.u.uIceP, this.nameCut);
+    if (prog.u.uIceLean) this.gl.uniform1f(prog.u.uIceLean, this.leanNow);
   }
 
   protected simCell() {
@@ -433,7 +440,12 @@ export class FlightEngine extends WaterEngine {
     gl.useProgram(d.prog);
     // (Leaner: the widest level is not made; its share goes to the next.)
     const wide = 1 - Math.min(1, this.leanNow);
-    for (let i = 1; i < (wide > 0 ? 4 : 3); i++) {
+    // Leanest: by day, when only the sun blooms, the halo is let go; before
+    // dawn it is kept, gathered at a quarter instead of a half.
+    const l2 = Math.min(1, Math.max(0, this.leanNow - 1));
+    const bloom = 0.55 * (1 - l2 * (1 - night));
+    const off = bloom <= 0.001;
+    for (let i = 1; i < (off ? 1 : wide > 0 ? 4 : 3); i++) {
       bindTex(gl, 0, f[i - 1].tex, d.u.uSrc);
       gl.uniform2f(d.u.uTexel, 0.5 / f[i - 1].w, 0.5 / f[i - 1].h);
       // By day only what outshines sunlit snow blooms; before dawn, the aurora and its mirror.
@@ -443,6 +455,7 @@ export class FlightEngine extends WaterEngine {
     // Gathered back up at small sizes, so the full-size pass reads the glow once.
     const up = this.p.bloomUp;
     gl.useProgram(up.prog);
+    if (!off) {
     bindTex(gl, 0, f[2].tex, up.u.uA);
     bindTex(gl, 1, f[3].tex, up.u.uB);
     gl.uniform2f(up.u.uTexelB, 1 / f[3].w, 1 / f[3].h);
@@ -451,13 +464,14 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 0, f[1].tex, up.u.uA);
     bindTex(gl, 1, f[4].tex, up.u.uB);
     gl.uniform2f(up.u.uTexelB, 1 / f[4].w, 1 / f[4].h);
-    gl.uniform2f(up.u.uW, 0.34, 0.66);
-    drawTo(gl, f[5]);
+    gl.uniform2f(up.u.uW, 0.34 * (1 - l2), 0.66 + 0.34 * l2);
+    if (l2 < 1) drawTo(gl, f[5]);
+    }
     const p = this.p.finish;
     gl.useProgram(p.prog);
     bindTex(gl, 0, f[0].tex, p.u.uScene);
-    bindTex(gl, 1, f[5].tex, p.u.uGlow);
-    gl.uniform1f(p.u.uBloom, 0.55);
+    bindTex(gl, 1, (l2 < 1 ? f[5] : f[4]).tex, p.u.uGlow);
+    gl.uniform1f(p.u.uBloom, bloom);
     gl.uniform1f(p.u.uTime, this.time);
     gl.uniform1f(p.u.uEnd, end);
     drawTo(gl, null, w, h);

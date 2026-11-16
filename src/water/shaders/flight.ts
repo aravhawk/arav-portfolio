@@ -607,8 +607,12 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   vec3 lit = lightOn(n, 1.0);
   // Clear ice: dark, blue-green; what is under it shows a little.
   float lodU = lodFor(foot, 230.0, 512.0);
-  float under = textureLod(uDetail, p / 700.0 + vec2(0.004, 0.003) * uTime, 0.0).r;
-  float netU = textureLod(uDetail, p / 230.0 + vec2(0.007, 0.004) * uTime, lodU).a;
+  float under = 0.5;
+  float netU = 0.0;
+  if (gL2 < 1.0) {
+    under = mix(textureLod(uDetail, p / 700.0 + vec2(0.004, 0.003) * uTime, 0.0).r, 0.5, gL2);
+    netU = textureLod(uDetail, p / 230.0 + vec2(0.007, 0.004) * uTime, lodU).a * (1.0 - gL2);
+  }
   vec3 clear = uIceCol * mix(vec3(0.2, 0.42, 0.52), vec3(0.016, 0.036, 0.062), uNight) * (0.78 + 0.34 * under) + uScatter * mix(2.0, 0.3, uNight);
   clear += (S.hor * 0.05 * (1.0 - uNight) + uAurora * 0.03) * smoothstep(0.22, 0.6, netU) * (1.0 - dust);
   vec3 white = mix(vec3(0.9, 0.92, 0.95), vec3(0.4, 0.47, 0.6), uNight) * lit * (0.97 + 0.03 * big);
@@ -627,10 +631,13 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   }
   // A pressure crack: a hairline of shadow, refrozen white either side.
   float cw = max(1.0, foot * 0.9);
-  float seam = 1.0 - smoothstep(1.5 * cw, 2.7 * cw, cr.x);
-  float plane = exp(-cr.x / (3.2 * cw)) * (0.5 + 0.5 * step(0.5, cr.y));
+  // (The cracks go as the sheet becomes plates, and a lean frame lets them go while they are only hairlines.)
+  float crK = (1.0 - uIceC.y) * (1.0 - gL2 * (1.0 - smoothstep(0.0, 0.01, uIceA.y)));
+  cr.x = mix(1e3, cr.x, crK > 0.0 ? 1.0 : 0.0);
+  float seam = (1.0 - smoothstep(1.5 * cw, 2.7 * cw, cr.x)) * crK;
+  float plane = exp(-cr.x / (3.2 * cw)) * (0.5 + 0.5 * step(0.5, cr.y)) * crK;
   col = mix(col, white * (1.06 + 0.1 * uLake.z), clamp(seam * 0.92 + plane * 0.3, 0.0, 1.0) / cw * (1.0 - 0.85 * uNight));
-  col *= 1.0 - mix(0.5, 0.62, uNight) * (1.0 - smoothstep(0.3 * cw, 0.85 * cw, cr.x)) / cw;
+  col *= 1.0 - mix(0.5, 0.62, uNight) * (1.0 - smoothstep(0.3 * cw, 0.85 * cw, cr.x)) / cw * crK;
   // The mirror: wet and clear ice carry the sky and the ranges.
   vec3 nr = normalize(vec3(-rel * 0.25, 1.0));
   float cosi = clamp(dot(-dir, nr), 0.0, 1.0);
@@ -640,7 +647,9 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   rf.z = abs(rf.z) + 0.02;
   // (Ice is a poorer mirror than water, and before dawn that difference is what draws the name.)
   gDull = true;
-  col = mix(col, skyAll(normalize(rf), 0.0), fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.72 * uNight));
+  vec3 mir = airAt(rf.xy);
+  if (gL2 < 1.0) mir = mix(skyAll(normalize(rf), 0.0), mir, gL2);
+  col = mix(col, mir, fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.72 * uNight));
   gDull = false;
   // The lip of a cut: a hair of snow, then the edge itself.
   float edge = 1.0 - smoothstep(0.0, 2.2 * cw, -f0);
@@ -770,6 +779,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   float fineW = 1.0 - smoothstep(0.12, 0.6, dn);
   float broadW = smoothstep(0.06, 0.4, dn);
   float net = 1.0 - smoothstep(0.55, 0.96, dn);
+  // (The lake is deep and dark: no net of light is seen on its bed, so none is worked out.)
+  if (lakeK > 0.99) net = 0.0;
   // Broad, slow unevenness in the light under water: the wide ripple layer's own field.
   float shaft = 0.45 + 1.1 * dw.r;
   vec3 lightOnBed;
