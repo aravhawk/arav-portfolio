@@ -16,7 +16,7 @@ import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, ground
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Target, bindTex, drawTo, freeTarget, makeTarget } from './gl';
 import { FLIGHT, FLIGHT_FREEBOARD } from './shaders/flight';
-import { GROUND } from './shaders/terrain';
+import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
 import { LAKE, OUTLET, SHOAL_Y, SLAB, WORLD, nameLayout, paintWorld, rasterName } from './world';
 
@@ -50,11 +50,16 @@ export class FlightEngine extends WaterEngine {
     delete s.render;
     s.flight = FLIGHT;
     s.ground = GROUND;
+    s.mountH = MOUNT_H;
+    s.mountPano = MOUNT_PANO;
+    s.mountEdge = MOUNT_EDGE;
     return s;
   }
 
   /** The snow's relief, baked once. */
   private ground!: Target;
+  /** The ranges, marched once into a panorama and lit each frame. */
+  private pano!: Target;
 
   /**
    * Trilinear, and as anisotropic as the device allows: a ground seen at a
@@ -82,6 +87,30 @@ export class FlightEngine extends WaterEngine {
     this.filterGround(this.ground);
     this.filterGround(this.grain);
     this.filterGround(this.detail);
+    this.bakeRanges();
+  }
+
+  private bakeRanges() {
+    const gl = this.gl;
+    const rgba8 = { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE };
+    const country = makeTarget(gl, 1024, 1024, { ...this.f16(), wrap: gl.REPEAT });
+    gl.useProgram(this.p.mountH.prog);
+    drawTo(gl, country);
+    const w = Math.min(PANO.w, this.maxTexture);
+    const raw = makeTarget(gl, w, PANO.h, { ...rgba8, filter: gl.NEAREST });
+    gl.useProgram(this.p.mountPano.prog);
+    bindTex(gl, 0, country.tex, this.p.mountPano.u.uH);
+    drawTo(gl, raw);
+    this.pano = makeTarget(gl, w, PANO.h, { ...rgba8, wrap: gl.MIRRORED_REPEAT });
+    gl.useProgram(this.p.mountEdge.prog);
+    bindTex(gl, 0, raw.tex, this.p.mountEdge.u.uPano);
+    drawTo(gl, this.pano);
+    gl.bindTexture(gl.TEXTURE_2D, this.pano.tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    freeTarget(gl, country);
+    freeTarget(gl, raw);
   }
 
   protected simCell() {
@@ -274,12 +303,14 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 10, this.curv.tex, r.u.uCurv);
     bindTex(gl, 11, (this.slabTex ?? this.grain.tex) as WebGLTexture, r.u.uSlabTex);
     bindTex(gl, 12, this.ground.tex, r.u.uGround);
+    bindTex(gl, 13, this.pano.tex, r.u.uPano);
     drawTo(gl, null, this.canvas.width, this.canvas.height);
   }
 
   destroy() {
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
     freeTarget(this.gl, this.ground);
+    freeTarget(this.gl, this.pano);
     super.destroy();
   }
 }

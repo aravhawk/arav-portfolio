@@ -21,6 +21,7 @@
  */
 
 import { ICE_FIELD } from './ice';
+import { PANO, SUN } from './terrain';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -55,6 +56,7 @@ uniform sampler2D uCurv;
 uniform sampler2D uGrain;
 uniform sampler2D uHeat;
 uniform sampler2D uSlabTex;
+uniform sampler2D uPano;   // the ranges: sun, sky, snow, distance
 uniform sampler2D uGround; // the baked snow: height, slope, a second field
 uniform float uIceH;
 uniform float uGlow;       // 0..1: how much of the lake's sheet is still there to glow under
@@ -75,6 +77,13 @@ uniform vec4 uLight;       // x: ambient, y: key, z: caustic gain, w: glint gain
 const float FREEBOARD = ${FLIGHT_FREEBOARD}.0;
 const float DEEP = 130.0;
 const vec3 POOL = vec3(0.1, 0.62, 0.7);
+const float PANO_AZ = ${PANO.az.toFixed(4)};
+const float PANO_EL = ${PANO.el.toFixed(4)};
+const float PANO_W = ${PANO.w}.0;
+const float SUN_AZ = ${SUN.az.toFixed(4)};
+const float SUN_EL = ${SUN.el.toFixed(4)};
+// What the aurora lends to things under it: zero by day.
+vec3 uAurora = vec3(0.0);
 
 vec2 bedUv(vec2 w) { return w / (uBedSize * uBedDiv); }
 ${ICE_FIELD}
@@ -99,13 +108,13 @@ Sky S;
 void skyKey() {
   // Morning at a high latitude: cold clear daylight, a low sun off to the
   // left, a pale sky that deepens overhead.
-  vec3 dz = vec3(0.075, 0.2, 0.52), dm = vec3(0.24, 0.43, 0.74), dh = vec3(0.66, 0.76, 0.86), db = vec3(1.25, 1.02, 0.74);
+  vec3 dz = vec3(0.06, 0.17, 0.48), dm = vec3(0.19, 0.37, 0.7), dh = vec3(0.5, 0.65, 0.84), db = vec3(1.25, 1.02, 0.74);
   // The hour before dawn: a deep blue sky, first light low behind the
   // ranges. The dark ending's light, earlier.
   vec3 nz = vec3(0.004, 0.011, 0.04), nm = vec3(0.012, 0.032, 0.085), nh = vec3(0.075, 0.07, 0.085), nb = vec3(0.62, 0.27, 0.085);
   S.zen = mix(dz, nz, uNight); S.mid = mix(dm, nm, uNight); S.hor = mix(dh, nh, uNight); S.band = mix(db, nb, uNight);
-  float az = mix(-0.92, 0.225, uNight);
-  float el = mix(0.215, -0.03, uNight);
+  float az = mix(SUN_AZ, 0.225, uNight);
+  float el = mix(SUN_EL, -0.03, uNight);
   S.sun = vec3(sin(az) * cos(el), cos(az) * cos(el), sin(el));
   // What lights the ground: the sun by day; before dawn a faint raking
   // light from where the sun will be, and the sky.
@@ -116,8 +125,8 @@ void skyKey() {
 
 /** The direction the ground is lit from: the sun, or before dawn a low light on its bearing. */
 vec3 keyDir() {
-  float az = mix(-0.92, 0.225, uNight);
-  float el = mix(0.215, 0.12, uNight);
+  float az = mix(SUN_AZ, 0.225, uNight);
+  float el = mix(SUN_EL, 0.12, uNight);
   return vec3(sin(az) * cos(el), cos(az) * cos(el), sin(el));
 }
 
@@ -154,67 +163,43 @@ vec3 skyColor(vec3 d, float clouds) {
   return col;
 }
 
-float ridgeH(float x) {
-  return (1.0 - abs(n1(x) * 2.0 - 1.0)) * 0.56 + (1.0 - abs(n1(x * 2.7 + 3.1) * 2.0 - 1.0)) * 0.27
-    + (1.0 - abs(n1(x * 6.3 + 1.7) * 2.0 - 1.0)) * 0.12 + n1(x * 17.0) * 0.05;
-}
-float ridgeBroad(float x) {
-  return (1.0 - abs(n1(x) * 2.0 - 1.0)) * 0.56 + (1.0 - abs(n1(x * 2.7 + 3.1) * 2.0 - 1.0)) * 0.27;
-}
-
 /**
- * Four ranges, furthest first, each a profile in elevation over bearing.
- * By day they are under snow: the faces turned to the sun are bright, the
- * others lie in blue shadow, and each range further back stands in more
- * air, so it is paler. Before dawn they are dark shapes against the first
- * light.
+ * The ranges: the baked panorama, lit now. Snow where the slopes are easy
+ * and rock where they are steep; the morning sun on one side of every
+ * ridge and blue shade on the other; and each range further off stands in
+ * more air, so it is paler and bluer. Before dawn they are dark country
+ * under the sky, their snow faintly lit by it.
+ * soft: how many levels blunter to read it (a mirror image in moving water is not sharp).
  */
-vec3 withRidges(vec3 col, vec3 d) {
+vec3 withRidges(vec3 col, vec3 d, float soft) {
   float el = asin(clamp(d.z, -1.0, 1.0));
-  if (el > 0.13) return col;
-  float az = atan(d.x, d.y);
-  float sunAz = atan(S.sun.x, S.sun.y);
-  float off = abs(az - sunAz);
-  float side = clamp((sunAz - az) * 3.0, -1.0, 1.0);
-  float aa = uPxAng * 1.5 + 1e-4;
   vec3 air = airAt(d.xy);
-  float cover = 0.0;
-  for (int i = 0; i < 4; i++) {
-    float near = float(i) / 3.0;
-    float f = mix(4.2, 9.0, near);
-    float x = az * f + 9.7 * float(i);
-    float r = ridgeH(x);
-    float amp = mix(0.1, 0.04, near);
-    float height = amp * (0.22 + 0.78 * r * r);
-    float m = 1.0 - smoothstep(height - aa, height + aa, el);
-    if (m > 0.0) {
-      float rel = clamp(el / max(height, 1e-4), 0.0, 1.0);
-      float slope = (ridgeBroad(x + 0.06) - ridgeBroad(x - 0.06)) / 0.12;
-      float spur = n1(x * 3.4 + (1.0 - rel) * 4.0 * side + 3.0 * float(i)) - 0.5;
-      float lit = clamp(0.5 - side * slope * 0.4 + spur * 0.8, 0.0, 1.0);
-      lit = smoothstep(0.12, 0.88, lit);
-      vec3 shade = mix(S.zen * 0.55 + S.mid * 0.5, S.zen * 0.22 + S.mid * 0.06, uNight);
-      vec3 sunlit = mix(vec3(0.86, 0.87, 0.9) + S.band * 0.12, S.mid * 0.34 + S.hor * 0.2 + S.band * 0.07 * exp(-off * 1.6), uNight);
-      vec3 rock = mix(shade, sunlit, lit * (0.55 + 0.45 * rel));
-      // Bare rock shows through the snow low on the nearer ranges.
-      rock *= 1.0 - (1.0 - uNight) * 0.3 * near * smoothstep(0.55, 0.2, rel) * smoothstep(0.35, 0.6, n1(x * 9.0 + 2.0));
-      rock += S.band * 0.1 * exp(-off * 3.0) * smoothstep(0.8, 1.0, rel) * uNight;
-      float airK = mix(mix(0.62, 0.4, uNight), mix(0.16, 0.0, uNight), near) * S.haze;
-      rock = mix(rock, air, clamp(airK + (1.0 - rel) * (1.0 - rel) * 0.3, 0.0, 0.92));
-      float a = m * step(0.0, el + 0.002);
-      col = mix(col, rock, a);
-      cover = max(cover, a);
+  if (el < PANO_EL) {
+    float az = atan(d.x, d.y);
+    vec2 uv = vec2(az / (2.0 * PANO_AZ) + 0.5, max(el, 0.0) / PANO_EL);
+    float lod = log2(max(uPxAng * PANO_W / (2.0 * PANO_AZ), 1.0)) + soft;
+    vec4 m = textureLod(uPano, uv, lod);
+    float cover = 1.0 - smoothstep(0.86, 0.97, m.a);
+    if (cover > 0.0) {
+      vec3 alb = mix(mix(vec3(0.13, 0.125, 0.13), vec3(0.05, 0.055, 0.07), uNight), mix(vec3(0.92, 0.93, 0.95), vec3(0.5, 0.56, 0.66), uNight), m.b);
+      float sunAz = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
+      vec3 day = S.key * 0.8 * m.r + S.amb * (0.1 + 0.62 * m.g);
+      // Before dawn: the sky's own light, and the first warmth on what faces it.
+      vec3 night = S.amb * (0.5 + 1.6 * m.g) + S.band * 0.035 * pow(sunAz, 3.0) * m.g + uAurora * 0.02 * m.g;
+      vec3 rock = alb * mix(day, night, uNight);
+      float far = clamp(m.a / 0.84, 0.0, 1.0);
+      float airK = 1.0 - exp(-(mix(0.07, 0.1, uNight) + far * mix(1.25, 1.9, uNight)) * S.haze);
+      rock = mix(rock, air, airK);
+      col = mix(col, rock, cover);
     }
   }
-  float sd = max(dot(d, S.sun), 0.0);
-  col += sunBloom(sd) * 0.5 * cover * uNight;
   // A thin band of mist lies along the foot of the ranges.
-  col = mix(col, air, exp(-max(el, 0.0) / 0.006) * 0.75);
+  col = mix(col, air, exp(-max(el, 0.0) / 0.004) * 0.6);
   return col;
 }
 
 /** What a ray that leaves the world sees. */
-vec3 skyAll(vec3 d, float clouds) { return withRidges(skyColor(d, clouds), d); }
+vec3 skyAll(vec3 d, float clouds) { return withRidges(skyColor(d, clouds), d, clouds > 0.5 ? 0.0 : 1.5); }
 
 vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
 
@@ -838,7 +823,7 @@ void main() {
     // end of the world.
     const float HF = 320.0;
     float thin = (1.0 - exp(-uCamPos.z / HF)) / max(uCamPos.z / HF, 1e-3);
-    float fog = 1.0 - exp(-t * 0.00034 * S.haze * thin);
+    float fog = 1.0 - exp(-t * 0.00021 * S.haze * thin);
     vec3 air = airAt(dir.xy);
     // (Before dawn the ground's haze is the cold air, warmed only toward the light.)
     air = mix(air, mix(S.hor, air, 0.45), uNight);
