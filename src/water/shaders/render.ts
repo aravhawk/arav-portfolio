@@ -95,9 +95,13 @@ vec4 bedAt(vec2 w) {
  */
 float bedDepth(float sd, out float slope) {
   float d = max(-sd, 0.0) / uScale;
-  float e = exp(-d / 22.0);
-  slope = (2.6 * e + 0.3) / uScale;
-  return 3.0 + 58.0 * (1.0 - e) + 0.3 * d;
+  // A shelf by the bank, then the floor. A narrow run never gets past the
+  // shelf, so it stays shallow and its bed shows; a pool or a basin has
+  // room to fall away to deep water in its middle.
+  float e = exp(-d / 12.0);
+  float wide = smoothstep(15.0, 90.0, d);
+  slope = (2.4 * e + 0.5 * wide) / uScale;
+  return 3.0 + 30.0 * (1.0 - e) + 0.95 * d * wide;
 }
 
 /** What a reflecting surface sees above it: a soft sky and two long lights. */
@@ -159,8 +163,12 @@ vec3 landColor(vec2 p, float sd, vec2 grad, vec2 scr) {
     float h0 = stoneH(g0);
     float hx = stoneH(texture(uGrain, (p + vec2(0.5, 0.0)) / 128.0));
     float hy = stoneH(texture(uGrain, (p + vec2(0.0, 0.5)) / 128.0));
-    rel += vec2(hx - h0, hy - h0) * 0.42;
+    // By night the stone is seen by raking light: its grain stands out.
+    rel += vec2(hx - h0, hy - h0) * (0.42 + 0.75 * uNight);
   }
+  // Night: the slab is lit unevenly along the page, as a floor is by a few
+  // far lamps, so the ground has light and dark country of its own.
+  col *= 1.0 + uNight * (0.7 * (cloud - 0.5) + 0.36 * (mott - 0.5));
   // The arris where the slab meets a cut is eased, not machined: a narrow
   // round that catches the key on one side and loses it on the other.
   float ch = 1.0 - smoothstep(0.4, 2.2, sd);
@@ -173,6 +181,10 @@ vec3 landColor(vec2 p, float sd, vec2 grad, vec2 scr) {
   float gloss = pow(max(dot(n, hv), 0.0), 26.0);
   float glim = texture(uDetail, vec2(p.x / 190.0 + uTime * 0.021, p.y / 150.0 - uTime * 0.027)).a;
   col += (uSky * 0.05 + uRim * 0.5 * uNight) * wet * (gloss * 2.2 + min(glim * glim * 9.0, 1.2) * 0.35 * wet) * uLight.y;
+  // Night: the water's glow spills a little cool light onto the stone
+  // beside it, and the grain there catches it.
+  float spill = exp(-max(sd, 0.0) / 34.0) * uNight;
+  col += uRim * spill * (0.13 + 0.45 * max(dot(n, hv), 0.0) + 2.5 * gloss) * (0.75 + 0.5 * g0.r);
   // The room's light falls off across the slab, and stays with the viewer.
   float fall = length((scr - vec2(0.2, 0.08)) * vec2(1.0, 0.82));
   col *= 1.0 + uGrainAmt.z * (0.42 - smoothstep(0.0, 1.2, fall));
@@ -385,7 +397,19 @@ void main() {
       float ph1 = fract(uTime * 0.19 + 0.5);
       float wphase = abs(ph0 * 2.0 - 1.0);
       const float DS = 132.0;
-      vec2 duv = pw / DS;
+      const mat2 R0 = mat2(0.3090, 0.9511, -0.9511, 0.3090);
+      // No two reaches show the same water: the moving detail is bent by
+      // one large slow warp and one smaller one, so the net never lines up
+      // with itself from one part of the page to the next.
+      vec4 reach = texture(uDetail, pw / 2900.0 + vec2(0.13, 0.41));
+      // Sines, not a texture: a magnified 8 bit warp would step.
+      vec2 warp = vec2(
+        sin(dot(pw, vec2(0.0021, 0.0027)) + 1.3) + 0.6 * sin(dot(pw, vec2(-0.0043, 0.0019)) + 4.1),
+        sin(dot(pw, vec2(-0.0024, 0.0031)) + 2.9) + 0.6 * sin(dot(pw, vec2(0.0037, 0.0036)) + 0.7)) * 0.8
+        + vec2(sin(dot(pw, vec2(0.011, -0.007)) + 0.4), sin(dot(pw, vec2(0.006, 0.012)) + 5.2)) * 0.16;
+      vec2 duv = pw / DS + warp;
+      // A run is water that is going somewhere: the channel's own current.
+      float runK = smoothstep(0.5, 0.85, length(flow)) * (1.0 - smoothstep(34.0, 80.0, -bw.r));
       vec2 uv0 = duv - vel * (ph0 * 2.6) / DS;
       vec2 uv1 = duv - vel * (ph1 * 2.6) / DS + vec2(0.37, 0.61);
       vec4 df = mix(texture(uDetail, uv0), texture(uDetail, uv1), wphase);
@@ -400,7 +424,7 @@ void main() {
       dw.gb = (dw.gb - 0.5) * R1 + 0.5;
       dw2.gb = (dw2.gb - 0.5) * R2 + 0.5;
       float speed = clamp(length(vel) / max(uFlowSpeed, 1.0), 0.0, 1.5);
-      float fa = 0.35 + 0.65 * speed;
+      float fa = 0.35 + 0.65 * speed + 0.35 * runK;
       vec2 dgrad = ((df.gb - 0.5) * fa * 0.9 + (dw.gb - 0.5) * 0.75 + (dw2.gb - 0.5) * 0.34) * 0.05;
 
       // One long slow swell crosses open water, far bigger than the ripples.
@@ -500,8 +524,9 @@ void main() {
         float gx0 = texture(uWave, suv - vec2(e.x, 0.0)).b;
         float gy1 = texture(uWave, suv + vec2(0.0, e.y)).a;
         float gy0 = texture(uWave, suv - vec2(0.0, e.y)).a;
-        t.xy -= vec2(gx1 - gx0, gy1 - gy0) * 4.5;
-        float f = uLight.z * mix(0.46, 0.8, dn);
+        t.xy -= vec2(gx1 - gx0, gy1 - gy0) * 3.2;
+        // The net is tighter in one reach and looser in the next.
+        float f = uLight.z * mix(0.46, 0.8, dn) * (0.78 + 0.5 * reach.r);
         float caust = focus(t, f);
         vec3 c3 = vec3(caust);
         if (uQuality > 1.5) {
@@ -596,20 +621,43 @@ void main() {
       float fres = min(0.02 + 0.98 * pow(1.0 - cosi, 5.0), 0.16);
       vec3 rf = reflect(dir, nr);
       vec3 sky = envWater(rf) * (1.0 - 0.75 * shade);
-      // Small sharp glints on steep ripple faces turned toward the key
-      // light. Calm water has none; a wake throws a line of them.
+      // A soft sheen on ripple faces turned toward the key light: shading,
+      // wide and graded, never a line.
       float face = dot(slope, -LXY);
-      float glint = smoothstep(0.1, 0.13, face) * (1.0 - smoothstep(0.15, 0.24, face));
+      float glint = smoothstep(0.05, 0.3, face) * 0.3;
       // A wave is seen the way real ripples are: the face turned to the
       // light is brighter, the far face darker. No layer is drawn over it.
       float wf = dot(wv.ba, -LXY) * 9.0;
-      water *= 1.0 + clamp(wf * 4.0, -0.32, 0.4);
-      water += sky * (1.0 + fres * 6.0) * (1.0 + clamp(wf * 9.0, -0.6, 1.1)) + uSky * glint * 0.11 * uLight.w * (1.0 - 0.8 * shade);
+      water *= 1.0 + clamp(wf * 3.4, -0.2, 0.36);
+      water += sky * (1.0 + fres * 6.0) * (1.0 + clamp(wf * 8.0, -0.4, 1.0)) + uSky * glint * 0.11 * uLight.w * (1.0 - 0.8 * shade);
       // Waterline: a dark wet seam where day water meets a bank; by night a
       // cool rim of light instead.
       float line = smoothstep(-2.6, 0.0, bw.r);
-      water *= 1.0 - 0.22 * line * (1.0 - uNight);
-      water += uRim * uNight * (line * 2.2 + smoothstep(-9.0, 0.0, bw.r) * 0.5);
+      // The bank that faces the light is lit where the water meets it: a
+      // thin bright line on that side, the bank's shadow on the other.
+      float toLight = max(dot(bw.ba, -LXY), 0.0);
+      float lite = smoothstep(-3.4, -1.2, bw.r) * (1.0 - smoothstep(-1.0, 0.4, bw.r)) * toLight * (1.0 - shade);
+      water *= 1.0 - 0.22 * line * (1.0 - uNight) * (1.0 - toLight);
+      water += uSky * lite * 0.34 * uLight.y * (1.0 - uNight);
+      water += uRim * uNight * (line * 2.2 + smoothstep(-9.0, 0.0, bw.r) * 0.5) * (0.55 + 1.1 * toLight);
+      // ---- the current, seen: long fine threads of light that ride a run,
+      // lying along it (they keep their distance from the bank, as drift
+      // lines do) and carried down it. Still water has none.
+      if (runK > 0.01) {
+        float lane = -bw.r + (reach.a - 0.5) * 9.0;
+        float th = texture(uGrain, vec2(lane / 46.0, 0.37 + reach.r * 0.6)).g;
+        float th2 = texture(uGrain, vec2(lane / 19.0 + 0.5, 0.71 + reach.g * 0.6)).g;
+        float lines = smoothstep(0.62, 0.72, th) * 0.7 + smoothstep(0.68, 0.76, th2) * 0.45;
+        // Broken into dashes by a pattern the current carries, in two
+        // phases cross-faded so it never stretches.
+        vec2 su = pw / 210.0 + warp * 0.3;
+        float carry = 5.2 / 210.0;
+        float b0 = texture(uGrain, su - vel * (ph0 * carry)).b;
+        float b1 = texture(uGrain, su - vel * (ph1 * carry) + vec2(0.53, 0.17)).b;
+        float dash = smoothstep(0.46, 0.62, mix(b0, b1, wphase));
+        float thread = min(lines, 1.0) * dash * runK * smoothstep(3.0, 9.0, -bw.r) * smoothstep(0.4, 0.75, length(vec2(dFdx(bw.r), dFdy(bw.r))) / uPx);
+        water += (uSky * 0.24 * (1.0 - uNight) + uRim * 3.2 * uNight + water * 0.6) * thread * (1.0 - 0.6 * shade);
+      }
       cut += water * (1.0 - aWall);
     }
     col += cut * (1.0 - aLand);
