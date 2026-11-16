@@ -136,8 +136,10 @@ vec3 skyColor(vec3 d, Sky s) {
 // colour. The ranges drop where the sun comes up, and its glow spills over
 // them.
 float ridgeH(float x) {
+  // In the blue hour the crests are calmer: fewer fine teeth on the line.
+  float teeth = mix(0.3, 1.0, uTheme);
   return (1.0 - abs(n1(x) * 2.0 - 1.0)) * 0.56 + (1.0 - abs(n1(x * 2.7 + 3.1) * 2.0 - 1.0)) * 0.27
-    + (1.0 - abs(n1(x * 6.3 + 1.7) * 2.0 - 1.0)) * 0.12 + n1(x * 17.0) * 0.05;
+    + ((1.0 - abs(n1(x * 6.3 + 1.7) * 2.0 - 1.0)) * 0.12 + n1(x * 17.0) * 0.05) * teeth;
 }
 
 /** The same profile without its fine teeth: what the light sees as a slope. */
@@ -274,7 +276,13 @@ void main() {
         glow = pow(gather, 1.5) * reach;
         c = mix(1.0, c, reach);
       }
-      vec3 day = uShallow * (1.0 + uNet.x * (c - 1.0));
+      // By day the water's colour is handed over, not cut: while the
+      // picture is still scrolling into view the page's teal deepens toward
+      // the dawn sea it is about to become, from the near water upward, so
+      // the top edge still meets the page's water in its own colour.
+      float hand = pow(uPre, 1.15) * (1.0 - smoothstep(0.5, 1.0, vUv.y) * (1.0 - 0.6 * uPre)) * 0.8;
+      vec3 sea = uDeep * 0.9 + s.mid * 0.55 + s.hor * 0.1;
+      vec3 day = mix(uShallow, sea, hand) * (1.0 + uNet.x * (1.0 - 0.6 * hand) * (c - 1.0));
       vec3 night = uShallow + uGlow * glow;
       vec3 shoal = mix(day, night, uTheme) * (0.9 + 0.2 * bars) * (1.0 + rip);
       body = mix(body, shoal, topK);
@@ -286,7 +294,7 @@ void main() {
     // By day the broad lobe is held back and the light is carried by a path
     // of separate glints: wide and sparse near the eye, narrowing to a
     // thread at the horizon.
-    col += vec3(1.0, 0.86, 0.62) * (pow(sd, 900.0) * 14.0 + pow(sd, 90.0) * mix(0.1, 0.55, uTheme)) * mix(0.75, 1.0, uTheme) * (1.0 - lee) * e;
+    col += vec3(1.0, 0.86, 0.62) * (pow(sd, 900.0) * 14.0 + pow(sd, 90.0) * mix(0.42, 0.55, uTheme)) * mix(0.8, 1.0, uTheme) * (1.0 - lee) * e;
     float da = atan(d.x, d.z) - atan(s.sun.x, s.sun.z);
     float nearK = 1.0 / (1.0 + dist * 0.03);
     float wide = mix(0.028, 0.11, nearK);
@@ -294,14 +302,16 @@ void main() {
     vec2 gq = q * vec2(30.0, 15.0);
     float sp = 0.6 * n2(gq + vec2(tt * 2.0, -tt * 3.0)) + 0.4 * n2(gq * 2.6 - vec2(tt * 3.0, tt));
     float lo = mix(0.5, 0.68, nearK);
-    float glint = smoothstep(lo, lo + 0.08, sp);
+    // Each glint has a soft shoulder: a spark on a ripple, not a cut-out.
+    float glint = smoothstep(lo - 0.16, lo + 0.26, sp);
+    glint *= glint;
     // Far off a glint is finer than a pixel: there the path is its even mean.
     float fine = smoothstep(0.35, 1.1, fwidth(gq.y));
     glint = mix(glint, 0.3, fine);
     float day = (1.0 - uTheme) * e;
     // The sun's reflected bloom is broken by the same facets, so it is not a patch.
-    col = max(col - sunBloom(sd, s) * clamp(fres + 0.05 * e, 0.0, 1.0) * 0.85 * (1.0 - glint) * day, 0.0);
-    col += vec3(1.0, 0.88, 0.7) * path * glint * mix(1.3, 0.95, nearK) * day * (1.0 - lee);
+    col = max(col - sunBloom(sd, s) * clamp(fres + 0.05 * e, 0.0, 1.0) * 0.3 * (1.0 - glint) * day, 0.0);
+    col += vec3(1.0, 0.88, 0.7) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee);
     vec3 air = airAt(atan(d.x, d.z), s);
     // Before the horizon is in frame its light already is: the far water
     // at the top of the picture warms as the look comes up.

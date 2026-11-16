@@ -135,7 +135,7 @@ export default async function Home() {
         <section className="beat wrap" data-side="right" aria-label="Kilo Bench">
           <Copy p={P['kilo-bench']} />
           <div className="feat feat-lanes" data-bed="feat:lanes">
-            <Slab media={P['kilo-bench'].media[0]} sizes="(max-width: 860px) 70vw, 30vw" />
+            <Slab media={P['kilo-bench'].media[0]} sizes="(max-width: 860px) 80vw, 40vw" />
           </div>
         </section>
 

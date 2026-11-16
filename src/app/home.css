@@ -317,8 +317,8 @@ html[data-water='on'] [data-ice] [data-ice-line] {
 .feat-lanes .slab {
   position: absolute;
   right: 0;
-  bottom: 3%;
-  width: 60%;
+  bottom: 4%;
+  width: 76%;
 }
 /* RydAR: the app stands on the ground the road bends around. */
 .feat-bends .slab {
@@ -620,7 +620,7 @@ html[data-water='on'] [data-ice] [data-ice-line] {
     left: 0;
     right: auto;
     bottom: 3%;
-    width: 68%;
+    width: 80%;
   }
   .feat-bends .slab {
     left: 21%;

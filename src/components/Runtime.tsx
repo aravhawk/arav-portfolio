@@ -60,9 +60,15 @@ export function Runtime() {
         melted = nowMelted;
         html.toggleAttribute('data-melted', nowMelted);
       }
+      // The nav leaves as soon as the page moves down, so it never sits
+      // over copy that is scrolling under it, and comes back when the page
+      // moves up or is at its top. Scroll position is read, not wheel
+      // events, so a scroll made by script counts too. Focus inside the
+      // nav brings it back in CSS, so it stays reachable by keyboard.
       const dy = y - lastY;
-      if (Math.abs(dy) > 6) {
-        const want = dy > 0 && y > vh * 0.5;
+      const atTop = y <= 8;
+      if (Math.abs(dy) > 6 || (atTop && hidden)) {
+        const want = dy > 0 && !atTop;
         if (want !== hidden) {
           hidden = want;
           html.toggleAttribute('data-nav-hidden', hidden);

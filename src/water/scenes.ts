@@ -365,7 +365,33 @@ const bends: Feature = (c, r, el) => {
 /** A plain run: the stream passes straight through a section. */
 const pass: Feature = (c, r) => {
   const x = c.narrow ? c.lane : cx(r);
-  c.b.channel([pt(x, r.y - 6), pt(x, r.y + r.h + 6)], { width: c.w, straight: true });
+  if (c.narrow || r.h < 500) {
+    c.b.channel([pt(x, r.y - 6), pt(x, r.y + r.h + 6)], { width: c.w, straight: true });
+    return { in: pt(x, r.y), out: pt(x, r.y + r.h) };
+  }
+  // A long lane: the stream moves in it as a stream does. It is slimmer
+  // than on the home page, wanders gently from side to side, and swells
+  // and narrows, so it is never a ruled pipe with a strip of ground beside
+  // it. It never crosses the lane's left edge: the reading column is dry.
+  const w = c.w * 0.64;
+  const lo = r.x + 4;
+  const hi = Math.min(c.a.viewW - 14, r.x + r.w + 48);
+  const n = Math.max(4, Math.round(r.h / 210));
+  const pts: Pt[] = [];
+  const widths: number[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const y = lerp(r.y - 6, r.y + r.h + 6, t);
+    // Calm where it joins the reaches above and below.
+    const ease = Math.sin(Math.PI * t) ** 0.6;
+    const wl = w * (1 + ease * (0.2 * Math.sin(y / 290 + 2.1) + 0.1 * Math.sin(y / 131 + 0.6)));
+    const room = Math.max(0, (hi - lo - wl * 1.3) / 2);
+    const mid = lerp(x, (lo + hi) / 2, ease);
+    const sway = 0.62 * Math.sin(y / 395 + 0.9) + 0.38 * Math.sin(y / 171 + 4.0);
+    pts.push(pt(mid + room * ease * sway, y));
+    widths.push(lerp(c.w, wl, Math.min(1, ease * 1.6)));
+  }
+  c.b.channel(pts, { width: widths });
   return { in: pt(x, r.y), out: pt(x, r.y + r.h) };
 };
 
