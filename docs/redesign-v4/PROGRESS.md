@@ -48,6 +48,42 @@ wasteful.
    aravjain.dev. Do not touch Vercel domain settings; list dashboard steps
    in the final report.
 
+## Work split (Arav, t256u, 2026-11-15 about 10:10 PM CT; this overrides who does what above)
+
+Arav's weekly Fable allowance on the Claude subscription was down to 11%.
+The work is not paused; it is split.
+
+1. **This thread (Claude Code, Fable 5.2) orchestrates, studies, tests and
+   reviews only:** planning, the reference studies, reading and judging
+   diffs, browser, performance and contrast checks, cross-browser runs,
+   haptics checks, review rounds, docs and the final write-up. Full depth
+   and rounds still apply. It does not write core implementation code. A
+   one-line tweak is the limit.
+2. **All core implementation goes to Kilo Code:** components, scene and
+   shader code, page builds, section I work, refactors, and any bug fix
+   bigger than a one-line tweak.
+3. How to delegate, exactly:
+   `delegate_task` with `target: {providerInstanceId: 'acpRegistry_kilo',
+   model: 'kilo/anthropic/claude-fable-5.2', options: {mode: 'code'}}`,
+   `runtimeMode: 'full-access'`, `isolation: 'shared'` (this worktree).
+   Never Kilo's orchestrator mode; a Kilo task never spawns subtasks. It
+   stays inside the worktree: no outside paths, no global installs.
+4. **One Kilo task at a time.** Wait, review its diff, run the tests and
+   visual checks, then send the next. No parallel helpers on any provider.
+5. Every brief stands alone (Kilo gets no history): spec sections, exact
+   files, Arav's rules and bans, acceptance tests, commands. Kilo commits
+   locally, SSH-signed as aravhawk@gmail.com, and never pushes. This thread
+   pushes the signed checkpoint after review.
+6. If a Kilo task shows `waiting` or looks idle for about 10 minutes, check
+   `task_status` and `t3_pending_request` for it at once and unblock it. Two
+   stalls on the same task: cancel, note why here, do that piece in this
+   thread at the smallest scope.
+7. A result below the bar goes back to Kilo with specific notes. It is not
+   rewritten here.
+
+Unchanged: same branch, signed SSH pushes only, no merge, no deploy,
+section I, haptics.
+
 ## Checklist
 
 ### 0. Setup
@@ -61,46 +97,45 @@ wasteful.
 - [x] Dependencies: lenis, web-haptics 0.0.6, vitest
 
 ### 1. Study
-- [~] Skills loaded (taste, Emil set, landing-page, ui-ux-pro-max, apple-design); `skills-evidence.md` owed
+- [x] Skills loaded and recorded in `skills-evidence.md`
 - [x] Reference study: parts 01 and 03 by helpers, part 02 by me, `reference-study.md` index and decision map
 - [x] v2/v3 carry-over, `carry-over.md`
-- [x] v3 lag root cause in `perf.md` (v4 measurements owed)
+- [x] v3 lag root cause in `perf.md` (v4 measurements: numbers taken, write-up owed)
 
 ### 2. Design
-- [ ] `concept.md` (3+ concepts, pick)
-- [ ] `motion-system.md`
-- [ ] `typography.md` + bake-off + blind ranking + `font-licenses.md`
+- [x] `concept.md`, `motion-system.md` (both need the deep water pass written in)
+- [~] `typography.md`: blind ranking done (X, Y, Z); the pick changed to X plus
+      a serif accent; the doc and `font-licenses.md` must be rewritten to match
 
 ### 3. Content and metrics
-- [x] `content-sources.md` (every number re-pulled, every link checked)
-- [x] `lib/metrics` + snapshot + refresh script + weekly workflow + tests (191 pass)
-- [x] `metrics.md`; metrics wired into home (inner pages in progress)
+- [x] `content-sources.md`, `lib/metrics`, snapshot, refresh script, weekly workflow, tests, `metrics.md`
+- [ ] Refresh the snapshot on ship (`node scripts/refresh-metrics.mjs`)
 
 ### 4. Build
-- [~] Water engine (bed, simulation, shading, tiers done; fallback, tuning owed)
-- [~] Home (hero, eight beats, interests, ending) built; tuning owed
-- [ ] /work archive, project detail pages
-- [ ] Blog shell, 404, error, loading states
-- [ ] Theme (system + toggle, no flash), haptics, reduced motion,
-      reduced transparency, forced colors, print
+- [x] Water engine, home, /work, project pages, blog shell, states, theme, haptics, reduced motion
+- [~] Deep water pass after the critic (commit 24a276c): done in this thread
+      before the split. What is left goes to Kilo (list in the log below).
 
 ### 4b. Domains and sharing (section I)
-- [x] One site URL constant (`src/lib/site.ts`); canonical, sitemap, robots, feed, JSON-LD on arav.pro
-- [x] Host redirects (backup) in next.config: aravjain.dev, www.aravjain.dev, www.arav.pro, 308, path kept
-- [x] OG images per page with next/og and real fonts (`src/lib/og.tsx`); apple-touch-icon; theme-color
-- [~] Verified once (rendered cards in `~/.t3/portfolio-redesign-v4/og/`, built meta tags, grep); re-verify on the final build
+- [x] Site URL constant, canonical, sitemap, robots, feed, JSON-LD on arav.pro; host redirects; OG images; icons; theme-color
+- [ ] Re-verify on the final build: OG images now use the new faces (render
+      each, check meta for home, one project, one post, grep aravjain.dev)
 
-### 5. Gates
-- [ ] lint, typecheck, build, unit tests
-- [ ] Overlap test (zero overlaps)
-- [ ] Perf traces
-- [ ] Lighthouse
-- [ ] Cross-browser matrix + touch
-- [ ] Greps (dashes, banned words), word count, blog/editor diff empty
+### 5. Gates (all must be re-run on the final build)
+- [x] lint, typecheck, build, 196 unit tests at 24a276c plus the tracking tweak
+- [~] Overlap test: script now measures ending contrast; passes on home at
+      five widths in Chromium; the full three-browser run is owed
+- [x] Perf traces at the deep water pass: p95 16.7 to 16.8 ms on all four
+      profiles, tier 0 desktop, backing size constant (`traces/v4-r6`)
+- [ ] Lighthouse on home, /work, a project page, a post (desktop and mobile)
+- [x] Cross-browser matrix after the deep water pass: 92 loads, 0 problems
+- [ ] Greps (dashes, banned words), word count, file sizes, blog/editor diff empty
 
 ### 6. Review
-- [~] Rounds 1 to 5, `design-review.md` (round 1 done and fixed; write-up owed)
-- [ ] Independent critic, fixes, re-score
+- [x] Rounds 1 to 5, `design-review.md`
+- [x] Independent critic, first score: 5.5 of 10 (`critic/review-1.md`)
+- [~] Fixes for the critic's findings (round 6): most done; remaining to Kilo
+- [ ] Second independent score, target 8.5; write both into `design-review.md`
 
 ### 7. Finish
 - [ ] Final screenshots and videos
@@ -140,3 +175,28 @@ wasteful.
   `content-sources.md`, `carry-over.md`, `perf.md` (v4 measurements owed),
   plus `sources/project-facts.md` outside git. Home page, ending screen and
   all eight project beds are built; inner pages in progress.
+- 2026-11-15 20:10 CT. Independent critic (one fresh agent, medium effort,
+  captures only): 5.5 of 10. Blind type ranking X, Y, Z, and the build had
+  shipped Z. Full text in `~/.t3/portfolio-redesign-v4/critic/review-1.md`.
+  Worst findings: the name was not ice, the melt was a weight slider, most
+  of the page was flat grey, the water read as a texture, the type looked
+  default, empty pools on inner pages, the ending was a step down from v2.
+- 2026-11-15 22:05 CT. Round 6, the deep water pass, pushed as 24a276c
+  (signed). Oblique camera (walls, waterline and bed read as depth), summed
+  curvature caustics, rivers about twice as wide, a lake from bank to bank,
+  the name as a standing block of ice, a melt that sinks and clears, TASA
+  Orbiter with Spline Sans Mono and a Newsreader accent, the ending with
+  words set in the picture, a plain footer on inner pages, no empty pools.
+  The overlap test's ending check turned out to be vacuous (it skipped
+  `data-chrome`); it now photographs the picture behind every line and
+  measures contrast. That failed the light ending at 1.6 to 1, so the light
+  ending was regraded as a blue-hour dawn; it passes at five widths.
+- 2026-11-15 22:10 CT. Work split (t256u, section above). From here this
+  thread reviews and tests; Kilo implements. Uncommitted at the split: one
+  line in `globals.css` (display tracking -0.036em, leading 0.94).
+- Open items for Kilo, from round 6 review (to be sent one task at a time):
+  1. Home word count back to 200 or under after the copy changes; check.
+  2. Reduced motion, no WebGL, forced colours and print after the layout
+     changes (full-bleed lake, new ending, footer).
+  3. Whatever the second critic finds.
+

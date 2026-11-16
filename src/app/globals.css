@@ -289,8 +289,8 @@ html:not([data-water='on']) [data-bed][data-basin] {
   font-family: var(--font-display);
   font-size: var(--fs-display);
   font-weight: var(--display-wght);
-  line-height: 0.9;
-  letter-spacing: -0.045em;
+  line-height: 0.94;
+  letter-spacing: -0.036em;
   text-wrap: balance;
 }
 .number {
