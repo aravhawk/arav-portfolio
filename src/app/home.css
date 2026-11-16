@@ -46,10 +46,10 @@ html:not([data-water='on']) .hero-lake [data-bed][data-basin] {
 .hero-lake {
   --bed-r: 44px;
   position: relative;
-  /* The lake runs well past the first screen: the name drifts down it as it
-     melts, so the melt stays in view. */
-  height: calc(134svh - var(--hero-top));
-  min-height: 760px;
+  /* The lake runs a little past the first screen and no further: when the
+     last floe has gone the statement below it is already well into view. */
+  height: calc(104svh - var(--hero-top));
+  min-height: 560px;
 }
 
 .ice {
@@ -548,8 +548,8 @@ html[data-water='on'] [data-ice] [data-ice-line] {
   }
   .hero-lake {
     --bed-r: 26px;
-    height: calc(122svh - var(--hero-top));
-    min-height: 560px;
+    height: calc(106svh - var(--hero-top));
+    min-height: 520px;
   }
   .ice {
     font-size: var(--ice-size-stacked);

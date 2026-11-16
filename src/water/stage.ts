@@ -300,7 +300,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
     if (ice && iceSd && lake) {
       engine.iceRect = ice.rect;
       engine.lake = { y0: lake.y, y1: lake.y + lake.h };
-      engine.meltRange = Math.round(viewH * 0.64);
+      engine.meltRange = Math.round(viewH * 0.56);
       const out = painter.outlet;
       engine.meltPath = out ? { x: out.x, y: out.y, reach: viewH * 0.9, w: out.w } : { x: 0, y: 0, reach: 0, w: 0 };
       engine.setIce({ sd: iceSd.sd, w: ice.tw, h: ice.th, minSd: iceSd.min });
@@ -356,7 +356,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
     engine.pointerMove(e.clientX + window.scrollX, e.clientY + window.scrollY);
   };
   const onDown = (e: PointerEvent) => {
-    engine.splash(e.clientX + window.scrollX, e.clientY + window.scrollY, e.pointerType === 'touch' ? 24 : 20, 1.15);
+    engine.splash(e.clientX + window.scrollX, e.clientY + window.scrollY, e.pointerType === 'touch' ? 24 : 20, 1.5);
   };
   const onLeave = () => engine.pointerLeave();
   window.addEventListener('pointermove', onMove, { passive: true });

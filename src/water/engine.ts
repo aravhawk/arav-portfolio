@@ -12,7 +12,7 @@
 import type { BedData } from './bed';
 import { type GL, type Program, type Target, Swap, bindTex, bindTriangle, compile, drawTo, freeTarget, makeTarget, makeTexture } from './gl';
 import { RENDER } from './shaders/render';
-import { BED_A, BED_B, DETAIL, DETAIL_CURV, GRAIN, SD_BLUR, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
+import { BED_A, BED_B, DETAIL, DETAIL_CURV, GRAIN, SD_BLUR, SNOW, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
 
 export interface Palette {
   land: [number, number, number];
@@ -119,6 +119,7 @@ export class WaterEngine {
   private detail!: Target;
   private curv!: Target;
   private grain!: Target;
+  private snow!: Target;
   private bedA: Target | null = null;
   private bedB: Target | null = null;
   private bedMeta = { w: 1, h: 1, div: 4 };
@@ -237,6 +238,7 @@ export class WaterEngine {
       detail: DETAIL,
       detailCurv: DETAIL_CURV,
       grain: GRAIN,
+      snow: SNOW,
       heat: HEAT,
     };
     for (const k of Object.keys(src)) {
@@ -255,6 +257,9 @@ export class WaterEngine {
     this.curv = makeTarget(gl, 512, 512, { ...this.f16(), wrap: gl.REPEAT });
     gl.useProgram(this.p.detailCurv.prog);
     drawTo(gl, this.curv);
+    this.snow = makeTarget(gl, 512, 512, { ...this.f16(), wrap: gl.REPEAT });
+    gl.useProgram(this.p.snow.prog);
+    drawTo(gl, this.snow);
     for (const t of [this.detail, this.grain]) {
       gl.bindTexture(gl.TEXTURE_2D, t.tex);
       gl.generateMipmap(gl.TEXTURE_2D);
@@ -507,7 +512,7 @@ export class WaterEngine {
     // The name only gets bolder until half way; after that the water it
     // let in takes the ice around it.
     const poolAt = (t: number) => half * 1.1 * smooth(0.5, ISLANDS, t);
-    const openAt = (t: number) => half * 0.42 * smooth(0.15, 0.6, t) + poolAt(t);
+    const openAt = (t: number) => half * 0.24 * smooth(0.15, 0.6, t) + poolAt(t);
     const gapAt = (t: number) => (narrow ? 0.55 : 1) * (56 * smooth(0.15, 0.6, t) + 24 * smooth(0.55, 0.9, t));
     const edgeAt = (t: number) => (narrow ? 26 : 34) + 0.4 * poolAt(t);
     const pool = poolAt(m);
@@ -537,17 +542,18 @@ export class WaterEngine {
       rect: [r.x, r.y + drift, r.w, r.h],
       a: [open, lead, m, gap],
       b: [this.meltPath.x, this.lake.y1 - lakeH * 0.16, gather, cell],
-      c: [narrow ? 20 : 32, smooth(0.5, 0.55, m), smooth(0.48, 0.56, m), edgeAt(m)],
+      c: [narrow ? 20 : 32, smooth(0.5, 0.55, m), smooth(0.505, 0.57, m), edgeAt(m)],
       k: Math.max(this.cssW * 0.42, lakeH * 0.42),
       l: [cellH / cell, (0.2 * band) / rows / cellH, r.x / cell, phaseY],
       box: [bx[0] * r.w, bx[1] * r.h, bx[2] * r.w, bx[3] * r.h],
       lake: [this.lake.y0, this.lake.y1, wet, 1],
       h: narrow ? 13 : 19,
       shed,
+
     };
   }
 
-  private bindIce(prog: Program, ice: ReturnType<WaterEngine['iceUniforms']>, sdfUnit: number) {
+  private bindIce(prog: Program, ice: ReturnType<WaterEngine['iceUniforms']>, sdfUnit: number, snowUnit: number) {
     const gl = this.gl;
     gl.uniform4fv(prog.u.uIce, ice.rect);
     gl.uniform4fv(prog.u.uIceA, ice.a);
@@ -559,6 +565,7 @@ export class WaterEngine {
     gl.uniform4fv(prog.u.uIceL, ice.l);
     gl.uniform4fv(prog.u.uLake, ice.lake);
     bindTex(gl, sdfUnit, (this.iceTex ?? this.grain).tex, prog.u.uIceSdf);
+    bindTex(gl, snowUnit, this.snow.tex, prog.u.uSnow);
   }
 
   private simulate(dt: number, top: number) {
@@ -619,7 +626,7 @@ export class WaterEngine {
     common(w, 1);
     gl.uniform1f(w.u.uDt, sub);
     gl.uniform4fv(w.u.uPtr, seg);
-    this.bindIce(w, ice, 3);
+    this.bindIce(w, ice, 3, 5);
     gl.uniform1f(w.u.uIceDrip, ice.rect[2] > 0 ? Math.min(this.meltRate, 1.2) + ice.shed : 0);
     gl.uniform1f(w.u.uAmbient, 1);
     bindTex(gl, 4, this.detail.tex, w.u.uDetail);
@@ -627,7 +634,7 @@ export class WaterEngine {
       bindTex(gl, 0, this.wave!.read.tex, w.u.uWave);
       gl.uniform2f(w.u.uShift, 0, i === 0 ? shift : 0);
       gl.uniform1f(w.u.uTime, this.time + i * sub);
-      gl.uniform2f(w.u.uPtrForce, moving ? (0.25 + 0.75 * Math.min(speed / 700, 1)) * 0.17 : 0, 15);
+      gl.uniform2f(w.u.uPtrForce, moving ? (0.25 + 0.75 * Math.min(speed / 700, 1)) * 0.22 : 0, 15);
       const d = this.drop;
       gl.uniform4f(w.u.uDrop, d.x, d.y, d.r, i === 0 ? d.s : 0);
       drawTo(gl, this.wave!.write);
@@ -698,8 +705,12 @@ export class WaterEngine {
     gl.uniform1f(r.u.uQuality, tier.quality);
     gl.uniform1i(r.u.uMode, mode);
     gl.uniform1f(r.u.uScale, this.cssW < 860 ? 0.5 : 1);
-    this.bindIce(r, ice, 7);
+    this.bindIce(r, ice, 7, 9);
     gl.uniform1f(r.u.uIceH, ice.h);
+    // By night the lake is lit from within while the sheet lies on it: the
+    // name is the bright thing. The light goes down as the ice goes, and is
+    // out when the melt is done.
+    gl.uniform1f(r.u.uGlow, this.iceTex ? (1 - smooth(0.5, 1, this.melt)) * Math.min(1, Math.max(0, this.theme)) : 0);
     gl.uniform1f(r.u.uMeltAct, mode === 0 ? this.meltAct : 0);
     gl.uniform4f(r.u.uMeltPath, this.meltPath.x, this.meltPath.y, this.meltPath.reach, this.meltPath.w);
     gl.uniform3fv(r.u.uLand, pal.land);
@@ -813,7 +824,7 @@ export class WaterEngine {
     this.wave?.free(gl);
     this.vel?.free(gl);
     this.heat.free(gl);
-    for (const t of [this.waveOut, this.bedA, this.bedB, this.iceTex, this.maskTarget, this.detail, this.grain]) freeTarget(gl, t);
+    for (const t of [this.waveOut, this.bedA, this.bedB, this.iceTex, this.maskTarget, this.detail, this.grain, this.curv, this.snow]) freeTarget(gl, t);
     for (const k of Object.keys(this.p)) gl.deleteProgram(this.p[k].prog);
     gl.getExtension('WEBGL_lose_context')?.loseContext();
   }

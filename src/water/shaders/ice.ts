@@ -9,7 +9,7 @@
  * shrink, round off and gather toward the lake's outlet until none is left.
  * Every term is a function of the melt alone, so it reverses exactly.
  *
- * Needs: uIce, uIceA, uIceB, uIceC, uIceK, uIceL, uIceW, uIceBox, uLake, uIceSdf, uDetail, and
+ * Needs: uIce, uIceA, uIceB, uIceC, uIceK, uIceL, uIceW, uIceBox, uLake, uIceSdf, uDetail, uSnow, and
  * the bed (uBedA, bedUv) declared before this block.
  */
 export const ICE_FIELD = `
@@ -24,6 +24,7 @@ uniform vec4 uIceBox;      // the letters' own box in the sheet's frame: centre 
 uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet is 0..1, w: 1 while the sheet is whole, 0 once it is gone
 uniform sampler2D uIceSdf; // signed distance to the letters px (negative inside), _, gradient
 uniform sampler2D uDetail;
+uniform sampler2D uSnow;   // three draws of one smooth field, in half floats: about -0.7..0.7
 
 vec2 ih2(vec2 p) {
   p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
@@ -55,6 +56,21 @@ float poolSd(vec2 q) {
   float r = min(uIceBox.z, uIceBox.w) * 0.92;
   vec2 d = abs(q - uIceBox.xy) - uIceBox.zw + r;
   return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
+}
+
+/**
+ * The plate the name stands in: the letters' box with room round it and
+ * round corners. No crack and no lead comes inside it while the name is
+ * there to be read. x: distance to its edge px (negative inside), yz: which
+ * way that distance grows.
+ */
+vec3 plateSd(vec2 q) {
+  vec2 v = q - uIceBox.xy;
+  float r = min(uIceBox.z, uIceBox.w) * 0.9;
+  vec2 d = abs(v) - uIceBox.zw - min(uIceBox.w * 0.55, 36.0) + r;
+  vec2 sg = vec2(v.x < 0.0 ? -1.0 : 1.0, v.y < 0.0 ? -1.0 : 1.0);
+  vec2 g = max(d.x, d.y) > 0.0 ? normalize(max(d, 0.0)) * sg : (d.x > d.y ? vec2(sg.x, 0.0) : vec2(0.0, sg.y));
+  return vec3(length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r, g);
 }
 
 /**
@@ -92,7 +108,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // Pressure cracks: the walls of a few large, irregular cells. Early in the
   // melt they are where leads of water open.
   float cellA = uIceK;
-  vec2 wob = (textureLod(uDetail, il / (cellA * 5.0), 0.0).gb - 0.5) * cellA * 0.16;
+  vec2 wob = textureLod(uSnow, il / (cellA * 5.0), 0.0).rg * cellA * 0.12;
   vec2 x = (il + wob) / cellA + vec2(3.37, 1.83);
   vec2 n = floor(x);
   vec2 fr = fract(x);
@@ -104,6 +120,9 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     for (int i = 0; i < 3; i++) {
       vec2 g = vec2(float(i - 1), float(j - 1));
       vec2 r = g + 0.14 + 0.72 * ih2(n + g) - fr;
+      // A cell whose middle would lie in or by the name's plate is not
+      // there: the plate has that ground.
+      if (plateSd(il + r * cellA).x < cellA * 0.12) r = vec2(40.0);
       pts[j * 3 + i] = r;
       float d = dot(r, r);
       if (d < md) { md = d; mr = r; mg = g; }
@@ -115,6 +134,15 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     if (dot(dr, dr) > 1e-5) bd = min(bd, dot(0.5 * (mr + pts[k]), normalize(dr)));
   }
   cr = vec3(bd * cellA, ih2(n + mg + 7.7).x, 0.0);
+  // The name's plate is one more cell among them, and it is the name's own:
+  // every point nearer the plate than any cell's middle belongs to it. So
+  // the cracks, and the leads that open along them, run round the name and
+  // never through a letter or between two.
+  vec3 pl = plateSd(il);
+  float d1 = sqrt(md) * cellA;
+  float turnK = max(length(-mr / max(sqrt(md), 1e-3) - pl.yz), 0.35);
+  if (pl.x < d1) cr = vec3((d1 - pl.x) / turnK, 0.3, 0.0);
+  else cr.x = min(cr.x, (pl.x - d1) / turnK);
 
   // The bank lets go unevenly: more here, less there.
   // (Looked up only where the sheet has a bank to let go of.)
@@ -130,7 +158,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     // Leads open unevenly along a crack, as they do. Across the name they
     // stay hairlines. Once the sheet is islands there are no leads: all the
     // water between the floes is open.
-    float un = textureLod(uDetail, il / (cellA * 1.4) + 0.31, 0.0).r;
+    float un = clamp(0.5 + 0.8 * textureLod(uSnow, il / (cellA * 1.4) + 0.31, 0.0).b, 0.0, 1.0);
     float clearOf = smoothstep(8.0, 130.0, lsd);
     f = smax(f, cellA * uIceA.y * (0.45 + 1.1 * un) * clearOf * (1.0 - uIceC.y) - cr.x, kS);
   }

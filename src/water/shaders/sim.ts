@@ -398,6 +398,18 @@ void main() {
 
 
 /**
+ * Two more draws of the same smooth field, kept in half floats. The ice
+ * reads its snow, its cracks' wander and its leads' width from this one:
+ * an 8 bit texture, magnified and then cut at a threshold, shows its 256
+ * levels as stair steps along every edge. This one has no levels to show.
+ */
+export const SNOW = `${HEAD}
+${DETAIL_FIELD}
+void main() {
+  o = vec4(field(vUv), field(vUv + vec2(0.37, 0.61)), field(vUv.yx + vec2(0.19, 0.83)), 1.0);
+}`;
+
+/**
  * The curvature of the same field (its Hessian, times the focal length the
  * caustic above was baked at). Layers of this add, where baked caustics do
  * not: the shading pass sums the curvature of every moving layer and takes

@@ -276,14 +276,18 @@ void main() {
         glow = pow(gather, 1.5) * reach;
         c = mix(1.0, c, reach);
       }
-      // By day the water's colour is handed over, not cut: while the
+      // The water's colour is handed over, not cut: while the
       // picture is still scrolling into view the page's teal deepens toward
       // the dawn sea it is about to become, from the near water upward, so
       // the top edge still meets the page's water in its own colour.
       float hand = pow(uPre, 1.15) * (1.0 - smoothstep(0.5, 1.0, vUv.y) * (1.0 - 0.6 * uPre)) * 0.8;
       vec3 sea = uDeep * 0.9 + s.mid * 0.55 + s.hor * 0.1;
       vec3 day = mix(uShallow, sea, hand) * (1.0 + uNet.x * (1.0 - 0.6 * hand) * (c - 1.0));
-      vec3 night = uShallow + uGlow * glow;
+      // By night the same handover: the page's night teal warms toward the
+      // first-light sea while the picture comes into view, and the net's
+      // cool light turns to the colour of the light that is coming.
+      vec3 seaN = uDeep * 1.5 + s.mid * 0.25 + s.hor * 0.12;
+      vec3 night = mix(uShallow, seaN, hand) + mix(uGlow, s.band * 0.075, hand) * glow;
       vec3 shoal = mix(day, night, uTheme) * (0.9 + 0.2 * bars) * (1.0 + rip);
       body = mix(body, shoal, topK);
     }
