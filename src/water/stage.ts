@@ -251,6 +251,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
       if (scene) scene(painter, anchors);
 
       // Every text block is raised back to dry land.
+      const range = document.createRange();
       const seen = document.querySelectorAll<HTMLElement>(TEXT_SELECTOR);
       for (let i = 0; i < seen.length; i++) {
         const el = seen[i];
@@ -258,6 +259,18 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
         if (!el.hasAttribute('data-dry') && !hasOwnText(el) && !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) continue;
         const r = docRect(el, sx, sy);
         if (r.w < 2 || r.h < 2) continue;
+        // Text can run past its own box (a long unbroken word in a narrow
+        // column). Measure the ink, not just the box.
+        if (el.scrollWidth > el.clientWidth + 1 && el.firstChild) {
+          range.selectNodeContents(el);
+          const t = range.getBoundingClientRect();
+          const x1 = Math.max(r.x + r.w, t.right + sx);
+          const y1 = Math.max(r.y + r.h, t.bottom + sy);
+          r.x = Math.min(r.x, t.left + sx);
+          r.y = Math.min(r.y, t.top + sy);
+          r.w = x1 - r.x;
+          r.h = y1 - r.y;
+        }
         // A reveal starts a little low and rises: keep that travel dry too.
         const rev = el.closest<HTMLElement>('[data-reveal]');
         if (rev) r.h += rev.dataset.reveal === 'lead' ? 34 : rev.dataset.reveal === 'fade' ? 0 : 18;

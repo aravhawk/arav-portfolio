@@ -112,6 +112,9 @@
   border-top: 0;
 }
 .row-name {
+  /* Repository names can be one long word: let them break, never spill. */
+  overflow-wrap: anywhere;
+  min-width: 0;
   font-family: var(--font-display);
   font-variation-settings: 'wdth' var(--display-wdth);
   font-weight: 700;

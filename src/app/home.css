@@ -259,6 +259,25 @@ html:not([data-js]) .say-word {
   height: auto;
 }
 
+.slab-video {
+  background: #0b0d0f;
+}
+.slab-play {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--ink);
+  transition: transform var(--t-press) var(--ease-out);
+}
+.slab-play:active {
+  transform: scale(0.94);
+}
+
 .feat-sandbox {
   display: grid;
   place-items: center;

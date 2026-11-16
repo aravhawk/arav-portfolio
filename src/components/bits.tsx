@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import type { ProjectMedia } from '@/content/projects';
+import { VideoSlab } from './VideoSlab';
 
 export function Arrow({ out = false }: { out?: boolean }) {
   return (
@@ -18,25 +19,7 @@ export function Arrow({ out = false }: { out?: boolean }) {
  * out of the water, so inside a pool it becomes an island.
  */
 export function Slab({ media, priority = false, sizes }: { media: ProjectMedia; priority?: boolean; sizes: string }) {
-  if (media.kind === 'video') {
-    return (
-      <figure className="slab" data-dry>
-        <video
-          className="slab-media"
-          src={media.src}
-          poster={media.poster}
-          width={media.w}
-          height={media.h}
-          muted
-          loop
-          playsInline
-          controls
-          preload="none"
-          aria-label={media.alt}
-        />
-      </figure>
-    );
-  }
+  if (media.kind === 'video') return <VideoSlab media={media} />;
   return (
     <figure className="slab" data-dry>
       <Image className="slab-media" src={media.src} alt={media.alt} width={media.w} height={media.h} sizes={sizes} priority={priority} />
