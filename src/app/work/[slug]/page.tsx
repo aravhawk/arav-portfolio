@@ -34,6 +34,8 @@ function Readout({ metric, what, unit }: { metric: Metric; what: string; unit: s
   );
 }
 
+const HIDDEN_MEDIA = new Set(['/media/kilo-bench-generation.webp']);
+
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const p = projectBySlug(slug);
@@ -41,7 +43,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const m = await getMetrics();
   const i = PROJECTS.indexOf(p);
   const next = PROJECTS[(i + 1) % PROJECTS.length];
-  const [lead, ...rest] = p.media;
+  // One capture is left off the page: it is a nearly empty panel with a
+  // spinner in it, and shows nothing of the project.
+  const [lead, ...rest] = p.media.filter((x) => !HIDDEN_MEDIA.has(x.src));
 
   return (
     <PageShell

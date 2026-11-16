@@ -1,6 +1,6 @@
 import { OG_SIZE, OG_TYPE, renderOg } from '@/lib/og';
 
-export const alt = 'Writing by Arav Jain: notes from the work.';
+export const alt = 'Writing by Arav Jain: notes from the work. Set on pale stone beside a stream of teal water.';
 export const size = OG_SIZE;
 export const contentType = OG_TYPE;
 

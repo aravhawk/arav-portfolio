@@ -1,7 +1,7 @@
 import { PROJECTS, projectBySlug } from '@/content/projects';
 import { OG_SIZE, OG_TYPE, renderOg } from '@/lib/og';
 
-export const alt = 'A project by Arav Jain';
+export const alt = 'A project by Arav Jain, set on pale stone beside a stream of teal water.';
 export const size = OG_SIZE;
 export const contentType = OG_TYPE;
 
@@ -13,7 +13,7 @@ export async function generateImageMetadata({ params }: { params: Promise<{ slug
   const { slug } = await params;
   const p = projectBySlug(slug);
   const name = p ? p.name.replace('‑', '-') : 'Work';
-  return [{ id: 'card', alt: p ? `${name}: ${p.line}` : alt, size: OG_SIZE, contentType: OG_TYPE }];
+  return [{ id: 'card', alt: p ? `${name}: ${p.line} Set on pale stone beside a stream of teal water.` : alt, size: OG_SIZE, contentType: OG_TYPE }];
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {

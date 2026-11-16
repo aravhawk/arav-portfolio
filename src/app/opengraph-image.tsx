@@ -1,6 +1,6 @@
 import { OG_SIZE, OG_TYPE, renderOg } from '@/lib/og';
 
-export const alt = 'Arav Jain, AI and developer tooling builder. The name set in ice in a pool of water on a pale machined slab.';
+export const alt = 'Arav Jain, AI and developer tooling builder. The name is cut through a pale sheet of lake ice, with deep teal water showing in the letters.';
 export const size = OG_SIZE;
 export const contentType = OG_TYPE;
 
