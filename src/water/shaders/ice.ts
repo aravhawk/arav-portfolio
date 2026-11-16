@@ -22,6 +22,7 @@ uniform float uIceK;       // the pressure cracks' cell px
 uniform float uIceW;       // the lake's width px: the page's
 uniform vec4 uIceBox;      // the letters' own box in the sheet's frame: centre xy, half size zw, px
 uniform vec4 uIceP;        // the camera the name is cut for: its y, its height, the cosine and sine of its pitch (all 0: the name lies flat and true)
+uniform float uIceRim;     // the flight: how far the opening is carried on past the far side of each stroke, so the cut's far wall stands outside the letter and the water seen is the letter itself (0 everywhere else)
 uniform float uIceLean;    // the flight's governor: at 2 the cracks are let go while they are only hairlines (0 everywhere else)
 uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet is 0..1, w: 1 while the sheet is whole, 0 once it is gone
 uniform sampler2D uIceSdf; // signed distance to the letters px (negative inside), _, gradient
@@ -115,6 +116,12 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     vec2 cl = clamp(iuv, 0.002, 0.998);
     lsd = (texture(uIceSdf, cl).r + length((iuv - cl) * uIce.zw)) * nk;
     if (lsd > 0.0) lsd = max(lsd, boxD);
+    if (uIceRim > 0.0 && lsd > -2.0 && lsd < uIceRim * 1.5 * nk + 4.0) {
+      vec2 n2 = nl - vec2(0.0, uIceRim);
+      vec2 i2 = n2 / uIce.zw;
+      vec2 c2 = clamp(i2, 0.002, 0.998);
+      lsd = min(lsd, (texture(uIceSdf, c2).r + length((i2 - c2) * uIce.zw)) * nk);
+    }
   }
   float cell = uIceB.w;
   // Half way through, the letters stop being letters: their openings run

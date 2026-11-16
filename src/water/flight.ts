@@ -210,6 +210,7 @@ export class FlightEngine extends WaterEngine {
     // (The cut is a hair wider than the drawn letter: its edge is blended over a pixel, and the blend belongs to the ice.)
     if (ice.rect[2] > 0) this.gl.uniform4f(prog.u.uIceA, ice.a[0] + 3, ice.a[1], ice.a[2], ice.a[3]);
     if (prog.u.uIceP) this.gl.uniform4fv(prog.u.uIceP, this.nameCut);
+    if (prog.u.uIceRim) this.gl.uniform1f(prog.u.uIceRim, ICE_H);
     if (prog.u.uIceLean) this.gl.uniform1f(prog.u.uIceLean, this.leanNow);
   }
 

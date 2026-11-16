@@ -218,6 +218,8 @@ vec3 aurora(vec3 d) {
 
 // Stars are drawn only where the sky is seen directly: a point in moving water is noise.
 bool gDirect = false;
+// 0 where a mirror shows the sun as broken glitter instead of a smooth glow (the water in the name).
+float gSunK = 1.0;
 /** Stars: one to a cell of the sky, a pixel or two wide, lost in the haze low down. */
 float stars(vec3 d) {
   vec2 g = vec2(atan(d.x, d.y), d.z) * 150.0;
@@ -239,8 +241,8 @@ vec3 skyColor(vec3 d, float clouds) {
   col += S.band * exp(-h * 15.0) * pow(az, 5.0) * 0.5 * warm;
   col += S.band * exp(-h * 30.0) * pow(az, 2.0) * 0.14 * warm;
   float sd = max(dot(d, S.sun), 0.0);
-  col += sunBloom(sd) * (1.0 - 0.5 * uNight);
-  col += vec3(1.0, 0.9, 0.7) * (smoothstep(0.9996, 0.99999, sd) * 2.4 + smoothstep(0.9999, 1.0, sd) * 1.6) * (1.0 - uNight);
+  col += sunBloom(sd) * (1.0 - 0.5 * uNight) * gSunK;
+  col += vec3(1.0, 0.9, 0.7) * (smoothstep(0.9996, 0.99999, sd) * 2.4 + smoothstep(0.9999, 1.0, sd) * 1.6) * (1.0 - uNight) * gSunK;
   if (uNight > 0.0) {
     vec3 au = aurora(d);
     col += au * uNight;
@@ -613,7 +615,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     under = mix(textureLod(uDetail, p / 700.0 + vec2(0.004, 0.003) * uTime, 0.0).r, 0.5, gL2);
     netU = textureLod(uDetail, p / 230.0 + vec2(0.007, 0.004) * uTime, lodU).a * (1.0 - gL2);
   }
-  vec3 clear = uIceCol * mix(vec3(0.2, 0.42, 0.52), vec3(0.016, 0.036, 0.062), uNight) * (0.78 + 0.34 * under) + uScatter * mix(2.0, 0.3, uNight);
+  vec3 clear = uIceCol * mix(vec3(0.2, 0.42, 0.52), vec3(0.013, 0.04, 0.078), uNight) * (0.78 + 0.34 * under) + uScatter * mix(2.0, 0.3, uNight);
   clear += (S.hor * 0.05 * (1.0 - uNight) + uAurora * 0.03) * smoothstep(0.22, 0.6, netU) * (1.0 - dust);
   vec3 white = mix(vec3(0.9, 0.92, 0.95), vec3(0.4, 0.47, 0.6), uNight) * lit * (0.97 + 0.03 * big);
   clear *= 1.0 - 0.3 * smoothstep(0.438, 0.35, lvl);
@@ -649,7 +651,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   gDull = true;
   vec3 mir = airAt(rf.xy);
   if (gL2 < 1.0) mir = mix(skyAll(normalize(rf), 0.0), mir, gL2);
-  col = mix(col, mir, fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.72 * uNight));
+  col = mix(col, mir, fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.6 * uNight));
   gDull = false;
   // The lip of a cut: a hair of snow, then the edge itself.
   float edge = 1.0 - smoothstep(0.0, 2.2 * cw, -f0);
@@ -659,19 +661,23 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   return col;
 }
 
-/** A cut face of the sheet. s: 0 at the top arris, 1 at the waterline. tall: its height in device px. */
+/**
+ * A cut face of the sheet, seen across the opening: the ice's thickness.
+ * It is lit through, so it is the brightest blue in the frame after the
+ * snow: a band of clear blue-white ice under a crisp lip of snow, a little
+ * deeper where it meets the water. It is never dark: a dark wall reads as
+ * the side of a raised shape, and this is a hole.
+ * s: 0 at the top arris, 1 at the waterline. tall: its height in device px.
+ */
 vec3 iceCut(vec2 p, float s, float tall) {
-  float streak = textureLod(uGrain, vec2(p.x / 9.0, p.y / 300.0), 0.0).g;
-  vec3 top = uIceCol * mix(vec3(0.115, 0.34, 0.43), vec3(0.03, 0.09, 0.125), uNight) + uScatter * mix(1.5, 0.8, uNight);
-  vec3 foot = uIceCol * mix(vec3(0.035, 0.15, 0.205), vec3(0.008, 0.03, 0.045), uNight) + uScatter * mix(1.2, 0.6, uNight);
-  vec3 face = mix(top, foot, smoothstep(0.1, 0.92, s)) * (0.8 + 0.4 * streak);
-  float w = min(1.6 / max(tall, 1.0), 0.22);
-  face = mix(face, uIceCol * vec3(0.88, 0.98, 1.0) * (1.0 + 0.12 * uNight), (1.0 - smoothstep(w * 0.7, w * 1.5, s)) * 0.92);
-  face *= 1.0 - 0.55 * smoothstep(0.84, 0.9, s);
-  // Before dawn the face holds a little of the sky's green, most near the top.
-  face += uAurora * mix(0.1, 0.02, s) * (0.7 + 0.6 * streak);
-  // By day the wall stands in its own shade below the lip.
-  face *= mix(1.0, 0.34, (1.0 - uNight) * smoothstep(0.12, 0.55, s));
+  float streak = textureLod(uGrain, vec2(p.x / 7.0, p.y / 260.0), 0.0).g;
+  vec3 top = mix(vec3(0.6, 0.83, 0.93), vec3(0.3, 0.62, 0.56), uNight);
+  vec3 foot = mix(vec3(0.24, 0.55, 0.72), vec3(0.1, 0.34, 0.33), uNight);
+  vec3 face = mix(top, foot, smoothstep(0.2, 1.0, s)) * (0.9 + 0.2 * streak);
+  // The lip: packed snow standing over the cut.
+  float w = min(1.5 / max(tall, 1.0), 0.3);
+  vec3 lip = mix(vec3(0.95, 0.97, 1.0), vec3(0.62, 0.8, 0.78), uNight);
+  face = mix(face, lip, 1.0 - smoothstep(w * 0.6, w * 1.3, s));
   return face;
 }
 
@@ -692,6 +698,8 @@ float streamX(float y) {
 
 // 1 over the lake's dark water while the sheet stands round it, by day.
 float gDeep = 0.0;
+// The ice field where the eye's ray crosses the top of the sheet: how far inside an opening this water is seen.
+float gIceF = 1e3;
 
 vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceShade, float slabOn) {
   vec3 L = keyDir();
@@ -862,16 +870,49 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   vec2 vdw = normalize(dir.xy + 1e-6);
   vec2 rs = slope * (0.6 + 0.5 * uNight);
   rs += vdw * dot(slope, vdw) * 0.9 * uNight;
+  // (Between walls of ice no wind reaches the water: it lies stiller than the open lake, and holds a picture.)
+  rs *= 1.0 - 0.55 * smoothstep(0.75, 1.0, uGlow) * smoothstep(uLake.y + 30.0, uLake.y - 90.0, pw.y);
   vec3 nr = normalize(vec3(-rs, 1.0));
   float cosi = clamp(dot(-dir, nr), 0.0, 1.0);
   float fres = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
   vec3 rf = reflect(dir, nr);
   rf.z = abs(rf.z) + 0.015;
   rf = normalize(rf);
+  // The water in the name lies still between walls of ice. The eye is high
+  // over it, and a true mirror at that angle would show only blank sky: so
+  // this mirror is leaned, as a long lens leans one, until what lies in the
+  // letters is what stands over the lake. By day that is the ranges, the
+  // warm air at their foot and the sun's path; before dawn it is the body
+  // of the high curtain, well clear of its hem.
+  float sheetK = smoothstep(0.75, 1.0, uGlow) * lakeK;
+  if (sheetK > 0.0) {
+    rf.z = mix(rf.z, mix(max((rf.z - 0.2) * 0.42, 0.004), rf.z + 0.11, uNight), sheetK);
+    rf = normalize(rf);
+  }
   // (Before dawn the thin cloud is too faint to be seen in moving water: it is not asked for.)
   gWash = gL1;
+  gSunK = 1.0 - sheetK * (1.0 - uNight);
   vec3 refl = withRidges(skyColor(rf, uQuality > 1.5 ? (1.0 - uNight) * (1.0 - gL1) : 0.0), rf, uQuality > 1.5 ? 1.5 * gL1 : 1.5);
   gWash = 0.0;
+  gSunK = 1.0;
+  // (Toward the sun the low air is far brighter than the rest: in the letters it is held to the sky's own
+  // brightness, so the letter nearest the sun is still a letter. The sun itself comes back as glitter.)
+  if (sheetK > 0.0) {
+    // (And dark water deepens what it mirrors: the ranges' shaded faces stand out from the sky more than they do above.)
+    float rl = max(dot(refl, vec3(0.3, 0.6, 0.1)), 1e-3);
+    refl *= mix(1.0, min(pow(rl / 0.56, 1.6), 0.5 / rl), sheetK * (1.0 - uNight));
+  }
+  if (sheetK * uNight > 0.0) {
+    // Before dawn the letters hold the curtain itself: its rays, drifting,
+    // green where the far letters catch its hem and turning violet in the
+    // deeper water under the eye.
+    float azv = atan(rf.x, rf.y);
+    float ray = n1(azv * 52.0 + 3.0 * n1(azv * 7.0 + uTime * 0.03) + uTime * 0.04);
+    float ray2 = n1(azv * 17.0 - uTime * 0.025 + 4.0);
+    float deepV = smoothstep(0.27, 0.44, cosi);
+    vec3 cur = refl * (0.5 + 0.8 * ray) * (0.72 + 0.5 * ray2) * mix(vec3(1.0), vec3(0.74, 0.7, 1.3), deepV * 0.7) * 1.34;
+    refl = mix(refl, cur, sheetK * uNight);
+  }
   // The slab stands in the water: its mirror image, broken by the ripples.
   if (slabOn > 0.0) {
     vec2 suvS;
@@ -895,18 +936,45 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // there it is nearly a whole mirror.)
   // Elsewhere it falls off as water does: a mirror toward the horizon, and
   // close under the eye dark water you look down into.
-  float sheetK = smoothstep(0.75, 1.0, uGlow) * lakeK;
-  fres = mix(fres, max(fres * 1.25 + 0.05, 0.94 * sheetK), uNight);
+  // (Steeply under the eye it is a little less of a mirror: you look down into it.)
+  fres = mix(fres, max(fres * 1.25 + 0.05, mix(0.97, 0.66, smoothstep(0.27, 0.44, cosi)) * sheetK), uNight);
   // A bank stands over the water at its edge: there the mirror shows the dark bank, not the sky.
   refl *= 1.0 - 0.75 * uNight * (1.0 - smoothstep(4.0, 46.0, -bw.r)) * (1.0 - sheetK);
   // (By day the sheet's own walls stand round that water: less of the pale sky reaches it.)
   gDeep = lakeDay * smoothstep(0.5, 1.0, uGlow);
-  fres *= 1.0 - 0.9 * gDeep;
+  // (By day it is dark water you look down into under the eye, and more of a mirror toward the far side of each letter.)
+  fres = mix(fres, mix(0.105, 0.008, smoothstep(0.27, 0.44, cosi)), gDeep);
+  // The sheet stands over the water at the near edge of an opening: a faint, short shade.
+  water *= 1.0 - 0.3 * sheetK * (1.0 - smoothstep(0.0, 16.0, gIceF));
   fres *= 1.0 - 0.7 * uEnd;
   vec3 col = mix(water, refl, fres);
   // The sun on ripple faces turned toward it: a broad, graded sheen.
   float sd = max(dot(rf, S.sun), 0.0);
-  col += S.band * (pow(sd, 240.0) * 1.6 + pow(sd, 40.0) * 0.12) * (1.0 - shade) * (1.0 - uNight);
+  col += S.band * (pow(sd, 240.0) * 1.6 + pow(sd, 40.0) * 0.12) * (1.0 - shade) * (1.0 - uNight) * (1.0 - gDeep);
+  // In the name the sun's path is broken glitter: single ripple faces
+  // catching it, thickest under the sun and thinning to either side.
+  if (gDeep > 0.0) {
+    float face = smoothstep(0.6, 0.84, mix(dw2.r, df.r, 0.45));
+    col += S.band * (pow(sd, 12.0) * (0.01 + 1.2 * face) * 0.38 + pow(sd, 90.0) * (0.03 + 1.8 * face)) * gDeep;
+  }
+  // A few small chips of ice lie afloat in the name's water, turning slowly.
+  if (sheetK > 0.0 && gIceF > 7.0 && footL < 12.0) {
+    vec2 q = pw / vec2(84.0, 130.0);
+    vec2 hq = hash2(floor(q) + 3.0);
+    if (hq.x > 0.8) {
+      vec2 bob = vec2(sin(uTime * 0.21 + hq.y * 40.0), cos(uTime * 0.17 + hq.x * 31.0)) * 5.0;
+      vec2 ql = (fract(q) - 0.5 - (hq - 0.5) * 0.5) * vec2(84.0, 130.0) - bob;
+      float ang = hq.y * 6.283 + uTime * 0.05 * (hq.x - 0.86) * 8.0;
+      ql = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * ql;
+      float sz = 3.0 + 5.5 * fract(hq.x * 37.0);
+      float chip = max(abs(ql.x) + abs(ql.y) * 0.5, max(abs(ql.y) * 1.2, abs(ql.x * 0.8 - ql.y * 0.6))) - sz;
+      float aC = (1.0 - smoothstep(-0.7 * foot, 0.7 * foot, chip)) * sheetK * smoothstep(7.0, 12.0, gIceF);
+      vec3 plate = mix(vec3(0.82, 0.9, 0.95) * (S.amb * 1.3 + S.key * 0.26), vec3(0.5, 0.74, 0.7) * 0.5, uNight);
+      // (Each rides a little under its own rim of shade.)
+      col *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 4.0, chip)) * sheetK * (1.0 - aC);
+      col = mix(col, plate, aC);
+    }
+  }
   // The current, drawn: fine bright threads that run with the stream,
   // quicker and whiter in the narrows, and the odd small plate of ice
   // carried down. Both live in the stream's own frame (along it, across it).
@@ -1033,6 +1101,7 @@ void main() {
     bool hasIce = uIceOn > 0.5 && uIce.z > 0.0 && p.y > uLake.x - 80.0 && p.y < uLake.y + 80.0 && sd0 < 40.0;
     if (hasIce) {
       f0 = iceF(p, sd0, cr, il);
+      gIceF = f0;
       float aaI = 0.75 * foot / mix(1.0, sinE, 0.6);
       aIce = 1.0 - smoothstep(-aaI, aaI, f0);
       // The cut face and the sheet's shade lie within a known reach of the
@@ -1046,12 +1115,6 @@ void main() {
         float f1 = iceF(pf, bedAt(pf).r, c1, i1);
         aCut = (1.0 - aIce) * (1.0 - smoothstep(-aaI, aaI, f1));
         cutS = clamp(f0 / max(f0 - f1, 1e-3), 0.0, 1.0);
-        if (aCut < 1.0 && uQuality > 0.5 && gL1 < 1.0 && min(f0, f1) < uIceH * 1.6) {
-          vec3 L = keyDir();
-          vec2 ps = pf + normalize(L.xy) * min(length(L.xy) / L.z, 1.5) * uIceH * 0.5;
-          float fs = iceF(ps, bedAt(ps).r, c1, i1);
-          iceShade = (1.0 - smoothstep(-1.0, 1.0, fs)) * (0.5 + 0.5 * smoothstep(0.0, uIceH * 0.5, -fs)) * (1.0 - gL1);
-        }
       }
     }
 
