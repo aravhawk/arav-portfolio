@@ -127,7 +127,7 @@
 }
 .row-line {
   color: var(--ink-2);
-  font-size: 0.9375rem;
+  font-size: clamp(0.9375rem, 0.25vw + 0.84rem, 1.0625rem);
   line-height: 1.45;
   max-width: 54ch;
 }

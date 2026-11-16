@@ -33,9 +33,9 @@
   --ice-size-stacked: 38vw;
 
   /* Fluid scale. Tracking tightens and leading closes as size grows. */
-  --fs-label: 0.6875rem;
+  --fs-label: clamp(0.6875rem, 0.12vw + 0.64rem, 0.75rem);
   --fs-small: 0.875rem;
-  --fs-body: 1.0625rem;
+  --fs-body: clamp(1.0625rem, 0.25vw + 0.9rem, 1.125rem);
   --fs-lead: clamp(1.125rem, 0.6vw + 1rem, 1.375rem);
   --fs-title: clamp(1.5rem, 1.6vw + 1rem, 2.25rem);
   --fs-statement: clamp(1.75rem, 3.1vw + 0.6rem, 3.5rem);
@@ -119,6 +119,13 @@ html.lenis body {
 }
 .lenis.lenis-smooth {
   scroll-behavior: auto !important;
+}
+
+/* Past 1440 wide the whole scale grows with the screen: every size, measure
+   and the page's own width are set in rem, so one root size carries them.
+   It is built on the reader's own 100%, so their text size still applies. */
+html {
+  font-size: max(100%, calc(100% + (100vw - 1440px) * 0.0045));
 }
 
 body {
@@ -352,7 +359,7 @@ html:not([data-water='on']) [data-bed][data-basin] {
 
 .wrap {
   width: 100%;
-  max-width: 1680px;
+  max-width: 105rem;
   margin-inline: auto;
   padding-inline: var(--gutter);
 }
