@@ -46,7 +46,6 @@ uniform sampler2D uBedA;
 uniform sampler2D uBedB;
 uniform sampler2D uWave;   // h, v, gx, gy
 uniform sampler2D uVel;
-uniform sampler2D uDye;
 uniform sampler2D uDetail;
 uniform sampler2D uCurv;   // curvature of the detail field: xx, yy, xy
 uniform sampler2D uGrain;
@@ -56,7 +55,10 @@ uniform sampler2D uHeat;
 
 uniform vec4 uIce;         // world rect of the ice texture: x, y, w, h (w = 0: no ice)
 uniform vec4 uIceState;    // x: erosion px, y: height above the water 0..1, z: rounding 0..1, w: body 0..1
-uniform float uIceAlive;   // 1 while any ice is left
+uniform float uIceHalf;    // half the thickest stroke, px
+uniform float uIceAlive;   // 1 while any ice is left, easing to 0 as the last lenses clear
+uniform float uMeltAct;    // 0..1: how hard the name is melting right now
+uniform vec4 uMeltPath;    // xy: the lake's outlet, z: how far the thread runs on, w: stream width
 
 // Palette, already mixed for the current theme, linear light.
 uniform vec3 uLand;
@@ -122,7 +124,10 @@ vec3 envWater(vec3 rf) {
   vec2 c = a - vec2(-0.1, -0.43);
   float band = (1.0 - smoothstep(0.3, 1.3, abs(c.x))) * (1.0 - smoothstep(0.015, 0.11, abs(c.y)));
   // By night the band is faint: the water is lit from within, not from above.
-  return uSky * (0.008 + 0.013 * far * (1.0 - 0.6 * uNight) + band * mix(0.036, 0.016, uNight));
+  // What it reflects is a cool sky, in the water's own hue: reflected light
+  // may brighten the lake but never greys it.
+  vec3 cool = uSky * vec3(0.3, 0.82, 0.94);
+  return uSky * 0.008 + cool * (0.011 * far * (1.0 - 0.6 * uNight) + band * mix(0.03, 0.016, uNight));
 }
 
 /** A symmetric 2x2 tensor (xx, yy, xy) seen through a rotated layer. */
@@ -134,6 +139,11 @@ vec3 turn(vec3 h, mat2 R) {
 float focus(vec3 t, float f) {
   float det = (1.0 + f * t.x) * (1.0 + f * t.y) - f * f * t.z * t.z;
   return min(1.0 / max(abs(det), 0.16), 4.6);
+}
+
+/** The same lens, signed: zero exactly where the light folds into a caustic line. */
+float fold(vec3 t, float f) {
+  return (1.0 + f * t.x) * (1.0 + f * t.y) - f * f * t.z * t.z;
 }
 
 float landLight(vec3 n) {
@@ -225,8 +235,12 @@ float iceField(vec2 w, out vec4 it) {
   // A melting edge does not thin evenly: it rounds, and the thin parts go
   // first. The slow noise is on the smooth field only, so it cannot leave
   // specks behind.
-  float rough = texture(uGrain, (w - uIce.xy) / 700.0).g;
-  return mix(it.r, low, uIceState.z) + uIceState.x * (0.9 + 0.2 * rough) + heat * 26.0;
+  // The wear also varies slowly along each stroke (a few stroke widths
+  // long), so a stroke breaks into short rounded lozenges and not into
+  // one long sliver.
+  vec2 q = (w - uIce.xy) / (max(uIceHalf, 1.0) * 3.2);
+  float rough = 0.55 * sin(q.x * 6.283 + 2.0 * sin(q.y * 4.1 + 1.0)) + 0.45 * sin(q.y * 8.2 + 1.6 * sin(q.x * 3.7 + 2.0));
+  return mix(it.r, low, uIceState.z) + uIceState.x * (1.0 + 0.6 * rough) + heat * 26.0;
 }
 
 void main() {
@@ -449,8 +463,14 @@ void main() {
         // Where the surface spreads the light the bed is only a little
         // dimmer: the net is bright lines on a calm floor, not an embossing.
         c3 = max(c3, 0.62 + 0.38 * c3);
-        nline = max(caust - 2.5, 0.0) * net * (0.3 + 0.7 * shallow);
-        c3 = mix(c3, 0.34 + max(c3 - 1.5, 0.0) * 0.5, uNight);
+        // Threads, not patches: the line where the light folds, a couple of pixels wide, and a faint glow by it.
+        float det = fold(t, f) - 0.22;
+        float fw = fwidth(det);
+        // Where the field is too busy to draw as a line it is left out: no speckle.
+        float thin = (1.0 - smoothstep(0.7, 2.6, abs(det) / (fw + 1e-4))) * (1.0 - smoothstep(0.1, 0.32, fw));
+        nline = (thin + 0.1 * (1.0 - smoothstep(0.0, 0.16, abs(det))))
+          * net * (0.95 - 0.5 * shallow);
+        c3 = mix(c3, 0.34 + max(c3 - 1.5, 0.0) * 0.14, uNight);
         c3 = mix(vec3(shaft), c3, net);
         lightOnBed = uLight.x * 0.9 + uLight.y * direct * shadow * c3;
       } else {
@@ -462,17 +482,62 @@ void main() {
 
       // ---- the water column
       float path = (depth + 7.0) * (1.0 + 1.0 / max(-r.z, 0.3));
-      vec4 dye = texture(uDye, suv);
       vec3 trans = exp(-uAbsorb * path);
       float turbid = 1.0 - exp(-path * 0.011);
       // Deep water still carries soft shafts of the light above it.
       vec3 body = uScatter * (0.5 + 0.5 * shadow) * (0.5 + 0.62 * min(caust, 3.0)) * (1.0 - 0.3 * shade) * (1.0 + 0.1 * lift);
       vec3 water = bed * trans + body * turbid * (1.0 - trans * 0.35);
+      // The deep is never a flat fill: one long swell crosses open water and
+      // soft shafts of light drift in it, slowly. Light only; no haze.
+      float deepK = smoothstep(0.5, 0.95, dn);
+      if (deepK > 0.0) {
+        float bend = texture(uDetail, pw / 2600.0 + vec2(0.003, 0.0) * uTime).r;
+        float swell = sin(dot(pw, vec2(0.0019, 0.0041)) - uTime * 0.2 + bend * 3.2);
+        float sh = texture(uDetail, vec2(pw.x + pw.y * 0.45, pw.y * 0.3) / 1100.0 + vec2(0.004, -0.002) * uTime).r;
+        water *= (1.0 - 0.42 * deepK * uNight) * (1.0 + deepK * (0.15 * swell + 0.55 * (sh - 0.45)));
+      }
       // Meltwater is cold and clear: it brightens and cools the water it
       // runs through. It never fogs it.
-      float mw = 1.0 - exp(-dye.g * 1.6);
-      water += uRim * nline * 7.0 * uNight * shadow * trans.g;
-      water += (water * 1.0 + uMelt * 0.22) * mw;
+      water += uRim * nline * 23.0 * uNight * (0.4 + 0.6 * shadow) * (0.45 + 0.55 * trans.g);
+      // It is drawn, not simulated: fine streaks that lie along the current
+      // from the letters to the outlet, and one brighter thread down the
+      // first channel. Only light is added, in the water's own hue, so it
+      // can never grey or soften the lake; and it is tied to the melt
+      // itself, so it is gone within a second of the melt stopping.
+      if (uMeltAct > 0.002 && uIce.z > 0.0) {
+        vec2 to = uMeltPath.xy - pw;
+        float dist = length(to);
+        float mw = 0.0;
+        if (pw.y < uMeltPath.y) {
+          // Lake: lines that converge on the outlet and slide toward it.
+          // The lines wander as a current does: never ruled rays.
+          float wob = (texture(uDetail, pw / 1500.0 + vec2(0.0, uTime * 0.006)).r - 0.5) * 0.9;
+          float ang = atan(to.x, max(to.y, 1.0)) + wob * smoothstep(40.0, 420.0, dist);
+          float along = dist / 520.0 + uTime * 0.2;
+          float n1 = texture(uGrain, vec2(ang * 1.9 + 0.31, along * 0.11)).g;
+          float n2 = texture(uGrain, vec2(ang * 5.3 - 0.17, along * 0.23 + 0.4)).g;
+          float st = smoothstep(0.52, 0.66, n1) * 0.7 + smoothstep(0.56, 0.68, n2) * 0.5;
+          // Between the name and the outlet only: a fan whose top edge is
+          // the row of letters.
+          float icy = uIce.y + uIce.w * 0.5;
+          float span = max(uMeltPath.y - icy, 1.0);
+          float v = clamp((pw.y - icy) / span, 0.0, 1.0);
+          float cxm = mix(uIce.x + uIce.z * 0.5, uMeltPath.x, v);
+          float halfw = mix(uIce.z * 0.5, uMeltPath.w * 0.8, v * v);
+          float fan = 1.0 - smoothstep(0.7, 1.0, abs(pw.x - cxm) / max(halfw, 1.0));
+          float head = smoothstep(icy - uIce.w * 0.3, icy + uIce.w * 0.25, pw.y);
+          float brk = 0.35 + 0.65 * smoothstep(0.3, 0.62, texture(uGrain, vec2(ang * 2.7, along * 0.8)).g);
+          mw = min(st * brk, 0.85) * fan * head * (0.5 + 0.5 * v) * smoothstep(30.0, 200.0, dist);
+        } else if (uMeltPath.z > 0.0) {
+          // Channel: one thread down the middle, breaking up as it goes.
+          float run = (pw.y - uMeltPath.y) / uMeltPath.z;
+          float mid = smoothstep(uMeltPath.w * 0.16, uMeltPath.w * 0.42, -bw.r);
+          float n = texture(uGrain, vec2(pw.x / 90.0, pw.y / 900.0 - uTime * 0.16)).g;
+          mw = mid * (0.55 + 0.45 * smoothstep(0.35, 0.7, n)) * (1.0 - smoothstep(0.35, 1.0, run));
+        }
+        mw *= uMeltAct;
+        water += (water * 0.55 + uMelt) * mw;
+      }
 
       // ---- the surface
       // The mirror is gentler than the lens: a steep wave face must not
@@ -495,7 +560,7 @@ void main() {
       // cool rim of light instead.
       float line = smoothstep(-2.6, 0.0, bw.r);
       water *= 1.0 - 0.22 * line * (1.0 - uNight);
-      water += uRim * uNight * (line * 0.9 + smoothstep(-9.0, 0.0, bw.r) * 0.25);
+      water += uRim * uNight * (line * 2.2 + smoothstep(-9.0, 0.0, bw.r) * 0.5);
       cut += water * (1.0 - aWall);
     }
     col += cut * (1.0 - aLand);

@@ -12,7 +12,7 @@
 import type { BedData } from './bed';
 import { type GL, type Program, type Target, Swap, bindTex, bindTriangle, compile, drawTo, freeTarget, makeTarget, makeTexture } from './gl';
 import { RENDER } from './shaders/render';
-import { BED_A, BED_B, DETAIL, DETAIL_CURV, DYE, GRAIN, SD_BLUR, SD_DOWN, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
+import { BED_A, BED_B, DETAIL, DETAIL_CURV, GRAIN, SD_BLUR, SD_DOWN, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
 
 export interface Palette {
   land: [number, number, number];
@@ -55,19 +55,19 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     scatter: [0.006, 0.046, 0.054],
     sky: [1.0, 1.0, 1.0],
     rim: [0, 0, 0],
-    melt: [0.1, 0.2, 0.21],
+    melt: [0.014, 0.15, 0.16],
     ice: srgb('#F4FAFC'),
     light: [0.5, 0.78, 1.5, 1.25],
     grain: [0.05, 0.05, 0.26],
   },
   dark: {
     land: srgb('#15181B'),
-    bed: srgb('#22525C'),
+    bed: srgb('#2B6A78'),
     absorb: [0.05, 0.02, 0.0175],
-    scatter: [0.001, 0.0125, 0.0155],
+    scatter: [0.0028, 0.033, 0.041],
     sky: [0.62, 0.84, 0.95],
     rim: [0.012, 0.05, 0.058],
-    melt: [0.012, 0.05, 0.056],
+    melt: [0.004, 0.04, 0.046],
     ice: srgb('#9CC3CF'),
     light: [0.16, 0.9, 2.3, 1.5],
     grain: [0.12, 0.12, 0.5],
@@ -130,7 +130,6 @@ export class WaterEngine {
   private wave: Swap | null = null;
   private waveOut: Target | null = null;
   private vel: Swap | null = null;
-  private dye: Swap | null = null;
   private maskTarget: Target | null = null;
   private hf: number;
 
@@ -163,8 +162,15 @@ export class WaterEngine {
   iceRect = { x: 0, y: 0, w: 0, h: 0 };
   /** Scroll distance over which the name melts. */
   meltRange = 600;
+  /**
+   * Where meltwater runs: the lake's outlet (world px), how far the thread
+   * carries on down the first channel, and the stream's width there.
+   */
+  meltPath = { x: 0, y: 0, reach: 0, w: 0 };
   private melt = 0;
   private meltRate = 0;
+  /** 0..1: how hard the name is melting right now. It falls to nothing in under a second. */
+  private meltAct = 0;
   /** Called once when the melt completes going down, and when it resets. */
   onMelt: ((done: boolean) => void) | null = null;
   private meltDone = false;
@@ -224,7 +230,6 @@ export class WaterEngine {
       velDiv: VEL_DIV,
       velPressure: VEL_PRESSURE,
       velProject: VEL_PROJECT,
-      dye: DYE,
       detail: DETAIL,
       detailCurv: DETAIL_CURV,
       grain: GRAIN,
@@ -320,7 +325,7 @@ export class WaterEngine {
     // melting edge rounds toward, so strokes soften instead of thinning to
     // hairlines.
     const texel = this.iceRect.w > 0 ? this.iceRect.w / ice.w : 1;
-    const k = Math.min(12, Math.max(2, Math.round(-ice.minSd / texel / 3)));
+    const k = Math.min(16, Math.max(2, Math.round(-ice.minSd / texel / 1.7)));
     const lw = Math.max(2, Math.ceil(ice.w / k));
     const lh = Math.max(2, Math.ceil(ice.h / k));
     const down = makeTarget(gl, lw, lh, { ...this.f16(), filter: gl.NEAREST });
@@ -378,13 +383,11 @@ export class WaterEngine {
     this.simH = h;
     this.wave?.free(gl);
     this.vel?.free(gl);
-    this.dye?.free(gl);
     freeTarget(gl, this.waveOut);
     const o = { ...this.f16(), filter: gl.LINEAR };
     this.wave = new Swap(gl, w, h, { ...this.f16(), filter: gl.NEAREST });
     this.waveOut = makeTarget(gl, w, h, o);
     this.vel = new Swap(gl, w, h, o);
-    this.dye = new Swap(gl, w, h, o);
     this.hasSimTop = false;
   }
 
@@ -444,6 +447,11 @@ export class WaterEngine {
     const rate = Math.abs(m - this.melt) / Math.max(dt, 1e-3);
     this.meltRate += (Math.min(rate, 1.1) - this.meltRate) * (1 - Math.exp(-dt * 6));
     this.melt = m;
+    // Meltwater is only there while the ice is actually melting: it rises
+    // with the melt and clears within a second of it stopping.
+    const want = this.iceTex && !this.still ? Math.min(1, this.meltRate * 2.4) : 0;
+    this.meltAct += (want - this.meltAct) * (1 - Math.exp(-dt * (want > this.meltAct ? 9 : 4.2)));
+    if (this.meltAct < 0.004 && want === 0) this.meltAct = 0;
     if (m >= 1 && !this.meltDone) {
       this.meltDone = true;
       this.onMelt?.(true);
@@ -478,21 +486,23 @@ export class WaterEngine {
     const r = this.iceRect;
     const m = this.melt;
     const half = -ice.minSd;
-    // Ice in water melts from its edges. The outline rounds toward a
-    // smoothed copy of itself while it is worn back, so strokes soften and
-    // close up instead of thinning to hairlines. The wear is slow for the
-    // first two thirds (the name stays bold) and fast after, and it ends
-    // past the thickest stroke, so nothing at all is left at the end. The
-    // block stays ice to the last: it sinks, it does not fade.
-    const early = 0.16 * Math.pow(Math.min(m / 0.65, 1), 1.4);
-    const late = Math.pow(Math.max(0, (m - 0.65) / 0.35), 1.25);
-    const erode = half * (early + 0.3 * late + 0.95 * smooth(0.9, 1, m));
-    const round = 0.55 * smooth(0.08, 0.95, m);
-    const height = 1 - smooth(0.04, 0.92, m);
-    const alive = m < 1 ? 1 : 0;
-    // Ice that is partly melted keeps shedding water even when the page is
-    // held still, so the plume is there at any scroll position.
-    const shed = 0.42 * Math.sin(Math.PI * Math.min(1, Math.max(0, m))) ** 0.7;
+    // Ice in water melts from its edges. Every length here is a share of
+    // the stroke's own half width on this device, so a phone melts the way
+    // a desktop does. For the first 65 percent the name stays bold: it only
+    // softens. After that it is worn back unevenly along each stroke and
+    // pulled a little toward a smoothed copy of itself, so thin parts go
+    // first and what is left are small rounded lozenges, never hairlines. Those
+    // do not shrink to specks: the last thin lenses of ice clear into the
+    // water, and the wear ends past the thickest stroke so nothing is left.
+    const t = Math.max(0, (m - 0.65) / 0.35);
+    const early = 0.1 * Math.pow(Math.min(m / 0.65, 1), 1.4);
+    const erode = half * 0.6 * (early + 1.2 * Math.pow(t, 1.1) + 3.5 * smooth(0.9, 1, m));
+    const round = 0.2 * smooth(0.1, 0.65, m) + 0.12 * smooth(0, 0.6, t);
+    const height = 1 - smooth(0.04, 0.9, m);
+    const alive = m < 1 ? 1 - smooth(0.86, 0.97, m) : 0;
+    // Partly melted ice keeps dripping while the page is held still: rings
+    // on the surface, nothing in the water.
+    const shed = alive > 0 ? 0.42 * Math.sin(Math.PI * Math.min(1, Math.max(0, m))) ** 0.7 : 0;
     return { rect: [r.x, r.y + drift, r.w, r.h], state: [erode, height, round, 1], alive, erode, shed };
   }
 
@@ -607,29 +617,6 @@ export class WaterEngine {
     drawTo(gl, this.vel!.write);
     this.vel!.swap();
 
-    // Meltwater.
-    const dy = this.p.dye;
-    gl.useProgram(dy.prog);
-    common(dy, 3);
-    bindTex(gl, 0, this.dye!.read.tex, dy.u.uDye);
-    bindTex(gl, 1, this.vel!.read.tex, dy.u.uVel);
-    bindTex(gl, 2, this.waveOut!.tex, dy.u.uWave);
-    if (this.iceTex) bindTex(gl, 5, this.iceTex.tex, dy.u.uIceSdf);
-    if (this.iceLow) bindTex(gl, 7, this.iceLow.tex, dy.u.uIceLow);
-    bindTex(gl, 6, this.detail.tex, dy.u.uDetail);
-    gl.uniform2f(dy.u.uShift, 0, shift);
-    gl.uniform1f(dy.u.uDt, dt);
-    gl.uniform1f(dy.u.uTime, this.time);
-    gl.uniform1f(dy.u.uFlowSpeed, FLOW_SPEED);
-    gl.uniform4fv(dy.u.uPtr, seg);
-    gl.uniform2f(dy.u.uPtrForce, moving ? Math.min(speed / 700, 1) * 0.05 : 0, 12);
-    gl.uniform4f(dy.u.uIce, ice.rect[0], ice.rect[1], ice.rect[2], ice.rect[3]);
-    // The plume is fed steadily, not by how fast the page moves, so a quick
-    // scroll cannot leave a smear along the floe's path.
-    gl.uniform3f(dy.u.uIceMelt, ice.erode, ice.rect[2] > 0 ? this.meltRate * 0.3 + ice.shed : 0, ice.state[2]);
-    drawTo(gl, this.dye!.write);
-    this.dye!.swap();
-
     p.px = p.x;
     p.py = p.y;
     p.fresh = false;
@@ -661,6 +648,9 @@ export class WaterEngine {
     gl.uniform4f(r.u.uIce, ice.rect[0], ice.rect[1], ice.rect[2], ice.rect[3]);
     gl.uniform4f(r.u.uIceState, ice.state[0], ice.state[1], ice.state[2], ice.state[3]);
     gl.uniform1f(r.u.uIceAlive, ice.alive);
+    gl.uniform1f(r.u.uIceHalf, this.iceMeta ? -this.iceMeta.minSd : 1);
+    gl.uniform1f(r.u.uMeltAct, mode === 0 ? this.meltAct : 0);
+    gl.uniform4f(r.u.uMeltPath, this.meltPath.x, this.meltPath.y, this.meltPath.reach, this.meltPath.w);
     gl.uniform3fv(r.u.uLand, pal.land);
     gl.uniform3fv(r.u.uBed, pal.bed);
     gl.uniform3fv(r.u.uAbsorb, pal.absorb);
@@ -677,7 +667,6 @@ export class WaterEngine {
     bindTex(gl, 1, this.bedB!.tex, r.u.uBedB);
     bindTex(gl, 2, this.waveOut!.tex, r.u.uWave);
     bindTex(gl, 3, this.vel!.read.tex, r.u.uVel);
-    bindTex(gl, 4, this.dye!.read.tex, r.u.uDye);
     bindTex(gl, 5, this.detail.tex, r.u.uDetail);
     bindTex(gl, 6, this.grain.tex, r.u.uGrain);
     bindTex(gl, 7, (this.iceTex ?? this.grain).tex, r.u.uIceSdf);
@@ -773,7 +762,6 @@ export class WaterEngine {
     const gl = this.gl;
     this.wave?.free(gl);
     this.vel?.free(gl);
-    this.dye?.free(gl);
     this.heat.free(gl);
     for (const t of [this.waveOut, this.bedA, this.bedB, this.iceTex, this.maskTarget, this.detail, this.grain]) freeTarget(gl, t);
     for (const k of Object.keys(this.p)) gl.deleteProgram(this.p[k].prog);

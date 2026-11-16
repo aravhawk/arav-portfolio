@@ -55,6 +55,8 @@ export class BedPainter {
   readonly h: number;
   readonly docW: number;
   readonly docH: number;
+  /** Where a lake drains (world px) and how wide the stream that leaves it is. Set by a scene. */
+  outlet: { x: number; y: number; w: number } | null = null;
   private mask: CanvasRenderingContext2D;
   private flow: CanvasRenderingContext2D;
 

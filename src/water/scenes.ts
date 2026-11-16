@@ -138,14 +138,18 @@ const tributaries: Feature = (c, r) => {
 };
 
 /**
- * Kilo Bench: one wide pool, with the benchmark's real results standing in
- * it on a pier that runs out from the bank. The stream fills the pool and
+ * Kilo Bench: one wide pool, with the benchmark's real results standing
+ * beside it on a rounded point of the bank. The stream fills the pool and
  * leaves by the far corner.
  */
-const lanes: Feature = (c, r) => {
+const lanes: Feature = (c, r, el) => {
   const { b } = c;
+  const slab = inner(el, r, '.slab');
   const xin = c.narrow ? c.lane : r.x + r.w * 0.26;
-  const xout = c.narrow ? c.lane : r.x + r.w * 0.2;
+  // The way out runs down the side of the image's footing, so the pool's
+  // south shore is the footing itself and there is no shelf between them.
+  const foot = c.narrow ? 20 : 30;
+  const xout = c.narrow ? c.lane : slab && cx(slab) > cx(r) ? Math.max(r.x + r.w * 0.2, slab.x - foot - c.w / 2 + 2) : r.x + r.w * 0.2;
   const x0 = r.x + r.w * (c.narrow ? 0.06 : 0.02);
   const x1 = c.narrow ? c.lane + c.w / 2 : r.x + r.w * 0.88;
   const body = { x: x0, y: r.y + r.h * 0.06, w: x1 - x0, h: r.h * 0.88 };
@@ -161,6 +165,17 @@ const lanes: Feature = (c, r) => {
     { width: m * 0.5, speed: 0.45, flowOnly: true },
   );
   b.agitate(pt(xin, body.y + m * 0.16), c.w * 1.3, 0.5);
+  if (slab) {
+    // The footing: one broad point of dry stone that runs out from the
+    // bank under the image, with a single round shoulder toward the pool.
+    // It reaches past the pool on its landward sides, so the shore meets
+    // it in one line and never in notches.
+    const pad = foot;
+    const right = cx(slab) > cx(body);
+    const x0p = right ? slab.x - pad : body.x - 200;
+    const x1p = right ? body.x + body.w + 200 : slab.x + slab.w + pad;
+    b.dry({ x: x0p, y: slab.y - pad, w: x1p - x0p, h: r.y + r.h + 40 - (slab.y - pad) }, 0, Math.min(slab.w, slab.h) * (c.narrow ? 0.3 : 0.42));
+  }
   return { in: pt(xin, r.y), out: pt(xout, r.y + r.h) };
 };
 
@@ -403,6 +418,7 @@ const home: Scene = (b, a) => {
     }
     b.agitate(pt(outX, lake.y + lake.h - 10), c.w * 1.6, 0.7);
     from = pt(outX, lake.y + lake.h);
+    b.outlet = { x: outX, y: lake.y + lake.h, w: c.w };
   }
   run(c, from);
 };

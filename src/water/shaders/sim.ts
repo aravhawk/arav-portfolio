@@ -8,8 +8,8 @@
  *   bedB  RGBA8    r,g: flow direction * speed (0.5 centred), b: agitation
  *   wave  RGBA16F  r: surface height, g: its velocity, b,a: height gradient
  *   vel   RGBA16F  r,g: velocity added by the pointer (px/s), b: pressure, a: divergence
- *   dye   RGBA16F  g: meltwater, the rest unused (no foam is drawn: a wake
- *                  shows by bending light, never as a layer on the water)
+ * Nothing is advected as a layer: a wake shows by bending light, and
+ * meltwater is drawn by the shading pass along the current.
  */
 
 /**
@@ -98,9 +98,9 @@ void main() {
   ivec2 sz = textureSize(uSd, 0);
   ivec2 p = ivec2(gl_FragCoord.xy) * uK;
   float acc = 0.0;
-  for (int y = 0; y < 12; y++) {
+  for (int y = 0; y < 16; y++) {
     if (y >= uK) break;
-    for (int x = 0; x < 12; x++) {
+    for (int x = 0; x < 16; x++) {
       if (x >= uK) break;
       acc += texelFetch(uSd, clamp(p + ivec2(x, y), ivec2(0), sz - 1), 0).r;
     }
@@ -226,7 +226,7 @@ void main() {
       float isd = mix(texture(uIceSdf, iuv).r, texture(uIceLow, iuv).r, uIceMelt.z) + uIceMelt.x;
       float edge = exp(-(isd - 3.0) * (isd - 3.0) / 22.0);
       float n = texture(uDetail, world / 46.0 + vec2(0.9, 0.7) * uTime).r;
-      v -= edge * smoothstep(0.6, 0.82, n) * min(uIceMelt.y, 1.2) * 0.11;
+      v -= edge * smoothstep(0.6, 0.82, n) * min(uIceMelt.y, 1.2) * 0.05;
     }
   }
 
@@ -323,57 +323,6 @@ void main() {
   vec4 c = V(0, 0);
   vec2 grad = 0.5 * vec2(V(1, 0).b - V(-1, 0).b, V(0, 1).b - V(0, -1).b);
   o = vec4(c.rg - grad, c.b, c.a);
-}`;
-
-/** Meltwater, carried by the full velocity field. */
-export const DYE = `${HEAD}
-${SIM_COMMON}
-uniform sampler2D uDye;
-uniform sampler2D uVel;
-uniform sampler2D uWave;
-uniform vec2 uShift;
-uniform float uDt;
-uniform float uTime;
-uniform float uFlowSpeed;
-uniform vec4 uPtr;
-uniform vec2 uPtrForce;
-uniform vec4 uIce;
-uniform sampler2D uIceSdf;
-uniform sampler2D uIceLow;
-uniform vec3 uIceMelt;
-uniform sampler2D uDetail;
-float segDist(vec2 p, vec2 a, vec2 b) {
-  vec2 pa = p - a, ba = b - a;
-  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);
-  return length(pa - ba * h);
-}
-void main() {
-  vec2 world = simWorld(vUv);
-  float sd = bedSd(world);
-  if (sd > 0.0) { o = vec4(0.0); return; }
-  vec2 texel = 1.0 / uSim.zw;
-  vec2 here = vUv + uShift * texel;
-  vec3 fl = bedFlow(world);
-  vec2 total = fl.xy * uFlowSpeed + texture(uVel, here).rg;
-  vec2 src = here - total * uDt / uSim.y * texel;
-  vec4 d = texture(uDye, src);
-  // Silt spreads as it travels: a cloud, never a hard edge.
-  vec4 dn4 = texture(uDye, src + vec2(texel.x, 0.0)) + texture(uDye, src - vec2(texel.x, 0.0))
-           + texture(uDye, src + vec2(0.0, texel.y)) + texture(uDye, src - vec2(0.0, texel.y));
-  d = mix(d, dn4 * 0.25, 0.22);
-  // Meltwater lasts long enough to reach the outlet and run down the stream.
-  float silt = d.g * exp(-uDt * 0.13);
-
-  // The melting ice sheds cold clear water all round its edge, and the
-  // lake's current carries it off toward the outlet.
-  if (uIceMelt.y > 0.0) {
-    vec2 iuv = (world - uIce.xy) / uIce.zw;
-    if (iuv.x > 0.0 && iuv.x < 1.0 && iuv.y > 0.0 && iuv.y < 1.0) {
-      float isd = mix(texture(uIceSdf, iuv).r, texture(uIceLow, iuv).r, uIceMelt.z) + uIceMelt.x;
-      silt += exp(-isd * isd / 190.0) * min(uIceMelt.y, 1.2) * uDt * 1.5;
-    }
-  }
-  o = vec4(0.0, min(silt, 1.0), 0.0, 0.0);
 }`;
 
 /**

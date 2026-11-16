@@ -3,7 +3,7 @@ import { Arrow, Slab } from '@/components/bits';
 import { Ending } from '@/components/ending/Ending';
 import { Basins, Fork, Tributaries } from '@/components/features';
 import { LiveNumber } from '@/components/LiveNumber';
-import { INTERESTS, PROJECTS, type Project } from '@/content/projects';
+import { INTERESTS, PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 import './home.css';
 
@@ -12,6 +12,16 @@ import './home.css';
 export const revalidate = 3600;
 
 const P = Object.fromEntries(PROJECTS.map((p) => [p.slug, p])) as Record<string, Project>;
+
+// The home island shows Infiniview's own front page: one composed frame
+// that still reads at island size. The project page keeps its closer views.
+const INFINIVIEW_HOME: ProjectMedia = {
+  kind: 'image',
+  src: '/media/infiniview-hero.webp',
+  alt: 'The Infiniview site: the headline Attack your code before anyone else does, and a sample run that ends with one critical and one high finding posted to a pull request.',
+  w: 2200,
+  h: 1376,
+};
 
 function Copy({ p, children }: { p: Project; children?: React.ReactNode }) {
   return (
@@ -73,7 +83,7 @@ export default async function Home() {
         <section className="beat wrap" data-side="right" aria-label="Infiniview">
           <Copy p={P.infiniview} />
           <div className="feat feat-sandbox" data-bed="feat:sandbox" data-basin>
-            <Slab media={P.infiniview.media[0]} sizes="(max-width: 860px) 78vw, 40vw" />
+            <Slab media={INFINIVIEW_HOME} sizes="(max-width: 860px) 78vw, 40vw" />
           </div>
         </section>
 
