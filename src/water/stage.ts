@@ -221,10 +221,13 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
       nextDocH = Math.max(html.scrollHeight, viewH);
       root.style.height = `${nextDocH}px`;
 
-      // One texel per 4 CSS px is plenty for a distance field; very long
-      // pages coarsen so the texture stays within every device's limit.
-      let div = 4;
-      while (nextDocH / div > 3800) div += 1;
+      // As fine as a budget allows: the field must fit the device's
+      // largest texture and stay under a cell count that keeps memory and
+      // the worker's transform time modest (about 3 million cells on a
+      // desktop, 1.2 million on a phone).
+      const rows = Math.min(engine.maxTexture, coarse ? 4096 : 8192) - 8;
+      const cells = coarse ? 1.2e6 : 3.0e6;
+      const div = Math.max(2, nextDocH / rows, Math.sqrt((docW * nextDocH) / cells));
       painter = new BedPainter(docW, nextDocH, div);
 
       const anchors: Anchors = {

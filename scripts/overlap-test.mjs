@@ -192,7 +192,8 @@ for (const name of browsers) {
           const el = document.querySelector('[data-bed="lake"], [data-bed="head"]');
           if (!el || !window.__water) return null;
           const r = el.getBoundingClientRect();
-          return { x: r.left + scrollX + r.width * 0.1, y: r.top + scrollY + r.height * 0.5 - 10, w: 24, h: 20, text: 'control', ending: false, top: r.top + scrollY };
+          // Just inside the left bank, clear of any island in the middle.
+          return { x: r.left + scrollX + 12, y: r.top + scrollY + r.height * 0.5 - 10, w: 10, h: 20, text: 'control', ending: false, top: r.top + scrollY };
         });
         if (control) {
           await page.evaluate((yy) => window.scrollTo(0, yy), Math.max(0, control.y - 300));

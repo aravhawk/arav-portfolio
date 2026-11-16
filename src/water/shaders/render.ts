@@ -82,6 +82,16 @@ vec3 landColor(vec2 p, float sd, vec2 grad, vec2 scr) {
   vec3 n = normalize(vec3(-grad * ch * 1.25, 1.0));
   float lit = (uLight.x + uLight.y * max(dot(n, L), 0.0)) / (uLight.x + uLight.y * L.z);
   col *= lit;
+  // One fine relief line milled parallel to every bank, inside the margin
+  // that text keeps from water, so it never runs under a word.
+  float u = (sd - 8.5) / 1.15;
+  float groove = exp(-u * u);
+  col *= 1.0 - 0.05 * groove;
+  col *= 1.0 + 0.11 * u * groove * dot(grad, normalize(L.xy));
+  // On a dark slab a multiply is invisible, so the lit lip is added.
+  col += vec3(0.02, 0.022, 0.024) * max(u * groove * dot(grad, normalize(L.xy)), 0.0) * (1.0 - smoothstep(0.0, 0.25, uLand.g));
+  // Water throws a little of its colour onto the bank beside it.
+  col = mix(col, col * (0.9 + 0.5 * uScatter / max(uScatter.b, 1e-3) * 0.2), exp(-sd / 9.0) * 0.5);
   // A studio light above the upper left of the frame: the slab is lit, not flat.
   float fall = length((scr - vec2(0.22, 0.12)) * vec2(1.0, 0.8));
   col *= 1.0 + uGrainAmt.z * (0.5 - smoothstep(0.0, 1.15, fall));

@@ -48,18 +48,18 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     foam: [1.0, 1.0, 1.0],
     ice: srgb('#F4FAFC'),
     light: [0.5, 0.78, 0.66, 1.2],
-    grain: [0.035, 0.03, 0.07],
+    grain: [0.045, 0.04, 0.12],
   },
   dark: {
     land: srgb('#15181B'),
-    bed: srgb('#7C8C94'),
-    absorb: [0.05, 0.021, 0.0135],
-    scatter: [0.0015, 0.02, 0.036],
+    bed: srgb('#4A5E6A'),
+    absorb: [0.044, 0.017, 0.0115],
+    scatter: [0.003, 0.038, 0.066],
     sky: [0.62, 0.78, 0.86],
     foam: [0.55, 0.7, 0.76],
     ice: srgb('#DDEEF4'),
-    light: [0.3, 1.0, 0.85, 1.6],
-    grain: [0.07, 0.06, 0.22],
+    light: [0.3, 1.0, 1.3, 1.6],
+    grain: [0.1, 0.1, 0.3],
   },
 };
 
@@ -98,6 +98,8 @@ const TIERS: Tier[] = [
 export class WaterEngine {
   readonly gl: GL;
   readonly canvas: HTMLCanvasElement;
+  /** Largest texture side this device allows. */
+  readonly maxTexture: number;
   private p: Record<string, Program> = {};
   private detail!: Target;
   private grain!: Target;
@@ -174,6 +176,7 @@ export class WaterEngine {
     const cbh = gl.getExtension('EXT_color_buffer_half_float');
     if (!cbf && !cbh) throw new Error('float render targets unavailable');
     this.gl = gl;
+    this.maxTexture = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
     this.hf = gl.HALF_FLOAT;
     this.theme = this.themeTarget = opts.theme;
     this.still = opts.still;
