@@ -172,8 +172,11 @@ html:not([data-flight]) .fl-lake[data-basin] {
     padding-top: 0;
     padding-bottom: 9vh;
   }
-  .fl-say-text {
-    max-width: 13ch;
+  /* On a phone the sentence is set about as wide as the name. */
+  .fl .fl-say .fl-say-text {
+    max-width: 100%;
+    font-size: clamp(34px, 10.4vw, 56px);
+    line-height: 1.04;
   }
   .fl-view-words {
     gap: var(--s-3);
