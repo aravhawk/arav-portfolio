@@ -20,7 +20,7 @@ import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
-import { LAKE, OUTLET, SHOAL_Y, SLAB, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
+import { LAKE, OUTLET, SHARDS, SHOAL_Y, SLAB, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -38,6 +38,7 @@ export class FlightEngine extends WaterEngine {
   private slabTex: WebGLTexture | null = null;
   private slabTint: V3 = [0.2, 0.2, 0.2];
   private sheetTex: WebGLTexture | null = null;
+  private pulseHalf = -1;
   private camKey = '';
 
   constructor(canvas: HTMLCanvasElement, opts: EngineOpts) {
@@ -394,6 +395,18 @@ export class FlightEngine extends WaterEngine {
     gl.uniform2f(r.u.uBedSize, this.bedMeta.w, this.bedMeta.h);
     gl.uniform1f(r.u.uBedDiv, this.bedMeta.div);
     gl.uniform1f(r.u.uTime, this.time);
+    // The tarn's shards are only worked out from near by.
+    const nearTarn = Math.hypot(cam.pos[0] - TARN.x, cam.pos[1] - TARN.y) < 2600 && cam.pos[2] < 700;
+    gl.uniform1f(r.u.uShardOn, nearTarn ? 1 : 0);
+    if (nearTarn) {
+      // A pulse leaving a shard is a real splash at its foot.
+      const half = Math.floor(this.time / 3.5);
+      if (half !== this.pulseHalf) {
+        this.pulseHalf = half;
+        const from = SHARDS[half % 2];
+        this.splash(from.x, from.y - from.r * 1.6, 34, 0.9);
+      }
+    }
     gl.uniform1f(r.u.uFlowSpeed, FLOW_SPEED);
     gl.uniform1f(r.u.uQuality, tier.quality);
     gl.uniform1f(r.u.uLean, this.leanNow);

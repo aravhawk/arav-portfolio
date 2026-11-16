@@ -22,7 +22,7 @@
 
 import { ICE_FIELD } from './ice';
 import { PANO, SUN } from './terrain';
-import { BASIN, CONF_Y, ISLAND, POOL, SHEET, STREAM, TRIBS } from '../world';
+import { BASIN, CONF_Y, ISLAND, POOL, SHARDS, SHEET, STREAM, TARN, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -71,6 +71,7 @@ uniform sampler2D uHeat;
 uniform sampler2D uSlabTex;
 uniform sampler2D uSheetTex; // the picture on the pool's bed
 uniform float uSheetOn;
+uniform float uShardOn;    // 1 when the tarn's two shards are near enough to be seen
 uniform sampler2D uPano;   // the ranges: sun, sky, snow, distance
 uniform sampler2D uGround; // the baked snow: height, slope, a second field
 uniform sampler2D uGlowTex; // the last frame's highlights, small and soft
@@ -1077,6 +1078,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   float fmag = length(flow);
   float inBasin = smoothstep(${(BASIN.y - 60).toFixed(1)}, ${(BASIN.y + 80).toFixed(1)}, pw.y) * (1.0 - smoothstep(${(BASIN.y + BASIN.h - 40).toFixed(1)}, ${(BASIN.y + BASIN.h + 120).toFixed(1)}, pw.y));
   float runK = smoothstep(0.25, 0.6, fmag) * (1.0 - inBasin) * (1.0 - lakeK) * (1.0 - shoalK) * smoothstep(3.0, 16.0, -bw.r) * (1.0 - uEnd);
+  // (The tarn is still: nothing is drawn on it.)
+  runK *= smoothstep(0.85, 1.2, length((pw - vec2(${TARN.x.toFixed(1)}, ${TARN.y.toFixed(1)})) / vec2(${TARN.rx.toFixed(1)}, ${TARN.ry.toFixed(1)})));
   if (runK > 0.0 && footL < 40.0) {
     float along = pw.y;
     float across = pw.x - streamX(pw.y);
@@ -1170,6 +1173,54 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   col = mix(col, edgeC, edgeF * mix(0.6, 0.3, uNight) * (1.0 - uEnd) * (1.0 - lakeK * smoothstep(0.0, 0.3, uGlow)));
 
   return col;
+}
+
+// ---- the tarn's two shards of ice, each lit from within
+const vec4 SH0 = vec4(${SHARDS[0].x.toFixed(1)}, ${SHARDS[0].y.toFixed(1)}, ${SHARDS[0].h.toFixed(1)}, ${SHARDS[0].r.toFixed(1)});
+const vec4 SH1 = vec4(${SHARDS[1].x.toFixed(1)}, ${SHARDS[1].y.toFixed(1)}, ${SHARDS[1].h.toFixed(1)}, ${SHARDS[1].r.toFixed(1)});
+// x: where the pulse is between them, 0..1; y, z: how freshly one has landed at each.
+vec3 pulseAt() {
+  float c = mod(uTime, 7.0);
+  float k = c < 3.5 ? smoothstep(0.0, 3.0, c) : 1.0 - smoothstep(3.5, 6.5, c);
+  return vec3(k, exp(-mod(c + 0.5, 7.0) * 1.5), c >= 3.0 ? exp(-(c - 3.0) * 1.5) : 0.0);
+}
+// A shard is five leaning faces that meet near a point: a convex solid, cut by planes.
+float shardHit(vec3 ro, vec3 rd, vec4 s, float turn, out vec3 n, out float tF) {
+  float tN = 0.0;
+  tF = 1e9;
+  n = vec3(0.0, 0.0, 1.0);
+  vec3 o = ro - vec3(s.xy, -FREEBOARD - 6.0);
+  for (int k = 0; k < 6; k++) {
+    vec3 pn = vec3(0.0, 0.0, -1.0);
+    float d = 30.0;
+    if (k < 5) {
+      float fk = float(k);
+      float a = turn + fk * 1.2566 + 0.34 * sin(fk * 2.7 + turn * 5.0);
+      float rr = s.w * (0.78 + 0.5 * fract(sin(fk * 12.9 + turn * 7.0) * 43.7));
+      float hk = s.z * (0.72 + 0.28 * fract(sin(fk * 5.3 + turn * 3.0) * 91.3));
+      float len = sqrt(hk * hk + rr * rr);
+      pn = vec3(cos(a) * hk, sin(a) * hk, rr) / len;
+      d = rr * hk / len;
+    }
+    float den = dot(rd, pn);
+    float num = d - dot(o, pn);
+    if (den < -1e-5) { float t = num / den; if (t > tN) { tN = t; n = pn; } }
+    else if (den > 1e-5) tF = min(tF, num / den);
+    else if (num < 0.0) return -1.0;
+  }
+  return tN < tF && tN > 0.0 ? tN : -1.0;
+}
+vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow) {
+  float path = clamp((tF - t) / (s.w * 2.2), 0.0, 1.0);
+  vec3 ice = mix(vec3(0.62, 0.82, 0.9), vec3(0.12, 0.4, 0.55), path);
+  vec3 lit = ice * lightOn(n, 1.0);
+  float fr = 0.04 + 0.96 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
+  vec3 refl = skyColor(reflect(rd, n), 0.0);
+  // The light inside: brightest where the ray passes nearest the heart.
+  vec3 mp = ro + rd * (t + tF) * 0.5 - vec3(s.xy, -FREEBOARD);
+  float core = exp(-length(mp.xy) / (s.w * 0.42)) * smoothstep(-30.0, s.z * 0.12, mp.z) * (1.0 - smoothstep(s.z * 0.45, s.z * 0.95, mp.z));
+  vec3 em = vec3(0.5, 0.95, 1.0) * (core * mix(1.15, 2.6, uNight) + 0.5 * uNight * path * (1.0 - smoothstep(s.z * 0.3, s.z, mp.z))) * glow * (0.6 + 0.4 * path);
+  return mix(lit, refl, fr * 0.6) + em;
 }
 
 void main() {
@@ -1348,6 +1399,44 @@ void main() {
     col = mix(col, air, fog * (1.0 - 0.9 * uEnd) * (1.0 - clearK));
     // The horizon is soft: the same mist that lies at the ranges' foot.
     col = mix(col, air, exp(dir.z / 0.006) * 0.75);
+  }
+  if (uShardOn > 0.5) {
+    vec3 pl = pulseAt();
+    // Where this pixel's ray meets the water, if it does.
+    float tw = dir.z < -0.0006 ? (uCamPos.z + FREEBOARD) / -dir.z : -1.0;
+    vec3 pwp = uCamPos + dir * max(tw, 0.0);
+    vec2 te = (pwp.xy - vec2(${TARN.x.toFixed(1)}, ${TARN.y.toFixed(1)})) / vec2(${TARN.rx.toFixed(1)}, ${TARN.ry.toFixed(1)});
+    float onTarn = tw > 0.0 ? 1.0 - smoothstep(0.86, 1.0, length(te)) : 0.0;
+    if (onTarn > 0.0) {
+      // The pulse: a glint that crosses, and the rings it draws on the still water.
+      vec2 pp = mix(SH0.xy, SH1.xy, pl.x);
+      float dp = length(pwp.xy - pp);
+      float going = smoothstep(0.0, 0.05, pl.x) * smoothstep(1.0, 0.95, pl.x);
+      float ring = sin(dp * 0.085 - uTime * 6.5) * exp(-dp / 110.0);
+      vec3 pc = mix(vec3(0.55, 0.85, 0.95), vec3(0.5, 1.0, 0.95), uNight);
+      col += pc * (exp(-dp * dp / 700.0) * 1.1 + max(ring, 0.0) * 0.2) * going * onTarn * mix(0.75, 1.0, uNight);
+      col *= 1.0 + min(ring, 0.0) * 0.14 * going * onTarn;
+    }
+    for (int i = 0; i < 2; i++) {
+      vec4 s = i == 0 ? SH0 : SH1;
+      float turn = i == 0 ? ${SHARDS[0].turn.toFixed(2)} : ${SHARDS[1].turn.toFixed(2)};
+      float glow = 0.5 + 1.2 * (i == 0 ? pl.y : pl.z);
+      vec3 n;
+      float tF;
+      float t = shardHit(uCamPos, dir, s, turn, n, tF);
+      if (t > 0.0 && (tw < 0.0 || t < tw)) {
+        col = shardColor(uCamPos, dir, t, tF, n, s, glow);
+      } else if (onTarn > 0.0) {
+        // Its mirror in the still water, a little dimmer, shaken by the rings.
+        vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3(0.0035 * sin(pwp.y * 0.13 + uTime * 0.7) + 0.002 * sin(pwp.y * 0.41 - uTime * 1.1), 0.0, 0.0));
+        float t2 = shardHit(pwp, rd2, s, turn, n, tF);
+        if (t2 > 0.0) col = mix(col, shardColor(pwp, rd2, t2, tF, n, s, glow) * 0.72, 0.62 * onTarn);
+      }
+      // The light it throws into the air round it.
+      vec3 c = vec3(s.xy, s.z * 0.34 - FREEBOARD) - uCamPos;
+      float along = dot(c, dir);
+      if (along > 0.0) col += vec3(0.25, 0.7, 0.8) * glow * mix(0.09, 0.17, uNight) * exp(-length(c - dir * along) / (s.w * 1.9)) * mix(0.3, 1.0, uNight);
+    }
   }
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
 

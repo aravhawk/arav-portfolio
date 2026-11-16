@@ -114,8 +114,8 @@ export const SHEET = { x: 1780, y: 9250 + DY, w: 600, h: 440 };
 /** Station 4, the tarn, and the two shards of ice that stand in it. */
 export const TARN = { x: 1300, y: 10800 + DY, rx: 820, ry: 640 };
 export const SHARDS: { x: number; y: number; h: number; r: number; turn: number }[] = [
-  { x: 820, y: 10560 + DY, h: 430, r: 62, turn: 0.5 },
-  { x: 1800, y: 11120 + DY, h: 470, r: 66, turn: -0.35 },
+  { x: 1560, y: 10420 + DY, h: 400, r: 62, turn: 0.5 },
+  { x: 1600, y: 11250 + DY, h: 520, r: 74, turn: -0.35 },
 ];
 
 export interface NameLayout {
