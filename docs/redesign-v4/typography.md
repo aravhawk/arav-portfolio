@@ -455,6 +455,96 @@ Known limits of this pass: specimens are flat colour grounds with no water behin
 
 ## Bake-off (in the real v4 pages)
 
+The three recommended systems were wired into the real site behind a
+`?type=` switch and rendered in the actual pages, not in specimens: the hero
+with the name cast in ice over the water, the statement, a project beat with
+its live figure ("21"), a blog post (title and body), and the ending screen,
+at 1440 and 390, in Chromium and WebKit. Captures and the blind sheets
+(`sheet-X/Y/Z.jpg`, key in `KEY.md`) are in
+`~/.t3/portfolio-redesign-v4/specimens/bakeoff/`.
+
+What the real pages showed that the flat specimens could not:
+
+| | Orbiter (TASA Orbiter) | Atelier (Zalando Sans + Newsreader) | Martian (Martian Grotesk + Mono) |
+|---|---|---|---|
+| The name as ice | Tall and narrow. Thin joins at this weight, so the frosted core is slim and the letters lose mass early in the melt | Wide and calm, but the expanded word space opens a hole in the middle of the name, and the diagonals of "v" and "A" thin out under the bevel | The heaviest, most even strokes. The frosted core stays broad, the name holds its shape through the first half of the melt, and it reads from across a room |
+| Takeaway line | Clear, plain | In serif it is elegant and reads as an editorial magazine, not as tooling | Wide, engineered, unmistakably technical |
+| Big figure ("21", "18,287") | Neutral | The expanded "1" grows a wide foot that looks like a different font | Dense and blunt; reads as an instrument |
+| Project names | Fine, forgettable | Wide and luxurious | Distinct shapes ("Kilo Bench", "TensorPoW") with ink traps that survive small sizes |
+| Blog post | The most comfortable body text of the three sans options | The best reading page by a clear margin, in serif | Body is denser than the others; the wide title was too heavy at first and was pulled back to width 100, weight 680 |
+| Ending screen | Quiet | The serif headline is beautiful over the horizon | Heavy and confident; matches the hero |
+| Files | 52 KB + 59 KB | 205 KB + 215 KB + 27 KB, and a Reserved Font Name on the grotesk | 148 KB + 63 KB + 28 KB static cut for the ice |
+
 ## Blind ranking
 
+The brief asks for an independent critic to rank the systems blind. Under
+the working rules for this build only one helper may run, at the final
+review, so the blind ranking is part of that critic's brief: it receives
+the three sheets labelled X, Y and Z with no names and ranks them before it
+sees anything else. Its ranking and reasons are recorded in
+`design-review.md` under "Independent critic", and copied here:
+
+_Filled in after the final review (see the end of this file)._
+
 ## The pick
+
+**Martian Grotesk for display and text, Martian Mono for labels, live
+readouts and code.** Both are by Evil Martians, both SIL OFL 1.1 with no
+Reserved Font Name, both self hosted from `src/fonts`.
+
+Why, in plain terms:
+
+1. **It says the right thing in five seconds.** The takeaway is "AI and
+   developer tooling builder". Martian Grotesk is a wide, engineered
+   grotesque drawn by a studio that makes developer tools, with squared
+   curves, flat terminals and ink traps. It looks built, not styled. A serif
+   takeaway line (Atelier) said "essayist"; a neutral geometric (Orbiter)
+   said nothing in particular.
+2. **It is the best material for ice.** The name is cast from the display
+   face's outlines, then bevelled, frosted and melted. That needs thick,
+   even strokes and generous joins. At width 112 and weight 760 Martian has
+   the most mass, so the frosted core stays broad and legible at rest and
+   the letterforms survive longest as they thin.
+3. **One superfamily, two axes, so the scale has real steps.** Width runs
+   75 to 200 and weight 100 to 1000. The site uses width 112 for display and
+   100 for reading, and weights that are deliberately not 400 and 700: 420
+   for body, 440 for leads, 560 for controls, 620 to 680 for titles, 760 for
+   display. Those in-between weights are a large part of what reads as
+   expensive.
+4. **The mono is the same hand.** Martian Mono was drawn as the grotesque's
+   companion, so labels and live numbers feel like instruments on the same
+   machine, not a second brand.
+5. **Nothing in the licence can bite a public repository.**
+
+What it costs, and what was done about it:
+
+- **No tabular figures in the grotesque.** Live figures are set in fixed
+  one-`ch` cells per digit (`.digit`), so a number that counts up never
+  changes width; small readouts use Martian Mono.
+- **Dense body text.** Long reading runs at 18px on a 1.68 line with a
+  43rem measure, weight 420, which opens it up; headings in posts drop to
+  width 100.
+- **Canvas cannot set variable axes.** The ice name uses a static instance
+  (width 112, weight 760, `MartianGrotesk-Ice.woff2`, 28 KB) so the canvas
+  and the DOM agree in every browser.
+
+The scale as shipped (`src/app/globals.css`):
+
+| Role | Size | Weight | Width | Tracking | Leading |
+|---|---|---|---|---|---|
+| Ice name | 14.6vw (33vw stacked on phones) | 760 | 112 | -0.045em | 1.0 |
+| Big figure | 4.5rem to 13.5rem | 760 | 112 | -0.06em | 0.82 |
+| Display (project names) | 2.9rem to 7.5rem, capped by the column | 760 | 112 | -0.045em | 0.9 |
+| Statement | 2rem to 4.6rem | 620 | 100 | -0.04em | 1.02 |
+| Title | 1.5rem to 2.25rem | 620 | 100 | -0.025em | 1.1 |
+| Lead | 1.125rem to 1.375rem | 440 | 100 | -0.008em | 1.42 |
+| Body | 1.0625rem | 420 | 100 | 0 | 1.5 to 1.55 |
+| Small | 0.875rem | 420 | 100 | 0 | 1.45 |
+| Label (mono, uppercase) | 0.6875rem | 480 | | +0.07em | 1.35 |
+
+Tracking tightens as size grows and leading closes with it, headings use
+`text-wrap: balance` and body `pretty`, and the fallbacks are metric-matched
+by `next/font` so there is no swap shift (measured CLS is 0).
+
+The two losing systems are still wired behind `?type=a` and `?type=f` until
+the critic has ranked the sheets; they are removed from the final build.

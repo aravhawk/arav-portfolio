@@ -12,8 +12,10 @@
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   align-items: end;
   gap: var(--s-7);
-  height: var(--hero-top);
-  padding: 0 0 26px;
+  /* A floor, not a fixed height: at 200% text size the block grows and the
+     lake starts lower instead of the copy running under the nav. */
+  min-height: var(--hero-top);
+  padding: 92px 0 26px;
   max-width: none;
 }
 .hero-role {
