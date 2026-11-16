@@ -536,4 +536,20 @@ effects, as igloo.inc and other award sites have.
   media (staged in `.tools/assets/` with their sources).
   Then a panel of three critics; rounds continue until the median is 9.5
   with none under 9. Then the sound phase.
+- 2026-11-16 23:05 CT. K8c done, reviewed and pushed (`30f77ee`, eight
+  signed commits): the name as open water with a bright recessed rim on
+  the far side only (no dark wall), the camera holding the hero's view
+  until the name's ice has gone, wandering fractures into plates of
+  different sizes, shorelines with a shelf and a foam line, the first
+  object as a block of glacier ice with the product frozen inside it,
+  one full-size pass straight to the screen with last frame's glow,
+  start-up in short tasks (0 long tasks on desktop), the statement
+  larger on phones. Gates: legibility passes at four widths in both
+  themes, existing pages untouched, three perf profiles pass on tier 0.
+  **Open gate:** the two-windows stress profile still drops 8.8 percent
+  of scroll frames (p95 33 ms). One pass did not fix it; the real GPU
+  time per frame at 2880 x 1800 is close to the budget on this machine.
+  A later task must find a leaner tier that is a real saving. Not
+  relaxed, not hidden.
+- 2026-11-16 23:10 CT. K9a started (`.tools/briefs/K9a-stations-2-4.md`).
 
