@@ -475,4 +475,13 @@ effects, as igloo.inc and other award sites have.
   time of day that moves with the scroll, swap into the home page,
   fallbacks, phone), K10 (project and inner pages led by large media),
   then a panel of three critics.
+- 2026-11-16 14:55 CT. K8 failed before changing anything: the Kilo
+  gateway stops any single response at 600 seconds, and its first big
+  edit ran past that. Nothing lost (tree clean at `0b4ec0d`). Relaunched
+  as two smaller tasks with an instruction to edit in small steps and
+  commit per part. **K8a (running):** ground, ranges, sky, aurora, film
+  finish, frame rate. **K8b (next):** the hero's composition and
+  anamorphic name, the river and the melt's plates, the project object,
+  the small named faults. Briefs for Kilo from here on always carry the
+  small-steps instruction.
 
