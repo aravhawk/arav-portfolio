@@ -43,6 +43,18 @@ export function bindTriangle(gl: GL): WebGLVertexArrayObject {
 }
 
 export function compile(gl: GL, frag: string, name: string): Program {
+  return compileEnd(gl, compileBegin(gl, frag, name));
+}
+
+export interface Pending {
+  prog: WebGLProgram;
+  vs: WebGLShader;
+  fs: WebGLShader;
+  name: string;
+}
+
+/** Hand a program to the driver. Nothing here waits for it. */
+export function compileBegin(gl: GL, frag: string, name: string): Pending {
   const vs = gl.createShader(gl.VERTEX_SHADER)!;
   gl.shaderSource(vs, VERT);
   gl.compileShader(vs);
@@ -53,6 +65,18 @@ export function compile(gl: GL, frag: string, name: string): Program {
   gl.attachShader(prog, vs);
   gl.attachShader(prog, fs);
   gl.linkProgram(prog);
+  return { prog, vs, fs, name };
+}
+
+/** Whether the driver has finished with it (always true where it cannot be asked). */
+export function compileDone(gl: GL, p: Pending): boolean {
+  const ext = gl.getExtension('KHR_parallel_shader_compile');
+  return !ext || (gl.getProgramParameter(p.prog, ext.COMPLETION_STATUS_KHR) as boolean);
+}
+
+/** Take the linked program: this waits if the driver has not finished. */
+export function compileEnd(gl: GL, p: Pending): Program {
+  const { prog, vs, fs, name } = p;
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
     const log =
       gl.getShaderInfoLog(fs) || gl.getShaderInfoLog(vs) || gl.getProgramInfoLog(prog) || '';

@@ -52,20 +52,20 @@ export const STREAM: Pt[] = [
 
 /** The walled basin (the sandbox) and the island in it. */
 export const BASIN: Rect = { x: 1050, y: 4520 + DY, w: 1120, h: 1080 };
-export const ISLAND = { x: 1560, y: 5110 + DY, rx: 290, ry: 170 };
+export const ISLAND = { x: 1560, y: 5110 + DY, rx: 275, ry: 150 };
 
 /** The upright slab that carries the product image. */
 export const SLAB = {
   /** middle of its foot */
   x: ISLAND.x,
-  y: ISLAND.y + 10,
-  w: 440,
-  h: 440 * (1376 / 2200),
-  thick: 44,
+  y: ISLAND.y - 50,
+  w: 430,
+  h: 372,
+  thick: 150,
   /** its foot stands this far above the ground, on a low plinth of ice */
   lift: 0,
   /** which way its face looks, in radians from -y toward -x: it faces the camera that arrives at the basin */
-  turn: 0.44,
+  turn: 0.16,
 };
 
 /** Where the river has become open water. */

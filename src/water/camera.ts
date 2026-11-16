@@ -117,8 +117,8 @@ export function flightKeys(aspect: number): Key[] {
         { s: h + 0.7, pos: [1080, 2250 + DY, 158], aim: [1320, 2740 + DY, 0], fov: 48 },
         { s: s1 - 0.5, pos: [1090, 2440 + DY, 152], aim: [1325, 2930 + DY, 0], fov: 48 },
         // The basin: slab and island right of centre, the bank at lower left.
-        { s: s1 + 1.0, pos: [930, 4110 + DY, 300], aim: [slabAim[0] - 250, slabAim[1], 30], fov: 42 },
-        { s: s2 - 0.55, pos: [955, 4180 + DY, 288], aim: [slabAim[0] - 235, slabAim[1] + 20, 30], fov: 42 },
+        { s: s1 + 1.0, pos: [930, 4110 + DY, 300], aim: [slabAim[0] - 250, slabAim[1], 105], fov: 42 },
+        { s: s2 - 0.55, pos: [955, 4180 + DY, 288], aim: [slabAim[0] - 235, slabAim[1] + 20, 105], fov: 42 },
 
         // Out wide of the island's left side: the slab leaves the frame whole
         // and at a distance, never as an edge sliding past the lens.

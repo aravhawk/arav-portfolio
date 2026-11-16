@@ -14,7 +14,7 @@ import { haptic } from '@/lib/haptics';
 import { BedPainter } from './bed';
 import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
-import { type Target, bindTex, drawTo, freeTarget, makeTarget } from './gl';
+import { type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
@@ -60,6 +60,37 @@ export class FlightEngine extends WaterEngine {
     return s;
   }
 
+  /**
+   * Start-up, in pieces no longer than a frame or two each. Every program
+   * is handed to the driver at once and taken when the driver says it is
+   * done (so the long shading program never holds the page), and the baked
+   * textures are made one to a task.
+   */
+  async prepare(): Promise<void> {
+    const gl = this.gl;
+    const tick = () => new Promise<void>((r) => setTimeout(r, 0));
+    const src = this.sources();
+    const pending = Object.keys(src).map((k) => [k, compileBegin(gl, src[k], k)] as const);
+    await tick();
+    for (const [k, p] of pending) {
+      for (let n = 0; n < 400 && !compileDone(gl, p); n++) await new Promise<void>((r) => setTimeout(r, 8));
+      this.p[k] = compileEnd(gl, p);
+      await tick();
+    }
+    super.bake();
+    await tick();
+    this.ground = makeTarget(gl, 1024, 1024, { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, wrap: gl.REPEAT });
+    gl.useProgram(this.p.ground.prog);
+    drawTo(gl, this.ground);
+    this.filterGround(this.ground);
+    await tick();
+    this.filterGround(this.grain);
+    this.filterGround(this.detail);
+    await tick();
+    this.bakeRanges();
+    await tick();
+  }
+
   /** The snow's relief, baked once. */
   private ground!: Target;
   /** The ranges, marched once into a panorama and lit each frame. */
@@ -80,18 +111,6 @@ export class FlightEngine extends WaterEngine {
       const max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number;
       gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, max));
     }
-  }
-
-  protected bake() {
-    super.bake();
-    const gl = this.gl;
-    this.ground = makeTarget(gl, 1024, 1024, { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, wrap: gl.REPEAT });
-    gl.useProgram(this.p.ground.prog);
-    drawTo(gl, this.ground);
-    this.filterGround(this.ground);
-    this.filterGround(this.grain);
-    this.filterGround(this.detail);
-    this.bakeRanges();
   }
 
   private bakeRanges() {
@@ -511,8 +530,11 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const themeNow = () => (html.dataset.theme === 'dark' ? 1 : 0);
 
+  const t0 = performance.now();
+  const lap = (name: string, from: number) => performance.measure(`fl:${name}`, { start: from, end: performance.now() });
   const engine = new FlightEngine(canvas, { theme: themeNow(), still: mqStill.matches, coarse });
   await engine.prepare();
+  lap('prepare', t0);
   if (isCancelled()) {
     engine.destroy();
     return null;
@@ -569,11 +591,25 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const cells = coarse ? 1.2e6 : 3.0e6;
     const div = Math.max(3, WORLD.h / rows, Math.sqrt((WORLD.w * WORLD.h) / cells));
     const painter = new BedPainter(WORLD.w, WORLD.h, div);
+    const tick = () => new Promise<void>((res) => setTimeout(res, 0));
+    let t = performance.now();
     paintWorld(painter);
+    lap('paint', t);
+    await tick();
+    t = performance.now();
     const r = painter.rasters();
+    lap('rasters', t);
     const sd = await solver.solve({ alpha: r.mask, w: painter.w, h: painter.h, clamp: r.clampTexels, scale: painter.div });
     if (destroyed) return false;
-    engine.setBed(painter.assemble(sd.sd, r.flow));
+    await tick();
+    t = performance.now();
+    const bed = painter.assemble(sd.sd, r.flow);
+    lap('assemble', t);
+    await tick();
+    if (destroyed) return false;
+    t = performance.now();
+    engine.setBed(bed);
+    lap('setBed', t);
     engine.shoalY = SHOAL_Y;
     engine.lake = { y0: LAKE.y0, y1: LAKE.y1 };
     engine.meltPath = { x: OUTLET.x, y: OUTLET.y, reach: 900, w: OUTLET.w };
