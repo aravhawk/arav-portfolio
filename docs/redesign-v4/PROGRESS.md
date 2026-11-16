@@ -405,3 +405,39 @@ renderer. Text is overlaid in composed zones and its contrast is measured
 at every scroll position, as the ending's already is. Built first at a
 temporary route so the shipped home page is not broken while it is judged.
 
+## Final phase, after the design reaches the bar: music and sound (Arav, t262u, 2026-11-16 10:46 AM CT)
+
+Not before the critics' median is 9.5 or more. It must not distract from
+the design rounds. v4 gets properly made and composed music and sound
+effects, as igloo.inc and other award sites have.
+
+1. **Study first.** How Igloo and two or three other Site of the Day
+   winners handle audio: the ambient score, UI and interaction sounds tied
+   to motion, the sound toggle, and the default-muted start browsers
+   require. Written up next to the reference study.
+2. **One sound design for the ice-to-water idea.** An ambient bed, plus
+   effects for the melt, scroll, hovers and the moments that already have
+   haptics. Mixed and level-balanced, nothing harsh.
+3. **Sources.** Original, synthesised (Web Audio) or properly licensed
+   only (CC0 or royalty-free with the licence recorded in the repo, as
+   the fonts' are). Never unlicensed audio.
+4. **Control.** A clear, elegant sound on/off control. Off by default
+   until the visitor turns it on; the choice is remembered; reduced
+   motion and the user's choice are respected.
+5. **Weight.** Audio loads lazily after the first interaction; the
+   performance budget and the Lighthouse gates still hold.
+6. **Who does what.** Kilo implements, one task at a time. This thread
+   reviews by measurement (waveform and loudness analysis, clipping,
+   level balance between bed and effects) and adds sound to the critics'
+   rubric.
+
+## Round 10 log
+- 2026-11-16 12:40 CT. Kilo task K7 started
+  (`.tools/briefs/K7-the-flight.md`): a prototype at `/flight` of the home
+  page as one world seen through a travelling perspective camera (frozen
+  lake under a sky, melt and descent, the statement on the bank, the
+  Infiniview slab in its basin with its reflection, hand-over to the
+  existing ending), plus `scripts/legibility-test.mjs` (contrast behind
+  every line of text at 40 or more scroll positions, both themes). The
+  shipped home page is untouched until the prototype is judged.
+
