@@ -18,14 +18,20 @@ Decisions it shaped:
   several.
 - No caption or description under any visual. The product screenshot and
   the launch video carry alt text only.
-- Software shows its own UI: Infiniview's beat uses the real finding screen,
-  not a metaphor or a generic dashboard.
+- Software shows its own UI: Infiniview's beat uses the product's own
+  screen, Kilo Bench its real results and RydAR the real app, not a
+  metaphor or a generic dashboard.
 - Copy rules: headings name things, the first screen says what he does and
   for whom with one hard fact, nothing invented, no slop words.
 - Equal left and right edges: one `.wrap` gutter for every block.
 - Hover answers on every link and control; nothing tilts; reduced motion
   rests everything with nothing left hidden.
-- No violet anywhere.
+- No violet in the interface. One exception, on purpose and worth the
+  owner's eye: the light theme's ending is a blue-hour dawn, and its sky
+  runs from deep blue through rose at the horizon. It was graded that way
+  so the words pass contrast over dark water (a pale morning failed at
+  1.6 to 1). One critic asked for it to move toward gold; the sky's four
+  colour keys are at the top of `src/components/ending/shader.ts`.
 - The checklist's 820, 768, 390 and 320 passes, 44px targets, and "nothing
   lies on anything else".
 

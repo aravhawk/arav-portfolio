@@ -234,3 +234,45 @@ Proof:
 24. Under contention the frame rate may fall. Sharpness may not.
 
 ## v4 measurements
+
+Measured on the final production build (`next start`), 2026-11-16, on the
+same M4 the v3 traces were taken on, with `scripts/perf-trace.mjs`: a real
+Chrome trace over a full scroll of the home page at reading speed, then 300
+pointer moves through the hero. Headless Chromium on Metal, 60 Hz. Traces
+and the report are in `~/.t3/portfolio-redesign-v4/traces/v4-final/`.
+
+| Profile | Scroll p50 / p95 / p99 (ms) | Frames over 25 ms | Hero p50 / p95 / p99 (ms) | Frames over 25 ms | Long tasks | GPU ms per frame | Backing size | Tier |
+|---|---|---|---|---|---|---|---|---|
+| Desktop 1440 x 900 at 2x | 16.7 / 16.8 / 16.8 | 2 of 677 | 16.7 / 16.7 / 16.8 | 0 of 648 | 1 (50 ms, at start) | 1.12 | 2880 x 2232, constant | 0 (highest) |
+| Desktop 1728 x 1117 at 2x | 16.7 / 16.8 / 33.3 | 13 of 804 | 16.7 / 16.7 / 16.8 | 0 of 648 | 1 (53 ms, at start) | 1.15 | 3456 x 2770, constant | 0 |
+| Phone 390 x 844 at 3x, CPU throttled 4x | 16.7 / 16.7 / 16.8 | 0 of 281 | 16.7 / 16.7 / 16.8 | 0 of 377 | 2 (worst 64 ms throttled, about 16 ms real) | 0.27 | 780 x 2700, constant | 1 |
+| Desktop 1440 at 2x, a second copy of the site rendering in another window | 16.7 / 16.8 / 33.3 | 9 of 673 | 16.7 / 16.7 / 16.8 | 0 of 648 | 0 | 1.99 | 2880 x 2232, constant | 0 |
+
+Against the rules above:
+
+- **Sharpness never drops.** The backing store is one size for the whole
+  of every run, including the contended one (rules 1, 6, 21, 24). The
+  device pixel ratio is capped at 2 and never changed; the only thing a
+  quality tier changes is the simulation grid and a few shading terms.
+- **Frame time.** p95 is one tick over the 16.7 ms target on three of the
+  four profiles (16.8 ms: the display's own interval as the timer reports
+  it). The scroll is not perfect: between 0.3 and 1.6 percent of frames in
+  the long scroll took two intervals on the desktop profiles (rule 23 asks
+  for under 1 percent; the 1440 run meets it, the 1728 and contended runs
+  miss it). The hero interaction dropped no frames on any profile.
+- **Cost.** About 1.1 ms of GPU time per frame on a desktop, against a
+  budget of 6 (rule 9). No ray loops in the on-screen pass; the ice's
+  fracture field is the dearest term and is skipped under packed snow.
+- **Start-up.** One long task of about 50 ms on a desktop while shaders
+  compile and the bed is carved (rule 20 asks for none over 50 ms: this
+  sits on the line). Programs compile one per task; distance transforms
+  run in a worker. `KHR_parallel_shader_compile` is not used.
+- **Not measured.** The dark theme (the trace script has no theme
+  option; the dark hero lights more of the ice's fracture field). A 120 Hz
+  display. The owner's own machine. A real phone.
+
+Lighthouse on the same build (desktop preset / mobile preset, performance):
+home 95 to 99 / 89 to 90, /work 100 / 94, a project page 99 to 100 / 88
+to 94, a post 100 / 93. Accessibility, best practices and SEO are 100 on
+all four pages in both presets. CLS is 0 everywhere. First-load JavaScript
+is 195 kB gzipped on every route (623 kB raw across 11 scripts).

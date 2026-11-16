@@ -59,7 +59,7 @@ v4's own numbers and the pick are in [typography.md](typography.md).
 | Hybrid water: a wave heightfield plus a velocity field plus authored flow | Water notes in part 3: pure dye reads as ink or jelly, pure ripples read as a pool. Height bends light, velocity moves things |
 | The pointer is a moving body dragged along its path, not a point source | Wallace (displaced volume), Unseen (force along the previous-to-current segment). It gives wakes, where a drop gives rings |
 | Caustics from the surface's own curvature, split slightly by colour, fading in shallows | Wallace's refracted-area method, done as a full-screen term |
-| Depth cues: red-first absorption, terraced bed for refraction to bend, dark wet seam and bright lip at banks, sparse foam | "What separates water from jelly" list in part 3 |
+| Depth cues: red-first absorption, a bed with form for refraction to bend (first built as terraces, which critics read as pool steps; now a shelving bed with stones and a fine net), dark wet seam and bright lip at banks, sparse foam | "What separates water from jelly" list in part 3 |
 | Ice name from a signed distance field: clear bevel, cloudy core, melt by threshold so the skeleton lasts longest; a real `h1` underneath | Igloo's ice parameters and frost mask; ice notes in part 3 |
 | No resolution scaling, ever: fixed device pixel ratio cap of 2, quality stepped in discrete tiers | Igloo's adaptive stepper was seen firing under load; v3's governor did the same and blurred (perf.md). Cyera and Auge render at full ratio |
 | Native scroll, Lenis only for fine pointers, no pins on the main page; the canvas travels with the document | Lando (native scroll, flat frames), KPR and Montfort (native scroll, fixed canvas, DOM text) |

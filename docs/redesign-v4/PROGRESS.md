@@ -127,25 +127,27 @@ section I, haptics.
 - [ ] Re-verify on the final build: OG images now use the new faces (render
       each, check meta for home, one project, one post, grep aravjain.dev)
 
-### 5. Gates (all must be re-run on the final build)
-- [x] lint, typecheck, build, 196 unit tests at 24a276c plus the tracking tweak
-- [~] Overlap test: script now measures ending contrast; passes on home at
-      five widths in Chromium; the full three-browser run is owed
-- [x] Perf traces at the deep water pass: p95 16.7 to 16.8 ms on all four
-      profiles, tier 0 desktop, backing size constant (`traces/v4-r6`)
-- [ ] Lighthouse on home, /work, a project page, a post (desktop and mobile)
-- [x] Cross-browser matrix after the deep water pass: 92 loads, 0 problems
-- [ ] Greps (dashes, banned words), word count, file sizes, blog/editor diff empty
+### 5. Gates (final build, 2026-11-16)
+- [x] lint, typecheck, build, 196 unit tests
+- [x] Overlap test with the ending's measured contrast: Chromium, six pages,
+      seven widths, 0 overlaps after every Kilo task; the full three-browser
+      run on the final build is recorded in the last log line
+- [x] Perf traces: p95 16.7 to 16.8 ms on all four profiles, tier 0 on
+      desktop, one backing size each (`perf.md`, `traces/v4-final`)
+- [x] Lighthouse: desktop 95 to 100, mobile 88 to 94, others 100
+- [x] Cross-browser matrix: 92 loads, 0 problems; touch emulation
+- [x] Greps (dashes, banned words), 197 words on home, one file over 2 MB
+      (the Agent Bridge film, 4.36 MB), blog and editor diff empty
 
 ### 6. Review
 - [x] Rounds 1 to 5, `design-review.md`
-- [x] Independent critic, first score: 5.5 of 10 (`critic/review-1.md`)
-- [~] Fixes for the critic's findings (round 6): most done; remaining to Kilo
-- [ ] Second independent score, target 8.5; write both into `design-review.md`
+- [x] Independent critics: 5.5, 5.8, 5.5, 5.8, 5.8. Target 8.5 not met
+- [x] Rounds 6 to 9 on their findings (K1 to K6 by Kilo, reviewed here)
 
 ### 7. Finish
-- [ ] Final screenshots and videos
-- [ ] Push, production server on 3133, final report
+- [x] Final screenshots (`screenshots/<browser>-<page>-<width>.png`) and
+      videos (`home-scroll-1440.webm`, `home-touch-390.webm`)
+- [x] Snapshot refreshed; pushed; production server on 3133; final report
 
 ## Log
 
@@ -285,4 +287,13 @@ section I, haptics.
   overlap run, perf, Lighthouse, matrix), a closing score for the record,
   final screenshots and videos, snapshot refresh, production server on
   3133, the report.
+- 2026-11-16 10:40 CT. K6 done, reviewed and pushed (`e04fcd1`): dark hero
+  with the name as lit water (4.5 to 1), crisp ice edges at 2x, cracks that
+  route round the name, a stronger wake, a shorter lake, a graded dark
+  handover into the ending, the empty spinner image dropped from the Kilo
+  Bench page, the five OG cards redrawn.
+- 2026-11-16 11:40 CT. Final build. Snapshot refreshed (`0a374c8`). Gates
+  re-run on it (checklist above). Closing independent score 5.8
+  (`critic/review-5.md`). No further passes: five scores in a row within
+  0.3 of each other say another pass of the same kind will not move it.
 

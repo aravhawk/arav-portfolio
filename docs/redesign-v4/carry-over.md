@@ -369,6 +369,12 @@ col += (h(vUv * 900.0 + fract(uTime) * 61.0) - 0.5) * 0.022;
 2. Arrive by tilting up. v4 looks straight down at the bed for the whole page; at the end the camera pitches up as the stream runs out into open water, and the horizon and the sky appear for the first and only time. That makes the ending a reveal instead of a last slide.
 3. Make the water the real simulation. The stream that has run down the page feeds the lake, so ripples at the mouth are the fluid sim's own, and the reflection is a true planar reflection at full resolution. Replace the bloom discs with a sun glitter path: a narrow specular streak on the water along the sun's direction, broken by the ripples.
 4. Put the words on land. A dry machined ledge in the lower left foreground carries the headline and the links, lit by the same sun. No shade pool, no text shadow, and nothing bright can pass behind a link.
+   Outcome: this was built and then reversed. An independent critic called
+   the ledge "a flat opaque wedge" that made the scene something you look
+   at past a grey panel. The words are now set in the picture, as v2 had
+   them, over a near reach of water the shader keeps calm and in shade,
+   and a test photographs the picture behind every line and measures the
+   contrast (design-review.md, round 6).
 5. Let the sun rise. After arrival the sun climbs slowly for about a minute, the band widens and the ledge picks up a warm edge, then it stops for good. Under reduced motion it is a still at the final state.
 6. Two themes from one model. Dark theme: v2's dawn as it is. Light theme: the same scene later in the morning, higher sun, paler zenith, lighter water. Both come from the same sky function with different keys.
 7. Render the sky and the water at the full device pixel ratio (see perf.md for the rule). A sky gradient costs almost nothing per pixel; softness here is what breaks the illusion. Dither in the shader instead of an overlay.

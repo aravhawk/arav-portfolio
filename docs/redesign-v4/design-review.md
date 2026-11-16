@@ -111,28 +111,29 @@ see them. The first also ranked the three type systems blind before seeing
 anything else (typography.md). The same ten questions each time; 8.5 was
 defined as "would not look out of place beside the references".
 
-| | Critic 1 (round 5 build) | Critic 2 (round 6 build) | Critic 3 (after K1 to K3) | Critic 4 (after K4 and K5) |
-|---|---|---|---|---|
-| a. Real flowing water, bold and central | 5 | 5.5 | 4.5 | 5 |
-| b. Nothing covered or hard to read | 7 | 7 | 6 | 6 |
-| c. Nothing soft or low resolution | 6 | 7 | 6.5 | 5 |
-| d. Typography | 5 | 6.5 | 6.5 | 6.5 |
-| e. Five-second read | 8.5 | 8 | 7.5 | 8 |
-| f. Ending against v2's | 5.5 | 7 | 7.5 | 6 |
-| g. Light and dark both first class | 6.5 | 6 | 5.5 | 4.5 |
-| h. Project pages | 6.5 | 5.5 | 4 | 6 |
-| i. Phone | 6 | 7 | 6.5 | 6 |
-| j. Craft against the references | 4.5 | 5 | 5 | 5 |
-| **Overall** | **5.5** | **5.8** | **5.5** | **5.8** |
+| | Critic 1 (round 5 build) | Critic 2 (round 6 build) | Critic 3 (after K1 to K3) | Critic 4 (after K4 and K5) | Critic 5 (final build) |
+|---|---|---|---|---|---|
+| a. Real flowing water, bold and central | 5 | 5.5 | 4.5 | 5 | 4.5 |
+| b. Nothing covered or hard to read | 7 | 7 | 6 | 6 | 7 |
+| c. Nothing soft or low resolution | 6 | 7 | 6.5 | 5 | 5.5 |
+| d. Typography | 5 | 6.5 | 6.5 | 6.5 | 7 |
+| e. Five-second read | 8.5 | 8 | 7.5 | 8 | 6.5 |
+| f. Ending against v2's | 5.5 | 7 | 7.5 | 6 | 6.5 |
+| g. Light and dark both first class | 6.5 | 6 | 5.5 | 4.5 | 6 |
+| h. Project pages | 6.5 | 5.5 | 4 | 6 | 6 |
+| i. Phone | 6 | 7 | 6.5 | 6 | 7 |
+| j. Craft against the references | 4.5 | 5 | 5 | 5 | 4.5 |
+| **Overall** | **5.5** | **5.8** | **5.5** | **5.8** | **5.8** |
 
-Four different agents scored four different builds, so the columns are
+Five different agents scored five different builds, so the columns are
 not a controlled series: critic 3's 4 for project pages, for instance,
 rests on a capture of mine that showed only the first and last screen of
-each page, and critic 4 reported that its tooling cut the brief short and
-could not open four of the reference images. What they have in common is
-the useful part, and so is the plain fact of the bottom row: **four
-independent scores between 5.5 and 5.8, against a target of 8.5.** The
-build did not reach the target.
+each page, and critics 4 and 5 reported that their tooling cut the brief
+short and that they compared against Igloo and Lando Norris only. What
+they have in common is the useful part, and so is the plain fact of the
+bottom row: **five independent scores between 5.5 and 5.8, against a
+target of 8.5.** The build did not reach the target, and no pass moved the
+overall score by more than 0.3.
 
 What all three said, in their words:
 
@@ -235,4 +236,34 @@ halos round dark channels; an empty spinner image on the Kilo Bench page.
 The Open Graph cards, which still drew the first build's look, were
 redrawn in the same task.
 
-_K6's result and the closing score are recorded below._
+K6 was reviewed here and pushed: the dark hero measures 4.5 to 1 or better
+with the name as the lighter side and a mean ice luminance of 0.06; the
+light hero keeps 5.2 to 1; cracks route round the name; the lake is
+shorter; the five cards are redrawn.
+
+## Where it ended
+
+The fifth critic scored the final build 5.8. Its findings, for whoever
+picks this up, worst first: the ice reads "flat" and "posterised" where it
+wants to be one lit, refractive surface; the stream still reads as a pipe
+of one width; the wake and the click are too faint in stills; the melt's
+floes are round where they should be angular plates, and the name washes
+out mid-melt; a soft smudge where the lake meets its outlet; the Kilo
+Bench page shows a pool with nothing standing in it since the second image
+was dropped; type is small at 1440 and 1920; inner pages leave their right
+half empty.
+
+What the five agreed is at or near the level of the references: nothing
+ever covers copy, the type system, the copy itself, the five-second read,
+the Infiniview beat in light theme, and the dark ending.
+
+What separates this build from Igloo, Lusion and Lando Norris, in every
+review, is not a list of defects. Those sites are lit three-dimensional
+scenes with a camera, made by studios with modelled and rendered assets.
+This one is a relief seen from above, drawn by one fragment shader over a
+distance field, by design: that is what lets the page's own layout carve
+the bed, keeps water out from under every word by construction, and holds
+60 frames a second at full resolution. Within that design it went from "a
+clever diagram" to a frozen lake that breaks up into a stream. It did not
+become a scene you fly through, and the scores say so.
+
