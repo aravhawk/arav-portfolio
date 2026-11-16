@@ -707,7 +707,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   gDull = true;
   vec3 mir = airAt(rf.xy);
   if (gL2 < 1.0) mir = mix(skyAll(normalize(rf), 0.0), mir, gL2);
-  col = mix(col, mir, fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.6 * uNight));
+  col = mix(col, mir, fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.74 * uNight));
   gDull = false;
   // The lip of a cut: a hair of snow, then the edge itself.
   float edge = 1.0 - smoothstep(0.0, 2.2 * cw, -f0);
@@ -966,7 +966,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     float ray = n1(azv * 52.0 + 3.0 * n1(azv * 7.0 + uTime * 0.03) + uTime * 0.04);
     float ray2 = n1(azv * 17.0 - uTime * 0.025 + 4.0);
     float deepV = smoothstep(0.27, 0.44, cosi);
-    vec3 cur = refl * (0.5 + 0.8 * ray) * (0.72 + 0.5 * ray2) * mix(vec3(1.0), vec3(0.74, 0.7, 1.3), deepV * 0.7) * 1.34;
+    vec3 cur = refl * (0.5 + 0.8 * ray) * (0.72 + 0.5 * ray2) * mix(vec3(1.0), vec3(0.74, 0.7, 1.3), deepV * 0.7) * 1.5;
     refl = mix(refl, cur, sheetK * uNight);
   }
   // The slab stands in the water: its mirror image, broken by the ripples.
