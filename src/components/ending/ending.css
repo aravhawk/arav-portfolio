@@ -78,14 +78,15 @@ html:not([data-js]) .ending-canvas {
   font-size: clamp(3.1rem, 6.8vw, 7.6rem);
   line-height: 0.94;
   letter-spacing: -0.032em;
+  /* One line wherever the screen has room for it, whatever the block's own measure. */
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--gutter));
 }
 .ending-line {
   display: block;
   /* Room on the right for the serif's overhang: the full stop is never cut. */
   padding: 0.08em 0.14em 0.16em 0;
   margin: -0.08em -0.14em -0.16em 0;
-  width: max-content;
-  max-width: calc(100% + 0.14em);
 }
 
 .ending-links {

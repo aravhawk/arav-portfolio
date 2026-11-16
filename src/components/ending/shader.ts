@@ -228,7 +228,10 @@ void main() {
     float sd = max(dot(r, s.sun), 0.0);
     col += vec3(1.0, 0.86, 0.62) * (pow(sd, 900.0) * 14.0 + pow(sd, 90.0) * 0.55) * mix(0.75, 1.0, uTheme) * (1.0 - lee) * e;
     vec3 air = airAt(atan(d.x, d.z), s);
-    col = mix(col, air, fog * e);
+    // Before the horizon is in frame its light already is: the far water
+    // at the top of the picture warms as the look comes up.
+    float pre4 = uPre * uPre; pre4 *= pre4;
+    col = mix(col, air, fog * max(e, 0.6 * pre4));
     // The same mist, seen on the water side of the line.
     col = mix(col, air, exp(d.y / 0.0035) * 0.6 * e);
     col *= 1.0 - 0.56 * lee;
