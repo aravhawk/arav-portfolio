@@ -449,8 +449,8 @@ void main() {
         // Where the surface spreads the light the bed is only a little
         // dimmer: the net is bright lines on a calm floor, not an embossing.
         c3 = max(c3, 0.62 + 0.38 * c3);
-        nline = max(caust - 1.9, 0.0) * net * (0.3 + 0.7 * shallow);
-        c3 = mix(c3, 0.34 + max(c3 - 1.5, 0.0) * 1.2, uNight);
+        nline = max(caust - 2.5, 0.0) * net * (0.3 + 0.7 * shallow);
+        c3 = mix(c3, 0.34 + max(c3 - 1.5, 0.0) * 0.5, uNight);
         c3 = mix(vec3(shaft), c3, net);
         lightOnBed = uLight.x * 0.9 + uLight.y * direct * shadow * c3;
       } else {
@@ -471,7 +471,7 @@ void main() {
       // Meltwater is cold and clear: it brightens and cools the water it
       // runs through. It never fogs it.
       float mw = 1.0 - exp(-dye.g * 1.6);
-      water += uRim * nline * 3.4 * uNight * shadow * trans.g;
+      water += uRim * nline * 7.0 * uNight * shadow * trans.g;
       water += (water * 1.0 + uMelt * 0.22) * mw;
 
       // ---- the surface

@@ -203,19 +203,26 @@ const basins: Feature = (c, r) => {
   const xin = c.narrow ? c.lane : models.length ? cx(models[0].rect) : cx(r);
   let from = pt(xin, r.y);
   let first = true;
+  let lastRad = c.w;
   for (const m of models) {
     const centre = pt(cx(m.rect), cy(m.rect));
     const rad = Math.min(m.rect.w, m.rect.h) / 2;
     b.disc(centre, rad);
     if (first) connectInto(c, from, centre);
-    else b.channel([from, pt(lerp(from.x, centre.x, 0.5), lerp(from.y, centre.y, 0.5) + 18), centre], { width: Math.max(16, c.w * 0.62), speed: 0.7 });
+    else b.channel([from, pt(lerp(from.x, centre.x, 0.5), lerp(from.y, centre.y, 0.5) + 18), centre], { width: Math.max(16, Math.min(c.w * 0.62, rad * 1.1)), speed: 0.7 });
+    lastRad = rad;
     b.agitate(centre, rad * 0.5, 0.25);
     from = centre;
     first = false;
   }
-  const xout = c.narrow ? c.lane : from.x;
+  // The way out runs down the gap between the columns, so it never has to
+  // pass the label that sits under the last basin.
+  const mid = cx(r);
+  const xout = c.narrow ? c.lane : models.length > 1 && Math.abs(from.x - mid) > c.w ? mid : from.x;
   const out = pt(xout, r.y + r.h);
-  if (models.length) connectOut(c, from, out);
+  if (models.length && !c.narrow && xout !== from.x) {
+    b.channel([from, pt(lerp(from.x, xout, 0.7), from.y + 8), pt(xout, lerp(from.y, out.y, 0.5)), pt(xout, out.y + 6)], { width: [Math.min(c.w, lastRad * 1.2), Math.min(c.w, lastRad * 1.5), c.w, c.w] });
+  } else if (models.length) connectOut(c, from, out);
   else b.channel([pt(xin, r.y - 6), pt(xin, r.y + r.h + 6)], { width: c.w, straight: true });
   return { in: pt(xin, r.y), out };
 };
@@ -236,7 +243,7 @@ const fork: Feature = (c, r, el) => {
   const right = Math.max(...branches.map((x) => x.rect.x + x.rect.w));
   const top = Math.min(...branches.map((x) => x.rect.y));
   const pitch = xs.length > 1 ? Math.abs(xs[1] - xs[0]) : 90;
-  const bw = Math.max(20, Math.min(c.w * 0.62, pitch - 30));
+  const bw = Math.max(20, Math.min(c.w * 0.5, pitch - 44));
   // The stream passes the switch on its open side.
   const roomRight = r.x + r.w - right;
   const side = c.narrow || roomRight >= left - r.x ? 1 : -1;
@@ -251,7 +258,7 @@ const fork: Feature = (c, r, el) => {
   xs.forEach((x, i) => {
     const open = i === active;
     // A closed branch starts below a dam of dry stone.
-    const ya = open ? y0 : y0 + bw * 0.5 + 16;
+    const ya = open ? y0 : y0 + bw + 30;
     b.channel([pt(x, ya), pt(x, y1)], { width: bw, straight: true, speed: open ? 1 : 0 });
     if (open) b.agitate(pt(x, y0 + bw), bw, 0.6);
   });
