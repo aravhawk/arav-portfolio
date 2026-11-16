@@ -62,18 +62,23 @@ export function flightKeys(aspect: number): Key[] {
   // shore, the ranges and a band of sky across the top.
   const hero = tall
     ? fit([NAME.x, NAME.y], name.width, 0.68, 44, 37.5, 64, aspect)
-    : fit([NAME.x, NAME.y + 10], name.width, Math.min(0.64, 0.4 * aspect), 36, 26.5, 58, aspect);
+    : fit([NAME.x, NAME.y + 10], name.width, Math.min(0.64, 0.4 * aspect, 1.15 / aspect), 36, 26.5, 58, aspect);
   if (aspect >= 1.2) {
     // The sky needs room for the ranges: from the same place, a wider lens
     // held a little higher. The name stays where it was in the frame.
     hero.fov = 64;
-    hero.aim = [hero.pos[0], hero.pos[1] + hero.pos[2] / Math.tan(rad(23)), 0];
+    // (On a very wide screen the name would reach down into the copy: held a little higher.)
+    hero.aim = [hero.pos[0], hero.pos[1] + hero.pos[2] / Math.tan(rad(aspect > 1.7 ? 24.6 : 23)), 0];
   }
   const hero2: Pose = { pos: [hero.pos[0], hero.pos[1] + 60, hero.pos[2] * 0.94], aim: [hero.aim[0], hero.aim[1] + 40, 0], fov: hero.fov };
 
-  const wideFov = tall ? 62 : 50;
+  // An upright screen that is not a phone (a tablet held tall) flies the
+  // phone's path after the hero: its copy sits at the foot, where that
+  // path keeps a bank.
+  const upright = aspect < 0.9;
+  const wideFov = upright ? 62 : 50;
   const slabAim: V3 = [SLAB.x, SLAB.y, SLAB.h * 0.5];
-  const keys: Key[] = tall
+  const keys: Key[] = upright
     ? [
         { s: 0, ...hero },
         { s: 0.3, ...hero2 },
@@ -101,6 +106,7 @@ export function flightKeys(aspect: number): Key[] {
         // The basin: slab and island right of centre, the bank at lower left.
         { s: s1 + 1.0, pos: [930, 4110, 300], aim: [slabAim[0] - 250, slabAim[1], 30], fov: 42 },
         { s: s2 - 0.55, pos: [955, 4180, 288], aim: [slabAim[0] - 235, slabAim[1] + 20, 30], fov: 42 },
+
         // Out wide of the island's left side: the slab leaves the frame whole
         // and at a distance, never as an edge sliding past the lens.
         { s: s2 - 0.1, pos: [900, 4950, 250], aim: [1250, 5900, 0], fov: 42 },

@@ -563,7 +563,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   float edge = 1.0 - smoothstep(0.0, 2.2 * cw, -f0);
   col *= 1.0 + 0.07 * edge;
   // Before dawn the arris catches the sky: a thin cold line round every cut.
-  col = mix(col, white * 1.1 + uAurora * 0.5, uNight * 0.55 * (1.0 - smoothstep(0.0, 1.5 * cw, -f0)));
+  col = mix(col, white * 0.7 + uAurora * 0.22, uNight * 0.45 * (1.0 - smoothstep(0.0, 1.5 * cw, -f0)));
   return col;
 }
 
