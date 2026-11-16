@@ -61,9 +61,9 @@ export const SLAB = {
   y: ISLAND.y + 10,
   w: 440,
   h: 440 * (1376 / 2200),
-  thick: 12,
+  thick: 44,
   /** its foot stands this far above the ground, on a low plinth of ice */
-  lift: 6,
+  lift: 0,
   /** which way its face looks, in radians from -y toward -x: it faces the camera that arrives at the basin */
   turn: 0.44,
 };
@@ -129,6 +129,19 @@ export function paintWorld(b: BedPainter) {
   // The run-out: the river leaves the basin and opens into wide water.
   b.channel([pt(1440, 5560 + DY), pt(1380, 5900 + DY), pt(1300, 6300 + DY), pt(1300, 6700 + DY), pt(1300, 7150 + DY)], { width: [320, 340, 520, 1300, 3400] });
   b.pool({ x: -400, y: 7000 + DY, w: WORLD.w + 800, h: WORLD.h - 7000 - DY + 400 }, 0);
+  // The open water's shore is a run of bays and points, never a ruled line.
+  for (const [x, dy, r] of [
+    [-120, 40, 300],
+    [260, -70, 250],
+    [640, 30, 230],
+    [930, -110, 260],
+    [1700, -120, 270],
+    [2010, 20, 240],
+    [2380, -60, 260],
+    [2740, 50, 300],
+  ]) {
+    b.disc(pt(x, 7000 + DY + r * 0.45 + dy), r);
+  }
   for (const t of [0.2, 0.5, 0.8]) {
     b.channel([pt(WORLD.w * t, 6900 + DY), pt(WORLD.w * t, WORLD.h)], { width: WORLD.w * 0.42, speed: 0.6, flowOnly: true, straight: true });
   }

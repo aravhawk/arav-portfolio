@@ -16,7 +16,7 @@ import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, ground
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Target, bindTex, drawTo, freeTarget, makeTarget } from './gl';
 import { BLOOM_DOWN, BLOOM_UP, FINISH } from './shaders/finish';
-import { FLIGHT, FLIGHT_FREEBOARD } from './shaders/flight';
+import { FLIGHT, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
 import { LAKE, OUTLET, SHOAL_Y, SLAB, WORLD, paintWorld, rasterName } from './world';
@@ -551,7 +551,10 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
 
   // The pointer meets the water where its ray meets the water's plane.
   const toWater = (e: PointerEvent) => {
-    const hit = groundUnder(cam, e.clientX / viewW, e.clientY / viewH, aspect, -FLIGHT_FREEBOARD);
+    // (The water lies lower in the basin: found where the ray meets the land, then met again at that depth.)
+    const land = groundUnder(cam, e.clientX / viewW, e.clientY / viewH, aspect, 0);
+    if (!land) return null;
+    const hit = groundUnder(cam, e.clientX / viewW, e.clientY / viewH, aspect, -freeboardAt(land.y));
     if (!hit || hit.t > 6000) return null;
     return { x: hit.x, y: hit.y, reach: 15 * hit.t * ((2 * cam.tan) / viewH) };
   };
