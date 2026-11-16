@@ -30,7 +30,18 @@
 html:not([data-water='on']) .hero-lake[data-bed][data-basin],
 html:not([data-water='on']) .hero-lake [data-bed][data-basin] {
   border-radius: 0;
-  box-shadow: inset 0 24px 60px -20px rgba(0, 0, 0, 0.55);
+  /* A frozen lake: a pale sheet of ice, the name cut through it to the
+     water. The same picture the canvas draws, held still. */
+  background:
+    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.5) 46%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #e3eef3, #edf5f8 40%, #dcebf1);
+  box-shadow: inset 0 10px 24px -14px rgba(20, 60, 75, 0.45);
+}
+:root[data-theme='dark']:not([data-water='on']) .hero-lake[data-bed][data-basin],
+:root[data-theme='dark']:not([data-water='on']) .hero-lake [data-bed][data-basin] {
+  background:
+    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.22) 46%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #a9c0ca, #b6cbd3 40%, #9fb9c4);
 }
 .hero-lake {
   --bed-r: 44px;
@@ -55,11 +66,17 @@ html:not([data-water='on']) .hero-lake [data-bed][data-basin] {
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.045em;
-  color: #eef6f9;
+  /* Deep water, seen through the cut. */
+  color: #0c5567;
+  text-shadow: 0 0.012em 0 rgba(255, 255, 255, 0.55);
   /* Room for ascenders and descenders so nothing is clipped. */
   padding: 0.08em 0;
 }
-/* Once the water is running the name is drawn in ice by the canvas. The
+:root[data-theme='dark'] .ice {
+  color: #0a2e39;
+  text-shadow: 0 0.012em 0 rgba(255, 255, 255, 0.25);
+}
+/* Once the water is running the name is cut in the ice by the canvas. The
    text stays in the document for assistive tech, selection and search. */
 html[data-water='on'] [data-ice] [data-ice-line] {
   opacity: 0;

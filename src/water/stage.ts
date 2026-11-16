@@ -214,6 +214,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
     let ice: ReturnType<typeof rasterIce>;
     let nextPulses: Rect[];
     let nextDocH: number;
+    let lake: Rect | null = null;
     try {
       const sx = window.scrollX;
       const sy = window.scrollY;
@@ -277,6 +278,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
         painter.dry(r, DRY_PAD, 10);
       }
       ice = rasterIce(sx, sy);
+      lake = anchors.rect('lake');
       nextPulses = Array.from(document.querySelectorAll<HTMLElement>('[data-pulse]')).map((el) => docRect(el, sx, sy));
     } finally {
       html.removeAttribute('data-measuring');
@@ -286,7 +288,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
     const r = painter.rasters();
     const [bedSd, iceSd] = await Promise.all([
       solver.solve({ alpha: r.mask, w: painter.w, h: painter.h, clamp: r.clampTexels, scale: painter.div }),
-      ice ? solver.solve({ alpha: ice.alpha, w: ice.tw, h: ice.th, clamp: 48, scale: ice.scale }) : Promise.resolve(null),
+      ice ? solver.solve({ alpha: ice.alpha, w: ice.tw, h: ice.th, clamp: 400, scale: ice.scale }) : Promise.resolve(null),
     ]);
     // A newer build started while this one was in the worker: drop it.
     if (destroyed || token !== buildToken) return;
@@ -295,13 +297,15 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
     pulses = nextPulses;
     engine.setBed(painter.assemble(bedSd.sd, r.flow));
     engine.shoalY = painter.shoal ?? 1e9;
-    if (ice && iceSd) {
+    if (ice && iceSd && lake) {
       engine.iceRect = ice.rect;
+      engine.lake = { y0: lake.y, y1: lake.y + lake.h };
       engine.meltRange = Math.round(viewH * 0.64);
       const out = painter.outlet;
       engine.meltPath = out ? { x: out.x, y: out.y, reach: viewH * 0.9, w: out.w } : { x: 0, y: 0, reach: 0, w: 0 };
       engine.setIce({ sd: iceSd.sd, w: ice.tw, h: ice.th, minSd: iceSd.min });
     } else {
+      engine.lake = { y0: -1e6, y1: -1e6 };
       engine.setIce(null);
     }
     built = true;

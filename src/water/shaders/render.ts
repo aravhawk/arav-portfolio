@@ -21,6 +21,8 @@
  * no boundary is a hard per-pixel decision.
  */
 
+import { ICE_FIELD } from './ice';
+
 export const FREEBOARD = 14;
 
 export const RENDER = `#version 300 es
@@ -47,17 +49,10 @@ uniform sampler2D uBedA;
 uniform sampler2D uBedB;
 uniform sampler2D uWave;   // h, v, gx, gy
 uniform sampler2D uVel;
-uniform sampler2D uDetail;
 uniform sampler2D uCurv;   // curvature of the detail field: xx, yy, xy
 uniform sampler2D uGrain;
-uniform sampler2D uIceSdf; // sd px, _, gx, gy
-uniform sampler2D uIceLow; // the same field, heavily smoothed: what a melting edge rounds toward
-uniform sampler2D uHeat;
-
-uniform vec4 uIce;         // world rect of the ice texture: x, y, w, h (w = 0: no ice)
-uniform vec4 uIceState;    // x: erosion px, y: height above the water 0..1, z: rounding 0..1, w: body 0..1
-uniform float uIceHalf;    // half the thickest stroke, px
-uniform float uIceAlive;   // 1 while any ice is left, easing to 0 as the last lenses clear
+uniform sampler2D uHeat;   // warmth the pointer left on the sheet, over the lake's own rect
+uniform float uIceH;       // how thick the sheet stands above the water, px
 uniform float uMeltAct;    // 0..1: how hard the name is melting right now
 uniform vec4 uMeltPath;    // xy: the lake's outlet, z: how far the thread runs on, w: stream width
 
@@ -78,6 +73,7 @@ const vec2 LXY = vec2(-0.6402, -0.7682);           // its direction on the groun
 const vec2 OBLIQUE = vec2(0.0, -0.36);             // the camera's slant
 const float FREEBOARD = ${FREEBOARD}.0;            // the water sits this far below the slab
 const float DEEP = 130.0;
+${ICE_FIELD}
 
 vec2 bedUv(vec2 w) { return w / (uBedSize * uBedDiv); }
 vec2 simUv(vec2 w) { return vec2(w.x / (uSim.z * uSim.y), (w.y - uSim.x) / (uSim.w * uSim.y)); }
@@ -220,22 +216,82 @@ vec3 fracture(vec2 x) {
   return vec3(md, hash2(n + mg));
 }
 
-/** Signed distance to the melting name at a world point, px. Negative inside. */
-float iceField(vec2 w, out vec4 it) {
-  it = vec4(1e3, 0.0, 0.0, 0.0);
-  vec2 iuv = (w - uIce.xy) / uIce.zw;
-  if (iuv.x <= 0.0 || iuv.x >= 1.0 || iuv.y <= 0.0 || iuv.y >= 1.0) return 1e3;
-  it = texture(uIceSdf, iuv);
-  float low = texture(uIceLow, iuv).r;
-  float heat = texture(uHeat, iuv).r;
-  // A melting edge rounds as it wears back: corners go before flats. The
-  // wear is even along a stroke and capped by the engine well inside the
-  // thinnest stroke, so a letter softens but can never break. The rounded
-  // field may only ever take ice away from a corner; it is never allowed
-  // to thin a stroke further than the wear itself does.
-  float soft = mix(it.r, max(it.r, min(low, it.r + uIceState.x)), uIceState.z);
-  // Warmth from the pointer wears it a little more, inside the same cap.
-  return soft + uIceState.x + heat * min(26.0, uIceHalf * 0.14);
+/**
+ * The top of the sheet: lake ice seen from above. Snow lies on it in long
+ * wind-blown streaks; between the streaks the ice is clear and dark, and
+ * what is under it shows a little. Pressure cracks cross it: each is a lane
+ * of refrozen, clearer ice with one bright seam down its middle.
+ */
+vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, vec2 scr) {
+  // The wind's direction, a little off the page's axes.
+  const mat2 RW = mat2(0.9563, -0.2924, 0.2924, 0.9563);
+  vec2 wl = RW * il;
+  float big = texture(uGrain, wl / vec2(6100.0, 2100.0)).g;
+  float mid = texture(uGrain, wl / vec2(2300.0, 520.0) + vec2(0.37, 0.11)).g;
+  float snow = big * 0.62 + mid * 0.38;
+  vec2 huv = vec2(p.x / uView.x, (p.y - uLake.x) / max(uLake.y - uLake.x, 1.0));
+  float heat = texture(uHeat, huv).r;
+  // Ice is thinner and wetter by the bank, in a lead, under a warm hand
+  // and, once the melt has begun, everywhere.
+  float bank = 1.0 - smoothstep(3.0, 70.0, -shore);
+  float lane = exp(-cr.x / 8.0);
+  float rim = 1.0 - smoothstep(0.0, 22.0, -f0);
+  float wet = clamp(uLake.z * 0.75 + heat * 0.9 + bank * 0.35 + rim * uLake.z * 0.6, 0.0, 1.0);
+  float frost = smoothstep(0.4, 0.56, snow - wet * 0.14 - lane * 0.1);
+  frost *= 1.0 - 0.5 * wet;
+  // Relief: the drifts are low, but the key light finds them.
+  vec2 rel = (texture(uDetail, wl / vec2(1500.0, 420.0)).gb - 0.5) * 0.5;
+  vec4 g = texture(uGrain, il / 128.0);
+  if (uQuality > 0.5) {
+    float hx = texture(uGrain, (il + vec2(0.5, 0.0)) / 128.0).a;
+    float hy = texture(uGrain, (il + vec2(0.0, 0.5)) / 128.0).a;
+    rel += vec2(hx - g.a, hy - g.a) * 0.13 * (0.4 + 0.6 * frost);
+  }
+  vec3 n = normalize(vec3(-rel, 1.0));
+  float lit = landLight(n);
+  // Clear ice: dark, blue-green, and deeper in colour where it is thick.
+  float under = texture(uDetail, p / 700.0 + vec2(0.004, 0.003) * uTime).r;
+  vec3 clear = uIceCol * vec3(0.4, 0.62, 0.7) * (0.74 + 0.3 * under) + uScatter * 1.2;
+  vec3 white = uIceCol * (0.97 + 0.06 * (big - 0.5)) * lit;
+  vec3 col = mix(clear, white, 0.24 + 0.76 * frost);
+  // Crystal grain.
+  col *= 1.0 + (g.r - 0.5) * 0.05 + (g.a - 0.45) * 0.05;
+  if (uQuality > 0.5) {
+    // A second, finer family of hairline cracks, in a few places only.
+    vec3 fr = fracture(il / 210.0 + vec2(3.7, 1.9));
+    float hair = (1.0 - smoothstep(0.0, 0.006, fr.x)) * step(0.62, fr.y) * smoothstep(0.46, 0.56, mid);
+    col = mix(col, uIceCol * 1.04, hair * 0.5);
+  }
+  // The seam: refrozen white, brighter as meltwater finds it.
+  float seam = 1.0 - smoothstep(0.5, 1.7, cr.x);
+  float plane = exp(-cr.x / 3.2) * (0.5 + 0.5 * step(0.5, cr.y));
+  col = mix(col, uIceCol * (1.06 + 0.1 * uLake.z), clamp(seam * 0.9 + plane * 0.3, 0.0, 1.0));
+  // One soft band of the light overhead lies across the sheet; wet and
+  // clear ice carry more of it than snow does.
+  vec3 rf = reflect(dir, normalize(vec3(-rel * 0.3, 1.0)));
+  float gloss = 1.0 - 0.75 * frost;
+  col += env(rf, 1.0) * (0.6 + 2.4 * gloss);
+  float band = 1.0 - smoothstep(0.0, 0.2, abs(scr.y - 0.5 - (scr.x - 0.5) * 0.07 + rel.y * 0.25));
+  col += uSky * band * band * (0.012 + 0.05 * gloss) * (0.3 + 0.7 * uLight.y);
+  // The lip of a cut: a hair of snow, then the edge itself.
+  col *= 1.0 + 0.07 * (1.0 - smoothstep(0.0, 2.2, -f0));
+  // The room's light falls off across the sheet as it does across the slab.
+  float fall = length((scr - vec2(0.2, 0.08)) * vec2(1.0, 0.82));
+  col *= 1.0 + 0.12 * (0.42 - smoothstep(0.0, 1.2, fall));
+  return col;
+}
+
+/** A cut face of the sheet: glass, brightest at its top arris, dark at the waterline. */
+vec3 iceCut(vec2 p, float s) {
+  float streak = texture(uGrain, vec2(p.x / 7.0, p.y / 300.0)).g;
+  vec3 top = uIceCol * vec3(0.2, 0.5, 0.6) + uScatter * 1.5;
+  vec3 foot = uIceCol * vec3(0.06, 0.24, 0.31) + uScatter * 1.3;
+  vec3 face = mix(top, foot, smoothstep(0.05, 0.9, s)) * (0.8 + 0.4 * streak);
+  // The arris: one crisp bright line where the top of the sheet turns over.
+  face = mix(face, uIceCol * vec3(0.86, 0.97, 1.0), (1.0 - smoothstep(0.035, 0.07, s)) * 0.85);
+  // The waterline: a thin dark wet line at the foot, hard-edged.
+  face *= 1.0 - 0.55 * smoothstep(0.86, 0.9, s);
+  return face;
 }
 
 void main() {
@@ -245,49 +301,41 @@ void main() {
   vec3 dir = normalize(vec3(tilt, -1.0));
   float aa = uPx * 0.75;
 
-  // ---- ice: decide first, because ice bends what is seen beneath it.
-  // The block stands out of the water: its top face is level with the slab
-  // at rest, and its south faces show because of the camera's slant.
-  float iceTop = 0.0;       // > 0: px inside the top face
-  float iceSide = -1.0;     // >= 0: this pixel is a side face, 0 at its top, 1 at the waterline
-  vec4 it = vec4(0.0);
-  vec2 ipt = p;             // where on the ice this pixel lands
-  vec3 iceN = vec3(0.0, 0.0, 1.0);
-  vec2 q = p;               // where the scene under this pixel is sampled
-  bool hasIce = uIce.z > 0.0 && uIceAlive > 0.001
-    && p.x > uIce.x - 40.0 && p.x < uIce.x + uIce.z + 40.0 && p.y > uIce.y - 40.0 && p.y < uIce.y + uIce.w + 60.0;
-  if (hasIce) {
-    float sunk = 1.0 - uIceState.y;
-    ipt = p + tilt * FREEBOARD * sunk;
-    float isd = iceField(ipt, it);
-    if (isd < 0.0) {
-      iceTop = -isd;
-    } else {
-      vec4 its;
-      for (int i = 1; i <= 5; i++) {
-        float s = float(i) / 5.0;
-        vec2 w = p + tilt * FREEBOARD * mix(sunk, 1.0, s);
-        if (iceField(w, its) < 0.0) { iceSide = s; ipt = w; it = its; break; }
-      }
-    }
-    if (iceTop > 0.0) {
-      // A narrow eased arris, then a top face that rolls gently: it melted
-      // and refroze. That roll is what bends the lake bed seen through it.
-      float x = clamp(iceTop / 2.4, 0.0, 1.0);
-      vec2 il = ipt - uIce.xy;
-      vec2 und = (texture(uDetail, il / 620.0).gb - 0.5) * 0.42;
-      iceN = normalize(vec3(it.ba * (1.0 - x) * 0.9 + und * x * 0.12, 1.0));
-      // Thick ice bends what is under it a long way and magnifies it a
-      // little; a thin melted lens hardly bends it at all.
-      q = p - (iceN.xy + und * x * 0.9) * (34.0 * uIceState.y + 10.0) * uIceAlive + tilt * 10.0 * uIceState.y;
-    }
-  }
-
+  vec2 q = p;
   vec4 b0 = bedAt(q);
   float sd0 = b0.r;
 
+  // ---- the ice sheet: decided first, because it hides what is under it.
+  // Its top is level with the slab. Where it is cut, the camera's slant
+  // shows the far face of the cut, and the sheet shades the water below.
+  float aIce = 0.0;        // how much of this pixel is the top of the sheet
+  float aCut = 0.0;        // how much is a cut face
+  float cutS = 0.0;        // 0 at the top arris, 1 at the waterline
+  float iceShade = 0.0;
+  float f0 = 1e3;
+  vec3 cr = vec3(1e3, 0.0, 0.0);
+  vec2 il = vec2(0.0);
+  bool hasIce = uIce.z > 0.0 && p.y > uLake.x - 60.0 && p.y < uLake.y + 60.0 && sd0 < 30.0;
+  if (hasIce) {
+    f0 = iceF(p, sd0, cr, il);
+    aIce = 1.0 - smoothstep(-aa, aa, f0);
+    if (aIce < 1.0) {
+      vec3 c1;
+      vec2 i1;
+      vec2 pf = p + tilt * uIceH;
+      float f1 = iceF(pf, bedAt(pf).r, c1, i1);
+      aCut = (1.0 - aIce) * (1.0 - smoothstep(-aa, aa, f1));
+      cutS = clamp(f0 / max(f0 - f1, 1e-3), 0.0, 1.0);
+      if (aCut < 1.0 && uQuality > 0.5) {
+        vec2 ps = pf + L.xy / L.z * uIceH * 0.5;
+        float fs = iceF(ps, bedAt(ps).r, c1, i1);
+        iceShade = 1.0 - smoothstep(-1.2, 1.2, fs);
+      }
+    }
+  }
+
   if (uMode == 1) {
-    float m = max(step(sd0, 0.75), max(step(0.001, iceTop), step(0.0, iceSide)));
+    float m = step(sd0, 0.75);
     o = vec4(m, m, m, 1.0);
     return;
   }
@@ -295,7 +343,8 @@ void main() {
   float aLand = smoothstep(-aa, aa, sd0);
   vec3 col = vec3(0.0);
   if (aLand > 0.0) col = landColor(q, sd0, b0.ba, scr) * aLand;
-  if (aLand < 1.0) {
+  // Under the whole sheet there is nothing to work out: the ice hides it.
+  if (aLand < 1.0 && aIce < 0.999) {
     // ---- into the channel
     vec2 pw = q + tilt * FREEBOARD;
     vec4 bw = bedAt(pw);
@@ -383,6 +432,13 @@ void main() {
         float bars = texture(uDetail, vec2(pb.x / 2100.0, pb.y / 1300.0)).r;
         depth = mix(depth, min(depth, 30.0 + 24.0 * bars), shoalK);
       }
+      // The lake is a wide basin, not a pit: its floor lies where light
+      // still reaches it, so the net shows on the bed all the way across.
+      float lakeK = smoothstep(uLake.y + 30.0, uLake.y - 90.0, pb.y);
+      if (lakeK > 0.0) {
+        float floorH = texture(uDetail, pb / 1700.0 + 0.4).r;
+        depth = mix(depth, min(depth, 70.0 + 34.0 * floorH), lakeK);
+      }
       float dn = clamp(depth / DEEP, 0.0, 1.0);
       float shallow = 1.0 - smoothstep(0.08, 0.5, dn);
 
@@ -399,12 +455,6 @@ void main() {
         bankShade *= 0.25;
       } else {
         bankShade = smoothstep(-2.4, 2.4, texture(uBedA, bedUv(sp)).r);
-      }
-      float iceShade = 0.0;
-      if (hasIce && iceTop <= 0.0) {
-        vec4 its;
-        float ssd = iceField(pw + toSun * FREEBOARD * uIceState.y, its);
-        iceShade = (1.0 - smoothstep(-2.0, 2.0, ssd)) * smoothstep(0.0, 0.25, uIceState.y);
       }
       float shade = max(bankShade, iceShade);
 
@@ -423,11 +473,7 @@ void main() {
         float reach = (min(depth, 70.0) + FREEBOARD) * 0.62;
         float ssd = texture(uBedA, bedUv(pb + LXY * reach)).r;
         shadow = 1.0 - 0.62 * smoothstep(-3.0, 7.0, ssd);
-        if (hasIce) {
-          vec4 its;
-          float isd2 = iceField(pb + toSun * (FREEBOARD * uIceState.y + min(depth, 70.0) * 0.55), its);
-          shadow *= 1.0 - 0.5 * (1.0 - smoothstep(-4.0, 10.0, isd2)) * (0.25 + 0.75 * uIceState.y) * uIceAlive;
-        }
+        shadow *= 1.0 - 0.7 * iceShade;
       } else {
         float near = 1.0 - smoothstep(0.0, depth * 0.8 + 4.0, -bb.r);
         shadow = 1.0 - 0.6 * near * max(dot(bb.ba, LXY), 0.0);
@@ -569,74 +615,9 @@ void main() {
     col += cut * (1.0 - aLand);
   }
 
-  // ---- ice on top
-  if (iceTop > 0.0) {
-    vec3 scene = col;
-    float live = uIceAlive;
-    float bodyK = uIceState.w;
-    vec2 il = ipt - uIce.xy;
-    vec4 g1 = texture(uGrain, il / 560.0);
-    vec4 g3 = texture(uGrain, il / 170.0);
-    float core = smoothstep(0.0, 2.4, iceTop);
-    // Clear glacier ice: the lake bed and its light show through, bent,
-    // cooler and lighter, under one even milky scatter. No cloud, no marble.
-    // The scatter is a little brighter toward the light, as it is in a
-    // real block: one slow gradient across the whole name.
-    vec2 ic = il / uIce.zw - 0.5;
-    // Thick ice is bluer than thin ice, as a glacier is.
-    float thick = smoothstep(1.0, 20.0, iceTop);
-    vec3 tint = mix(vec3(1.0), vec3(0.74, 0.93, 1.0), thick);
-    vec3 lit = uIceCol * tint * (0.9 + 0.1 * landLight(iceN)) * (1.0 - 0.2 * dot(ic, -LXY));
-    // Light that went in through the top comes back focused off the floor
-    // of the block: a slow, magnified net seen inside the letters.
-    float inl = texture(uDetail, q / 380.0 + vec2(0.011, 0.007) * uTime).a;
-    vec3 under = col * vec3(1.0, 1.22, 1.3) + uScatter * 0.9 + uIceCol * tint * min(inl * inl * 5.0, 1.0) * 0.2 * (0.3 + 0.7 * uLight.y);
-    // Rime: frost only at the edges of the top face.
-    float rime = (1.0 - smoothstep(1.0, 5.5, iceTop)) * (0.5 + 0.5 * g3.g);
-    col = mix(under, lit, clamp(0.4 + 0.4 * rime, 0.0, 0.9) * bodyK);
-    // Fracture planes: few, fine. Each is a thin bright seam, with a soft
-    // sheet of light in the cell on one side of it and frost inside it.
-    vec3 fr = fracture(il / 290.0 + vec2(3.7, 1.9));
-    float seam = 1.0 - smoothstep(0.0015, 0.0045, fr.x);
-    float sheet = exp(-fr.x * 6.0) * step(0.5, fr.y);
-    col += uSky * (seam * 0.34 + sheet * 0.16) * core * bodyK * (0.35 + 0.65 * uLight.y);
-    // A few trails of small bubbles, where air was caught as it froze.
-    float trail = 1.0 - smoothstep(0.0, 0.012, abs(g1.g - 0.53));
-    float bub = (1.0 - smoothstep(0.08, 0.2, texture(uGrain, il / 60.0).a)) * trail * core;
-    col += uSky * bub * 0.3 * bodyK;
-    // Wet ice is glossy: one soft band of the light above crosses the name.
-    vec3 rf = reflect(dir, iceN);
-    float cosi = clamp(dot(-dir, iceN), 0.0, 1.0);
-    col += env(rf, 1.0) * (1.5 + 4.0 * pow(1.0 - cosi, 4.0)) * live;
-    float gband = 1.0 - smoothstep(0.0, 0.11, abs(ic.y + 0.16 - ic.x * 0.3 + iceN.y * 0.6));
-    col += uSky * gband * gband * 0.13 * live * core * (0.3 + 0.7 * uLight.y);
-    // The arris facing the light is one crisp bright line; the opposite
-    // inner edge carries a thin dark line, the bank of the lens.
-    vec2 nxy = normalize(it.ba + 1e-4);
-    float toLight = dot(nxy, LXY);
-    float stand = 0.35 + 0.65 * uIceState.y;
-    float arris = 1.0 - smoothstep(0.2, 1.5, iceTop);
-    col += uSky * arris * pow(max(toLight, 0.0), 1.4) * 0.8 * live * stand;
-    float inner = smoothstep(0.6, 1.6, iceTop) * (1.0 - smoothstep(2.0, 3.6, iceTop));
-    col *= 1.0 - 0.4 * inner * max(-toLight, 0.0) * live * stand;
-    col *= 1.0 - 0.1 * (1.0 - core) * live;
-    // The edge is one device pixel wide at every stage. When the low,
-    // intact letters go into the water they go as a whole: the same crisp
-    // shape, clearing evenly.
-    col = mix(scene, col, smoothstep(0.0, uPx, iceTop) * live);
-  } else if (iceSide >= 0.0) {
-    // The cut face of the block, seen at a slant: dark blue-green glass
-    // with fine vertical streaks, brightest at the top arris.
-    vec3 scene = col;
-    vec2 il = ipt - uIce.xy;
-    float streak = texture(uGrain, vec2(il.x / 9.0, il.y / 240.0)).g;
-    vec3 face = mix(uIceCol * 0.34, uScatter * 2.2 + uIceCol * 0.05, 0.2 + 0.7 * iceSide);
-    face *= 0.78 + 0.44 * streak;
-    col = mix(col * 0.5, face, 0.62 + 0.2 * uIceState.w);
-    col += uSky * (1.0 - smoothstep(0.0, 0.26, iceSide)) * 0.2 * (0.35 + 0.65 * uLight.y);
-    col += (uSky * 0.06 + uRim * uNight) * smoothstep(0.8, 1.0, iceSide);
-    col = mix(scene, col, uIceAlive);
-  }
+  // ---- the sheet goes on last
+  if (aCut > 0.0) col = mix(col, iceCut(p, cutS), aCut);
+  if (aIce > 0.0) col = mix(col, iceTop(p, il, cr, f0, sd0, dir, scr), aIce);
 
   // Display transform and a blue-noise-ish dither against banding.
   col = pow(max(col, 0.0), vec3(1.0 / 2.2));

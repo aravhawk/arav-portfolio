@@ -21,6 +21,8 @@
 export const WAVE_C2 = 0.34;
 export const WAVE_NU = 0.04;
 
+import { ICE_FIELD } from './ice';
+
 const HEAD = `#version 300 es
 precision highp float;
 in vec2 vUv;
@@ -90,24 +92,6 @@ void main() {
   o = vec4(acc / wsum, 0.0, 0.0, 1.0);
 }`;
 
-/** Average K x K blocks of a distance field into a small one. */
-export const SD_DOWN = `${HEAD}
-uniform sampler2D uSd;
-uniform int uK;
-void main() {
-  ivec2 sz = textureSize(uSd, 0);
-  ivec2 p = ivec2(gl_FragCoord.xy) * uK;
-  float acc = 0.0;
-  for (int y = 0; y < 16; y++) {
-    if (y >= uK) break;
-    for (int x = 0; x < 16; x++) {
-      if (x >= uK) break;
-      acc += texelFetch(uSd, clamp(p + ivec2(x, y), ivec2(0), sz - 1), 0).r;
-    }
-  }
-  o = vec4(acc / float(uK * uK), 0.0, 0.0, 1.0);
-}`;
-
 export const BED_B = `${HEAD}
 uniform sampler2D uRaw;  // RGBA8 flow raster
 void main() {
@@ -138,12 +122,9 @@ uniform float uTime;
 uniform vec4 uPtr;          // pointer segment: prev.xy -> cur.xy in world px
 uniform vec2 uPtrForce;     // x: strength (speed based), y: radius px
 uniform vec4 uDrop;         // x,y world, z radius, w strength (one discrete splash)
-uniform vec4 uIce;          // ice name rect in world px: x, y, w, h
-uniform sampler2D uIceSdf;
-uniform sampler2D uIceLow;
-uniform vec3 uIceMelt;      // x: erosion px, y: melt rate (drips), z: rounding
+uniform float uIceDrip;     // how hard the ice is melting right now: drips off its edges
 uniform float uAmbient;     // strength of flow-driven ripples
-uniform sampler2D uDetail;
+${ICE_FIELD}
 
 float segDist(vec2 p, vec2 a, vec2 b) {
   vec2 pa = p - a, ba = b - a;
@@ -218,16 +199,21 @@ void main() {
     float stir = fl.z * 1.5 + speed * smoothstep(-14.0, -2.0, sd) * 0.22;
     v += n * stir * uAmbient * 0.008;
   }
-  // Meltwater dripping off the ice edge: each drip starts a ring, and the
-  // rings leave the letters for as long as they melt.
-  if (uIceMelt.y > 0.0) {
-    vec2 iuv = (world - uIce.xy) / uIce.zw;
-    if (iuv.x > 0.0 && iuv.x < 1.0 && iuv.y > 0.0 && iuv.y < 1.0) {
-      float isd = mix(texture(uIceSdf, iuv).r, texture(uIceLow, iuv).r, uIceMelt.z) + uIceMelt.x;
-      float edge = exp(-(isd - 3.0) * (isd - 3.0) / 22.0);
+  // Under the sheet the water has no free surface: nothing moves there, and
+  // a wave that reaches the ice dies at its edge. Meltwater dripping off a
+  // melting edge starts rings in the open water beside it.
+  if (uIce.z > 0.0 && world.y > uLake.x - 40.0 && world.y < uLake.y + 40.0) {
+    vec3 cr;
+    vec2 il;
+    float f = iceF(world, sd, cr, il);
+    if (uIceDrip > 0.0) {
+      float edge = exp(-(f - 4.0) * (f - 4.0) / 26.0);
       float n = texture(uDetail, world / 46.0 + vec2(0.9, 0.7) * uTime).r;
-      v -= edge * smoothstep(0.6, 0.82, n) * min(uIceMelt.y, 1.2) * 0.05;
+      v -= edge * smoothstep(0.6, 0.82, n) * min(uIceDrip, 1.2) * 0.05;
     }
+    float open = smoothstep(-5.0, 1.0, f);
+    h *= open;
+    v *= open;
   }
 
   // Soft absorbing band at the top and bottom of the window.

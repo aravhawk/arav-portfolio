@@ -12,7 +12,7 @@
 import type { BedData } from './bed';
 import { type GL, type Program, type Target, Swap, bindTex, bindTriangle, compile, drawTo, freeTarget, makeTarget, makeTexture } from './gl';
 import { RENDER } from './shaders/render';
-import { BED_A, BED_B, DETAIL, DETAIL_CURV, GRAIN, SD_BLUR, SD_DOWN, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
+import { BED_A, BED_B, DETAIL, DETAIL_CURV, GRAIN, SD_BLUR, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
 
 export interface Palette {
   land: [number, number, number];
@@ -68,7 +68,7 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     sky: [0.62, 0.84, 0.95],
     rim: [0.012, 0.05, 0.058],
     melt: [0.004, 0.04, 0.046],
-    ice: srgb('#9CC3CF'),
+    ice: srgb('#B3C8D1'),
     light: [0.16, 0.9, 2.3, 1.5],
     grain: [0.12, 0.12, 0.5],
   },
@@ -81,10 +81,10 @@ const smooth = (a: number, b: number, x: number) => {
 const mix3 = (a: number[], b: number[], t: number) => a.map((v, i) => v + (b[i] - v) * t);
 
 export interface IceInput {
+  /** signed distance to the letters in world px, negative inside them */
   sd: Float32Array;
   w: number;
   h: number;
-  /** signed distance in world px, negative inside the letters */
   /** most negative distance in world px (half the thickest stroke) */
   minSd: number;
 }
@@ -123,7 +123,6 @@ export class WaterEngine {
   private bedB: Target | null = null;
   private bedMeta = { w: 1, h: 1, div: 4 };
   private iceTex: Target | null = null;
-  private iceLow: Target | null = null;
   private iceMeta: IceInput | null = null;
   private heat: Swap;
   private ready = false;
@@ -158,8 +157,10 @@ export class WaterEngine {
   private drop = { x: 0, y: 0, r: 0, s: 0 };
 
   // ice
-  /** Where the ice name rests at scroll 0, in world px. */
+  /** Where the name's raster rests at scroll 0, in world px. */
   iceRect = { x: 0, y: 0, w: 0, h: 0 };
+  /** The lake the sheet covers: its north and south shores, world px. */
+  lake = { y0: -1e6, y1: -1e6 };
   /** Scroll distance over which the name melts. */
   meltRange = 600;
   /**
@@ -171,7 +172,7 @@ export class WaterEngine {
   shoalY = 1e9;
   private melt = 0;
   private meltRate = 0;
-  /** 0..1: how hard the name is melting right now. It falls to nothing in under a second. */
+  /** 0..1: how hard the ice is melting right now. It falls to nothing in under a second. */
   private meltAct = 0;
   /** Called once when the melt completes going down, and when it resets. */
   onMelt: ((done: boolean) => void) | null = null;
@@ -211,7 +212,7 @@ export class WaterEngine {
     gl.disable(gl.BLEND);
     bindTriangle(gl);
 
-    this.heat = new Swap(gl, 256, 64, this.f16());
+    this.heat = new Swap(gl, 256, 192, this.f16());
   }
 
   /**
@@ -225,7 +226,6 @@ export class WaterEngine {
       bedA: BED_A,
       bedB: BED_B,
       sdBlur: SD_BLUR,
-      sdDown: SD_DOWN,
       wave: WAVE,
       waveGrad: WAVE_GRAD,
       velAdvect: VEL_ADVECT,
@@ -302,9 +302,7 @@ export class WaterEngine {
   setIce(ice: IceInput | null) {
     const gl = this.gl;
     freeTarget(gl, this.iceTex);
-    freeTarget(gl, this.iceLow);
     this.iceTex = null;
-    this.iceLow = null;
     this.iceMeta = ice;
     if (!ice) return;
     const sdTex = makeTexture(gl, ice.w, ice.h, {
@@ -323,23 +321,6 @@ export class WaterEngine {
     gl.useProgram(this.p.bedA.prog);
     bindTex(gl, 0, soft.tex, this.p.bedA.u.uSd);
     drawTo(gl, this.iceTex);
-    // The same field smoothed across about half a stroke: the shape a
-    // melting edge rounds toward, so strokes soften instead of thinning to
-    // hairlines.
-    const texel = this.iceRect.w > 0 ? this.iceRect.w / ice.w : 1;
-    const k = Math.min(16, Math.max(2, Math.round(-ice.minSd / texel / 1.7)));
-    const lw = Math.max(2, Math.ceil(ice.w / k));
-    const lh = Math.max(2, Math.ceil(ice.h / k));
-    const down = makeTarget(gl, lw, lh, { ...this.f16(), filter: gl.NEAREST });
-    gl.useProgram(this.p.sdDown.prog);
-    bindTex(gl, 0, sdTex, this.p.sdDown.u.uSd);
-    gl.uniform1i(this.p.sdDown.u.uK, k);
-    drawTo(gl, down);
-    this.iceLow = makeTarget(gl, lw, lh, this.f16());
-    gl.useProgram(this.p.sdBlur.prog);
-    bindTex(gl, 0, down.tex, this.p.sdBlur.u.uSd);
-    drawTo(gl, this.iceLow);
-    freeTarget(gl, down);
     gl.deleteTexture(sdTex);
     freeTarget(gl, soft);
     this.dirty = true;
@@ -451,8 +432,8 @@ export class WaterEngine {
     this.melt = m;
     // Meltwater is only there while the ice is actually melting: it rises
     // with the melt and clears within a second of it stopping.
-    // Once the name is gone there is nothing left to melt.
-    const want = this.iceTex && !this.still && m < ICE_GONE ? Math.min(1, this.meltRate * 2.4) : 0;
+    // Once the ice is gone there is nothing left to melt.
+    const want = this.iceTex && !this.still && m > 0.12 && m < ICE_GONE ? Math.min(1, this.meltRate * 2.4) : 0;
     this.meltAct += (want - this.meltAct) * (1 - Math.exp(-dt * (want > this.meltAct ? 9 : 4.2)));
     if (this.meltAct < 0.004 && want === 0) this.meltAct = 0;
     if (m >= 1 && !this.meltDone) {
@@ -481,32 +462,55 @@ export class WaterEngine {
     return top;
   }
 
+  /**
+   * The state of the sheet at a scroll position. Every number is a function
+   * of the melt alone, so scrolling back up refreezes the lake exactly.
+   */
   private iceUniforms(scrollY: number) {
     const ice = this.iceMeta;
-    if (!ice || !this.iceTex) return { rect: [0, 0, 0, 0], state: [0, 0, 0, 0], alive: 0, erode: 0, shed: 0 };
-    // The floe drifts with the camera while it melts, so it stays in view.
+    const none = { rect: [0, 0, 0, 0], a: [0, 0, 0, 0], b: [0, 0, 1, 1], lake: [this.lake.y0, this.lake.y1, 0, 0], h: 1, shed: 0 };
+    const m = this.melt;
+    if (!ice || !this.iceTex || m >= ICE_GONE) return none;
+    // The sheet rides with the camera while it melts, so the melt stays in view.
     const drift = Math.min(scrollY, this.meltRange) * 0.74;
     const r = this.iceRect;
-    const m = this.melt;
     const half = -ice.minSd;
-    // Ice in water melts from its edges. Every length here is a share of
-    // the stroke's own half width on this device, so a phone melts the way
-    // a desktop does. The wear is capped: it stops while every stroke,
-    // the thin ones too, is still one whole stroke, so no letter can ever
-    // break into pieces, thin to a hairline or leave a speck. For the first
-    // 70 percent the name only softens, rounds a little and settles lower.
-    // Then what is left, low clear letters that are still letters, sinks
-    // to the waterline and goes into the water, all of it together and
-    // quickly. Nothing is left after that.
-    const wear = smooth(0, 0.7, m);
-    const erode = half * ICE_WEAR * wear;
-    const round = 0.16 * wear;
-    const height = 1 - 0.5 * smooth(0.04, 0.7, m) - 0.5 * smooth(0.68, 0.8, m);
-    const alive = 1 - smooth(ICE_GOING, ICE_GONE, m);
-    // Partly melted ice keeps dripping while the page is held still: rings
-    // on the surface, nothing in the water.
-    const shed = alive > 0 ? 0.42 * Math.sin(Math.PI * Math.min(1, Math.max(0, m))) ** 0.7 : 0;
-    return { rect: [r.x, r.y + drift, r.w, r.h], state: [erode, height, round, 1], alive, erode, shed };
+    const narrow = this.cssW < 860;
+    const lakeH = Math.max(1, this.lake.y1 - this.lake.y0);
+    // A few large floes at every width: their size follows the lake.
+    const cell = Math.max(this.cssW * 0.42, lakeH * 0.42);
+    // First the sheet only gets wet. Then the letters open from their
+    // edges, leads open along the cracks and the sheet lets go of the
+    // banks. Then it is floes: each shrinks to nothing in its own time
+    // (the shader does that), and all of them gather toward the outlet.
+    const wet = smooth(0, 0.15, m);
+    const go = smooth(0.15, 0.6, m);
+    const late = smooth(0.55, 0.9, m);
+    // The name only gets bolder until half way; after that the water it
+    // let in takes the ice around it.
+    const open = half * (0.42 * go + 3.5 * smooth(0.5, 0.68, m) + 2.5 * late * late);
+    const lead = 0.075 * go * go + 0.04 * late;
+    const gap = (narrow ? 0.55 : 1) * (56 * go + 50 * late);
+    const gather = 1 + 1.2 * smooth(0.5, 0.9, m);
+    // Partly melted ice keeps dripping while the page is held still.
+    const shed = 0.42 * Math.sin(Math.PI * Math.min(1, m / ICE_GONE)) ** 0.7;
+    return {
+      rect: [r.x, r.y + drift, r.w, r.h],
+      a: [open, lead, m, gap],
+      b: [this.meltPath.x, this.lake.y1 - lakeH * 0.16, gather, cell],
+      lake: [this.lake.y0, this.lake.y1, wet, 1],
+      h: narrow ? 17 : 26,
+      shed,
+    };
+  }
+
+  private bindIce(prog: Program, ice: ReturnType<WaterEngine['iceUniforms']>, sdfUnit: number) {
+    const gl = this.gl;
+    gl.uniform4fv(prog.u.uIce, ice.rect);
+    gl.uniform4fv(prog.u.uIceA, ice.a);
+    gl.uniform4fv(prog.u.uIceB, ice.b);
+    gl.uniform4fv(prog.u.uLake, ice.lake);
+    bindTex(gl, sdfUnit, (this.iceTex ?? this.grain).tex, prog.u.uIceSdf);
   }
 
   private simulate(dt: number, top: number) {
@@ -551,9 +555,9 @@ export class WaterEngine {
       const pr = this.p.heat;
       gl.useProgram(pr.prog);
       bindTex(gl, 0, this.heat.read.tex, pr.u.uHeat);
-      const r = ice.rect;
-      const on = p.active && r[2] > 0;
-      gl.uniform3f(pr.u.uPtr, on ? (p.x - r[0]) / r[2] : -9, on ? (p.y - r[1]) / r[3] : -9, r[2] > 0 ? r[3] / r[2] : 1);
+      const lh = Math.max(1, this.lake.y1 - this.lake.y0);
+      const on = p.active && ice.rect[2] > 0;
+      gl.uniform3f(pr.u.uPtr, on ? p.x / this.cssW : -9, on ? (p.y - this.lake.y0) / lh : -9, lh / this.cssW);
       gl.uniform1f(pr.u.uDt, dt);
       drawTo(gl, this.heat.write);
       this.heat.swap();
@@ -567,11 +571,9 @@ export class WaterEngine {
     common(w, 1);
     gl.uniform1f(w.u.uDt, sub);
     gl.uniform4fv(w.u.uPtr, seg);
-    gl.uniform4f(w.u.uIce, ice.rect[0], ice.rect[1], ice.rect[2], ice.rect[3]);
-    gl.uniform3f(w.u.uIceMelt, ice.erode, ice.rect[2] > 0 ? (Math.min(this.meltRate, 1.2) + ice.shed) * ice.alive : 0, ice.state[2]);
+    this.bindIce(w, ice, 3);
+    gl.uniform1f(w.u.uIceDrip, ice.rect[2] > 0 ? Math.min(this.meltRate, 1.2) + ice.shed : 0);
     gl.uniform1f(w.u.uAmbient, 1);
-    if (this.iceTex) bindTex(gl, 3, this.iceTex.tex, w.u.uIceSdf);
-    if (this.iceLow) bindTex(gl, 5, this.iceLow.tex, w.u.uIceLow);
     bindTex(gl, 4, this.detail.tex, w.u.uDetail);
     for (let i = 0; i < steps; i++) {
       bindTex(gl, 0, this.wave!.read.tex, w.u.uWave);
@@ -648,10 +650,8 @@ export class WaterEngine {
     gl.uniform1f(r.u.uQuality, tier.quality);
     gl.uniform1i(r.u.uMode, mode);
     gl.uniform1f(r.u.uScale, this.cssW < 860 ? 0.5 : 1);
-    gl.uniform4f(r.u.uIce, ice.rect[0], ice.rect[1], ice.rect[2], ice.rect[3]);
-    gl.uniform4f(r.u.uIceState, ice.state[0], ice.state[1], ice.state[2], ice.state[3]);
-    gl.uniform1f(r.u.uIceAlive, ice.alive);
-    gl.uniform1f(r.u.uIceHalf, this.iceMeta ? -this.iceMeta.minSd : 1);
+    this.bindIce(r, ice, 7);
+    gl.uniform1f(r.u.uIceH, ice.h);
     gl.uniform1f(r.u.uMeltAct, mode === 0 ? this.meltAct : 0);
     gl.uniform4f(r.u.uMeltPath, this.meltPath.x, this.meltPath.y, this.meltPath.reach, this.meltPath.w);
     gl.uniform3fv(r.u.uLand, pal.land);
@@ -673,9 +673,7 @@ export class WaterEngine {
     bindTex(gl, 3, this.vel!.read.tex, r.u.uVel);
     bindTex(gl, 5, this.detail.tex, r.u.uDetail);
     bindTex(gl, 6, this.grain.tex, r.u.uGrain);
-    bindTex(gl, 7, (this.iceTex ?? this.grain).tex, r.u.uIceSdf);
     bindTex(gl, 8, this.heat.read.tex, r.u.uHeat);
-    bindTex(gl, 9, (this.iceLow ?? this.grain).tex, r.u.uIceLow);
     bindTex(gl, 10, this.curv.tex, r.u.uCurv);
   }
 
@@ -773,16 +771,8 @@ export class WaterEngine {
   }
 }
 
-/**
- * The most the name is ever worn back, as a share of half its thickest
- * stroke. The thinnest strokes of a bold face are a little over half as
- * thick as the thickest, so this leaves even those more than half their
- * width.
- */
-const ICE_WEAR = 0.26;
-/** The share of the melt over which the whole, intact name goes into the water. */
-const ICE_GOING = 0.71;
-const ICE_GONE = 0.82;
+/** The melt at which the last floe is gone. The rest of the scroll range is open water. */
+const ICE_GONE = 0.9;
 
 /** Speed of the current where the flow map is 1, in CSS px per second. */
 const FLOW_SPEED = 78;
