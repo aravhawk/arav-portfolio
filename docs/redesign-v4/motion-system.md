@@ -47,7 +47,7 @@ only on colour changes, where it is correct.
 
 | Thing | Behaviour | Constant |
 |---|---|---|
-| Surface waves | Linear wave equation on a low-resolution grid, fixed substeps of 1/120 s, banks reflect | `(c dt / dx)^2 = 0.42`, slower in shallows; damping 0.9 to 2.4 per second |
+| Surface waves | Linear wave equation on a low-resolution grid, fixed substeps of 1/120 s, banks reflect | `(c dt / dx)^2 = 0.34` with viscosity 0.04 (stable while their sum times 8 stays under 4), slower in shallows; damping 0.9 to 2.4 per second; height and velocity clamped |
 | Current | Authored flow map along each channel, blurred | 78 px/s where the map is 1; 34% through the lake |
 | Pointer | A body moving through the water: a trough along its path and a bulge behind it, plus momentum into a velocity field kept divergence free | Trough radius 10px, strength scales with speed up to 900 px/s; velocity decays at 0.9 per second |
 | Press or tap | One splash | Radius 16px (22px for touch) |

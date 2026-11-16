@@ -181,9 +181,9 @@ void main() {
       // with the screen axes.
       const mat2 R1 = mat2(0.7986, -0.6018, 0.6018, 0.7986);
       const mat2 R2 = mat2(0.5299, 0.8480, -0.8480, 0.5299);
-      vec2 wuv1 = R1 * pw / 610.0 + vec2(0.011, 0.017) * uTime;
+      vec2 wuv1 = R1 * pw / 610.0 + vec2(0.021, 0.033) * uTime;
       vec4 dw = texture(uDetail, wuv1);
-      vec4 dw2 = texture(uDetail, R2 * pw / 340.0 - vec2(0.019, 0.009) * uTime + vec2(0.5, 0.2));
+      vec4 dw2 = texture(uDetail, R2 * pw / 340.0 - vec2(0.037, 0.018) * uTime + vec2(0.5, 0.2));
       dw.gb = (dw.gb - 0.5) * R1 + 0.5;
       dw2.gb = (dw2.gb - 0.5) * R2 + 0.5;
       float speed = clamp(length(vel) / max(uFlowSpeed, 1.0), 0.0, 1.5);
@@ -192,7 +192,7 @@ void main() {
       // Two drifting caustic sheets; where both are bright, the filaments.
       float ctex = sqrt(df.a * dw.a) * 6.0 * 0.62 + sqrt(df.a * dw2.a) * 6.0 * 0.38;
 
-      vec2 slope = wv.ba * 3.4 + dgrad;
+      vec2 slope = wv.ba * 5.6 + dgrad;
       // Meniscus: the surface climbs the bank.
       float men = smoothstep(-5.0, -0.5, bw.r);
       slope += bw.ba * men * 0.42;
@@ -233,7 +233,7 @@ void main() {
         wlap = (gx1 - gx0 + gy1 - gy0) * 0.5;
       }
       float dn = clamp(depth / DEEP, 0.0, 1.0);
-      float fbase = (0.3 + 0.7 * dn) * wlap * 16.0;
+      float fbase = (0.3 + 0.7 * dn) * wlap * 30.0;
       float ripple = min(1.0 / max(abs(1.0 - fbase), 0.24), 3.4);
       // Shallow water has no room to focus: the pattern sharpens with depth.
       float cdepth = smoothstep(0.0, 0.5, dn);
@@ -270,8 +270,8 @@ void main() {
       vec3 rf = reflect(dir, n);
       float panel = smoothstep(0.972, 1.0, dot(rf, LS));
       // Ripple faces turned toward the key light flash; calm water does not.
-      float crest = smoothstep(0.035, 0.2, dot(slope, -normalize(L.xy)));
-      col += uSky * (fres * 0.6 + panel * panel * 0.045 + crest * crest * 0.5 * uLight.w);
+      float crest = smoothstep(0.03, 0.34, dot(slope, -normalize(L.xy)));
+      col += uSky * (fres * 0.6 + panel * panel * 0.012 + crest * crest * 0.5 * uLight.w);
       // Foam rides the current as broken cells, not a white wash.
       float cells = texture(uGrain, (pw - vel * 0.35) / 150.0).a;
       float foam = clamp(dye.r, 0.0, 1.0);

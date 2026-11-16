@@ -66,6 +66,18 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           <Basins models={m.ollama.models} />
         ) : p.slug === 'cc-switch' ? (
           <Fork />
+        ) : p.slug === 'kilo-bench' ? (
+          <div className="feat feat-lanes" data-bed="feat:lanes" />
+        ) : p.slug === 'tensorpow' ? (
+          <div className="feat feat-grid" data-bed="feat:grid" />
+        ) : p.slug === 'rydar' ? (
+          <div className="feat feat-bends" data-bed="feat:bends" />
+        ) : p.slug === 'agent-bridge' && lead ? (
+          <div className="feat feat-bridge" data-bed="feat:bridge">
+            <div className="peer peer-a" data-bed="peer:a" data-pulse data-basin />
+            <div className="peer peer-b" data-bed="peer:b" data-pulse data-basin />
+            <Slab media={lead} sizes="(max-width: 860px) 70vw, 34vw" />
+          </div>
         ) : null
       }
     >
@@ -111,7 +123,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         </ol>
       </section>
 
-      {lead && lead.kind === 'video' ? (
+      {lead && lead.kind === 'video' && p.slug !== 'agent-bridge' ? (
         <section className="block" aria-label="Video">
           <Slab media={lead} sizes="(max-width: 860px) 80vw, 60vw" />
         </section>

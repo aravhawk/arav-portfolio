@@ -514,7 +514,7 @@ export class WaterEngine {
       bindTex(gl, 0, this.wave!.read.tex, w.u.uWave);
       gl.uniform2f(w.u.uShift, 0, i === 0 ? shift : 0);
       gl.uniform1f(w.u.uTime, this.time + i * sub);
-      gl.uniform2f(w.u.uPtrForce, moving ? Math.min(speed / 900, 1) * 0.028 : 0, 10);
+      gl.uniform2f(w.u.uPtrForce, moving ? (0.25 + 0.75 * Math.min(speed / 700, 1)) * 0.075 : 0, 12);
       const d = this.drop;
       gl.uniform4f(w.u.uDrop, d.x, d.y, d.r, i === 0 ? d.s : 0);
       drawTo(gl, this.wave!.write);
@@ -571,7 +571,7 @@ export class WaterEngine {
     gl.uniform1f(dy.u.uTime, this.time);
     gl.uniform1f(dy.u.uFlowSpeed, FLOW_SPEED);
     gl.uniform4fv(dy.u.uPtr, seg);
-    gl.uniform2f(dy.u.uPtrForce, moving ? Math.min(speed / 900, 1) * 0.02 : 0, 10);
+    gl.uniform2f(dy.u.uPtrForce, moving ? Math.min(speed / 700, 1) * 0.05 : 0, 12);
     gl.uniform4f(dy.u.uIce, ice.rect[0], ice.rect[1], ice.rect[2], ice.rect[3]);
     gl.uniform2f(dy.u.uIceMelt, ice.erode, ice.rect[2] > 0 ? this.meltRate : 0);
     drawTo(gl, this.dye!.write);

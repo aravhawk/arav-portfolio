@@ -11,6 +11,15 @@
  *   dye   RGBA16F  r: foam, g: meltwater silt, b: unused
  */
 
+/**
+ * Wave solver constants. The explicit scheme is stable only while
+ * 8 * (WAVE_C2 + WAVE_NU) < 4 for the grid's fastest mode; a test holds that
+ * line (tests/water/stability.test.ts), because crossing it turns the
+ * surface into a checkerboard.
+ */
+export const WAVE_C2 = 0.34;
+export const WAVE_NU = 0.04;
+
 const HEAD = `#version 300 es
 precision highp float;
 in vec2 vUv;
@@ -153,11 +162,13 @@ void main() {
   float lap = hl + hr + hu + hd - 4.0 * h;
   // Shallow water is slower: waves bend toward the banks as they arrive.
   float depth = clamp(-sd / 40.0, 0.12, 1.0);
-  float c2 = 0.42 * mix(0.45, 1.0, depth);   // (c dt / dx)^2, stable below 0.5
+  // (c dt / dx)^2. The explicit scheme is stable while 8 * (c2 + nu) < 4 for
+  // the grid's fastest mode; 0.34 + 0.04 leaves a wide margin.
+  float c2 = ${WAVE_C2.toFixed(3)} * mix(0.45, 1.0, depth);
   v += c2 * lap;
   v *= exp(-uDt * mix(2.4, 0.9, depth));
   h += v;
-  h += 0.02 * lap;                           // a little viscosity kills grid noise
+  h += ${WAVE_NU.toFixed(3)} * lap;                          // viscosity: damps the grid-scale modes
   h *= exp(-uDt * 0.35);
 
   // Pointer: a finger pushed through water leaves a trough along its path.
@@ -185,7 +196,7 @@ void main() {
     float n = texture(uDetail, world / 170.0 + vec2(0.31, -0.23) * uTime).r
             - texture(uDetail, world / 120.0 - vec2(0.27, 0.19) * uTime + 0.5).r;
     float stir = fl.z * 1.5 + speed * smoothstep(-14.0, -2.0, sd) * 0.22;
-    v += n * stir * uAmbient * 0.016;
+    v += n * stir * uAmbient * 0.008;
   }
   // Meltwater dripping off the ice edge.
   if (uIceMelt.y > 0.0) {
@@ -202,7 +213,8 @@ void main() {
   float edgeFade = smoothstep(0.0, 6.0, float(p.y)) * smoothstep(0.0, 6.0, float(sz.y - 1 - p.y));
   h *= mix(0.9, 1.0, edgeFade);
   v *= mix(0.9, 1.0, edgeFade);
-  o = vec4(h, v, 0.0, 0.0);
+  // Whatever is thrown at it, the surface stays bounded.
+  o = vec4(clamp(h, -1.5, 1.5), clamp(v, -0.75, 0.75), 0.0, 0.0);
 }`;
 
 /** Height gradient, stored so the shading pass needs one tap for normals. */
