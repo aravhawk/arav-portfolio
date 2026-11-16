@@ -16,23 +16,32 @@
 
 import { type BedPainter, type Pt, type Rect, pt } from './bed';
 
-export const WORLD = { w: 2600, h: 8400 };
+/**
+ * How much longer the lake is than the first build's. The lake has to run
+ * from under the first camera to a far shore near the horizon, so the
+ * river, the basin and the open water all lie this much further on.
+ */
+export const DY = 4000;
+
+export const WORLD = { w: 2600, h: 8400 + DY };
 
 /** The lake's north and south shores. */
-export const LAKE = { x0: 250, x1: 2350, y0: 120, y1: 2050 };
+// (It is wider than the world: past the world's sides the bed repeats its
+// last column, so the ice runs on to left and right without a shore.)
+export const LAKE = { x0: -700, x1: WORLD.w + 700, y0: -900, y1: 2050 + DY };
 /** Where the river leaves the lake, and how wide it is there. */
 export const OUTLET = { x: 1480, y: LAKE.y1, w: 300 };
 
 /** The middle of the name on the lake. */
-export const NAME = { x: 1300, y: 1190 };
+export const NAME = { x: 1300, y: 1700 };
 
 /** The river's middle line from the lake to the basin. */
-export const RIVER: Pt[] = [pt(1480, 2030), pt(1610, 2520), pt(1500, 3060), pt(1690, 3620), pt(1570, 4180), pt(1600, 4560)];
+export const RIVER: Pt[] = [pt(1480, 2030 + DY), pt(1610, 2520 + DY), pt(1500, 3060 + DY), pt(1690, 3620 + DY), pt(1570, 4180 + DY), pt(1600, 4560 + DY)];
 const RIVER_W = [300, 250, 285, 240, 280, 300];
 
 /** The walled basin (the sandbox) and the island in it. */
-export const BASIN: Rect = { x: 1050, y: 4520, w: 1120, h: 1080 };
-export const ISLAND = { x: 1560, y: 5110, rx: 290, ry: 170 };
+export const BASIN: Rect = { x: 1050, y: 4520 + DY, w: 1120, h: 1080 };
+export const ISLAND = { x: 1560, y: 5110 + DY, rx: 290, ry: 170 };
 
 /** The upright slab that carries the product image. */
 export const SLAB = {
@@ -49,7 +58,7 @@ export const SLAB = {
 };
 
 /** Where the river has become open water. */
-export const SHOAL_Y = 6650;
+export const SHOAL_Y = 6650 + DY;
 
 export interface NameLayout {
   /** the words, one per line */
@@ -60,25 +69,26 @@ export interface NameLayout {
   stretch: number;
 }
 
-/** A wide screen reads the name on one line; a tall one stacks it, as the page does. */
-export function nameLayout(aspect: number): NameLayout {
-  if (aspect < 0.7) return { lines: ['Arav', 'Jain'], width: 860, stretch: 1.34 };
-  return { lines: ['Arav Jain'], width: 1500, stretch: 1.62 };
-}
-
 /** Carve the bed. Land runs on past every edge except the last, which is open water. */
 export function paintWorld(b: BedPainter) {
   // The lake: one broad body with bays, so its shore is never a ruled curve.
   b.pool({ x: LAKE.x0, y: LAKE.y0, w: LAKE.x1 - LAKE.x0, h: LAKE.y1 - LAKE.y0 }, 640);
-  b.disc(pt(560, 1060), 330);
-  b.disc(pt(2050, 1420), 320);
-  b.disc(pt(900, 1700), 300);
-  b.disc(pt(1850, 760), 300);
-  b.disc(pt(700, 520), 330);
+  // Bays and points along the far shore, so it is never a ruled line.
+  for (const [x, dy, r] of [
+    [140, -40, 300],
+    [620, 70, 260],
+    [1010, -10, 210],
+    [1960, 60, 280],
+    [2420, -60, 330],
+  ]) {
+    b.disc(pt(x, LAKE.y1 - r * 0.72 + dy), r);
+  }
+  b.dry({ x: 760, y: LAKE.y1 - 150, w: 330, h: 260 }, 0, 120);
+  b.dry({ x: 2080, y: LAKE.y1 - 120, w: 300, h: 240 }, 0, 110);
   // A slow current gathers toward the outlet, so meltwater leaves the lake.
   for (const t of [0.2, 0.5, 0.8]) {
-    const x = LAKE.x0 + (LAKE.x1 - LAKE.x0) * t;
-    b.channel([pt(x, LAKE.y0 + 180), pt((x + OUTLET.x) / 2, LAKE.y0 + 1000), pt(OUTLET.x, LAKE.y1 - 30)], { width: 760, speed: 0.34, flowOnly: true });
+    const x = WORLD.w * t;
+    b.channel([pt(x, LAKE.y1 - 1900), pt((x + OUTLET.x) / 2, LAKE.y1 - 900), pt(OUTLET.x, LAKE.y1 - 30)], { width: 760, speed: 0.34, flowOnly: true });
   }
   b.agitate(pt(OUTLET.x, LAKE.y1 - 10), OUTLET.w * 1.4, 0.7);
   b.outlet = { x: OUTLET.x, y: OUTLET.y, w: OUTLET.w };
@@ -90,7 +100,7 @@ export function paintWorld(b: BedPainter) {
   b.pool(BASIN, 300);
   b.disc(pt(BASIN.x + 240, BASIN.y + BASIN.h - 300), 260);
   b.disc(pt(BASIN.x + BASIN.w - 250, BASIN.y + 330), 270);
-  b.channel([pt(1600, 4540), pt(1480, 4800), pt(1250, 5200), pt(1420, 5560)], { width: 420, speed: 0.4, flowOnly: true });
+  b.channel([pt(1600, 4540 + DY), pt(1480, 4800 + DY), pt(1250, 5200 + DY), pt(1420, 5560 + DY)], { width: 420, speed: 0.4, flowOnly: true });
   // The island: dry ground in the middle of it.
   b.dry({ x: ISLAND.x - ISLAND.rx, y: ISLAND.y - ISLAND.ry, w: ISLAND.rx * 2, h: ISLAND.ry * 2 }, 0, ISLAND.ry * 0.96);
   // Attacks: waves strike the island from every side.
@@ -106,10 +116,10 @@ export function paintWorld(b: BedPainter) {
   }
 
   // The run-out: the river leaves the basin and opens into wide water.
-  b.channel([pt(1440, 5560), pt(1380, 5900), pt(1300, 6300), pt(1300, 6700), pt(1300, 7150)], { width: [320, 340, 520, 1300, 3400] });
-  b.pool({ x: -400, y: 7000, w: WORLD.w + 800, h: WORLD.h - 7000 + 400 }, 0);
+  b.channel([pt(1440, 5560 + DY), pt(1380, 5900 + DY), pt(1300, 6300 + DY), pt(1300, 6700 + DY), pt(1300, 7150 + DY)], { width: [320, 340, 520, 1300, 3400] });
+  b.pool({ x: -400, y: 7000 + DY, w: WORLD.w + 800, h: WORLD.h - 7000 - DY + 400 }, 0);
   for (const t of [0.2, 0.5, 0.8]) {
-    b.channel([pt(WORLD.w * t, 6900), pt(WORLD.w * t, WORLD.h)], { width: WORLD.w * 0.42, speed: 0.6, flowOnly: true, straight: true });
+    b.channel([pt(WORLD.w * t, 6900 + DY), pt(WORLD.w * t, WORLD.h)], { width: WORLD.w * 0.42, speed: 0.6, flowOnly: true, straight: true });
   }
   b.shoal = SHOAL_Y;
 }

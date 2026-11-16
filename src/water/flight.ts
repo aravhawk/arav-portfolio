@@ -12,14 +12,14 @@
 import { onFrame } from '@/lib/frame';
 import { haptic } from '@/lib/haptics';
 import { BedPainter } from './bed';
-import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, groundUnder, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
+import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Target, bindTex, drawTo, freeTarget, makeTarget } from './gl';
 import { BLOOM_DOWN, BLOOM_UP, FINISH } from './shaders/finish';
 import { FLIGHT, FLIGHT_FREEBOARD } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
-import { LAKE, OUTLET, SHOAL_Y, SLAB, WORLD, nameLayout, paintWorld, rasterName } from './world';
+import { LAKE, OUTLET, SHOAL_Y, SLAB, WORLD, paintWorld, rasterName } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -31,7 +31,7 @@ const CELL = [4, 5, 6, 8];
 /** How much of the world, along the flight, the simulation covers. */
 const SPAN = 2300;
 /** How thick the lake's sheet stands above the water, world units. */
-const ICE_H = 30;
+const ICE_H = 11;
 
 export class FlightEngine extends WaterEngine {
   private slabTex: WebGLTexture | null = null;
@@ -115,6 +115,16 @@ export class FlightEngine extends WaterEngine {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     freeTarget(gl, country);
     freeTarget(gl, raw);
+  }
+
+  /** The camera the name is cut for (see the ice field). */
+  nameCut: [number, number, number, number] = [0, 0, 1, 0];
+
+  protected bindIce(prog: Parameters<WaterEngine['bindIce']>[0], ice: Parameters<WaterEngine['bindIce']>[1], sdfUnit: number, snowUnit: number) {
+    super.bindIce(prog, ice, sdfUnit, snowUnit);
+    // (The cut is a hair wider than the drawn letter: its edge is blended over a pixel, and the blend belongs to the ice.)
+    if (ice.rect[2] > 0) this.gl.uniform4f(prog.u.uIceA, ice.a[0] + 3, ice.a[1], ice.a[2], ice.a[3]);
+    if (prog.u.uIceP) this.gl.uniform4fv(prog.u.uIceP, this.nameCut);
   }
 
   protected simCell() {
@@ -419,7 +429,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   /** One screen of scroll, in px: what the sections are sized in. */
   let unit = 1;
   let keys: Key[] = flightKeys(aspect);
-  let tall: boolean | null = null;
+  let cutFor = 0;
   let built = false;
   let destroyed = false;
   let buildToken = 0;
@@ -478,11 +488,12 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const token = ++buildToken;
     const host = document.querySelector<HTMLElement>('[data-ice]');
     const family = host ? getComputedStyle(host).fontFamily : 'system-ui, sans-serif';
-    const layout = nameLayout(aspect);
-    const ice = rasterName(layout, family);
+    const hero = heroDesign(aspect);
+    const ice = rasterName(hero.name, family);
     const sd = await solver.solve({ alpha: ice.alpha, w: ice.tw, h: ice.th, clamp: 400, scale: ice.scale });
     if (destroyed || token !== buildToken) return;
     engine.iceRect = ice.rect;
+    engine.nameCut = hero.cut;
     engine.setIce({ sd: sd.sd, w: ice.tw, h: ice.th, minSd: sd.min });
   }
 
@@ -491,9 +502,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
       measureView();
-      const nowTall = aspect < 0.7;
-      if (nowTall !== tall) {
-        tall = nowTall;
+      // The name is cut for this screen's first camera: a new shape, a new cut.
+      if (Math.abs(aspect - cutFor) > 0.004) {
+        cutFor = aspect;
         void buildName();
       }
     }, 120);
@@ -516,7 +527,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     canvas.remove();
     return null;
   }
-  tall = aspect < 0.7;
+  cutFor = aspect;
   await buildName();
   measureView();
   built = true;

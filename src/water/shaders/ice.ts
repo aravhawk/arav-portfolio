@@ -21,6 +21,7 @@ uniform vec4 uIceL;        // the floes' lattice: x: a cell's height over its wi
 uniform float uIceK;       // the pressure cracks' cell px
 uniform float uIceW;       // the lake's width px: the page's
 uniform vec4 uIceBox;      // the letters' own box in the sheet's frame: centre xy, half size zw, px
+uniform vec4 uIceP;        // the camera the name is cut for: its y, its height, the cosine and sine of its pitch (all 0: the name lies flat and true)
 uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet is 0..1, w: 1 while the sheet is whole, 0 once it is gone
 uniform sampler2D uIceSdf; // signed distance to the letters px (negative inside), _, gradient
 uniform sampler2D uDetail;
@@ -86,12 +87,26 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // everything in it gathers toward the outlet.
   vec2 u = uIceB.xy + (w - uIceB.xy) * uIceB.z;
   il = u - uIce.xy;
-  vec2 iuv = il / uIce.zw;
+  // Lettering painted on a road is drawn for one eye. Where that eye is
+  // given, each point of the ice is looked up where that camera sees it,
+  // so from there the name stands square-on and true.
+  vec2 nl = il;
+  float nk = 1.0;
+  if (uIceP.y > 0.0) {
+    vec2 mid = uIce.xy + uIce.zw * 0.5;
+    float dy0 = mid.y - uIceP.x;
+    float z0 = dy0 * uIceP.z + uIceP.y * uIceP.w;
+    float dy = u.y - uIceP.x;
+    float zc = max(dy * uIceP.z + uIceP.y * uIceP.w, 1.0);
+    nl = uIce.zw * 0.5 + vec2((u.x - mid.x) * z0 / zc, ((dy * uIceP.w - uIceP.y * uIceP.z) / zc - (dy0 * uIceP.w - uIceP.y * uIceP.z) / z0) * z0 * z0 / uIceP.y);
+    nk = zc / z0;
+  }
+  vec2 iuv = nl / uIce.zw;
   vec2 cl = clamp(iuv, 0.002, 0.998);
-  float lsd = texture(uIceSdf, cl).r + length((iuv - cl) * uIce.zw);
+  float lsd = (texture(uIceSdf, cl).r + length((iuv - cl) * uIce.zw)) * nk;
   // The raster's distances stop at a ceiling; past it the distance to the
   // letters' own box carries on, so no opening ever ends on the raster's edge.
-  vec2 bq = abs(il - uIceBox.xy) - uIceBox.zw;
+  vec2 bq = abs(nl - uIceBox.xy) - uIceBox.zw;
   if (lsd > 0.0) lsd = max(lsd, length(max(bq, 0.0)) + min(max(bq.x, bq.y), 0.0));
   float cell = uIceB.w;
   // Half way through, the letters stop being letters: their openings run
@@ -182,11 +197,19 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     }
     // The largest round that surely fits in this cell about its middle.
     float inr = 8.0;
+    float edge = 8.0;
     vec2 p1 = icePt(c1);
+    vec2 at = (y - c1 - p1) * asp;
     for (int j = 0; j < 3; j++) {
       for (int i = 0; i < 3; i++) {
         vec2 g = vec2(float(i - 1), float(j - 1));
-        if (i != 1 || j != 1) inr = min(inr, 0.5 * length((g + icePt(c1 + g) - p1) * asp));
+        if (i != 1 || j != 1) {
+          vec2 rg = (g + icePt(c1 + g) - p1) * asp;
+          float lg = length(rg);
+          inr = min(inr, 0.5 * lg);
+          // (How far inside its own cell of the lattice the point lies: the plate's straight sides.)
+          edge = min(edge, 0.5 * lg - dot(at, rg) / lg);
+        }
       }
     }
     vec2 site = (c1 + p1 - uIceL.zw) * cell * asp;
@@ -196,7 +219,8 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     // ever cut it along a line: a floe is a whole island or it is not there.
     vec2 ws = uIceB.xy + (site + uIce.xy - uIceB.xy) / uIceB.z;
     float bank = min(-textureLod(uBedA, bedUv(ws), 0.0).r, uLake.y - ws.y) - uIceA.w * 1.6 - 8.0;
-    bank = min(bank, min(ws.x, uIceW - ws.x) - 10.0);
+    // (A lake wider than the frame has no side to keep clear of.)
+    if (uIceP.y <= 0.0) bank = min(bank, min(ws.x, uIceW - ws.x) - 10.0);
     float pool = poolSd(site) - uIceA.x - 0.8 * uIceC.w - 12.0;
     float room = cell * inr - 4.0;
     // No two are one size.
@@ -212,7 +236,12 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     float small = cell * 0.18 * uIceB.z;
     R *= step(small, R);
     float rim = (textureLod(uDetail, il / (cell * 0.7) + 0.6, 0.0).r - 0.5) * cell * 0.07 * min(1.0, R / (cell * 0.3));
-    f = smax(f, sqrt(d1) * cell + rim - R + step(R, 1.0) * 1e3, cell * 0.07);
+    float fl = sqrt(d1) * cell + rim - R;
+    // Seen from the ground the sheet breaks as lake ice does, into angular
+    // plates: each is its cell of the lattice with straight sides, drawn in
+    // from them by as much as the round floe would have lost.
+    if (uIceP.y > 0.0) fl = max(cell * inr - R, cell * 0.035) - edge * cell + rim * 0.35;
+    f = smax(f, fl + step(R, 1.0) * 1e3, cell * (uIceP.y > 0.0 ? 0.02 : 0.07));
   }
   f /= uIceB.z;
   // The bank, with a lead of open water along the north shore, and the

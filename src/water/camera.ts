@@ -7,7 +7,7 @@
  * so a held frame still drifts.
  */
 
-import { NAME, SLAB, nameLayout } from './world';
+import { DY, NAME, type NameLayout, SLAB } from './world';
 
 export type V3 = [number, number, number];
 
@@ -29,48 +29,57 @@ export const SECTIONS = { hero: 2.4, say: 2.2, infiniview: 2.6, runout: 2.0 };
 export const FLIGHT_SCREENS = SECTIONS.hero + SECTIONS.say + SECTIONS.infiniview + SECTIONS.runout;
 /** Scroll (in screens) over which the lake's ice melts. */
 export const MELT = { from: 0.12, to: 1.95 };
+/** Until here the first camera only drifts: the name is still letters. */
+const HOLD = 1.1;
 
 const rad = (d: number) => (d * Math.PI) / 180;
 
+export interface Hero {
+  pose: Pose;
+  name: NameLayout;
+  /** the camera the name is cut for: its y, its height, and the cosine and sine of its pitch */
+  cut: [number, number, number, number];
+}
+
 /**
- * A camera that looks along +y and down by `pitch`, placed so a target on
- * the ground is seen `sight` degrees below the horizon and a width there
- * fills `share` of the frame's width.
+ * The first frame, composed from the picture backwards: the horizon a fifth
+ * of the way down, the name a set share of the frame's width with its middle
+ * below the frame's. The camera looks straight along +y, and the name is cut
+ * for exactly this camera (see the ice field), so it reads square-on.
  */
-function fit(target: [number, number], width: number, share: number, sight: number, pitch: number, fov: number, aspect: number): Pose {
+export function heroDesign(aspect: number): Hero {
+  const tall = aspect < 0.7;
+  const fov = tall ? 64 : aspect >= 1.2 ? 50 : 56;
+  const horizon = tall ? 0.19 : 0.21;
+  const middle = tall ? 0.55 : 0.585;
+  const share = tall ? 0.72 : Math.min(0.62, Math.max(0.56, 0.3 + 0.19 * aspect));
+  const width = tall ? 860 : 1500;
   const th = Math.tan(rad(fov / 2));
-  // Across the frame at the target's range, measured square to the view axis.
-  const off = rad(sight - pitch);
-  const range = width / share / (2 * th * aspect * Math.cos(off));
-  const d = range * Math.cos(rad(sight));
-  const z = range * Math.sin(rad(sight));
-  const pos: V3 = [target[0], target[1] - d, z];
-  const reach = z / Math.tan(rad(pitch));
-  return { pos, aim: [target[0], pos[1] + reach, 0], fov };
+  const pitch = Math.atan((1 - 2 * horizon) * th);
+  const sight = pitch + Math.atan((2 * middle - 1) * th);
+  // The name's depth along the view axis, then its range and the camera's height.
+  const depth = width / (share * 2 * th * aspect);
+  const range = depth / Math.cos(sight - pitch);
+  const z = range * Math.sin(sight);
+  const y = NAME.y - range * Math.cos(sight);
+  const pose: Pose = { pos: [NAME.x, y, z], aim: [NAME.x, y + z / Math.tan(pitch), 0], fov };
+  return {
+    pose,
+    name: { lines: tall ? ['Arav', 'Jain'] : ['Arav Jain'], width, stretch: depth / z },
+    cut: [y, z, Math.cos(pitch), Math.sin(pitch)],
+  };
 }
 
 /** The key poses for a screen of this shape. */
 export function flightKeys(aspect: number): Key[] {
-  const tall = aspect < 0.7;
-  const name = nameLayout(aspect);
   const h = SECTIONS.hero;
   const s1 = h + SECTIONS.say;
   const s2 = s1 + SECTIONS.infiniview;
   const end = FLIGHT_SCREENS - 1;
 
-  // High above the lake. The name sits a little below the middle, the far
-  // shore, the ranges and a band of sky across the top.
-  const hero = tall
-    ? fit([NAME.x, NAME.y], name.width, 0.68, 44, 37.5, 64, aspect)
-    : fit([NAME.x, NAME.y + 10], name.width, Math.min(0.64, 0.4 * aspect, 1.15 / aspect), 36, 26.5, 58, aspect);
-  if (aspect >= 1.2) {
-    // The sky needs room for the ranges: from the same place, a wider lens
-    // held a little higher. The name stays where it was in the frame.
-    hero.fov = 64;
-    // (On a very wide screen the name would reach down into the copy: held a little higher.)
-    hero.aim = [hero.pos[0], hero.pos[1] + hero.pos[2] / Math.tan(rad(aspect > 1.7 ? 24.6 : 23)), 0];
-  }
-  const hero2: Pose = { pos: [hero.pos[0], hero.pos[1] + 60, hero.pos[2] * 0.94], aim: [hero.aim[0], hero.aim[1] + 40, 0], fov: hero.fov };
+  // The poster, held (with a slow push) until the letters have run together.
+  const hero = heroDesign(aspect).pose;
+  const hero2: Pose = { pos: [hero.pos[0], hero.pos[1] + 70, hero.pos[2] * 0.97], aim: [hero.aim[0], hero.aim[1] + 60, 0], fov: hero.fov };
 
   // An upright screen that is not a phone (a tablet held tall) flies the
   // phone's path after the hero: its copy sits at the foot, where that
@@ -81,38 +90,38 @@ export function flightKeys(aspect: number): Key[] {
   const keys: Key[] = upright
     ? [
         { s: 0, ...hero },
-        { s: 0.3, ...hero2 },
+        { s: HOLD, ...hero2 },
         // Low over the lake's south end, looking down the river.
-        { s: h - 0.25, pos: [1440, 1560, 250], aim: [1530, 2200, 0], fov: wideFov },
+        { s: h - 0.25, pos: [1440, 1560 + DY, 250], aim: [1530, 2200 + DY, 0], fov: wideFov },
         // The statement: the near bank fills the foot of the frame, the river crosses beyond it.
-        { s: h + 0.75, pos: [1180, 2180, 250], aim: [1470, 2820, 0], fov: wideFov },
-        { s: s1 - 0.5, pos: [1200, 2400, 240], aim: [1500, 3020, 0], fov: wideFov },
+        { s: h + 0.75, pos: [1180, 2180 + DY, 250], aim: [1470, 2820 + DY, 0], fov: wideFov },
+        { s: s1 - 0.5, pos: [1200, 2400 + DY, 240], aim: [1500, 3020 + DY, 0], fov: wideFov },
         // The basin: the slab stands above the middle, bank at the foot.
-        { s: s1 + 1.0, pos: [1010, 3450, 460], aim: [slabAim[0] - 20, slabAim[1] - 60, 40], fov: 50 },
-        { s: s2 - 0.55, pos: [1030, 3530, 445], aim: [slabAim[0] - 10, slabAim[1] - 40, 40], fov: 50 },
+        { s: s1 + 1.0, pos: [1010, 3450 + DY, 460], aim: [slabAim[0] - 20, slabAim[1] - 60, 40], fov: 50 },
+        { s: s2 - 0.55, pos: [1030, 3530 + DY, 445], aim: [slabAim[0] - 10, slabAim[1] - 40, 40], fov: 50 },
         // Out past the island's left side, so the slab is never flown through.
-        { s: s2 - 0.1, pos: [900, 4900, 330], aim: [1250, 5900, 0], fov: 54 },
-        { s: s2 + 0.45, pos: [1380, 5950, 420], aim: [1330, 6700, 0], fov: 50 },
-        { s: end, pos: [1300, 7300, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)), 0], fov: 40 },
+        { s: s2 - 0.1, pos: [900, 4900 + DY, 330], aim: [1250, 5900 + DY, 0], fov: 54 },
+        { s: s2 + 0.45, pos: [1380, 5950 + DY, 420], aim: [1330, 6700 + DY, 0], fov: 50 },
+        { s: end, pos: [1300, 7300 + DY, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)) + DY, 0], fov: 40 },
       ]
     : [
         { s: 0, ...hero },
-        { s: 0.3, ...hero2 },
+        { s: HOLD, ...hero2 },
         // Low over the lake's south end, looking down the river toward the ranges.
-        { s: h - 0.25, pos: [1380, 1640, 200], aim: [1500, 2190, 0], fov: wideFov },
+        { s: h - 0.25, pos: [1380, 1640 + DY, 200], aim: [1500, 2190 + DY, 0], fov: wideFov },
         // The statement: gliding down the first reach, river on the right, the bank on the left.
-        { s: h + 0.7, pos: [1080, 2250, 158], aim: [1320, 2740, 0], fov: 48 },
-        { s: s1 - 0.5, pos: [1090, 2440, 152], aim: [1325, 2930, 0], fov: 48 },
+        { s: h + 0.7, pos: [1080, 2250 + DY, 158], aim: [1320, 2740 + DY, 0], fov: 48 },
+        { s: s1 - 0.5, pos: [1090, 2440 + DY, 152], aim: [1325, 2930 + DY, 0], fov: 48 },
         // The basin: slab and island right of centre, the bank at lower left.
-        { s: s1 + 1.0, pos: [930, 4110, 300], aim: [slabAim[0] - 250, slabAim[1], 30], fov: 42 },
-        { s: s2 - 0.55, pos: [955, 4180, 288], aim: [slabAim[0] - 235, slabAim[1] + 20, 30], fov: 42 },
+        { s: s1 + 1.0, pos: [930, 4110 + DY, 300], aim: [slabAim[0] - 250, slabAim[1], 30], fov: 42 },
+        { s: s2 - 0.55, pos: [955, 4180 + DY, 288], aim: [slabAim[0] - 235, slabAim[1] + 20, 30], fov: 42 },
 
         // Out wide of the island's left side: the slab leaves the frame whole
         // and at a distance, never as an edge sliding past the lens.
-        { s: s2 - 0.1, pos: [900, 4950, 250], aim: [1250, 5900, 0], fov: 42 },
-        { s: s2 + 0.45, pos: [1380, 5950, 300], aim: [1330, 6800, 0], fov: 40 },
+        { s: s2 - 0.1, pos: [900, 4950 + DY, 250], aim: [1250, 5900 + DY, 0], fov: 42 },
+        { s: s2 + 0.45, pos: [1380, 5950 + DY, 300], aim: [1330, 6800 + DY, 0], fov: 40 },
         // Open water seen from above: the ending's first frame.
-        { s: end, pos: [1300, 7300, 1100], aim: [1300, 7300 + 1100 / Math.tan(rad(57)), 0], fov: 36 },
+        { s: end, pos: [1300, 7300 + DY, 1100], aim: [1300, 7300 + 1100 / Math.tan(rad(57)) + DY, 0], fov: 36 },
       ];
   return keys;
 }

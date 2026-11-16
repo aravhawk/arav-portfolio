@@ -499,6 +499,8 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   float less = wet * 0.14 + lane * 0.06 + uNight * (0.1 + 0.1 * (1.0 - smoothstep(20.0, 300.0, nameD)));
   // More snow lies on the near ice, where the first frame's words stand.
   less -= 0.09 * (1.0 - smoothstep(uLake.x + 120.0, uLake.x + 520.0, p.y)) * (1.0 - uLake.z) * (1.0 - uNight);
+  // By day wind-packed snow lies thickest round the name: bright ground for dark letters.
+  less -= 0.07 * (1.0 - smoothstep(60.0, 520.0, nameD)) * (1.0 - uLake.z) * (1.0 - uNight);
   float lvl = snowAt(wl, big) - less;
   float ew = 0.006;
   float lvlT = lvl;
@@ -573,15 +575,20 @@ vec3 iceCut(vec2 p, float s, float tall) {
   vec3 top = uIceCol * mix(vec3(0.115, 0.34, 0.43), vec3(0.03, 0.09, 0.125), uNight) + uScatter * mix(1.5, 0.8, uNight);
   vec3 foot = uIceCol * mix(vec3(0.035, 0.15, 0.205), vec3(0.008, 0.03, 0.045), uNight) + uScatter * mix(1.2, 0.6, uNight);
   vec3 face = mix(top, foot, smoothstep(0.1, 0.92, s)) * (0.8 + 0.4 * streak);
-  float w = 1.6 / max(tall, 1.0);
+  float w = min(1.6 / max(tall, 1.0), 0.22);
   face = mix(face, uIceCol * vec3(0.88, 0.98, 1.0) * (1.0 + 0.12 * uNight), (1.0 - smoothstep(w * 0.7, w * 1.5, s)) * 0.92);
   face *= 1.0 - 0.55 * smoothstep(0.84, 0.9, s);
   // Before dawn the face holds a little of the sky's green, most near the top.
   face += uAurora * mix(0.1, 0.02, s) * (0.7 + 0.6 * streak);
+  // By day the wall stands in its own shade below the lip.
+  face *= mix(1.0, 0.34, (1.0 - uNight) * smoothstep(0.12, 0.55, s));
   return face;
 }
 
 /* ---------- water ---------- */
+
+// 1 over the lake's dark water while the sheet stands round it, by day.
+float gDeep = 0.0;
 
 vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceShade, float slabOn) {
   vec3 L = keyDir();
@@ -728,6 +735,10 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 
     water = mix(water, pool, uNight * 0.93);
   }
+  // The lake is deep: by day its water is dark, and under the sheet, where
+  // no wind reaches it, darker still. That is what draws the name.
+  float lakeDay = lakeK * (1.0 - uNight);
+  if (lakeDay > 0.0) water = mix(water, vec3(0.0025, 0.016, 0.027) * (0.75 + 0.5 * shaft) + water * 0.04, lakeDay * 0.95);
   // Meltwater brightens and cools the water it runs through.
   water *= 1.0 + 0.25 * uMeltAct * lakeK;
 
@@ -760,6 +771,9 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // (Under the sheet the water is stillest, and the name is cut into it:
   // there it is nearly a whole mirror.)
   fres = mix(fres, max(fres, mix(0.4, 0.94, smoothstep(0.75, 1.0, uGlow) * lakeK)), uNight);
+  // (By day the sheet's own walls stand round that water: less of the pale sky reaches it.)
+  gDeep = lakeDay * smoothstep(0.5, 1.0, uGlow);
+  fres *= 1.0 - 0.9 * gDeep;
   fres *= 1.0 - 0.7 * uEnd;
   vec3 col = mix(water, refl, fres);
   // The sun on ripple faces turned toward it: a broad, graded sheen.
@@ -807,6 +821,8 @@ void main() {
       }
     }
     if (slabCov > 0.0) slabCol /= slabCov;
+    // Far down the valley it is lost in the air: nothing stands behind the name.
+    slabCov *= 1.0 - smoothstep(3600.0, 5200.0, slabT);
   }
 
   if (slabCov > 0.999) {
@@ -870,7 +886,7 @@ void main() {
     float slabShade = 1.0;
     vec3 slabLight = vec3(0.0);
     float slabOn = 0.0;
-    if (uSlabSize.x > 0.0) {
+    if (uSlabSize.x > 0.0 && length(uCamPos.xy - uSlabPos.xy) < 5200.0) {
       vec2 ds = p - uSlabPos.xy;
       float dd = dot(ds, ds);
       float reach = uSlabSize.x * 4.0;
@@ -933,7 +949,9 @@ void main() {
     vec3 air = airAt(dir.xy);
     // (Before dawn the ground's haze is the cold air, warmed only toward the light.)
     air = mix(air, mix(S.hor, air, 0.45), uNight);
-    col = mix(col, air, fog * (1.0 - 0.9 * uEnd));
+    // (The cut water close under the eye is kept out of the haze: the name is the darkest thing in the frame.)
+    float clearK = gDeep * (1.0 - aLand) * (1.0 - aIce) * (1.0 - aCut) * (1.0 - smoothstep(2500.0, 4500.0, t));
+    col = mix(col, air, fog * (1.0 - 0.9 * uEnd) * (1.0 - clearK));
     // The horizon is soft: the same mist that lies at the ranges' foot.
     col = mix(col, air, exp(dir.z / 0.006) * 0.75);
   }
