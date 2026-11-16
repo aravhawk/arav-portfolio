@@ -15,6 +15,7 @@ import { BedPainter } from './bed';
 import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, groundUnder, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Target, bindTex, drawTo, freeTarget, makeTarget } from './gl';
+import { BLOOM_DOWN, FINISH } from './shaders/finish';
 import { FLIGHT, FLIGHT_FREEBOARD } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
@@ -53,6 +54,8 @@ export class FlightEngine extends WaterEngine {
     s.mountH = MOUNT_H;
     s.mountPano = MOUNT_PANO;
     s.mountEdge = MOUNT_EDGE;
+    s.bloomDown = BLOOM_DOWN;
+    s.finish = FINISH;
     return s;
   }
 
@@ -304,10 +307,58 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 11, (this.slabTex ?? this.grain.tex) as WebGLTexture, r.u.uSlabTex);
     bindTex(gl, 12, this.ground.tex, r.u.uGround);
     bindTex(gl, 13, this.pano.tex, r.u.uPano);
-    drawTo(gl, null, this.canvas.width, this.canvas.height);
+    this.finish(night, end);
+  }
+
+  /** The scene in linear light, and its highlights at a half, a quarter and an eighth. */
+  private film: Target[] = [];
+
+  private filmTargets(w: number, h: number) {
+    const gl = this.gl;
+    if (this.film.length && this.film[0].w === w && this.film[0].h === h) return;
+    for (const t of this.film) freeTarget(gl, t);
+    this.film = [];
+    for (let i = 0; i < 4; i++) {
+      const tw = Math.max(1, Math.round(w / (1 << i)));
+      const th = Math.max(1, Math.round(h / (1 << i)));
+      this.film.push(makeTarget(gl, tw, th, { ...this.f16(), filter: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE }));
+    }
+  }
+
+  /** Draw the scene to the float target, gather its highlights, and make the picture. */
+  private finish(night: number, end: number) {
+    const gl = this.gl;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    // (Making a texture binds it: on a unit the scene does not use.)
+    gl.activeTexture(gl.TEXTURE15);
+    this.filmTargets(w, h);
+    const f = this.film;
+    drawTo(gl, f[0]);
+    const d = this.p.bloomDown;
+    gl.useProgram(d.prog);
+    for (let i = 1; i < 4; i++) {
+      bindTex(gl, 0, f[i - 1].tex, d.u.uSrc);
+      gl.uniform2f(d.u.uTexel, 0.5 / f[i - 1].w, 0.5 / f[i - 1].h);
+      // By day only what outshines sunlit snow blooms; before dawn, the aurora and its mirror.
+      gl.uniform1f(d.u.uCut, i === 1 ? 1.9 - 1.5 * night : 0);
+      drawTo(gl, f[i]);
+    }
+    const p = this.p.finish;
+    gl.useProgram(p.prog);
+    bindTex(gl, 0, f[0].tex, p.u.uScene);
+    bindTex(gl, 1, f[1].tex, p.u.uB1);
+    bindTex(gl, 2, f[2].tex, p.u.uB2);
+    bindTex(gl, 3, f[3].tex, p.u.uB3);
+    gl.uniform2f(p.u.uTexel3, 1 / f[3].w, 1 / f[3].h);
+    gl.uniform1f(p.u.uBloom, 0.55);
+    gl.uniform1f(p.u.uTime, this.time);
+    gl.uniform1f(p.u.uEnd, end);
+    drawTo(gl, null, w, h);
   }
 
   destroy() {
+    for (const t of this.film) freeTarget(this.gl, t);
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
     freeTarget(this.gl, this.ground);
     freeTarget(this.gl, this.pano);

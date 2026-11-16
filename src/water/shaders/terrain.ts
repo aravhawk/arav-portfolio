@@ -64,7 +64,7 @@ void main() {
 }`;
 
 /** Where the morning sun stands: bearing from +y toward +x, and height, radians. */
-export const SUN = { az: -0.78, el: 0.19 };
+export const SUN = { az: -0.52, el: 0.088 };
 /** What the panorama of the ranges covers: bearings either side of +y, and elevations from the horizon up. */
 export const PANO = { az: 1.75, el: 0.11, w: 4096, h: 256 };
 
