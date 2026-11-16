@@ -180,7 +180,7 @@ vec3 aurora(vec3 d) {
     rays = mix(rays, 0.62, over * 0.6) * (1.0 - 0.6 * over);
     float reach = mix(smoothstep(0.2, 0.62, fold + 0.25 * sin(a * 0.9 + 1.0)), 0.55 + 0.45 * fold, k);
     vec3 tint = mix(vec3(0.16, 0.92, 0.6), vec3(0.42, 0.22, 0.9), smoothstep(0.0, tall * mix(1.5, 2.4, k), up));
-    sum += tint * prof * rays * reach * mix(0.55, 1.2, k);
+    sum += tint * prof * rays * reach * mix(0.55, 2.15, k);
   }
   // Nothing of it toward the dawn.
   float dawn = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
@@ -757,7 +757,9 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // Still dark water is a better mirror than this angle alone would make
   // it: before dawn the surface is held to at least that much mirror, so
   // the aurora is what the water and the name show.
-  fres = mix(fres, max(fres, 0.52), uNight);
+  // (Under the sheet the water is stillest, and the name is cut into it:
+  // there it is nearly a whole mirror.)
+  fres = mix(fres, max(fres, mix(0.4, 0.94, smoothstep(0.75, 1.0, uGlow) * lakeK)), uNight);
   fres *= 1.0 - 0.7 * uEnd;
   vec3 col = mix(water, refl, fres);
   // The sun on ripple faces turned toward it: a broad, graded sheen.
