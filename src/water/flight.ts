@@ -15,7 +15,7 @@ import { BedPainter } from './bed';
 import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Target, bindTex, drawTo, freeTarget, makeTarget } from './gl';
-import { BLOOM_DOWN, BLOOM_UP, FINISH } from './shaders/finish';
+import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
@@ -56,7 +56,7 @@ export class FlightEngine extends WaterEngine {
     s.mountEdge = MOUNT_EDGE;
     s.bloomDown = BLOOM_DOWN;
     s.bloomUp = BLOOM_UP;
-    s.finish = FINISH;
+    s.bloomKeep = BLOOM_KEEP;
     return s;
   }
 
@@ -323,6 +323,8 @@ export class FlightEngine extends WaterEngine {
         this.simTop = Math.floor(top / dx) * dx - dx;
       }
       this.draw(cam, aspect, end);
+      // (A still frame has no frame before it to glow from: it is drawn twice.)
+      this.draw(cam, aspect, end);
       this.dirty = false;
       return;
     }
@@ -410,75 +412,70 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 11, (this.slabTex ?? this.grain.tex) as WebGLTexture, r.u.uSlabTex);
     bindTex(gl, 12, this.ground.tex, r.u.uGround);
     bindTex(gl, 13, this.pano.tex, r.u.uPano);
-    this.finish(night, end);
+    this.finish(night);
   }
 
-  /** The scene in linear light, and its highlights at a half, a quarter and an eighth. */
+  /**
+   * The glow. [0] the finished frame at a quarter size, [1] its highlights
+   * at an eighth, [2] those at a sixteenth, [3] the two gathered at an
+   * eighth: what the next frame's scene pass adds.
+   */
   private film: Target[] = [];
 
   private filmTargets(w: number, h: number) {
     const gl = this.gl;
-    if (this.film.length && this.film[0].w === w && this.film[0].h === h) return;
+    const q = Math.max(1, Math.round(w / 4));
+    if (this.film.length && this.film[0].w === q) return;
     for (const t of this.film) freeTarget(gl, t);
-    this.film = [];
-    for (let i = 0; i < 4; i++) {
-      const tw = Math.max(1, Math.round(w / (1 << i)));
-      const th = Math.max(1, Math.round(h / (1 << i)));
-      this.film.push(makeTarget(gl, tw, th, { ...this.f16(), filter: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE }));
-    }
-    // Two more, at a quarter and a half, to gather the levels into one.
-    for (const i of [2, 1]) this.film.push(makeTarget(gl, this.film[i].w, this.film[i].h, { ...this.f16(), filter: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE }));
+    const at = (d: number, o: Parameters<typeof makeTarget>[3]) => makeTarget(gl, Math.max(1, Math.round(w / d)), Math.max(1, Math.round(h / d)), { ...o, filter: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE });
+    this.film = [at(4, { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE }), at(8, this.f16()), at(16, this.f16()), at(8, this.f16())];
   }
 
-  /** Draw the scene to the float target, gather its highlights, and make the picture. */
-  private finish(night: number, end: number) {
+  /**
+   * Draw the scene straight to the screen, finished, in one full-size pass.
+   * Then take this frame's highlights, small, for the next frame's glow: a
+   * frame's delay in a soft halo is not seen.
+   */
+  private finish(night: number) {
     const gl = this.gl;
     const w = this.canvas.width;
     const h = this.canvas.height;
+    const r = this.p.flight;
     // (Making a texture binds it: on a unit the scene does not use.)
     gl.activeTexture(gl.TEXTURE15);
     this.filmTargets(w, h);
     const f = this.film;
-    drawTo(gl, f[0]);
-    const d = this.p.bloomDown;
-    gl.useProgram(d.prog);
-    // (Leaner: the widest level is not made; its share goes to the next.)
-    const wide = 1 - Math.min(1, this.leanNow);
-    // Leanest: by day, when only the sun blooms, the halo is let go; before
-    // dawn it is kept, gathered at a quarter instead of a half.
+    // Leanest: by day, when only the sun blooms, the halo is let go.
     const l2 = Math.min(1, Math.max(0, this.leanNow - 1));
     const bloom = 0.55 * (1 - l2 * (1 - night));
-    const off = bloom <= 0.001;
-    for (let i = 1; i < (off ? 1 : wide > 0 ? 4 : 3); i++) {
-      bindTex(gl, 0, f[i - 1].tex, d.u.uSrc);
-      gl.uniform2f(d.u.uTexel, 0.5 / f[i - 1].w, 0.5 / f[i - 1].h);
-      // By day only what outshines sunlit snow blooms; before dawn, the aurora and its mirror.
-      gl.uniform1f(d.u.uCut, i === 1 ? 1.9 - 1.5 * night : 0);
-      drawTo(gl, f[i]);
-    }
-    // Gathered back up at small sizes, so the full-size pass reads the glow once.
+    gl.useProgram(r.prog);
+    bindTex(gl, 14, f[3].tex, r.u.uGlowTex);
+    gl.uniform1f(r.u.uBloom, bloom);
+    drawTo(gl, null, w, h);
+    if (bloom <= 0.001) return;
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, f[0].fbo);
+    gl.blitFramebuffer(0, 0, w, h, 0, 0, f[0].w, f[0].h, gl.COLOR_BUFFER_BIT, gl.LINEAR);
+    const k = this.p.bloomKeep;
+    gl.useProgram(k.prog);
+    bindTex(gl, 0, f[0].tex, k.u.uSrc);
+    // By day only what outshines sunlit snow blooms; before dawn, the aurora and its mirror.
+    gl.uniform1f(k.u.uCut, 0.86 - 0.36 * night);
+    gl.uniform1f(k.u.uGain, 3.2 - 2.65 * night);
+    drawTo(gl, f[1]);
+    const d = this.p.bloomDown;
+    gl.useProgram(d.prog);
+    bindTex(gl, 0, f[1].tex, d.u.uSrc);
+    gl.uniform2f(d.u.uTexel, 0.5 / f[1].w, 0.5 / f[1].h);
+    gl.uniform1f(d.u.uCut, 0);
+    drawTo(gl, f[2]);
     const up = this.p.bloomUp;
     gl.useProgram(up.prog);
-    if (!off) {
-    bindTex(gl, 0, f[2].tex, up.u.uA);
-    bindTex(gl, 1, f[3].tex, up.u.uB);
-    gl.uniform2f(up.u.uTexelB, 1 / f[3].w, 1 / f[3].h);
-    gl.uniform2f(up.u.uW, 1 - 0.5 * wide, 0.5 * wide);
-    drawTo(gl, f[4]);
     bindTex(gl, 0, f[1].tex, up.u.uA);
-    bindTex(gl, 1, f[4].tex, up.u.uB);
-    gl.uniform2f(up.u.uTexelB, 1 / f[4].w, 1 / f[4].h);
-    gl.uniform2f(up.u.uW, 0.34 * (1 - l2), 0.66 + 0.34 * l2);
-    if (l2 < 1) drawTo(gl, f[5]);
-    }
-    const p = this.p.finish;
-    gl.useProgram(p.prog);
-    bindTex(gl, 0, f[0].tex, p.u.uScene);
-    bindTex(gl, 1, (l2 < 1 ? f[5] : f[4]).tex, p.u.uGlow);
-    gl.uniform1f(p.u.uBloom, bloom);
-    gl.uniform1f(p.u.uTime, this.time);
-    gl.uniform1f(p.u.uEnd, end);
-    drawTo(gl, null, w, h);
+    bindTex(gl, 1, f[2].tex, up.u.uB);
+    gl.uniform2f(up.u.uTexelB, 1 / f[2].w, 1 / f[2].h);
+    gl.uniform2f(up.u.uW, 0.4, 0.6);
+    drawTo(gl, f[3]);
   }
 
   destroy() {

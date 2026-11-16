@@ -71,6 +71,8 @@ uniform sampler2D uHeat;
 uniform sampler2D uSlabTex;
 uniform sampler2D uPano;   // the ranges: sun, sky, snow, distance
 uniform sampler2D uGround; // the baked snow: height, slope, a second field
+uniform sampler2D uGlowTex; // the last frame's highlights, small and soft
+uniform float uBloom;
 uniform float uIceH;
 uniform float uIceOn;      // 0 once the whole sheet has melted: the field is not asked at all
 uniform float uGlow;       // 0..1: how much of the lake's sheet is still there to glow under
@@ -1202,6 +1204,20 @@ void main() {
   }
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
 
-  // Linear light, unbounded: the finish pass makes the picture.
-  o = vec4(max(col, 0.0), 1.0);
+  // ---- the finish, in this same pass: the glow of the last frame's
+  // highlights, a gentle vignette, the filmic curve, and a fine grain that
+  // moves (it is also the dither). The top-down last frame is the page's
+  // own water and takes none of it.
+  col = max(col, 0.0);
+  float fin = 1.0 - uEnd;
+  if (uBloom > 0.0) col += textureLod(uGlowTex, vUv, 0.0).rgb * uBloom * fin;
+  vec2 vc = vUv - 0.5;
+  col *= 1.0 - dot(vc, vc) * 0.42 * fin;
+  vec3 xa = col * 1.12;
+  col = mix(clamp((xa * (2.51 * xa + 0.03)) / (xa * (2.43 * xa + 0.59) + 0.14), 0.0, 1.0), col, uEnd);
+  col = pow(max(col, 0.0), vec3(1.0 / 2.2));
+  float gn = hash21(gl_FragCoord.xy + fract(uTime * 7.31) * vec2(317.0, 113.0)) - 0.5;
+  float lum = dot(col, vec3(0.3, 0.6, 0.1));
+  col += gn * (1.6 / 255.0 + 0.022 * fin * (0.35 + 2.6 * lum * (1.0 - lum)));
+  o = vec4(col, 1.0);
 }`;

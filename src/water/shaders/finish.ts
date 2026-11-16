@@ -77,3 +77,24 @@ void main() {
   col += g * (1.6 / 255.0 + 0.022 * fin * (0.35 + 2.6 * l * (1.0 - l)));
   o = vec4(col, 1.0);
 }`;
+
+
+/**
+ * The highlights of the picture that has just been drawn, for the next
+ * frame's glow. The source is the finished frame at a quarter size (tone
+ * curve and all), so what outshone the curve's shoulder is found by how
+ * near white it is, and given back the strength the curve took from it.
+ */
+export const BLOOM_KEEP = `#version 300 es
+precision highp float;
+uniform sampler2D uSrc;
+uniform float uCut;    // keep what is brighter than this, in the frame's own (display) light
+uniform float uGain;
+in vec2 vUv;
+out vec4 o;
+void main() {
+  vec3 c = pow(texture(uSrc, vUv).rgb, vec3(2.2));
+  float l = max(c.r, max(c.g, c.b));
+  float k = clamp((l - uCut) / (1.0 - uCut), 0.0, 1.0);
+  o = vec4(c * k * k * uGain / max(l, 1e-3), 1.0);
+}`;
