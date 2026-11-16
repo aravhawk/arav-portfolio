@@ -7,16 +7,22 @@ import type { SiteMetrics } from '@/lib/metrics';
  * by the scene in src/water/scenes.ts.
  */
 
-export function Tributaries({ repos }: { repos: SiteMetrics['mergedPrs']['byRepo'] }) {
+export function Tributaries({ repos, counts = false }: { repos: SiteMetrics['mergedPrs']['byRepo']; counts?: boolean }) {
   return (
     <div className="feat feat-trib" data-bed="feat:tributaries">
       <ul className="tribs">
         {repos.map((r, i) => (
           <li key={r.repo} className="trib" data-bed={`trib:${i}`} data-n={r.count}>
-            <a className="trib-repo mono" href={r.url} target="_blank" rel="noopener noreferrer">
+            <a
+              className="trib-repo mono"
+              href={r.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${r.repo}: ${r.count} merged pull request${r.count === 1 ? '' : 's'}`}
+            >
               {r.repo.split('/')[1]}
             </a>
-            <span className="trib-n mono">{r.count}</span>
+            {counts ? <span className="trib-n mono">{r.count}</span> : null}
           </li>
         ))}
       </ul>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
+import { ViewTransition } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Nav } from '@/components/Nav';
@@ -135,7 +136,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <WaterStage />
         <Nav />
-        <div className="shell">{children}</div>
+        <div className="shell">
+          {/* Route changes: the old page lifts away, the new one settles in.
+              The water underneath is not part of the swap and keeps running. */}
+          <ViewTransition default="page">{children}</ViewTransition>
+        </div>
         <Runtime />
         {/* These endpoints exist only on Vercel; elsewhere they would 404. */}
         {process.env.VERCEL ? <Analytics /> : null}

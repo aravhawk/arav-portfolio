@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ViewTransition } from 'react';
 import { Ending } from '@/components/ending/Ending';
 import '@/app/home.css';
 import '@/app/pages.css';
@@ -6,6 +7,8 @@ import '@/app/pages.css';
 interface HeadProps {
   label: React.ReactNode;
   title: string;
+  /** Shared-element name: the title travels from the link that opened it. */
+  vt?: string;
   /** A sentence-length title (a post) set smaller than a name. */
   titleLong?: boolean;
   lead?: React.ReactNode;
@@ -30,7 +33,13 @@ export function PageShell({ head, children, note, feature }: { head: HeadProps; 
               </Link>
             ) : null}
             <p className="label page-label">{head.label}</p>
-            <h1 className={`display page-title${head.titleLong ? ' page-title-long' : ''}`}>{head.title}</h1>
+            {head.vt ? (
+              <ViewTransition name={head.vt} share="title" default="none">
+                <h1 className={`display page-title${head.titleLong ? ' page-title-long' : ''}`}>{head.title}</h1>
+              </ViewTransition>
+            ) : (
+              <h1 className={`display page-title${head.titleLong ? ' page-title-long' : ''}`}>{head.title}</h1>
+            )}
             {head.lead ? <p className="lead page-lead">{head.lead}</p> : null}
           </div>
           <div className="page-head-pool" data-bed="head" data-basin>

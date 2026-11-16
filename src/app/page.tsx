@@ -19,7 +19,7 @@ function Copy({ p, children }: { p: Project; children?: React.ReactNode }) {
     <div className="beat-copy">
       <p className="label beat-label" data-reveal="fade">
         <span>{p.n}</span>
-        <span>{p.kicker}</span>
+        {p.kicker ? <span>{p.kicker}</span> : null}
       </p>
       <h2
         className="display beat-name"
@@ -65,7 +65,7 @@ export default async function Home() {
         <section className="say wrap" aria-label="What I do">
           <Statement
             className="statement"
-            text="I build agents that break software before attackers do, and the tools developers run every day."
+            text="Agents that break software before attackers do. Tools developers run daily."
           />
         </section>
 
@@ -104,7 +104,7 @@ export default async function Home() {
                 asOf={formatAsOf(m.mergedPrs.total.asOf)}
                 what="merged pull requests in total"
               />{' '}
-              merged in all.{' '}
+              in all.{' '}
               <LiveNumber
                 className="mono"
                 value={m.contributions.total.value}
@@ -154,7 +154,7 @@ export default async function Home() {
                 asOf={formatAsOf(m.ollama.total.asOf)}
                 what="pulls of my open models on Ollama"
               />
-              <span className="title beat-unit">pulls of four open models</span>
+              <span className="title beat-unit">pulls, four open models</span>
             </h2>
             <Link className="go" href="/work/ollama" aria-label="Open the open models" data-reveal style={{ '--i': 2 } as React.CSSProperties}>
               <Arrow />
@@ -207,17 +207,17 @@ export default async function Home() {
               ))}
             </ul>
             <p className="lead into-next" data-reveal>
-              Next: a company people rely on, a research paper, and code in the tools you open every day.
+              Next: a company, a research paper, and code in tools you open daily.
             </p>
             <Link className="btn" href="/work" data-reveal>
-              See all work <Arrow />
+              All work <Arrow />
             </Link>
           </div>
           <div className="into-lane" data-bed="feat:pass" />
         </section>
         <div className="delta" data-bed="delta" aria-hidden="true" />
       </main>
-      <Ending variant="full" note={`Numbers read ${formatAsOf(m.retrievedAt)}`} />
+      <Ending variant="full" />
     </>
   );
 }

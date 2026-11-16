@@ -127,8 +127,8 @@ export const PROJECTS: Project[] = [
     slug: 'kilo-bench',
     n: '03',
     name: 'Kilo Bench',
-    kicker: 'Hackathon winner',
-    line: 'Model benchmarking inside Kilo Code. Won "Kilo - For Devs, By Devs" at DeveloperWeek 2026.',
+    kicker: 'DeveloperWeek 2026',
+    line: 'Model benchmarking in Kilo Code. Won "Kilo - For Devs, By Devs".',
     summary:
       'Kilo Bench is a benchmarking feature built into Kilo Code. It reads your workspace, writes coding challenges that fit your actual codebase, runs the models you pick through them, and tells you which one works best for your code. It won the prize category "Kilo - For Devs, By Devs" at the DeveloperWeek 2026 Hackathon.',
     how: [
@@ -174,7 +174,7 @@ export const PROJECTS: Project[] = [
     slug: 'agent-bridge',
     n: '04',
     name: 'Agent Bridge',
-    kicker: 'Open source, Apache 2.0',
+    kicker: 'Apache 2.0',
     line: 'One inbox between an OpenAI Dot and a Grok Bot. Messages are data, never permission.',
     summary:
       'Agent Bridge connects an OpenAI Dot to a Grok Bot. It is a self hosted MCP inbox for one owner who wants the two to exchange messages, status updates and handoff requests in both directions without copying context between chats.',
@@ -246,8 +246,8 @@ export const PROJECTS: Project[] = [
     slug: 'cc-switch',
     n: '06',
     name: 'cc\u2011switch',
-    kicker: 'npm, MIT',
-    line: 'One command moves Claude Code between Anthropic and open model providers.',
+    kicker: '',
+    line: 'One command switches Claude Code between providers.',
     summary:
       'cc-switch is a profile manager for Claude Code. Keep a profile for your Claude subscription, one for Kimi, one for a local Ollama model, one for work on Bedrock, and move between them without editing settings.json by hand.',
     how: [
@@ -280,7 +280,7 @@ export const PROJECTS: Project[] = [
     n: '07',
     name: 'TensorPoW',
     kicker: 'Research',
-    line: 'Proof of work built for GPUs, on its way to a full research paper.',
+    line: 'GPU native proof of work, becoming a research paper.',
     summary:
       'TensorPoW is the reference implementation of a GPU native proof of work protocol. It is built around deterministic INT8 tensor computation and a fruit and anchor block structure designed so different backends verify the same consensus. I am turning it into a full research paper.',
     how: [
@@ -309,8 +309,8 @@ export const PROJECTS: Project[] = [
     slug: 'rydar',
     n: '08',
     name: 'RydAR',
-    kicker: 'iPhone, built with collaborators',
-    line: 'An iPhone co-pilot for tight bends in Arkansas, plus a public curve map.',
+    kicker: '',
+    line: 'An iPhone co-pilot for tight bends in Arkansas.',
     summary:
       'RydAR is an iPhone co-pilot for tight bends in Arkansas, and a public map of those bends at rydar.org. I built it with collaborators.',
     how: [
@@ -453,12 +453,12 @@ export const ARCHIVE: ArchiveEntry[] = [
 ];
 
 export const INTERESTS = [
-  'AI agents and evals',
-  'Machine learning',
+  'Agents and evals',
+  'ML',
   'Security',
-  'GPUs and low level compute',
-  'PCBs and flight computers',
-  'Spaceflight and rocketry',
+  'GPUs',
+  'Flight computers',
+  'Spaceflight',
   'Robotics',
 ];
 

@@ -49,17 +49,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         back: { href: '/work', label: 'Work' },
         label: (
           <>
-            {p.n} / {p.kicker}
+            {p.n}
+            {p.kicker ? ` / ${p.kicker}` : ''}
           </>
         ),
         title: p.name,
+        vt: `title-${p.slug}`,
         lead: p.summary,
         children: lead && lead.kind === 'image' ? <Slab media={lead} priority sizes="(max-width: 860px) 70vw, 26vw" /> : null,
       }}
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
       feature={
         p.slug === 'open-source' ? (
-          <Tributaries repos={m.mergedPrs.byRepo} />
+          <Tributaries repos={m.mergedPrs.byRepo} counts />
         ) : p.slug === 'ollama' ? (
           <Basins models={m.ollama.models} />
         ) : p.slug === 'cc-switch' ? (

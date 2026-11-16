@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { PageShell } from '@/components/PageShell';
 import { getAllPosts } from '@/lib/blog';
@@ -32,7 +33,9 @@ export default function BlogPage() {
                     <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date, 'short')}</time>
                   </span>
                   <span>
-                    <h2>{post.frontmatter.title}</h2>
+                    <ViewTransition name={`post-${post.slug}`} share="title" default="none">
+                      <h2>{post.frontmatter.title}</h2>
+                    </ViewTransition>
                     <p className="body">{post.frontmatter.description}</p>
                   </span>
                   <span className="row-go" aria-hidden="true">

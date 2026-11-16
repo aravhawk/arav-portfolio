@@ -78,6 +78,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </>
         ),
         title: post.frontmatter.title,
+        vt: `post-${slug}`,
         titleLong: true,
         lead: post.frontmatter.description,
       }}

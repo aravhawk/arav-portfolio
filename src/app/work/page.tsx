@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { PageShell } from '@/components/PageShell';
 import { ArchiveList } from '@/components/work/ArchiveList';
@@ -44,7 +45,9 @@ export default async function Work() {
             <li key={p.slug}>
               <Link className="row" href={`/work/${p.slug}`}>
                 <span className="label">{p.n}</span>
-                <span className="row-name">{p.name}</span>
+                <ViewTransition name={`title-${p.slug}`} share="title" default="none">
+                  <span className="row-name">{p.name}</span>
+                </ViewTransition>
                 <span className="row-line">
                   {p.line}
                   {stat[p.slug] ? <small>{stat[p.slug]}</small> : null}

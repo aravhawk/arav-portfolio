@@ -246,8 +246,12 @@ export function Ending({ variant = 'full', note }: Props) {
           </div>
           <div className="ending-foot label">
             <span>
-              <Link href="/work">Work</Link>
-              <Link href="/blog">Writing</Link>
+              {variant === 'band' ? (
+                <>
+                  <Link href="/work">Work</Link>
+                  <Link href="/blog">Writing</Link>
+                </>
+              ) : null}
               <a href="/feed.xml">RSS</a>
               <HapticsSetting />
             </span>

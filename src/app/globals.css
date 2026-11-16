@@ -534,6 +534,68 @@ html[data-js] [data-reveal][data-in] {
   transform: none;
 }
 
+/* ---------- route transitions ---------- */
+
+/* The world (root) is not swapped: only the page above it is. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-old(.page) {
+  animation: vt-out 160ms var(--ease-out) both;
+}
+::view-transition-new(.page) {
+  animation: vt-in 380ms var(--ease-out) 120ms both;
+}
+/* A title travels from the row that opened it to the head of its page. */
+::view-transition-group(.title) {
+  animation-duration: 460ms;
+  animation-timing-function: var(--ease-in-out);
+}
+::view-transition-old(.title),
+::view-transition-new(.title) {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+  object-position: left top;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*) {
+    animation-duration: 120ms;
+  }
+  ::view-transition-old(.page) {
+    animation: vt-fade-out 120ms linear both;
+  }
+  ::view-transition-new(.page) {
+    animation: vt-fade-in 120ms linear both;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* While the bed is being measured, text sits at its resting place. */
 html[data-measuring] [data-reveal] {
   transform: none !important;
