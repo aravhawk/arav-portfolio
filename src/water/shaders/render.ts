@@ -40,6 +40,7 @@ uniform float uQuality;    // 0 low, 1 mid, 2 high
 uniform int uMode;         // 0 colour, 1 effect mask (for the overlap test)
 uniform float uScale;      // how fast the bed falls away: 1 on a desktop, tighter on a phone's narrow channels
 uniform float uPx;         // CSS px per device pixel: the width every edge is blended across
+uniform float uShoal;      // world y where the wide shallows before the ending begin
 uniform float uNight;      // 0 day, 1 night: the dark theme is lit differently, not just recoloured
 
 uniform sampler2D uBedA;
@@ -141,11 +142,6 @@ float focus(vec3 t, float f) {
   return min(1.0 / max(abs(det), 0.16), 4.6);
 }
 
-/** The same lens, signed: zero exactly where the light folds into a caustic line. */
-float fold(vec3 t, float f) {
-  return (1.0 + f * t.x) * (1.0 + f * t.y) - f * f * t.z * t.z;
-}
-
 float landLight(vec3 n) {
   return (uLight.x + uLight.y * max(dot(n, L), 0.0)) / (uLight.x + uLight.y * L.z);
 }
@@ -232,15 +228,14 @@ float iceField(vec2 w, out vec4 it) {
   it = texture(uIceSdf, iuv);
   float low = texture(uIceLow, iuv).r;
   float heat = texture(uHeat, iuv).r;
-  // A melting edge does not thin evenly: it rounds, and the thin parts go
-  // first. The slow noise is on the smooth field only, so it cannot leave
-  // specks behind.
-  // The wear also varies slowly along each stroke (a few stroke widths
-  // long), so a stroke breaks into short rounded lozenges and not into
-  // one long sliver.
-  vec2 q = (w - uIce.xy) / (max(uIceHalf, 1.0) * 3.2);
-  float rough = 0.55 * sin(q.x * 6.283 + 2.0 * sin(q.y * 4.1 + 1.0)) + 0.45 * sin(q.y * 8.2 + 1.6 * sin(q.x * 3.7 + 2.0));
-  return mix(it.r, low, uIceState.z) + uIceState.x * (1.0 + 0.6 * rough) + heat * 26.0;
+  // A melting edge rounds as it wears back: corners go before flats. The
+  // wear is even along a stroke and capped by the engine well inside the
+  // thinnest stroke, so a letter softens but can never break. The rounded
+  // field may only ever take ice away from a corner; it is never allowed
+  // to thin a stroke further than the wear itself does.
+  float soft = mix(it.r, max(it.r, min(low, it.r + uIceState.x)), uIceState.z);
+  // Warmth from the pointer wears it a little more, inside the same cap.
+  return soft + uIceState.x + heat * min(26.0, uIceHalf * 0.14);
 }
 
 void main() {
@@ -380,6 +375,14 @@ void main() {
       vec4 bb = bedAt(pb);
       float sl;
       float depth = bedDepth(min(bb.r, -0.01), sl);
+      // The mouth of the stream is a wide shoal, not a deep lake: sand bars
+      // lie a little under the surface, so the bed and the light on it show
+      // all the way across.
+      float shoalK = smoothstep(uShoal - 30.0, uShoal + 150.0, pb.y);
+      if (shoalK > 0.0) {
+        float bars = texture(uDetail, vec2(pb.x / 2100.0, pb.y / 1300.0)).r;
+        depth = mix(depth, min(depth, 30.0 + 24.0 * bars), shoalK);
+      }
       float dn = clamp(depth / DEEP, 0.0, 1.0);
       float shallow = 1.0 - smoothstep(0.08, 0.5, dn);
 
@@ -440,7 +443,7 @@ void main() {
       float net = 1.0 - smoothstep(0.55, 0.96, dn);
       float shaft = 0.45 + 1.1 * texture(uDetail, R2 * pw / 2300.0 + vec2(0.006, -0.004) * uTime).r;
       vec3 lightOnBed;
-      float nline = 0.0;   // the folds of the net that glow by night
+      float nfil = 0.0;    // how much of the net's light is gathered here, for the night's glow
       if (uQuality > 0.5) {
         vec3 t = mix(texture(uCurv, uv0).rgb, texture(uCurv, uv1).rgb, wphase) * (fa * fineW);
         t += turn(texture(uCurv, wuv2).rgb, R2) * (0.5 * fineW);
@@ -459,18 +462,16 @@ void main() {
           // A touch of dispersion: red focuses a little short, blue a little long.
           c3 = vec3(focus(t, f * 0.93), caust, focus(t, f * 1.07));
         }
-        // By night the net is drawn thin: only the brightest folds show.
         // Where the surface spreads the light the bed is only a little
         // dimmer: the net is bright lines on a calm floor, not an embossing.
         c3 = max(c3, 0.62 + 0.38 * c3);
-        // Threads, not patches: the line where the light folds, a couple of pixels wide, and a faint glow by it.
-        float det = fold(t, f) - 0.22;
-        float fw = fwidth(det);
-        // Where the field is too busy to draw as a line it is left out: no speckle.
-        float thin = (1.0 - smoothstep(0.7, 2.6, abs(det) / (fw + 1e-4))) * (1.0 - smoothstep(0.1, 0.32, fw));
-        nline = (thin + 0.1 * (1.0 - smoothstep(0.0, 0.16, abs(det))))
-          * net * (0.95 - 0.5 * shallow);
-        c3 = mix(c3, 0.34 + max(c3 - 1.5, 0.0) * 0.14, uNight);
+        // By night it is the same net, seen in less light: the same filled
+        // filaments with the same soft falloff, fewer of them (only where
+        // the light is truly gathered) and dimmer. Nothing is thresholded
+        // into a line, so nothing can read as an outline.
+        float gather = clamp((caust - 1.0) / 3.6, 0.0, 1.0);
+        nfil = pow(gather, 1.5) * net * (0.3 + 0.7 * shallow);
+        c3 = mix(c3, 0.36 + (c3 - 0.62) * 0.1, uNight);
         c3 = mix(vec3(shaft), c3, net);
         lightOnBed = uLight.x * 0.9 + uLight.y * direct * shadow * c3;
       } else {
@@ -496,9 +497,11 @@ void main() {
         float sh = texture(uDetail, vec2(pw.x + pw.y * 0.45, pw.y * 0.3) / 1100.0 + vec2(0.004, -0.002) * uTime).r;
         water *= (1.0 - 0.42 * deepK * uNight) * (1.0 + deepK * (0.15 * swell + 0.55 * (sh - 0.45)));
       }
+      // Night: the net is what lights the water. Cool cyan-white, strongest
+      // in the shallows by the banks, gone in the deep.
+      water += uRim * nfil * 36.0 * uNight * (0.4 + 0.6 * shadow) * (0.45 + 0.55 * trans.g);
       // Meltwater is cold and clear: it brightens and cools the water it
       // runs through. It never fogs it.
-      water += uRim * nline * 23.0 * uNight * (0.4 + 0.6 * shadow) * (0.45 + 0.55 * trans.g);
       // It is drawn, not simulated: fine streaks that lie along the current
       // from the letters to the outlet, and one brighter thread down the
       // first channel. Only light is added, in the water's own hue, so it
@@ -617,10 +620,14 @@ void main() {
     float inner = smoothstep(0.6, 1.6, iceTop) * (1.0 - smoothstep(2.0, 3.6, iceTop));
     col *= 1.0 - 0.4 * inner * max(-toLight, 0.0) * live * stand;
     col *= 1.0 - 0.1 * (1.0 - core) * live;
-    col = mix(scene, col, smoothstep(0.0, uPx, iceTop));
+    // The edge is one device pixel wide at every stage. When the low,
+    // intact letters go into the water they go as a whole: the same crisp
+    // shape, clearing evenly.
+    col = mix(scene, col, smoothstep(0.0, uPx, iceTop) * live);
   } else if (iceSide >= 0.0) {
     // The cut face of the block, seen at a slant: dark blue-green glass
     // with fine vertical streaks, brightest at the top arris.
+    vec3 scene = col;
     vec2 il = ipt - uIce.xy;
     float streak = texture(uGrain, vec2(il.x / 9.0, il.y / 240.0)).g;
     vec3 face = mix(uIceCol * 0.34, uScatter * 2.2 + uIceCol * 0.05, 0.2 + 0.7 * iceSide);
@@ -628,6 +635,7 @@ void main() {
     col = mix(col * 0.5, face, 0.62 + 0.2 * uIceState.w);
     col += uSky * (1.0 - smoothstep(0.0, 0.26, iceSide)) * 0.2 * (0.35 + 0.65 * uLight.y);
     col += (uSky * 0.06 + uRim * uNight) * smoothstep(0.8, 1.0, iceSide);
+    col = mix(scene, col, uIceAlive);
   }
 
   // Display transform and a blue-noise-ish dither against banding.

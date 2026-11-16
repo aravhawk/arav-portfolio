@@ -27,6 +27,8 @@ uniform vec3 uDeep;      // open water body colour, linear
 uniform float uHorizon;  // where the horizon rests, in v (-1 bottom .. 1 top)
 uniform float uSunAz;    // the sun's bearing, radians right of straight ahead
 uniform float uCalm;     // u (0..1) left of which the water is kept calm for the words
+uniform vec2 uNet;       // x: how strongly the net of light shows on the shoal by day
+uniform vec3 uGlow;      // the light the net gives the water by night, linear
 uniform float uNear;     // v (0..1 from the bottom) under which the water is kept calm on a narrow screen; 0 when unused
 
 const float TAN_HALF = 0.3249;   // 36 degree vertical field of view
@@ -41,6 +43,41 @@ float n2(vec2 p) {
   return mix(mix(hash21(i), hash21(i + vec2(1, 0)), f.x), mix(hash21(i + vec2(0, 1)), hash21(i + vec2(1, 1)), f.x), f.y);
 }
 float fbm2(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * n2(p); p = p * 2.03 + 11.7; a *= 0.5; } return s; }
+
+// Gradient noise with a quintic fade: its second derivatives are continuous,
+// which a caustic needs (it is made of them).
+vec2 gdir(vec2 p) { float a = hash21(p) * 6.2831853; return vec2(cos(a), sin(a)); }
+float gn(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+  return mix(mix(dot(gdir(i), f), dot(gdir(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)), u.x),
+             mix(dot(gdir(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)), dot(gdir(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x), u.y);
+}
+/** The surface over the shoal: three layers that slide past each other, as the page's do. */
+float surf(vec2 p, float t) {
+  return 0.62 * gn(p + vec2(0.02, 0.03) * t) + 0.3 * gn(p * 1.83 + 3.1 - vec2(0.05, 0.03) * t) + 0.13 * gn(p * 3.17 + 7.9 + vec2(0.03, -0.06) * t);
+}
+/**
+ * Light on the bed under that surface: one over the Jacobian of where the
+ * refracted light lands, the same lens the page's water uses.
+ */
+float bedNet(vec2 p, float t) {
+  // A slow warp makes the crests meander, so the net is long threads and
+  // not a honeycomb.
+  p = (p + vec2(gn(p * 0.5 + 1.7), gn(p * 0.5 + 5.2)) * 0.7) * 1.0;
+  const float e = 0.045;
+  float c = surf(p, t);
+  float l = surf(p - vec2(e, 0.0), t), r = surf(p + vec2(e, 0.0), t);
+  float u = surf(p - vec2(0.0, e), t), d = surf(p + vec2(0.0, e), t);
+  float ul = surf(p + vec2(-e, -e), t), ur = surf(p + vec2(e, -e), t);
+  float dl = surf(p + vec2(-e, e), t), dr = surf(p + vec2(e, e), t);
+  const float F = 0.07;
+  float hxx = F * (l + r - 2.0 * c) / (e * e);
+  float hyy = F * (u + d - 2.0 * c) / (e * e);
+  float hxy = F * (dr - dl - ur + ul) / (4.0 * e * e);
+  float det = (1.0 + hxx) * (1.0 + hyy) - hxy * hxy;
+  return min(1.0 / max(abs(det), 0.16), 4.6);
+}
 
 struct Sky { vec3 zen; vec3 mid; vec3 hor; vec3 band; vec3 sun; float haze; };
 
@@ -213,25 +250,63 @@ void main() {
     // From straight above it is still the page's water: the same colour, the
     // same net of light on the bed. It gives way as the camera comes down.
     float down = 1.0 - e;
-    // The page's open water is deep and clear: no net on the bed out here,
-    // only the slow, broad light it has in its own lake.
-    float broad = fbm2(q * 0.22 + vec2(tt * 0.05, -tt * 0.03));
-    vec2 gs = vec2(n2(q * 0.9 + vec2(tt * 0.4, 0.0)) - 0.5, n2(q * 0.9 + 5.0 - vec2(0.0, tt * 0.4)) - 0.5);
     float topK = down * down;
-    // Its ripples are seen the way the page's are: one face lighter, one
-    // darker. They are what shows the look lifting.
-    float rip = clamp((gs.x * 0.6 + gs.y * 0.8) * 0.5 + (g.x * 0.6 + g.y * 0.8) * 1.2, -0.14, 0.18) * (1.0 - smoothstep(0.72, 1.0, vUv.y) * (1.0 - uPre)) / (1.0 + dist * 0.012);
-    body = mix(body, uShallow * (0.88 + 0.26 * broad) * (1.0 + rip), topK);
+    if (topK > 0.002) {
+      // The page's water runs out here over a wide shoal, so this is the
+      // same water: the same colour, the same net of light on the bed (one
+      // lens focus of a summed surface, as the page computes it), the same
+      // slow drift down the page. The net lies on the bed in the world, so
+      // as the look lifts it is seen receding toward where the horizon
+      // will be. It gives way as the camera comes down.
+      float bars = fbm2(q * 0.22 + vec2(tt * 0.05, -tt * 0.03));
+      vec2 gs = vec2(n2(q * 0.9 + vec2(tt * 0.4, 0.0)) - 0.5, n2(q * 0.9 + 5.0 - vec2(0.0, tt * 0.4)) - 0.5);
+      // Its ripples are seen the way the page's are: one face lighter, one
+      // darker.
+      float rip = clamp((gs.x * 0.6 + gs.y * 0.8) * 0.5 + (g.x * 0.6 + g.y * 0.8) * 1.2, -0.14, 0.18) / (1.0 + dist * 0.012);
+      // Far off the net is finer than a pixel: it eases out before it can shimmer.
+      float reach = 1.0 - smoothstep(16.0, 46.0, dist);
+      float c = 1.0;
+      float glow = 0.0;
+      if (reach > 0.0) {
+        c = bedNet(q + vec2(0.0, uTime * 0.2 * (1.0 - 0.6 * pre)), uTime);
+        c = max(c, 0.62 + 0.38 * c);
+        float gather = clamp((c - 1.0) / 3.6, 0.0, 1.0);
+        glow = pow(gather, 1.5) * reach;
+        c = mix(1.0, c, reach);
+      }
+      vec3 day = uShallow * (1.0 + uNet.x * (c - 1.0));
+      vec3 night = uShallow + uGlow * glow;
+      vec3 shoal = mix(day, night, uTheme) * (0.9 + 0.2 * bars) * (1.0 + rip);
+      body = mix(body, shoal, topK);
+    }
     fres *= 1.0 - 0.85 * topK;
     col = mix(body, refl, clamp(fres + 0.05 * e, 0.0, 1.0));
     // Sun glitter: a broken streak toward the sun.
     float sd = max(dot(r, s.sun), 0.0);
-    col += vec3(1.0, 0.86, 0.62) * (pow(sd, 900.0) * 14.0 + pow(sd, 90.0) * 0.55) * mix(0.75, 1.0, uTheme) * (1.0 - lee) * e;
+    // By day the broad lobe is held back and the light is carried by a path
+    // of separate glints: wide and sparse near the eye, narrowing to a
+    // thread at the horizon.
+    col += vec3(1.0, 0.86, 0.62) * (pow(sd, 900.0) * 14.0 + pow(sd, 90.0) * mix(0.1, 0.55, uTheme)) * mix(0.75, 1.0, uTheme) * (1.0 - lee) * e;
+    float da = atan(d.x, d.z) - atan(s.sun.x, s.sun.z);
+    float nearK = 1.0 / (1.0 + dist * 0.03);
+    float wide = mix(0.028, 0.11, nearK);
+    float path = exp(-da * da / (wide * wide));
+    vec2 gq = q * vec2(30.0, 15.0);
+    float sp = 0.6 * n2(gq + vec2(tt * 2.0, -tt * 3.0)) + 0.4 * n2(gq * 2.6 - vec2(tt * 3.0, tt));
+    float lo = mix(0.5, 0.68, nearK);
+    float glint = smoothstep(lo, lo + 0.08, sp);
+    // Far off a glint is finer than a pixel: there the path is its even mean.
+    float fine = smoothstep(0.35, 1.1, fwidth(gq.y));
+    glint = mix(glint, 0.3, fine);
+    float day = (1.0 - uTheme) * e;
+    // The sun's reflected bloom is broken by the same facets, so it is not a patch.
+    col = max(col - sunBloom(sd, s) * clamp(fres + 0.05 * e, 0.0, 1.0) * 0.85 * (1.0 - glint) * day, 0.0);
+    col += vec3(1.0, 0.88, 0.7) * path * glint * mix(1.3, 0.95, nearK) * day * (1.0 - lee);
     vec3 air = airAt(atan(d.x, d.z), s);
     // Before the horizon is in frame its light already is: the far water
     // at the top of the picture warms as the look comes up.
     float pre4 = uPre * uPre; pre4 *= pre4;
-    col = mix(col, air, fog * max(e, 0.6 * pre4));
+    col = mix(col, air, fog * max(e, 0.4 * pre4));
     // The same mist, seen on the water side of the line.
     col = mix(col, air, exp(d.y / 0.0035) * 0.6 * e);
     col *= 1.0 - 0.56 * lee;

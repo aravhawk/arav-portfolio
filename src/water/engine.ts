@@ -167,6 +167,8 @@ export class WaterEngine {
    * carries on down the first channel, and the stream's width there.
    */
   meltPath = { x: 0, y: 0, reach: 0, w: 0 };
+  /** World y where the wide shallows before the ending begin; far away when the page has none. */
+  shoalY = 1e9;
   private melt = 0;
   private meltRate = 0;
   /** 0..1: how hard the name is melting right now. It falls to nothing in under a second. */
@@ -449,7 +451,8 @@ export class WaterEngine {
     this.melt = m;
     // Meltwater is only there while the ice is actually melting: it rises
     // with the melt and clears within a second of it stopping.
-    const want = this.iceTex && !this.still ? Math.min(1, this.meltRate * 2.4) : 0;
+    // Once the name is gone there is nothing left to melt.
+    const want = this.iceTex && !this.still && m < ICE_GONE ? Math.min(1, this.meltRate * 2.4) : 0;
     this.meltAct += (want - this.meltAct) * (1 - Math.exp(-dt * (want > this.meltAct ? 9 : 4.2)));
     if (this.meltAct < 0.004 && want === 0) this.meltAct = 0;
     if (m >= 1 && !this.meltDone) {
@@ -488,18 +491,18 @@ export class WaterEngine {
     const half = -ice.minSd;
     // Ice in water melts from its edges. Every length here is a share of
     // the stroke's own half width on this device, so a phone melts the way
-    // a desktop does. For the first 65 percent the name stays bold: it only
-    // softens. After that it is worn back unevenly along each stroke and
-    // pulled a little toward a smoothed copy of itself, so thin parts go
-    // first and what is left are small rounded lozenges, never hairlines. Those
-    // do not shrink to specks: the last thin lenses of ice clear into the
-    // water, and the wear ends past the thickest stroke so nothing is left.
-    const t = Math.max(0, (m - 0.65) / 0.35);
-    const early = 0.1 * Math.pow(Math.min(m / 0.65, 1), 1.4);
-    const erode = half * 0.6 * (early + 1.2 * Math.pow(t, 1.1) + 3.5 * smooth(0.9, 1, m));
-    const round = 0.2 * smooth(0.1, 0.65, m) + 0.12 * smooth(0, 0.6, t);
-    const height = 1 - smooth(0.04, 0.9, m);
-    const alive = m < 1 ? 1 - smooth(0.86, 0.97, m) : 0;
+    // a desktop does. The wear is capped: it stops while every stroke,
+    // the thin ones too, is still one whole stroke, so no letter can ever
+    // break into pieces, thin to a hairline or leave a speck. For the first
+    // 70 percent the name only softens, rounds a little and settles lower.
+    // Then what is left, low clear letters that are still letters, sinks
+    // to the waterline and goes into the water, all of it together and
+    // quickly. Nothing is left after that.
+    const wear = smooth(0, 0.7, m);
+    const erode = half * ICE_WEAR * wear;
+    const round = 0.16 * wear;
+    const height = 1 - 0.5 * smooth(0.04, 0.7, m) - 0.5 * smooth(0.68, 0.8, m);
+    const alive = 1 - smooth(ICE_GOING, ICE_GONE, m);
     // Partly melted ice keeps dripping while the page is held still: rings
     // on the surface, nothing in the water.
     const shed = alive > 0 ? 0.42 * Math.sin(Math.PI * Math.min(1, Math.max(0, m))) ** 0.7 : 0;
@@ -565,7 +568,7 @@ export class WaterEngine {
     gl.uniform1f(w.u.uDt, sub);
     gl.uniform4fv(w.u.uPtr, seg);
     gl.uniform4f(w.u.uIce, ice.rect[0], ice.rect[1], ice.rect[2], ice.rect[3]);
-    gl.uniform3f(w.u.uIceMelt, ice.erode, ice.rect[2] > 0 ? this.meltRate + ice.shed : 0, ice.state[2]);
+    gl.uniform3f(w.u.uIceMelt, ice.erode, ice.rect[2] > 0 ? (Math.min(this.meltRate, 1.2) + ice.shed) * ice.alive : 0, ice.state[2]);
     gl.uniform1f(w.u.uAmbient, 1);
     if (this.iceTex) bindTex(gl, 3, this.iceTex.tex, w.u.uIceSdf);
     if (this.iceLow) bindTex(gl, 5, this.iceLow.tex, w.u.uIceLow);
@@ -658,6 +661,7 @@ export class WaterEngine {
     gl.uniform3fv(r.u.uSky, pal.sky);
     gl.uniform3fv(r.u.uRim, pal.rim);
     gl.uniform3fv(r.u.uMelt, pal.melt);
+    gl.uniform1f(r.u.uShoal, this.shoalY);
     gl.uniform1f(r.u.uPx, 1 / this.dpr);
     gl.uniform1f(r.u.uNight, Math.min(1, Math.max(0, this.theme)));
     gl.uniform3fv(r.u.uIceCol, pal.ice);
@@ -768,6 +772,17 @@ export class WaterEngine {
     gl.getExtension('WEBGL_lose_context')?.loseContext();
   }
 }
+
+/**
+ * The most the name is ever worn back, as a share of half its thickest
+ * stroke. The thinnest strokes of a bold face are a little over half as
+ * thick as the thickest, so this leaves even those more than half their
+ * width.
+ */
+const ICE_WEAR = 0.26;
+/** The share of the melt over which the whole, intact name goes into the water. */
+const ICE_GOING = 0.71;
+const ICE_GONE = 0.82;
 
 /** Speed of the current where the flow map is 1, in CSS px per second. */
 const FLOW_SPEED = 78;

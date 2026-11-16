@@ -212,9 +212,15 @@ function connectOut(c: Ctx, centre: Pt, to: Pt) {
 }
 
 /** Open models: one basin per model, its area set by its pulls. */
-const basins: Feature = (c, r) => {
+const basins: Feature = (c, r, el) => {
   const { b, a } = c;
   const models = within(a, 'model:', r);
+  // The labels are dry stone: a link that would run under one goes round it.
+  const e0 = el.getBoundingClientRect();
+  const labels: Rect[] = [...el.querySelectorAll<HTMLElement>('.model-name')].map((n) => {
+    const q = n.getBoundingClientRect();
+    return { x: r.x + q.left - e0.left, y: r.y + q.top - e0.top, w: q.width, h: q.height };
+  });
   const xin = c.narrow ? c.lane : models.length ? cx(models[0].rect) : cx(r);
   let from = pt(xin, r.y);
   let first = true;
@@ -224,7 +230,21 @@ const basins: Feature = (c, r) => {
     const rad = Math.min(m.rect.w, m.rect.h) / 2;
     b.disc(centre, rad);
     if (first) connectInto(c, from, centre);
-    else b.channel([from, pt(lerp(from.x, centre.x, 0.5), lerp(from.y, centre.y, 0.5) + 18), centre], { width: Math.max(16, Math.min(c.w * 0.62, rad * 1.1)), speed: 0.7 });
+    else {
+      const width = Math.max(16, Math.min(c.w * 0.62, rad * 1.1));
+      const x0 = Math.min(from.x, centre.x) - width;
+      const x1 = Math.max(from.x, centre.x) + width;
+      const inWay = labels.filter((l) => l.y > from.y && l.y + l.h < centre.y && l.x < x1 && l.x + l.w > x0);
+      if (c.narrow && inWay.length) {
+        // Out past the labels' right end, down their side, and back in
+        // under them: the water is one piece and every label keeps a bank.
+        const gap = 14;
+        const xr = Math.max(...inWay.map((l) => l.x + l.w)) + gap + width / 2;
+        const yt = Math.min(...inWay.map((l) => l.y)) - gap;
+        const yb = Math.max(...inWay.map((l) => l.y + l.h)) + gap + width / 2;
+        b.channel([from, pt(xr, Math.max(from.y + 4, yt)), pt(xr, yb), pt(lerp(xr, centre.x, 0.5), lerp(yb, centre.y, 0.5) + 6), centre], { width, speed: 0.7 });
+      } else b.channel([from, pt(lerp(from.x, centre.x, 0.5), lerp(from.y, centre.y, 0.5) + 18), centre], { width, speed: 0.7 });
+    }
     lastRad = rad;
     b.agitate(centre, rad * 0.5, 0.25);
     from = centre;
@@ -387,7 +407,16 @@ function run(c: Ctx, start: Pt | null) {
   if (delta) {
     // The mouth: the stream opens out into the water of the ending.
     if (from) connect(c, from, pt(c.narrow ? c.lane : from.x, delta.y + 8));
-    c.b.pool({ x: -120, y: delta.y, w: a.viewW + 240, h: delta.h + 200 }, 0);
+    // It reaches well under the ending's picture, whose top edge dissolves
+    // into this water while the camera is still coming down.
+    const reach = delta.h + a.viewH * 0.75;
+    c.b.pool({ x: -120, y: delta.y, w: a.viewW + 240, h: reach }, 0);
+    // Out here the water is wide and shallow, and it keeps running: one
+    // broad current down the page, toward the ending.
+    for (const t of [0.2, 0.5, 0.8]) {
+      c.b.channel([pt(a.viewW * t, delta.y + 24), pt(a.viewW * t, delta.y + reach - 10)], { width: a.viewW * 0.42, speed: 0.6, flowOnly: true, straight: true });
+    }
+    c.b.shoal = delta.y;
   } else if (from) {
     c.b.channel([pt(from.x, from.y - 6), pt(from.x, a.docH + 40)], { width: c.w, straight: true });
   }

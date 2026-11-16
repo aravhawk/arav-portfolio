@@ -17,7 +17,12 @@ const g22 = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.pow(v / 255, 2.2));
 };
-const SHALLOW = { light: g22('#2b6473'), dark: g22('#203a41') };
+const SHALLOW = { light: g22('#408d99'), dark: g22('#203a41') };
+/* How strongly the net of light shows on that water by day, and the light
+   it gives the water by night: set so this water and the page's measure
+   the same on screen. */
+const NET_DAY = 0.38;
+const GLOW = [0.25, 1.0, 1.15].map((v) => v * 0.38);
 const DEEP = { light: [0.005, 0.034, 0.085], dark: [0.004, 0.028, 0.05] };
 
 interface Props {
@@ -214,7 +219,9 @@ export function Ending({ note }: Props) {
       lastP = p + pre;
       // The top edge feathers into the page's water while the camera is
       // still coming down, and is a clean edge once it has arrived.
-      const f = Math.round(9 * (1 - Math.min(1, p / 0.45)) * 10) / 10;
+      // It is long while the picture is first coming in, when both are
+      // the same shoal seen from above, so one runs into the other.
+      const f = Math.round((9 + 22 * (1 - pre)) * (1 - Math.min(1, p / 0.45)) * 10) / 10;
       if (f !== feather) {
         feather = f;
         cv.style.setProperty('--feather', `${f}%`);
@@ -258,6 +265,8 @@ export function Ending({ note }: Props) {
       // near, dark reach below it. The sun keeps to the right of them.
       gl.uniform1f(u.uHorizon, narrow ? 0.3 : 0.24);
       gl.uniform1f(u.uSunAz, Math.atan((narrow ? 0.7 : 0.46) * aspect * 0.3249));
+      gl.uniform2f(u.uNet, NET_DAY, 0);
+      gl.uniform3f(u.uGlow, GLOW[0], GLOW[1], GLOW[2]);
       gl.uniform1f(u.uCalm, calm);
       gl.uniform1f(u.uNear, near);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
