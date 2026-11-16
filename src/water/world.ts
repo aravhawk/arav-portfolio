@@ -39,6 +39,17 @@ export const NAME = { x: 1300, y: 1700 };
 export const RIVER: Pt[] = [pt(1480, 2030 + DY), pt(1610, 2520 + DY), pt(1500, 3060 + DY), pt(1690, 3620 + DY), pt(1570, 4180 + DY), pt(1600, 4560 + DY)];
 const RIVER_W = [300, 250, 285, 240, 280, 300];
 
+/** The stream's middle from the lake to open water, for what is drawn along it. */
+export const STREAM: Pt[] = [
+  ...RIVER,
+  pt(1480, 4800 + DY),
+  pt(1250, 5200 + DY),
+  pt(1430, 5560 + DY),
+  pt(1380, 5900 + DY),
+  pt(1300, 6300 + DY),
+  pt(1300, 6700 + DY),
+];
+
 /** The walled basin (the sandbox) and the island in it. */
 export const BASIN: Rect = { x: 1050, y: 4520 + DY, w: 1120, h: 1080 };
 export const ISLAND = { x: 1560, y: 5110 + DY, rx: 290, ry: 170 };

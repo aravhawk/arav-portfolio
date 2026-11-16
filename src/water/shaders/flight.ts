@@ -22,6 +22,7 @@
 
 import { ICE_FIELD } from './ice';
 import { PANO, SUN } from './terrain';
+import { STREAM } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -328,7 +329,11 @@ vec4 bedAt(vec2 w) {
   // easing out past it, where nothing can show it.
   float nearShore = 1.0 - smoothstep(70.0, 130.0, abs(b.r));
   bedShore = 0.0;
-  if (nearShore > 0.0) bedShore = ((textureLod(uGrain, w / 800.0, 0.0).g - 0.5) * 9.0 + (textureLod(uGrain, w / 2600.0 + 0.3, 0.0).b - 0.5) * 22.0) * nearShore;
+  if (nearShore > 0.0) {
+    // Meltwater eats a bank in scallops: bays with a cusp between each pair.
+    float sc = textureLod(uGrain, w / 520.0, 0.0).g;
+    bedShore = ((0.5 - abs(sc * 2.0 - 1.0)) * 26.0 + (textureLod(uGrain, w / 2600.0 + 0.3, 0.0).b - 0.5) * 22.0) * nearShore;
+  }
   b.r += bedShore;
   b.g += bedShore;
   return b;
@@ -418,6 +423,9 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   vec3 blue = mix(vec3(0.3, 0.52, 0.62), vec3(0.2, 0.36, 0.46), uNight);
   vec3 alb = mix(snow, stone, bare);
   alb = mix(alb, blue, glaze * 0.8);
+  // The bank's lip is wet ice all along the water: a blue edge under the white.
+  float lipK = 1.0 - smoothstep(2.0, 13.0 + 6.0 * b.w, sd);
+  alb = mix(alb, blue * 1.15, lipK * 0.85);
   // (Level snow is held at one brightness whatever the sun's height; the
   // low sun is in how strongly every slope answers it. Before dawn the
   // aurora lends the snow a faint green.)
@@ -587,6 +595,19 @@ vec3 iceCut(vec2 p, float s, float tall) {
 
 /* ---------- water ---------- */
 
+/** Where the stream's middle lies at a distance down the valley. */
+float streamX(float y) {
+  const vec2 P[${STREAM.length}] = vec2[${STREAM.length}](${STREAM.map((q) => `vec2(${q.x.toFixed(1)}, ${q.y.toFixed(1)})`).join(', ')});
+  float x = P[0].x;
+  for (int i = 0; i < ${STREAM.length - 1}; i++) {
+    if (y > P[i].y) {
+      float t = clamp((y - P[i].y) / (P[i + 1].y - P[i].y), 0.0, 1.0);
+      x = mix(P[i].x, P[i + 1].x, t * t * (3.0 - 2.0 * t));
+    }
+  }
+  return x;
+}
+
 // 1 over the lake's dark water while the sheet stands round it, by day.
 float gDeep = 0.0;
 
@@ -731,6 +752,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   if (uNight > 0.0) {
     float deepK = smoothstep(0.25, 1.0, dn);
     vec3 pool = vec3(0.006, 0.02, 0.028) * (0.6 + 0.4 * shaft) * mix(1.0, 0.5, deepK);
+    // In the shallows the bed shows, and the sky's light is netted on it.
+    pool += (uBed * vec3(0.02, 0.05, 0.06) * (0.5 + 0.5 * gb.g) + uAurora * 0.1 * (0.35 + nfil * 2.2)) * shallow;
     pool += uAurora * 0.05 * nfil;
 
     water = mix(water, pool, uNight * 0.93);
@@ -748,7 +771,13 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   water *= 1.0 + clamp(wf * 6.5, -0.3, 0.7);
 
   // ---- the surface: a mirror that grows toward the horizon
-  vec3 nr = normalize(vec3(-slope * 0.6, 1.0));
+  // (Before dawn the sky is all there is to see in it, so its ripples are
+  // what make it water: they tilt the mirror more, and most along the view,
+  // which is what draws a reflection out into broken vertical strokes.)
+  vec2 vdw = normalize(dir.xy + 1e-6);
+  vec2 rs = slope * (0.6 + 0.5 * uNight);
+  rs += vdw * dot(slope, vdw) * 0.9 * uNight;
+  vec3 nr = normalize(vec3(-rs, 1.0));
   float cosi = clamp(dot(-dir, nr), 0.0, 1.0);
   float fres = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
   vec3 rf = reflect(dir, nr);
@@ -770,7 +799,12 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // the aurora is what the water and the name show.
   // (Under the sheet the water is stillest, and the name is cut into it:
   // there it is nearly a whole mirror.)
-  fres = mix(fres, max(fres, mix(0.4, 0.94, smoothstep(0.75, 1.0, uGlow) * lakeK)), uNight);
+  // Elsewhere it falls off as water does: a mirror toward the horizon, and
+  // close under the eye dark water you look down into.
+  float sheetK = smoothstep(0.75, 1.0, uGlow) * lakeK;
+  fres = mix(fres, max(fres * 1.25 + 0.05, 0.94 * sheetK), uNight);
+  // A bank stands over the water at its edge: there the mirror shows the dark bank, not the sky.
+  refl *= 1.0 - 0.75 * uNight * (1.0 - smoothstep(4.0, 46.0, -bw.r)) * (1.0 - sheetK);
   // (By day the sheet's own walls stand round that water: less of the pale sky reaches it.)
   gDeep = lakeDay * smoothstep(0.5, 1.0, uGlow);
   fres *= 1.0 - 0.9 * gDeep;
@@ -779,6 +813,40 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // The sun on ripple faces turned toward it: a broad, graded sheen.
   float sd = max(dot(rf, S.sun), 0.0);
   col += S.band * (pow(sd, 240.0) * 1.6 + pow(sd, 40.0) * 0.12) * (1.0 - shade) * (1.0 - uNight);
+  // The current, drawn: fine bright threads that run with the stream,
+  // quicker and whiter in the narrows, and the odd small plate of ice
+  // carried down. Both live in the stream's own frame (along it, across it).
+  float fmag = length(flow);
+  float runK = smoothstep(0.25, 0.6, fmag) * (1.0 - lakeK) * (1.0 - shoalK) * smoothstep(3.0, 16.0, -bw.r) * (1.0 - uEnd);
+  if (runK > 0.0 && footL < 40.0) {
+    float along = pw.y;
+    float across = pw.x - streamX(pw.y);
+    float run = uTime * uFlowSpeed * (0.35 + 0.65 * fmag);
+    float fadeT = 1.0 - smoothstep(4.0, 14.0, footL);
+    // (Thin lines are where a smooth field crosses its middle; drawn long along the stream.)
+    float th = textureLod(uDetail, vec2(across / 150.0, (along - run) / 2600.0), lodFor(footL, 150.0, 512.0)).r;
+    float th2 = textureLod(uDetail, vec2(across / 64.0 + 0.4, (along - run * 1.3) / 1500.0 + 0.27), lodFor(footL, 64.0, 512.0)).r;
+    float quick = smoothstep(0.7, 1.15, fmag);
+    float wT = 0.01 + 0.014 * quick + clamp(footL * 0.004, 0.0, 0.03);
+    float thread = (1.0 - smoothstep(0.0, wT, abs(th - 0.58))) * 0.6 + (1.0 - smoothstep(0.0, wT * 0.8, abs(th2 - 0.4))) * (0.4 + 0.5 * quick);
+    vec3 foam = mix(vec3(0.9, 0.96, 1.0) * (S.amb * 1.2 + S.key * 0.26), vec3(0.3, 0.42, 0.5) * 0.12 + uAurora * 0.16, uNight);
+    col = mix(col, foam, clamp(thread, 0.0, 1.0) * runK * fadeT * (0.42 + 0.3 * quick) * (1.0 - 0.6 * shade));
+    // A plate of ice: a few to a reach, each an angular chip riding the stream.
+    vec2 q = vec2(across / 64.0, (along - run * 0.8) / 120.0);
+    vec2 qi = floor(q);
+    vec2 hq = hash2(qi);
+    if (hq.x > 0.86) {
+      vec2 ql = (fract(q) - 0.5 - (hq - 0.5) * 0.3) * vec2(64.0, 120.0);
+      float ang = hq.y * 6.283;
+      ql = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * ql;
+      float sz = 7.0 + 9.0 * fract(hq.x * 37.0);
+      float chip = max(abs(ql.x) + abs(ql.y) * 0.45, abs(ql.y) * 1.1) - sz;
+      float mid = smoothstep(26.0, 60.0, -bw.r);
+      float aC = (1.0 - smoothstep(-0.8 * foot - 0.4, 0.8 * foot + 0.4, chip)) * runK * mid * (1.0 - smoothstep(6.0, 16.0, footL));
+      vec3 plate = mix(vec3(0.86, 0.92, 0.96) * (S.amb * 1.3 + S.key * 0.3), vec3(0.2, 0.26, 0.34) * 0.2 + uAurora * 0.05, uNight);
+      col = mix(col * (1.0 - 0.35 * (1.0 - smoothstep(-0.5, 5.0, chip)) * runK * mid), plate, aC);
+    }
+  }
   // The last move ends on the ending's own first frame: the page's open
   // water seen from above, in the colour and with the net the ending draws.
   if (uEnd > 0.0) {
