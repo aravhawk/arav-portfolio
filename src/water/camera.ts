@@ -86,7 +86,7 @@ export function flightKeys(aspect: number): Key[] {
         { s: s1 + 1.0, pos: [1010, 3450, 460], aim: [slabAim[0] - 20, slabAim[1] - 60, 40], fov: 50 },
         { s: s2 - 0.55, pos: [1030, 3530, 445], aim: [slabAim[0] - 10, slabAim[1] - 40, 40], fov: 50 },
         // Out past the island's left side, so the slab is never flown through.
-        { s: s2 - 0.1, pos: [1120, 4860, 330], aim: [1330, 5900, 0], fov: 54 },
+        { s: s2 - 0.1, pos: [900, 4900, 330], aim: [1250, 5900, 0], fov: 54 },
         { s: s2 + 0.45, pos: [1380, 5950, 420], aim: [1330, 6700, 0], fov: 50 },
         { s: end, pos: [1300, 7300, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)), 0], fov: 40 },
       ]
@@ -101,8 +101,9 @@ export function flightKeys(aspect: number): Key[] {
         // The basin: slab and island right of centre, the bank at lower left.
         { s: s1 + 1.0, pos: [930, 4110, 300], aim: [slabAim[0] - 250, slabAim[1], 30], fov: 42 },
         { s: s2 - 0.55, pos: [955, 4180, 288], aim: [slabAim[0] - 235, slabAim[1] + 20, 30], fov: 42 },
-        // Out past the island's left side, so the slab is never flown through.
-        { s: s2 - 0.1, pos: [1150, 4880, 240], aim: [1340, 5900, 0], fov: 42 },
+        // Out wide of the island's left side: the slab leaves the frame whole
+        // and at a distance, never as an edge sliding past the lens.
+        { s: s2 - 0.1, pos: [900, 4950, 250], aim: [1250, 5900, 0], fov: 42 },
         { s: s2 + 0.45, pos: [1380, 5950, 300], aim: [1330, 6800, 0], fov: 40 },
         // Open water seen from above: the ending's first frame.
         { s: end, pos: [1300, 7300, 1100], aim: [1300, 7300 + 1100 / Math.tan(rad(57)), 0], fov: 36 },
