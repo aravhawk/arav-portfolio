@@ -13,7 +13,7 @@ What v4 keeps, reworks or kills from the two earlier builds, section by section,
 
 All file paths below are relative to the worktree named in the heading of the table they sit in. Line numbers are from the heads above.
 
-Captures are outside git in `~/.t3/portfolio-redesign-v4/v2v3/<v2|v3>/<browser>-<width>/<page>-<nn>.jpg`. Each folder has a `_frames.json` that maps every file to what it shows, the scroll offset, and the canvas backing-store width at that moment. Contact sheets are in `~/.t3/portfolio-redesign-v4/v2v3/_sheets/`. Frame names quoted in this document (for example `v3/chromium-1440/home-01.jpg`) are relative to `~/.t3/portfolio-redesign-v4/v2v3/`.
+Captures are outside git in `~/.t3/portfolio-redesign-v4/v2v3/<v2|v3>/<browser>-<width>/<page>-<nn>.jpg`. Each folder has a `_frames.json` that maps every file to what it shows, the scroll offset, and the canvas backing-store width at that moment. Contact sheets are in `~/.t3/portfolio-redesign-v4/v2v3/_sheets/`. One Chromium home scroll video per site: `v2/chromium-1440/home-scroll.webm` and `v3/chromium-1440/home-scroll.webm`. Capture folders: `chromium-1440`, `webkit-1440`, `chromium-390`, `webkit-390` under each of `v2/` and `v3/` (1440 x 900 at 2x; 390 x 844 at 3x with touch). Frame names quoted in this document (for example `v3/chromium-1440/home-01.jpg`) are relative to `~/.t3/portfolio-redesign-v4/v2v3/`.
 
 ## Verdict rules
 
@@ -70,8 +70,8 @@ Captures are outside git in `~/.t3/portfolio-redesign-v4/v2v3/<v2|v3>/<browser>-
 |---|---|---|---|
 | /work header | "The index" at 158px in two weights, bottom of a 62svh band over the calm scene, a mono meta row (`src/app/work/page.tsx:15-20`, `globals.css:191-194`) | REWORK | Bold and clean. Keep the scale and the single meta row. |
 | /work sheet | Ink panel with a 14px backdrop blur that covers the world as you scroll (`globals.css:195`) | REWORK | Keep "content sits on its own opaque surface". No backdrop blur over the canvas. |
-| /work search and chips | Underlined search field with a live "n of 52" count, eight pill filters (`src/components/work/Index.tsx:19-31`, `globals.css:200-209`) | REWORK | Merge into v3's archive tools. Keep the live count inside the field. |
-| /work rows | 52 rows: year, name, one line, kind, arrow. Every row is an external link or not a link (`Index.tsx:32-49`) | KILL | "V2's project page was horrible. It literally just had redirects." The row grid itself (5ch, 22ch, 1fr, 15ch, 22px) is clean and feeds the v4 archive. |
+| /work search and chips | Underlined search field with a live "n of 48" count, eight pill filters (`src/components/work/Index.tsx:19-31`, `globals.css:200-209`) | REWORK | Merge into v3's archive tools. Keep the live count inside the field. |
+| /work rows | 48 rows: year, name, one line, kind, arrow. Every row is an external link or not a link (`Index.tsx:32-49`) | KILL | "V2's project page was horrible. It literally just had redirects." The row grid itself (5ch, 22ch, 1fr, 15ch, 22px) is clean and feeds the v4 archive. |
 | Sheet footer | "It's still early." at 100px with the four contact links, text only, on ink (`src/components/shell/Foot.tsx`, `globals.css:270-272`) | KEEP | Keep the idea that every inner page ends on the ending. In v2 it is only the words. In v4 it is a compact version of the real scene. |
 | /blog index | Title, description and date as full-width rows with hairlines (`src/app/blog/page.tsx`, `globals.css:231-238`) | REWORK | Clean. With one post it reads as empty (`v2/chromium-1440/blog-01.jpg`). |
 | Blog post | 52svh title band, then a 68ch column at 18px / 1.68 (`src/app/blog/[slug]/page.tsx`, `globals.css:239-267`) | KEEP | Keep the measure (68ch, 701px at 1440), the 18px body, the spacing scale inside prose and the flare-underlined links. New type. Blog content and editor are untouched. |
@@ -145,14 +145,21 @@ Evidence for the KILL. All frames are in `v3/chromium-1440/` unless noted; the s
 | `home-11.jpg` to `home-14.jpg` | The merge form and then the pane cover the end of "source". |
 | `home-18.jpg` to `home-21.jpg` | The bars cover the "ch" in "Bench". |
 | `home-23.jpg` to `home-27.jpg` | The bridge form and the video pane together cover "Bridge". |
-| `home-28.jpg`, `home-29.jpg` | The stack form covers the "84" in "18,284". |
+| `home-28.jpg`, `home-29.jpg` | The stack form sits on the last digits of "18,284". |
 | `home-36.jpg` to `home-39.jpg` | The toggle covers "cc-" and then "itc" in "switch". |
 | `home-41.jpg` to `home-44.jpg` | The lattice covers "rPo" in "TensorPoW". |
 | `home-48.jpg` to `home-52.jpg` | The engine bell covers "rl" in "Merlin". |
 | `home-58.jpg` | The drop covers "ing" in "shipping". |
 | `blog-01.jpg` | The slab covers "lo" in "Blog". |
 | `project-agent-bridge-01.jpg` | A satellite droplet sits on the final "e" of the page title. |
+| `v3/webkit-1440/project-open-source-01.jpg`, `project-kilo-bench-01.jpg`, `project-open-models-01.jpg` | The parked form covers the last letters of three project page titles. |
 | `work-archive-03.jpg` | After the engine gave up, the CSS fallback blob covers the archive filters and the year column. |
+| `v3/webkit-390/home-01.jpg` | Phone hero: the drop covers the middle of both lines of the name. |
+| `v3/webkit-390/work-01.jpg`, `blog-01.jpg` | Phone: the slab covers "rk" in "Work" and "og" in "Blog". |
+| `v3/webkit-390/project-merlin-control-01.jpg` | Phone: the form sits on the "t" of the page title. |
+| `v3/webkit-390/home-58.jpg` | Phone: a droplet sits inside "software" in the closing line. |
+
+The first critique of v3 already reported this ("Glass crossed titles and the 18,284 figure at rest; on mobile it buried them") and it was repositioned beat by beat. It cannot be fixed by repositioning, because the concept is a body that refracts the type it sits on. v4's rule has to be structural: the effect and the text never share pixels.
 
 ## Dossier A: the v2 ending screen
 
@@ -289,7 +296,7 @@ Sky key at the end of the page (`engine.ts:40`), linear colour before tone mappi
 | Ridges | three rings at radius 9000, 6800 and 5000, heights 950, 620 and 330, darkness 0.5, 0.72 and 0.9; five octaves of ridged noise; each ring drops to 22% height where the sun comes up, which is what opens the bright gap; haze at the base | `engine.ts:79-97`, `shaders.ts:53-74` |
 | Water | three.js `Reflector` mirror at 0.85 of the canvas size (0.6 on phones); two crossing noise fields offset the reflection, calmer with distance; fresnel `0.34 + 0.66 * (1 - V.y)^3`; a faint cellular salt crust where you look down; haze `1 - exp(-dist * 0.00022)` to the horizon colour | `engine.ts:100-106`, `286-287`, `shaders.ts:89-106` |
 | Light column | 62% of the lights on a curve `[8 + t^1.6 * 330, 0.4 + t^0.8 * 330, -40 - t * 420]`, streaming along its tangent; 20% as exhaust rolling outward on the water; five rings | `formations.ts:409-425` |
-| Camera | field of view 32 degrees; arrives at position (-34, 7, 96) looking at (6, 44, -140), and over the last 0.72 screens of scroll sinks to (-24, 3.2, 86) looking at (8, 38, -200); subject shifted 10% of the width | `beats.ts:44`, `engine.ts:189` |
+| Camera | field of view 32 degrees; arrives at position (-34, 7, 96) looking at (6, 44, -140), and over the last 0.72 screens of scroll sinks toward (-24, 3.2, 86) looking at (8, 38, -200), getting about 86% of the way there before the page ends; subject shifted 10% of the width | `beats.ts:44`, `engine.ts:189` |
 | Bloom | UnrealBloom, strength `0.48 - tod * 0.1` (0.38 here), radius 0.6, threshold 0.95, half-float target | `engine.ts:147-150`, `258` |
 | Final pass | chromatic offset `c * r2 * (0.004 + 0.05 * speed)`, exposure times 1.15, vignette `1 - r2 * 0.85`, ACES, gamma 2.2, grain of plus or minus 0.011 | `shaders.ts:182-192` |
 | Resolution | `min(devicePixelRatio, 1.5, 2600 / longest side)`, fixed for the session. Measured backing store 2160 x 1350 for a 1440 x 900 viewport on a 2x screen, in every frame of every capture | `engine.ts:283` |
@@ -326,7 +333,7 @@ col += (h(vUv * 900.0 + fract(uTime) * 61.0) - 0.5) * 0.022;
 2. From beat 7 the swarm leaves the engine, the camera lifts 16 units in the middle of the flight, and the sky runs from key 0.88 to 1.0. `home-27.jpg` and `home-28.jpg` show the flight.
 3. The beat turns on when `q` passes 7.925 (`Story.tsx:38-45`). The headline wipes in left to right behind a 3px flare bar over 900ms with the in-out curve; the links and the two small links rise 14px and fade in over 700ms starting at 520ms. `ending-enter-01.jpg` catches the bar at the left edge. Leaving is fast: 160 to 180ms.
 4. After arrival nothing changes except: lights stream up the column, the exhaust rolls outward on the water, ripples move the reflection, cloud drifts, lights twinkle. The four rest frames over seven seconds (`ending-01..04`) are nearly identical. The sun does not move.
-5. The last 0.72 screens of scroll lower the camera from 7 to 3.2 units above the water, so the page ends on a slow settle toward the surface, not a stop.
+5. The last 0.72 screens of scroll lower the camera from 7 to about 3.7 units above the water, so the page ends on a slow settle toward the surface, not a stop.
 6. HUD at the end: "08 / 08 First light" left, "First light now" right, bar full.
 7. Hover: only the 1px underline. Focus: the global 2px flare ring. No pressed state on the contact links. The pointer still parts the light column (`ending-hover-07.jpg`).
 
@@ -479,7 +486,7 @@ const rows = useMemo(() => {
 
 The first v3 critic's finding 9 was "Project pages are thin." The review's response: "Not addressed beyond the parked form and shared-element title. Listed as a gap." The closing notes add that project pages "do not have their own scroll choreography". What that means concretely:
 
-- There is very little on them. Bodies are one or two paragraphs: Open models and cc-switch have one sentence each, RydAR has two (`site.ts:177`, `191`, `261-263`). Page heights at 1440 x 900 run from 1,082px (merlin-control) to 1,640px (agent-bridge), so most pages are barely more than one screen and the "next" row is visible on arrival.
+- There is very little on them. Bodies are one or two short paragraphs: Open models, cc-switch and RydAR each have a single paragraph of two or three sentences (`site.ts:177`, `191`, `261-263`). Page heights at 1440 x 900 run from 1,082px (merlin-control) to 1,640px (agent-bridge), so most pages are barely more than one screen and the "next" row is visible on arrival.
 - Only one page has any media (`video?: boolean`, and only Agent Bridge sets it). No screenshots, no diagrams, no code, no before and after. The data model has no field for them.
 - No structure inside the body: no problem, approach, result. `body` is a flat list of strings.
 - Facts are uneven: two rows on merlin-control and RydAR, seven on Open source. Role, dates and stack are not consistent fields, so pages cannot be compared.

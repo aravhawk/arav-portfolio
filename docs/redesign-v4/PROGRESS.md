@@ -15,6 +15,30 @@ unchecked item. Do not restart.
   `content/posts` and `blog-editor` (diff against 9a487fb must stay empty).
 - Captures, traces, specimens and reference material stay outside git.
 
+## Orchestrator guardrail (2026-11-15, binding until the final review)
+
+At 2:30 PM CT the limit auto-resume restarted this thread and all seven
+helpers at once, and eight agents in parallel spent the whole 5-hour window
+in 23 minutes. Rules since then:
+
+1. One task at a time. No `delegate_task`, no background helpers, no
+   subagents of any kind until the final review.
+2. The failed helper "v4 refs: new SOTD sites + Apple" is cancelled
+   (`task_cancel`), and `task_status` on all seven shows none running
+   (checked 2026-11-15, after the guardrail arrived). The SOTD and Apple
+   study is skipped; do not redo it.
+3. Reuse the six finished helpers' outputs. Do not redo references,
+   typography research, metrics, content or carry-over.
+4. At the final review: at most one critic helper, medium effort, nothing
+   else running.
+5. Three review rounds, not five. Per round capture only 390, 768, 1440 and
+   1920 in Chromium. The full cross-browser pass (Chromium, WebKit, Firefox,
+   all widths, touch) runs once, at the end.
+6. Commit and push signed work at each milestone
+   (`git push -u origin redesign/fable-v4b-20261115`, SSH, that branch only,
+   no force-push, no PR, no merge).
+7. Do not change model or effort.
+
 ## Checklist
 
 ### 0. Setup
@@ -28,10 +52,10 @@ unchecked item. Do not restart.
 - [x] Dependencies: lenis, web-haptics 0.0.6, vitest
 
 ### 1. Study
-- [ ] Skills loaded, `skills-evidence.md`
-- [ ] Reference study, `reference-study.md`
-- [ ] v2/v3 carry-over, `carry-over.md`
-- [ ] v3 lag root cause, `perf.md`
+- [~] Skills loaded (taste, Emil set, landing-page, ui-ux-pro-max, apple-design); `skills-evidence.md` owed
+- [~] Reference study: parts 01 and 03 written by helpers; `reference-study.md` index and decision map owed (part 02 skipped by guardrail)
+- [x] v2/v3 carry-over, `carry-over.md`
+- [x] v3 lag root cause in `perf.md` (v4 measurements owed)
 
 ### 2. Design
 - [ ] `concept.md` (3+ concepts, pick)
@@ -39,13 +63,13 @@ unchecked item. Do not restart.
 - [ ] `typography.md` + bake-off + blind ranking + `font-licenses.md`
 
 ### 3. Content and metrics
-- [ ] `content-sources.md` (every number re-pulled, every link checked)
+- [x] `content-sources.md` (every number re-pulled, every link checked)
 - [x] `lib/metrics` + snapshot + refresh script + weekly workflow + tests (191 pass)
-- [ ] `metrics.md`, wire metrics into pages
+- [x] `metrics.md`; metrics wired into home (inner pages in progress)
 
 ### 4. Build
 - [~] Water engine (bed, simulation, shading, tiers done; fallback, tuning owed)
-- [ ] Home (hero, featured beats, interests, more, ending)
+- [~] Home (hero, eight beats, interests, ending) built; tuning owed
 - [ ] /work archive, project detail pages
 - [ ] Blog shell, 404, error, loading states
 - [ ] Theme (system + toggle, no flash), haptics, reduced motion,
@@ -95,3 +119,9 @@ unchecked item. Do not restart.
     `sources/raw`, media in `sources/assets/<project>`. Owed:
     `content-sources.md`, project fact sheets.
   - Rule from here: no more than one background agent at a time.
+- 2026-11-15 15:10 CT. Correction: six of the seven helpers did finish
+  (2:33 to 2:53 PM). On disk and reused: `reference-study/01-...` and
+  `03-...`, `typography.md` (three sections left for me), `metrics.md`,
+  `content-sources.md`, `carry-over.md`, `perf.md` (v4 measurements owed),
+  plus `sources/project-facts.md` outside git. Home page, ending screen and
+  all eight project beds are built; inner pages in progress.

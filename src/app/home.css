@@ -1,0 +1,567 @@
+/* Home. Text lives on land; every feature box is a lane the water owns. */
+
+/* ---------- hero ---------- */
+
+.hero {
+  --hero-top: 232px;
+  position: relative;
+  padding: 0 var(--gutter);
+}
+.hero-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--s-7);
+  height: var(--hero-top);
+  padding: 0 0 26px;
+  max-width: none;
+}
+.hero-role {
+  max-width: 14ch;
+}
+.hero-intro {
+  max-width: 34ch;
+  justify-self: end;
+  color: var(--ink-2);
+}
+.hero-lake {
+  --bed-r: 44px;
+  position: relative;
+  /* The lake runs well past the first screen: the name drifts down it as it
+     melts, so the melt stays in view. */
+  height: calc(176svh - var(--hero-top));
+  min-height: 900px;
+}
+
+.ice {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc((100svh - var(--hero-top)) / 2);
+  transform: translateY(-54%);
+  margin: 0;
+  text-align: center;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: var(--ice-size);
+  font-weight: var(--display-wght);
+  font-variation-settings: 'wdth' var(--display-wdth);
+  line-height: 1;
+  letter-spacing: -0.045em;
+  color: #eef6f9;
+  /* Room for ascenders and descenders so nothing is clipped. */
+  padding: 0.08em 0;
+}
+/* Once the water is running the name is drawn in ice by the canvas. The
+   text stays in the document for assistive tech, selection and search. */
+html[data-water='on'] [data-ice] [data-ice-line] {
+  opacity: 0;
+}
+[data-ice] [data-ice-line] {
+  transition: opacity 600ms var(--ease-out);
+}
+
+/* ---------- statement ---------- */
+
+.say {
+  padding-block: clamp(96px, 16vh, 190px) clamp(72px, 12vh, 150px);
+}
+.say-text {
+  max-width: min(19ch, 58vw);
+  font-size: clamp(2rem, 4.3vw + 0.5rem, 4.6rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 620;
+}
+.say-word {
+  color: var(--ink);
+  opacity: 0.26;
+  transition: opacity 520ms var(--ease-out);
+}
+.say-word[data-lit],
+html:not([data-js]) .say-word {
+  opacity: 1;
+}
+
+/* ---------- beats ---------- */
+
+.beat {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--s-5);
+  align-items: center;
+  padding-block: var(--beat-pad);
+  min-height: 96svh;
+}
+.beat-copy {
+  grid-column: 1 / span 5;
+  grid-row: 1;
+  display: grid;
+  justify-items: start;
+  gap: var(--s-5);
+}
+.beat .feat {
+  grid-column: 7 / span 6;
+  grid-row: 1;
+}
+.beat[data-side='left'] .beat-copy {
+  grid-column: 8 / span 5;
+}
+.beat[data-side='left'] .feat {
+  grid-column: 1 / span 6;
+}
+
+.beat-label {
+  display: inline-flex;
+  gap: 14px;
+}
+.beat-label span:first-child {
+  color: var(--ink);
+}
+.beat-name {
+  /* Padding keeps the reveal from clipping descenders. */
+  padding-bottom: 0.06em;
+  hyphens: none;
+  overflow-wrap: normal;
+}
+.beat-line {
+  max-width: 30ch;
+}
+.beat-figure {
+  display: grid;
+  gap: var(--s-4);
+}
+.beat-unit {
+  max-width: 17ch;
+  color: var(--ink);
+}
+.beat-sub {
+  max-width: 34ch;
+}
+.number-sm {
+  font-size: clamp(3.6rem, 9.4vw + 0.5rem, 10.2rem);
+}
+
+/* The way into a project: one round control, no words. */
+.go {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--land);
+  transition:
+    transform var(--t-press) var(--ease-out),
+    background-color var(--t-fast) ease;
+}
+.go .arrow {
+  width: 18px;
+  height: 18px;
+  transition: transform var(--t-ui) var(--ease-out);
+}
+.go:active {
+  transform: scale(0.94);
+}
+@media (hover: hover) and (pointer: fine) {
+  .go:hover .arrow {
+    transform: translateX(4px);
+  }
+}
+
+/* ---------- live readouts ---------- */
+
+.metric {
+  position: relative;
+  display: inline-block;
+  color: inherit;
+  cursor: help;
+}
+.metric-value {
+  display: inline-block;
+  white-space: nowrap;
+}
+.digit {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
+}
+.number .digit {
+  width: 0.66em;
+}
+.sep {
+  display: inline-block;
+}
+.metric-tip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  padding: 7px 11px;
+  border-radius: var(--r-1);
+  background: var(--ink);
+  color: var(--land);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 480;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 4px, 0) scale(0.97);
+  transform-origin: 0 100%;
+  transition:
+    opacity 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+.metric:focus-visible .metric-tip {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .metric:hover .metric-tip {
+    opacity: 1;
+    transform: none;
+    transition-delay: 160ms;
+  }
+}
+
+/* ---------- features ---------- */
+
+.feat {
+  position: relative;
+  height: clamp(440px, 68svh, 760px);
+}
+
+/* A slab: real media on dry land, with one soft contact shadow. */
+.slab {
+  position: relative;
+  border-radius: var(--r-2);
+  background: var(--land-2);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 26px 50px -30px rgba(4, 16, 22, 0.55);
+  overflow: hidden;
+}
+.slab-media {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.feat-sandbox {
+  display: grid;
+  place-items: center;
+}
+.feat-sandbox .slab {
+  width: 76%;
+}
+
+/* Upstream: labels on the outer bank, tributaries run from them. */
+.tribs {
+  position: absolute;
+  inset: 4% 0 14% 0;
+  display: grid;
+  align-content: space-between;
+  justify-items: start;
+}
+.beat[data-side='right'] .tribs {
+  justify-items: end;
+}
+.trib {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 2px;
+}
+.trib-repo {
+  font-size: 0.8125rem;
+  font-weight: 520;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.trib-n {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+@media (hover: hover) and (pointer: fine) {
+  .trib-repo:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+/* Agent Bridge: two peers and the launch video on the bank between. */
+.peer {
+  position: absolute;
+  width: clamp(120px, 15vw, 230px);
+  aspect-ratio: 1;
+  --bed-r: 50%;
+  border-radius: 50%;
+}
+.peer-a {
+  left: 6%;
+  top: 2%;
+}
+.peer-b {
+  right: 4%;
+  bottom: 0;
+}
+.feat-bridge .slab {
+  position: absolute;
+  right: 0;
+  top: 5%;
+  width: 56%;
+}
+
+/* Open models: basin area follows pulls. */
+.feat-basins {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  gap: 8% 4%;
+  padding: 4% 2%;
+}
+.model {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  width: 100%;
+}
+.model-disc {
+  width: calc(max(54px, var(--d) * min(250px, 38%)));
+  width: max(54px, calc(var(--d) * 15vw));
+  max-width: 250px;
+  aspect-ratio: 1;
+  --bed-r: 50%;
+  border-radius: 50%;
+}
+.model-name {
+  font-size: 0.8125rem;
+  font-weight: 520;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+@media (hover: hover) and (pointer: fine) {
+  .model-name:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+/* cc-switch: the profile switch sits on the bank beside the fork. */
+.feat-fork .switch {
+  position: absolute;
+  left: 0;
+  bottom: 2%;
+}
+.beat[data-side='right'] .feat-fork .switch {
+  left: auto;
+  right: 0;
+}
+.switch {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: repeat(3, 92px);
+  padding: 4px;
+  border-radius: var(--r-pill);
+}
+.switch-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 92px;
+  height: 44px;
+  border-radius: var(--r-pill);
+  background: var(--ink);
+  /* Critically damped: it lands, it does not bounce. */
+  transition: transform 300ms var(--ease-out);
+}
+.switch-opt {
+  position: relative;
+  z-index: 1;
+  height: 44px;
+  font-size: 0.75rem;
+  font-weight: 520;
+  color: var(--ink-2);
+  border-radius: var(--r-pill);
+  transition: color 200ms ease;
+}
+.switch-opt[aria-checked='true'] {
+  color: var(--land);
+}
+.switch-opt:active {
+  transform: scale(0.97);
+}
+
+/* ---------- interests ---------- */
+
+.into {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--s-5);
+  padding-block: var(--beat-pad) clamp(96px, 14vh, 170px);
+}
+.into-copy {
+  grid-column: 1 / span 7;
+  display: grid;
+  justify-items: start;
+  gap: var(--s-6);
+}
+.into-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  max-width: 26ch;
+  font-size: clamp(1.6rem, 2.6vw + 0.6rem, 3rem);
+  line-height: 1.08;
+}
+.into-list li {
+  margin-right: 0.32em;
+}
+.into-list li:not(:last-child)::after {
+  content: '/';
+  margin-left: 0.32em;
+  color: var(--ink-3);
+  font-weight: 300;
+}
+.into-next {
+  max-width: 32ch;
+  color: var(--ink);
+}
+.into-lane {
+  grid-column: 10 / span 2;
+  grid-row: 1;
+  height: 100%;
+}
+/* The mouth: land on the left, open water on the right, where the ending's
+   shoreline will be. */
+.delta {
+  height: 46svh;
+  margin-left: 59.5%;
+}
+
+/* ---------- narrow ---------- */
+
+@media (max-width: 859px) {
+  .hero {
+    --hero-top: 250px;
+  }
+  .hero-top {
+    grid-template-columns: 1fr;
+    align-content: end;
+    gap: var(--s-3);
+    padding-bottom: 20px;
+  }
+  .hero-intro {
+    justify-self: start;
+    max-width: 32ch;
+    font-size: 1rem;
+  }
+  .hero-lake {
+    --bed-r: 26px;
+    height: calc(150svh - var(--hero-top));
+    min-height: 640px;
+  }
+  .ice {
+    font-size: var(--ice-size-stacked);
+    line-height: 0.92;
+    white-space: normal;
+  }
+  .ice [data-ice-line] {
+    display: block;
+  }
+
+  .beat {
+    display: block;
+    min-height: 0;
+    padding-block: clamp(56px, 9vh, 96px);
+  }
+  /* The stream keeps to a lane down the right edge, so copy leaves it room. */
+  .beat-copy {
+    padding-right: 72px;
+    margin-bottom: var(--s-7);
+  }
+  .feat {
+    height: clamp(340px, 52svh, 520px);
+  }
+  .feat-sandbox .slab {
+    width: 80%;
+    margin-right: 12%;
+  }
+  .tribs {
+    inset: 0 auto 8% 0;
+    justify-items: start !important;
+  }
+  .feat-bridge .slab {
+    position: absolute;
+    left: 0;
+    right: auto;
+    top: auto;
+    bottom: 0;
+    width: 62%;
+  }
+  .peer {
+    width: 112px;
+  }
+  .peer-a {
+    left: 4%;
+    top: 0;
+  }
+  .peer-b {
+    right: 22%;
+    top: 22%;
+    bottom: auto;
+  }
+  .feat-basins {
+    padding-right: 76px;
+    gap: 6% 2%;
+  }
+  .model-disc {
+    width: max(48px, calc(var(--d) * 30vw));
+  }
+  .switch {
+    grid-template-columns: repeat(3, 80px);
+  }
+  .switch-thumb {
+    width: 80px;
+  }
+  .feat-fork .switch,
+  .beat[data-side='right'] .feat-fork .switch {
+    left: 0;
+    right: auto;
+    bottom: 0;
+  }
+  .say {
+    padding-right: calc(var(--gutter) + 72px);
+  }
+  .into {
+    display: block;
+  }
+  .into-copy {
+    padding-right: 72px;
+  }
+  .into-lane {
+    display: none;
+  }
+  .delta {
+    height: 34svh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .say-word {
+    opacity: 1;
+    transition: none;
+  }
+  .switch-thumb {
+    transition: none;
+  }
+}

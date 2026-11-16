@@ -8,13 +8,14 @@
  */
 
 import { onFrame } from '@/lib/frame';
+import { haptic } from '@/lib/haptics';
 import { BedPainter, type Rect } from './bed';
 import { WaterEngine, type IceInput } from './engine';
 import { SCENES, type Anchors } from './scenes';
 import { signedDistance } from './sdf';
 
 const TEXT_SELECTOR =
-  'h1,h2,h3,h4,h5,h6,p,li,a,button,dt,dd,figcaption,blockquote,pre,label,time,th,td,summary,input,textarea,select,[data-dry]';
+  'h1,h2,h3,h4,h5,h6,p,li,a,span,button,dt,dd,figcaption,blockquote,pre,code,label,time,th,td,summary,strong,em,input,textarea,select,[data-dry]';
 /** Text is kept this far from any water, in CSS px. */
 export const DRY_PAD = 14;
 
@@ -55,6 +56,18 @@ export function mountWater(root: HTMLElement): StageHandle {
   let docH = 0;
   let built = false;
   let destroyed = false;
+  let pulses: Rect[] = [];
+  let pulseAt = 0;
+  let pulseIdx = 0;
+
+  // The melt finishing is a real event: the name has become the stream.
+  let meltFelt = false;
+  engine.onMelt = (done) => {
+    if (done && !meltFelt) {
+      meltFelt = true;
+      haptic('soft');
+    }
+  };
 
   function measureView() {
     viewW = html.clientWidth;
@@ -169,7 +182,7 @@ export function mountWater(root: HTMLElement): StageHandle {
     const seen = document.querySelectorAll<HTMLElement>(TEXT_SELECTOR);
     for (let i = 0; i < seen.length; i++) {
       const el = seen[i];
-      if (el.closest('[data-chrome],[data-ice],[aria-hidden="true"]')) continue;
+      if (el.closest('[data-chrome],[data-ice],[data-nodry],.sr-only')) continue;
       if (!el.hasAttribute('data-dry') && !hasOwnText(el) && !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) continue;
       const r = docRect(el, sx, sy);
       if (r.w < 2 || r.h < 2) continue;
@@ -178,6 +191,7 @@ export function mountWater(root: HTMLElement): StageHandle {
 
     engine.setBed(painter.finish());
     buildIce(sx, sy);
+    pulses = Array.from(document.querySelectorAll<HTMLElement>('[data-pulse]')).map((el) => docRect(el, sx, sy));
     built = true;
     html.dataset.water = 'on';
   }
@@ -223,8 +237,15 @@ export function mountWater(root: HTMLElement): StageHandle {
 
   const off = onFrame((now) => {
     if (!built) return;
-    const top = engine.tick(now, window.scrollY, viewH);
+    const y = window.scrollY;
+    const top = engine.tick(now, y, viewH);
     canvas.style.transform = `translate3d(0,${top}px,0)`;
+    // Traffic: marked pools take turns sending a ripple while in view.
+    if (pulses.length && now - pulseAt > 1900 && !mqStill.matches) {
+      pulseAt = now;
+      const r = pulses[pulseIdx++ % pulses.length];
+      if (r.y + r.h > y && r.y < y + viewH) engine.splash(r.x + r.w / 2, r.y + r.h / 2, Math.max(12, r.w * 0.12), 0.5);
+    }
   }, 10);
 
   return {

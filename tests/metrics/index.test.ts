@@ -25,7 +25,6 @@ async function load(handler: (url: string) => MockReply): Promise<{ entry: Entry
 
 /** A healthy world where every source reports a little more than `base`. */
 function growingWorld(base: SiteMetrics) {
-  const year = String(new Date().getUTCFullYear());
   return (url: string): MockReply => {
     const parsed = new URL(url);
     if (parsed.host === 'ollama.com') {
@@ -59,7 +58,6 @@ function growingWorld(base: SiteMetrics) {
           : { total_count: base.mergedPrs.total.value + 2, incomplete_results: false, items: [] },
       };
     }
-    void year;
     return undefined;
   };
 }
@@ -148,6 +146,29 @@ describe('@/lib/metrics (Next-facing entry)', () => {
       expect((call.init.headers as Record<string, string>).Authorization).toBeUndefined();
     }
     expect(calls.filter((call) => new URL(call.url).host === 'api.github.com').length).toBeLessThanOrEqual(3);
+  });
+
+  it('a source that fails later falls back to the last good live value, not a lower one', async () => {
+    const base = (await load(() => undefined)).entry.getSnapshotMetrics();
+    let online = true;
+    const healthy = growingWorld(base);
+    const { entry } = await load((url) => (online ? healthy(url) : new Error('offline')));
+
+    const first = await entry.getMetrics();
+    expect(first.npm.allTime).toMatchObject({ value: base.npm.allTime.value + 100, live: true });
+
+    online = false;
+    const second = await entry.getMetrics();
+    expect(second.npm.allTime).toMatchObject({
+      value: base.npm.allTime.value + 100,
+      snapshotValue: base.npm.allTime.value,
+      live: false,
+      asOf: first.npm.allTime.asOf,
+    });
+    expect(second.ollama.total.value).toBe(first.ollama.total.value);
+    expect(second.contributions.total.value).toBe(first.contributions.total.value);
+    expect(second.mergedPrs.total.value).toBe(first.mergedPrs.total.value);
+    expect(second.ollama.total.live).toBe(false);
   });
 
   it('uses GITHUB_TOKEN when it exists, and only for the GitHub API', async () => {

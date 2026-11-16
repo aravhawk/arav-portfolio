@@ -1,25 +1,23 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Arrow } from '@/components/bits';
+import '@/app/home.css';
+import '@/app/pages.css';
+
+export const metadata: Metadata = { title: 'Post not found' };
 
 export default function PostNotFound() {
   return (
-    <main className="min-h-screen bg-[#050505] flex items-center justify-center px-6">
-      <div className="text-center">
-        <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#00F0FF] mb-4 block">
-          404
-        </span>
-        <h1 className="font-display text-5xl md:text-6xl text-[#FAFAFA] mb-4">
-          Post Not Found
-        </h1>
-        <p className="text-[#888888] mb-8 max-w-md mx-auto">
-          This blog post doesn&apos;t exist or has been removed.
-        </p>
-        <Link
-          href="/blog"
-          className="inline-flex items-center gap-2 px-6 py-3 text-xs font-mono uppercase tracking-wider text-[#050505] bg-[#00F0FF] hover:bg-[#00D4E0] transition-colors duration-300"
-        >
-          Back to Blog
+    <main id="main" data-scene="page" className="state wrap">
+      <p className="label">404</p>
+      <h1 className="display">No such post</h1>
+      <p className="lead">That post does not exist, or it is not published.</p>
+      <div className="state-actions">
+        <Link className="btn" href="/blog">
+          All writing <Arrow />
         </Link>
       </div>
+      <div className="state-pool" data-bed="head" data-basin aria-hidden="true" />
     </main>
   );
 }

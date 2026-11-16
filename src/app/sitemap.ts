@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { PROJECTS } from '@/content/projects';
 import { getAllPosts } from '@/lib/blog';
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -24,6 +25,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    {
+      url: 'https://aravjain.dev/work',
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    ...PROJECTS.map((p) => ({
+      url: `https://aravjain.dev/work/${p.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
     ...blogEntries,
   ];
 }

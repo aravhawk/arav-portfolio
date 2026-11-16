@@ -61,26 +61,28 @@ function logOnce(source: string, message: string): void {
   const key = `${source}: ${message}`;
   if (logged.has(key)) return;
   logged.add(key);
-  console.warn(`[metrics] ${key} (showing the snapshot value)`);
+  console.warn(`[metrics] ${key} (showing the last known good value)`);
 }
 
 const loadMetrics = cache(async (): Promise<SiteMetrics> => {
   try {
     const now = new Date();
+    const previous = lastKnownGood;
     const live = await collectLive({
       config: METRICS_CONFIG,
-      snapshot,
+      snapshot: previous,
       fetchImpl,
       init: CACHED_FETCH_INIT,
       now,
       githubToken: process.env.GITHUB_TOKEN ?? null,
     });
     const { snapshot: resolved, status, problems } = resolveMetrics({
-      previous: snapshot,
+      previous,
       live,
       config: METRICS_CONFIG,
       now,
     });
+    lastKnownGood = resolved;
     for (const problem of problems) logOnce(problem.source, problem.message);
     return toSiteMetrics({
       resolved,

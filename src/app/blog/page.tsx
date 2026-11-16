@@ -1,31 +1,55 @@
 import type { Metadata } from 'next';
-import { getAllPosts, getTagsFromPosts } from '@/lib/blog';
-import BlogIndex from '@/components/blog/BlogIndex';
-import Navigation from '@/components/layout/Navigation';
-import Footer from '@/components/layout/Footer';
+import Link from 'next/link';
+import { Arrow } from '@/components/bits';
+import { PageShell } from '@/components/PageShell';
+import { getAllPosts } from '@/lib/blog';
+import { formatPostDate } from '@/lib/dates';
 
 export const metadata: Metadata = {
-  title: 'Blog - Arav Jain',
-  description:
-    'Thoughts on AI agents, security, engineering, and building startups.',
+  title: 'Writing',
+  description: 'Notes on AI agents, evaluation, security and shipping software.',
+  alternates: { canonical: '/blog' },
   openGraph: {
-    title: 'Blog - Arav Jain',
-    description:
-      'Thoughts on AI agents, security, engineering, and building startups.',
+    title: 'Writing · Arav Jain',
+    description: 'Notes on AI agents, evaluation, security and shipping software.',
     type: 'website',
   },
 };
 
 export default function BlogPage() {
-  const posts = getAllPosts().map(({ content: _content, ...rest }) => rest);
-  const tags = getTagsFromPosts(posts);
-
+  const posts = getAllPosts();
   return (
-    <main className="min-h-screen bg-[#050505]">
-      <div className="noise-overlay" />
-      <Navigation />
-      <BlogIndex posts={posts} tags={tags} />
-      <Footer />
-    </main>
+    <PageShell
+      head={{
+        label: 'Writing',
+        title: 'Notes from the work',
+        lead: 'What I learn building agents and the tools around them.',
+      }}
+    >
+      <section className="block" aria-label="Posts">
+        {posts.length ? (
+          <ul className="posts">
+            {posts.map((post) => (
+              <li key={post.slug}>
+                <Link className="post-row" href={`/blog/${post.slug}`}>
+                  <span className="label">
+                    <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date, 'short')}</time>
+                  </span>
+                  <span>
+                    <h2>{post.frontmatter.title}</h2>
+                    <p className="body">{post.frontmatter.description}</p>
+                  </span>
+                  <span className="row-go" aria-hidden="true">
+                    <Arrow />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="empty">Nothing published yet. The first post is on its way.</p>
+        )}
+      </section>
+    </PageShell>
   );
 }
