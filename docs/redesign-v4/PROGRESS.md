@@ -252,4 +252,37 @@ section I, haptics.
 - After K4: review, a fourth and final independent score, then the final
   gates, the remaining docs and the report, whatever the score is. The
   report states the scores as they are.
+- 2026-11-16 06:10 CT. K4 done, reviewed and pushed (`c630b1d`): the frozen
+  lake (the name cut through a sheet of lake ice as live water; the melt
+  is the sheet breaking into floes), runs and pools as different water, a
+  lit dark ground, a larger Kilo Bench image, the light ending's sun path
+  and colour handover, a wandering stream on inner pages, a nav that
+  leaves on scroll down, a wake by shading.
+- 2026-11-16 08:20 CT. K5 done, reviewed and pushed (`5d4be01`): night ice
+  in dark theme (mean ice luminance 0.25, name 3.3 to 1), crisp drifted
+  snow over clear ice in light with a lead of open water at the north
+  shore (name 5.2 to 1), whole round floes that go largest last, no crease
+  or terracing in the stream bed. Kilo caught a frame-time regression of
+  its own (the fracture field cost 33 ms p95 under GPU contention) and
+  fixed it before handing back.
+- 2026-11-16 09:15 CT. Final gates on the K5 build (production, port 3141):
+  perf p95 16.7 to 16.8 ms on all four profiles, tier 0 desktop, one
+  backing size each; Lighthouse desktop 99, 100, 100, 100 and mobile 90,
+  94, 88, 93 (home, /work, project, post), accessibility, best practices
+  and SEO 100 everywhere; cross-browser matrix 92 loads, 0 problems; home
+  197 words; states and haptics wiring pass. Section I re-verified: every
+  canonical and OG URL on arav.pro, no stray aravjain.dev. The OG cards
+  rendered but still drew the first build's look: sent to Kilo in K6.
+- 2026-11-16 09:25 CT. Fourth independent critic: 5.8 of 10
+  (`critic/review-4.md`). Four fresh critics, four builds: 5.5, 5.8, 5.5,
+  5.8. The target of 8.5 is not met and the report says so. Its real,
+  specific findings went to Kilo as K6 (`.tools/briefs/K6-last-fixes.md`):
+  the dark hero's legibility, stepped edges on the ice at 2x, cracks
+  cutting the name, a wake that had become too faint, a screen of plain
+  water after the melt, the dark colour handover into the ending, halos,
+  an empty spinner image, and the OG cards.
+- After K6: review, final build, the full gate set once more (three-browser
+  overlap run, perf, Lighthouse, matrix), a closing score for the record,
+  final screenshots and videos, snapshot refresh, production server on
+  3133, the report.
 

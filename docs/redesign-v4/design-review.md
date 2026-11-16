@@ -111,24 +111,28 @@ see them. The first also ranked the three type systems blind before seeing
 anything else (typography.md). The same ten questions each time; 8.5 was
 defined as "would not look out of place beside the references".
 
-| | Critic 1 (round 5 build) | Critic 2 (round 6 build) | Critic 3 (after K1 to K3) |
-|---|---|---|---|
-| a. Real flowing water, bold and central | 5 | 5.5 | 4.5 |
-| b. Nothing covered or hard to read | 7 | 7 | 6 |
-| c. Nothing soft or low resolution | 6 | 7 | 6.5 |
-| d. Typography | 5 | 6.5 | 6.5 |
-| e. Five-second read | 8.5 | 8 | 7.5 |
-| f. Ending against v2's | 5.5 | 7 | 7.5 |
-| g. Light and dark both first class | 6.5 | 6 | 5.5 |
-| h. Project pages | 6.5 | 5.5 | 4 |
-| i. Phone | 6 | 7 | 6.5 |
-| j. Craft against the references | 4.5 | 5 | 5 |
-| **Overall** | **5.5** | **5.8** | **5.5** |
+| | Critic 1 (round 5 build) | Critic 2 (round 6 build) | Critic 3 (after K1 to K3) | Critic 4 (after K4 and K5) |
+|---|---|---|---|---|
+| a. Real flowing water, bold and central | 5 | 5.5 | 4.5 | 5 |
+| b. Nothing covered or hard to read | 7 | 7 | 6 | 6 |
+| c. Nothing soft or low resolution | 6 | 7 | 6.5 | 5 |
+| d. Typography | 5 | 6.5 | 6.5 | 6.5 |
+| e. Five-second read | 8.5 | 8 | 7.5 | 8 |
+| f. Ending against v2's | 5.5 | 7 | 7.5 | 6 |
+| g. Light and dark both first class | 6.5 | 6 | 5.5 | 4.5 |
+| h. Project pages | 6.5 | 5.5 | 4 | 6 |
+| i. Phone | 6 | 7 | 6.5 | 6 |
+| j. Craft against the references | 4.5 | 5 | 5 | 5 |
+| **Overall** | **5.5** | **5.8** | **5.5** | **5.8** |
 
-Three different agents scored three different builds, so the columns are
+Four different agents scored four different builds, so the columns are
 not a controlled series: critic 3's 4 for project pages, for instance,
 rests on a capture of mine that showed only the first and last screen of
-each page. What the three have in common is the useful part.
+each page, and critic 4 reported that its tooling cut the brief short and
+could not open four of the reference images. What they have in common is
+the useful part, and so is the plain fact of the bottom row: **four
+independent scores between 5.5 and 5.8, against a target of 8.5.** The
+build did not reach the target.
 
 What all three said, in their words:
 
@@ -198,4 +202,37 @@ reach of open water was a flat field.
 
 ## Round 8: the frozen lake (after critic 3)
 
-_Kilo task K4, and the fourth score, are recorded below when they are in._
+Three critics had given the same top finding in three builds of it: the
+name as raised letters reads as a text effect whatever it is made of.
+Tuning that was stopped, and the picture was changed (Kilo tasks K4 and
+K5).
+
+| Critic 3's finding | What changed |
+|---|---|
+| The name: "bevelled extrusion ... an offset ghost beneath" | The lake is covered by a sheet of lake ice and the name is cut through it. The letters are live water seen through the ice, with the cut's wall and the sheet's shadow giving it depth. The raised block and its shadow are gone |
+| The melt "thins and cross-fades" | The sheet melts: openings grow from the letters, leads open along the cracks, the sheet becomes a few large floes that shrink and drift to the outlet, then open water |
+| Body water: "teal fill with one repeating caustic texture" | Runs and pools are different water: threads of current in the runs, deep calm pools, a lit edge, no repeated pattern from reach to reach |
+| Dark: "flat charcoal ground" | The dark slab catches light; the water spills a little cool light onto the stone beside it |
+| Light ending: "posterised glints"; "teal pool jump-cuts to purple sea" | A soft sun path; the water's colour travels from the page's teal to the sea across the lift |
+| "A grey band right of the pipe"; "the same pipe on every inner page" | The band is gone; the stream wanders inside its lane |
+| The nav pill over copy as it scrolls under | The nav leaves when the page scrolls down and returns on the way up |
+| The wake as "a thin cartoon outline" | Drawn by shading only |
+
+Sent back after review of K4 (task K5): in dark theme the ice sheet was as
+bright as in light; the light ice read soft, like cloud; the middle of the
+melt had crenellated floes and one cut by a straight line; a crease and
+faint terracing showed in the stream bed.
+
+## Round 9: the last fixes (after critic 4)
+
+Critic 4's worst findings were real and specific, so one more task went
+to Kilo (K6): the dark hero's name "barely legible ... camouflage"
+(now the reverse of the light hero: dark ice, the name glowing as lit
+water); stepped edges on the ice at 2x; cracks cutting the name apart in
+the first half of the melt; a wake that had become too faint; a screen of
+plain water after the melt; an abrupt colour change into the dark ending;
+halos round dark channels; an empty spinner image on the Kilo Bench page.
+The Open Graph cards, which still drew the first build's look, were
+redrawn in the same task.
+
+_K6's result and the closing score are recorded below._
