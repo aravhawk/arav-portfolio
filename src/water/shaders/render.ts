@@ -73,20 +73,30 @@ const vec2 LXY = vec2(-0.6402, -0.7682);           // its direction on the groun
 const vec2 OBLIQUE = vec2(0.0, -0.36);             // the camera's slant
 const float FREEBOARD = ${FREEBOARD}.0;            // the water sits this far below the slab
 const float DEEP = 130.0;
-${ICE_FIELD}
 
 vec2 bedUv(vec2 w) { return w / (uBedSize * uBedDiv); }
+${ICE_FIELD}
 vec2 simUv(vec2 w) { return vec2(w.x / (uSim.z * uSim.y), (w.y - uSim.x) / (uSim.w * uSim.y)); }
 
 /**
  * The bed field with a natural shoreline: slow noise moves the bank in and
  * out by about two px, far inside the 14 px that text keeps from water.
  */
+float bedShore;   // what the last bedAt moved the bank by
 vec4 bedAt(vec2 w) {
   vec4 b = texture(uBedA, bedUv(w));
-  b.r += (texture(uGrain, w / 800.0).g - 0.5) * 7.0;
+  bedShore = (texture(uGrain, w / 800.0).g - 0.5) * 7.0;
+  b.r += bedShore;
+  b.g += bedShore;
   return b;
 }
+
+/**
+ * The distance the bed's depth is read from: the true one at the bank, the
+ * smoothed one away from it, so the floor has no ridge where two banks are
+ * equally near and no facets round a corner.
+ */
+float bedSoft(vec4 b) { return mix(b.r, b.g, smoothstep(3.0, 16.0, -b.r)); }
 
 /**
  * How deep the bed lies at a distance from the bank. It shelves smoothly:
@@ -217,8 +227,10 @@ vec3 fracture(vec2 x) {
     }
   }
   md = 8.0;
-  for (int j = -2; j <= 2; j++) {
-    for (int i = -2; i <= 2; i++) {
+  // The nearest cell's own neighbours are enough for a hairline: the rare
+  // wall they miss is one this picture never draws.
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
       vec2 g = mg + vec2(float(i), float(j));
       vec2 r = g + hash2(n + g) - f;
       vec2 dr = r - mr;
@@ -229,18 +241,34 @@ vec3 fracture(vec2 x) {
 }
 
 /**
- * The top of the sheet: lake ice seen from above. Snow lies on it in long
- * wind-blown streaks; between the streaks the ice is clear and dark, and
- * what is under it shows a little. Pressure cracks cross it: each is a lane
- * of refrozen, clearer ice with one bright seam down its middle.
+ * How much wind-blown snow lies at a point of the sheet (given in the
+ * wind's own frame). Long slow shapes carry the drifts; two finer layers
+ * give their edges a ragged, hard line: snow lying on ice ends at an edge.
+ */
+float snowAt(vec2 wl, float big) {
+  float mid = texture(uGrain, wl / vec2(2300.0, 520.0) + vec2(0.37, 0.11)).g;
+  float fin = texture(uGrain, wl / vec2(980.0, 130.0) + vec2(0.71, 0.29)).g;
+  float tooth = texture(uGrain, wl / vec2(330.0, 50.0) + vec2(0.13, 0.57)).g;
+  return big * 0.48 + mid * 0.33 + fin * 0.14 + tooth * 0.05;
+}
+
+/**
+ * The top of the sheet: lake ice seen from above, in three hard-edged
+ * layers. Clear ice, dark, where you sense the water under it. A thin
+ * dusting of snow over that. And drifts the wind has packed: white, raised
+ * enough to catch the key light on one edge and drop a hairline of shadow
+ * off the other. Pressure cracks cross all of it: a dark fissure with a
+ * refrozen seam on either side.
+ *
+ * By night it is the same sheet under a low cool light: the clear ice is
+ * near black over black water and takes up most of the lake, and the drifts
+ * and seams are the pale accents.
  */
 vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, vec2 scr) {
   // The wind's direction, a little off the page's axes.
   const mat2 RW = mat2(0.9563, -0.2924, 0.2924, 0.9563);
   vec2 wl = RW * il;
   float big = texture(uGrain, wl / vec2(6100.0, 2100.0)).g;
-  float mid = texture(uGrain, wl / vec2(2300.0, 520.0) + vec2(0.37, 0.11)).g;
-  float snow = big * 0.62 + mid * 0.38;
   vec2 huv = vec2(p.x / uView.x, (p.y - uLake.x) / max(uLake.y - uLake.x, 1.0));
   float heat = texture(uHeat, huv).r;
   // Ice is thinner and wetter by the bank, in a lead, under a warm hand
@@ -249,60 +277,98 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, vec2 scr)
   float lane = exp(-cr.x / 8.0);
   float rim = 1.0 - smoothstep(0.0, 22.0, -f0);
   float wet = clamp(uLake.z * 0.75 + heat * 0.9 + bank * 0.35 + rim * uLake.z * 0.6, 0.0, 1.0);
-  float frost = smoothstep(0.4, 0.56, snow - wet * 0.14 - lane * 0.1);
-  frost *= 1.0 - 0.5 * wet;
-  // Relief: the drifts are low, but the key light finds them.
+  // Less snow lies where the ice is wet, and less by night, when the dark
+  // ice is the ground of the picture.
+  float less = wet * 0.14 + lane * 0.06 + uNight * 0.075;
+  float lvl = snowAt(wl, big) - less;
+  float drift = smoothstep(0.512, 0.524, lvl);
+  float dust = smoothstep(0.438, 0.449, lvl) * (1.0 - 0.5 * wet);
+  // The same drift, a little way toward the light: where the two differ is
+  // the drift's lit edge on one side and its shadow on the other.
+  float lip = 0.0;
+  float lee = 0.0;
+  if (uQuality > 0.5) {
+    float toward = smoothstep(0.512, 0.524, snowAt(RW * (il + LXY * 2.2), big) - less);
+    lip = clamp(drift - toward, 0.0, 1.0);
+    lee = clamp(toward - drift, 0.0, 1.0);
+  }
+  // Relief: the drifts are low, but the key light finds them, and a low
+  // light by night finds them more.
   vec2 rel = (texture(uDetail, wl / vec2(1500.0, 420.0)).gb - 0.5) * 0.5;
   vec4 g = texture(uGrain, il / 128.0);
   if (uQuality > 0.5) {
     float hx = texture(uGrain, (il + vec2(0.5, 0.0)) / 128.0).a;
     float hy = texture(uGrain, (il + vec2(0.0, 0.5)) / 128.0).a;
-    rel += vec2(hx - g.a, hy - g.a) * 0.13 * (0.4 + 0.6 * frost);
+    rel += vec2(hx - g.a, hy - g.a) * 0.16 * (0.3 + 0.7 * drift);
   }
+  rel *= 1.0 + 0.9 * uNight;
   vec3 n = normalize(vec3(-rel, 1.0));
   float lit = landLight(n);
-  // Clear ice: dark, blue-green, and deeper in colour where it is thick.
+  // Clear ice: dark, blue-green, and what is under it shows a little: the
+  // depth of the water and, faintly, the light moving on its bed.
   float under = texture(uDetail, p / 700.0 + vec2(0.004, 0.003) * uTime).r;
-  vec3 clear = uIceCol * vec3(0.4, 0.62, 0.7) * (0.74 + 0.3 * under) + uScatter * 1.2;
-  vec3 white = uIceCol * (0.97 + 0.06 * (big - 0.5)) * lit;
-  vec3 col = mix(clear, white, 0.24 + 0.76 * frost);
-  // Crystal grain.
-  col *= 1.0 + (g.r - 0.5) * 0.05 + (g.a - 0.45) * 0.05;
-  if (uQuality > 0.5) {
-    // A second, finer family of hairline cracks, in a few places only.
+  float netU = texture(uDetail, p / 230.0 + vec2(0.007, 0.004) * uTime).a;
+  vec3 clear = uIceCol * mix(vec3(0.21, 0.44, 0.54), vec3(0.085, 0.16, 0.225), uNight) * (0.78 + 0.34 * under) + uScatter * mix(2.0, 0.9, uNight);
+  clear += (uSky * 0.05 * (1.0 - uNight) + uRim * 0.9 * uNight) * smoothstep(0.22, 0.6, netU) * (1.0 - dust);
+  vec3 white = uIceCol * (0.97 + 0.06 * (big - 0.5)) * lit * (1.0 - 0.2 * uNight);
+  // Windows of clear ice are deepest in their middle; the dusting thickens
+  // toward the drift it blew off. Soft tones, under hard edges.
+  clear *= 1.0 - 0.3 * smoothstep(0.438, 0.35, lvl);
+  vec3 col = mix(clear, white, mix(0.42 + 0.34 * smoothstep(0.445, 0.512, lvl), 0.1, uNight) * dust);
+  col = mix(col, white, drift);
+  col = mix(col, uIceCol * 1.07, lip * 0.7);
+  col *= 1.0 - lee * mix(0.2, 0.42, uNight);
+  // Frost grain: fine and sharp on the snow, quieter on clear ice.
+  col *= 1.0 + (g.r - 0.5) * mix(0.03, 0.085, drift) + (g.a - 0.45) * 0.05;
+  if (uQuality > 0.5 && drift < 0.99) {
+    // Hairline cracks inside the clear ice, in a few places only.
     vec3 fr = fracture(il / 210.0 + vec2(3.7, 1.9));
-    float hair = (1.0 - smoothstep(0.0, 0.006, fr.x)) * step(0.62, fr.y) * smoothstep(0.46, 0.56, mid);
-    col = mix(col, uIceCol * 1.04, hair * 0.5);
+    float hair = (1.0 - smoothstep(0.0, 0.006, fr.x)) * step(0.55, fr.y) * (1.0 - drift);
+    col = mix(col, uIceCol * 1.04, hair * mix(0.55, 0.3, uNight));
   }
-  // The seam: refrozen white, brighter as meltwater finds it.
-  float seam = 1.0 - smoothstep(0.5, 1.7, cr.x);
+  // A pressure crack is a real fissure: a hairline of shadow down its
+  // middle, refrozen white on either side of it, brighter as meltwater
+  // finds it, and a faint sheet of light in the ice beside it.
+  float seam = 1.0 - smoothstep(1.5, 2.7, cr.x);
   float plane = exp(-cr.x / 3.2) * (0.5 + 0.5 * step(0.5, cr.y));
-  col = mix(col, uIceCol * (1.06 + 0.1 * uLake.z), clamp(seam * 0.9 + plane * 0.3, 0.0, 1.0));
+  col = mix(col, uIceCol * (1.06 + 0.1 * uLake.z), clamp(seam * 0.92 + plane * 0.3, 0.0, 1.0));
+  col *= 1.0 - mix(0.5, 0.62, uNight) * (1.0 - smoothstep(0.3, 0.85, cr.x));
   // One soft band of the light overhead lies across the sheet; wet and
-  // clear ice carry more of it than snow does.
+  // clear ice carry more of it than snow does. By night it is faint.
   vec3 rf = reflect(dir, normalize(vec3(-rel * 0.3, 1.0)));
-  float gloss = 1.0 - 0.75 * frost;
-  col += env(rf, 1.0) * (0.6 + 2.4 * gloss);
+  float gloss = 1.0 - 0.75 * max(drift, dust * 0.6);
+  float dim = 1.0 - 0.72 * uNight;
+  col += env(rf, 1.0) * (0.6 + 2.4 * gloss) * dim;
   float band = 1.0 - smoothstep(0.0, 0.2, abs(scr.y - 0.5 - (scr.x - 0.5) * 0.07 + rel.y * 0.25));
-  col += uSky * band * band * (0.012 + 0.05 * gloss) * (0.3 + 0.7 * uLight.y);
-  // The lip of a cut: a hair of snow, then the edge itself.
-  col *= 1.0 + 0.07 * (1.0 - smoothstep(0.0, 2.2, -f0));
+  col += uSky * band * band * (0.012 + 0.05 * gloss) * (0.3 + 0.7 * uLight.y) * dim;
+  // The lip of a cut: a hair of snow, then the edge itself. By night it is
+  // the line of light that draws the letters.
+  float edge = 1.0 - smoothstep(0.0, 2.2, -f0);
+  col *= 1.0 + 0.07 * edge;
+  col = mix(col, uIceCol * 1.1, uNight * 0.75 * (1.0 - smoothstep(0.0, 1.5, -f0)));
   // The room's light falls off across the sheet as it does across the slab.
   float fall = length((scr - vec2(0.2, 0.08)) * vec2(1.0, 0.82));
-  col *= 1.0 + 0.12 * (0.42 - smoothstep(0.0, 1.2, fall));
+  col *= 1.0 + mix(0.12, 0.3, uNight) * (0.42 - smoothstep(0.0, 1.2, fall));
   return col;
 }
 
-/** A cut face of the sheet: glass, brightest at its top arris, dark at the waterline. */
-vec3 iceCut(vec2 p, float s) {
+/**
+ * A cut face of the sheet: dark glass with one crisp bright line where the
+ * top turns over (the arris), darker toward the waterline. It is plainly
+ * darker than the top of the sheet, so a small counter reads as a hole with
+ * a wall in it and not as a second outline.
+ * s: 0 at the arris, 1 at the waterline. tall: the face's height on screen px.
+ */
+vec3 iceCut(vec2 p, float s, float tall) {
   float streak = texture(uGrain, vec2(p.x / 7.0, p.y / 300.0)).g;
-  vec3 top = uIceCol * vec3(0.2, 0.5, 0.6) + uScatter * 1.5;
-  vec3 foot = uIceCol * vec3(0.06, 0.24, 0.31) + uScatter * 1.3;
-  vec3 face = mix(top, foot, smoothstep(0.05, 0.9, s)) * (0.8 + 0.4 * streak);
-  // The arris: one crisp bright line where the top of the sheet turns over.
-  face = mix(face, uIceCol * vec3(0.86, 0.97, 1.0), (1.0 - smoothstep(0.035, 0.07, s)) * 0.85);
+  vec3 top = uIceCol * mix(vec3(0.115, 0.34, 0.43), vec3(0.03, 0.09, 0.125), uNight) + uScatter * mix(1.5, 0.8, uNight);
+  vec3 foot = uIceCol * mix(vec3(0.035, 0.15, 0.205), vec3(0.008, 0.03, 0.045), uNight) + uScatter * mix(1.2, 0.6, uNight);
+  vec3 face = mix(top, foot, smoothstep(0.1, 0.92, s)) * (0.8 + 0.4 * streak);
+  // The arris: about one px, whatever the face's height.
+  float w = max(uPx, 0.8) / max(tall, 1.0);
+  face = mix(face, uIceCol * vec3(0.88, 0.98, 1.0) * (1.0 + 0.12 * uNight), (1.0 - smoothstep(w * 0.7, w * 1.5, s)) * 0.92);
   // The waterline: a thin dark wet line at the foot, hard-edged.
-  face *= 1.0 - 0.55 * smoothstep(0.86, 0.9, s);
+  face *= 1.0 - 0.55 * smoothstep(0.84, 0.9, s);
   return face;
 }
 
@@ -341,7 +407,9 @@ void main() {
       if (aCut < 1.0 && uQuality > 0.5) {
         vec2 ps = pf + L.xy / L.z * uIceH * 0.5;
         float fs = iceF(ps, bedAt(ps).r, c1, i1);
-        iceShade = 1.0 - smoothstep(-1.2, 1.2, fs);
+        // A crisp edge, and inside it the shade deepens toward the wall
+        // that throws it: a shadow in a hole, not a band beside an outline.
+        iceShade = (1.0 - smoothstep(-1.0, 1.0, fs)) * (0.5 + 0.5 * smoothstep(0.0, uIceH * 0.5, -fs));
       }
     }
   }
@@ -410,8 +478,22 @@ void main() {
       vec2 duv = pw / DS + warp;
       // A run is water that is going somewhere: the channel's own current.
       float runK = smoothstep(0.5, 0.85, length(flow)) * (1.0 - smoothstep(34.0, 80.0, -bw.r));
-      vec2 uv0 = duv - vel * (ph0 * 2.6) / DS;
-      vec2 uv1 = duv - vel * (ph1 * 2.6) / DS + vec2(0.37, 0.61);
+      // Where the current turns sharply it carries the pattern less far.
+      // Carried the whole way, the pattern is wrung round the turn and shows
+      // as lines fanning out of the inside of a sharp bend.
+      float calm = 1.0;
+      if (runK > 0.01) {
+        // (Looked for along the current, ahead and behind.)
+        vec2 fd = flow / max(length(flow), 0.02) * 28.0;
+        vec2 fa2 = texture(uBedB, bedUv(pw + fd)).rg - 0.5019608;
+        vec2 fb2 = texture(uBedB, bedUv(pw - fd)).rg - 0.5019608;
+        float la = length(fa2), lb = length(fb2);
+        float wring = 1.6 * length(fa2 / max(la, 0.02) - fb2 / max(lb, 0.02)) * smoothstep(0.08, 0.22, min(la, lb));
+        calm = 1.0 - 0.94 * smoothstep(0.3, 1.0, wring);
+      }
+      vec2 carried = flow * uFlowSpeed * calm + (vel - flow * uFlowSpeed);
+      vec2 uv0 = duv - carried * (ph0 * 2.6) / DS;
+      vec2 uv1 = duv - carried * (ph1 * 2.6) / DS + vec2(0.37, 0.61);
       vec4 df = mix(texture(uDetail, uv0), texture(uDetail, uv1), wphase);
       // The wind layers are rotated off the lattice so nothing lines up
       // with the screen axes.
@@ -443,11 +525,11 @@ void main() {
 
       vec3 r = refract(dir, n, 0.75);
       float sl0;
-      float d0p = bedDepth(bw.r, sl0);
+      float d0p = bedDepth(bedSoft(bw), sl0);
       vec2 pb = pw + r.xy / max(-r.z, 0.2) * d0p;
       vec4 bb = bedAt(pb);
       float sl;
-      float depth = bedDepth(min(bb.r, -0.01), sl);
+      float depth = bedDepth(min(bedSoft(bb), -0.01), sl);
       // The mouth of the stream is a wide shoal, not a deep lake: sand bars
       // lie a little under the surface, so the bed and the light on it show
       // all the way across.
@@ -488,7 +570,13 @@ void main() {
       vec4 gs = texture(uGrain, pb / 330.0);
       float marks = sin(dot(pb, vec2(0.34, 0.94)) / 5.2 + gs.g * 11.0);
       vec3 bed = uBed * (1.0 + (gb.r - 0.5) * uGrainAmt.x * 0.5 + (gs.b - 0.42) * 0.17 + (gb.a - 0.4) * 0.12 + marks * 0.06 * shallow);
-      vec3 nb = normalize(vec3(-bb.ba * sl * 0.55, 1.0));
+      // The floor's own slope, from the smoothed field: it eases to level in
+      // the middle of the water instead of turning over along a line.
+      float s0 = bedSoft(vec4(bb.r - bedShore, bb.g - bedShore, 0.0, 0.0));
+      vec2 fall = vec2(bedSoft(texture(uBedA, bedUv(pb + vec2(4.0, 0.0)))), bedSoft(texture(uBedA, bedUv(pb + vec2(0.0, 4.0))))) - s0;
+      fall = fall / 4.0;
+      fall /= max(length(fall), 1.0);
+      vec3 nb = normalize(vec3(-fall * sl * 0.55, 1.0));
       vec3 lr = normalize(vec3(L.xy * 0.72, L.z));
       float direct = max(dot(nb, lr), 0.0) / lr.z;
       // The bank on the light's side shades the bed below it.
@@ -568,9 +656,14 @@ void main() {
         float sh = texture(uDetail, vec2(pw.x + pw.y * 0.45, pw.y * 0.3) / 1100.0 + vec2(0.004, -0.002) * uTime).r;
         water *= (1.0 - 0.42 * deepK * uNight) * (1.0 + deepK * (0.15 * swell + 0.55 * (sh - 0.45)));
       }
+      // Under the night sheet the water body is darker than in the open
+      // stream: the ice keeps the sky off it. It is the dark the lit net
+      // and the lit cut are seen against. It eases off as the sheet opens.
+      float underIce = uNight * lakeK * step(0.5, uIce.z) * (1.0 - smoothstep(0.1, 0.55, uIceA.z));
+      water *= 1.0 - 0.46 * underIce;
       // Night: the net is what lights the water. Cool cyan-white, strongest
       // in the shallows by the banks, gone in the deep.
-      water += uRim * nfil * 36.0 * uNight * (0.4 + 0.6 * shadow) * (0.45 + 0.55 * trans.g);
+      water += uRim * nfil * 36.0 * uNight * (0.4 + 0.6 * shadow) * (0.45 + 0.55 * trans.g) * (1.0 - 0.4 * underIce);
       // Meltwater is cold and clear: it brightens and cools the water it
       // runs through. It never fogs it.
       // It is drawn, not simulated: fine streaks that lie along the current
@@ -644,7 +737,10 @@ void main() {
       // lying along it (they keep their distance from the bank, as drift
       // lines do) and carried down it. Still water has none.
       if (runK > 0.01) {
-        float lane = -bw.r + (reach.a - 0.5) * 9.0;
+        // The threads on one side of a run are not the mirror of the other
+        // side's, so they never close on its middle like a seam.
+        float side = step(0.0, vel.x * bw.a - vel.y * bw.b);
+        float lane = -bw.r + (reach.a - 0.5) * 9.0 + side * 311.0;
         float th = texture(uGrain, vec2(lane / 46.0, 0.37 + reach.r * 0.6)).g;
         float th2 = texture(uGrain, vec2(lane / 19.0 + 0.5, 0.71 + reach.g * 0.6)).g;
         float lines = smoothstep(0.62, 0.72, th) * 0.7 + smoothstep(0.68, 0.76, th2) * 0.45;
@@ -652,8 +748,8 @@ void main() {
         // phases cross-faded so it never stretches.
         vec2 su = pw / 210.0 + warp * 0.3;
         float carry = 5.2 / 210.0;
-        float b0 = texture(uGrain, su - vel * (ph0 * carry)).b;
-        float b1 = texture(uGrain, su - vel * (ph1 * carry) + vec2(0.53, 0.17)).b;
+        float b0 = texture(uGrain, su - carried * (ph0 * carry)).b;
+        float b1 = texture(uGrain, su - carried * (ph1 * carry) + vec2(0.53, 0.17)).b;
         float dash = smoothstep(0.46, 0.62, mix(b0, b1, wphase));
         float thread = min(lines, 1.0) * dash * runK * smoothstep(3.0, 9.0, -bw.r) * smoothstep(0.4, 0.75, length(vec2(dFdx(bw.r), dFdy(bw.r))) / uPx);
         water += (uSky * 0.24 * (1.0 - uNight) + uRim * 3.2 * uNight + water * 0.6) * thread * (1.0 - 0.6 * shade);
@@ -664,7 +760,7 @@ void main() {
   }
 
   // ---- the sheet goes on last
-  if (aCut > 0.0) col = mix(col, iceCut(p, cutS), aCut);
+  if (aCut > 0.0) col = mix(col, iceCut(p, cutS, length(tilt) * uIceH), aCut);
   if (aIce > 0.0) col = mix(col, iceTop(p, il, cr, f0, sd0, dir, scr), aIce);
 
   // Display transform and a blue-noise-ish dither against banding.

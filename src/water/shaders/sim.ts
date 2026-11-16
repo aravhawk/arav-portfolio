@@ -4,7 +4,8 @@
  *
  * Shared layout
  *   bedA  RGBA16F  r: signed distance to the bank in CSS px (negative = water, clamped at 360)
- *                  g: unused, b,a: unit gradient of the distance field
+ *                  g: the same distance, smoothed more the farther from the bank (what the bed's depth is read from),
+ *                  b,a: unit gradient of the distance field
  *   bedB  RGBA8    r,g: flow direction * speed (0.5 centred), b: agitation
  *   wave  RGBA16F  r: surface height, g: its velocity, b,a: height gradient
  *   vel   RGBA16F  r,g: velocity added by the pointer (px/s), b: pressure, a: divergence
@@ -58,6 +59,7 @@ float hash12(vec2 p) {
  */
 export const BED_A = `${HEAD}
 uniform sampler2D uSd;   // R32F, texels are CSS px of signed distance
+uniform float uSoft;     // texels per CSS px for the smoothed copy (0: none wanted)
 void main() {
   ivec2 sz = textureSize(uSd, 0);
   ivec2 p = ivec2(gl_FragCoord.xy);
@@ -71,7 +73,28 @@ void main() {
   g = l > 1e-5 ? g / l : vec2(0.0);
   // A light blur of the distance removes the last stair steps on diagonals.
   float s = (c * 4.0 + S(1, 0) + S(-1, 0) + S(0, 1) + S(0, -1)) / 8.0;
-  o = vec4(s, 0.0, g);
+  // A second copy for the depth of the bed. The distance to the nearest
+  // bank has a ridge wherever two banks are equally near (down the middle
+  // of a run, across a pool, out of every inside corner) and facets round
+  // every outside corner. A bed shaped on it shows each as a line. Averaged
+  // over a width that grows away from the bank, the ridge becomes a round
+  // floor and the facets go; at the bank itself nothing changes.
+  float soft = s;
+  if (uSoft > 0.0) {
+    float rad = clamp(-c * 0.45, 6.0, 44.0) * uSoft / 4.0;
+    float acc = 0.0;
+    float wsum = 0.0;
+    for (int y = -4; y <= 4; y++) {
+      for (int x = -4; x <= 4; x++) {
+        float w = exp(-float(x * x + y * y) / 8.0);
+        ivec2 q = ivec2(floor(vec2(float(x), float(y)) * rad + 0.5));
+        acc += texelFetch(uSd, clamp(p + q, ivec2(0), sz - 1), 0).r * w;
+        wsum += w;
+      }
+    }
+    soft = acc / wsum;
+  }
+  o = vec4(s, soft, g);
 }`;
 
 /** A small Gaussian on a distance field, so its gradient is clean. */

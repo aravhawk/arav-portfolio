@@ -68,7 +68,7 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     sky: [0.62, 0.84, 0.95],
     rim: [0.012, 0.05, 0.058],
     melt: [0.004, 0.04, 0.046],
-    ice: srgb('#B3C8D1'),
+    ice: srgb('#A6BECC'),
     light: [0.16, 0.9, 2.3, 1.5],
     grain: [0.12, 0.12, 0.5],
   },
@@ -124,6 +124,8 @@ export class WaterEngine {
   private bedMeta = { w: 1, h: 1, div: 4 };
   private iceTex: Target | null = null;
   private iceMeta: IceInput | null = null;
+  /** The letters' own box inside their raster: centre x, y and half size, as shares of it. */
+  private iceBox = [0.5, 0.5, 0.5, 0.5];
   private heat: Swap;
   private ready = false;
   private wave: Swap | null = null;
@@ -289,6 +291,7 @@ export class WaterEngine {
     this.bedB = makeTarget(gl, bed.w, bed.h, { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE });
     gl.useProgram(this.p.bedA.prog);
     bindTex(gl, 0, sdTex, this.p.bedA.u.uSd);
+    gl.uniform1f(this.p.bedA.u.uSoft, 1 / bed.div);
     drawTo(gl, this.bedA);
     gl.useProgram(this.p.bedB.prog);
     bindTex(gl, 0, flowTex, this.p.bedB.u.uRaw);
@@ -305,6 +308,21 @@ export class WaterEngine {
     this.iceTex = null;
     this.iceMeta = ice;
     if (!ice) return;
+    // Where the letters themselves lie in the raster (it is padded): the
+    // pool they melt into is shaped on this box.
+    let x0 = ice.w, y0 = ice.h, x1 = 0, y1 = 0;
+    for (let y = 0; y < ice.h; y += 2) {
+      const row = y * ice.w;
+      for (let x = 0; x < ice.w; x += 2) {
+        if (ice.sd[row + x] < 0) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+      }
+    }
+    if (x1 > x0 && y1 > y0) this.iceBox = [(x0 + x1) / 2 / ice.w, (y0 + y1) / 2 / ice.h, (x1 - x0) / 2 / ice.w, (y1 - y0) / 2 / ice.h];
     const sdTex = makeTexture(gl, ice.w, ice.h, {
       internal: gl.R32F,
       format: gl.RED,
@@ -320,6 +338,7 @@ export class WaterEngine {
     this.iceTex = makeTarget(gl, ice.w, ice.h, this.f16());
     gl.useProgram(this.p.bedA.prog);
     bindTex(gl, 0, soft.tex, this.p.bedA.u.uSd);
+    gl.uniform1f(this.p.bedA.u.uSoft, 0);
     drawTo(gl, this.iceTex);
     gl.deleteTexture(sdTex);
     freeTarget(gl, soft);
@@ -468,7 +487,7 @@ export class WaterEngine {
    */
   private iceUniforms(scrollY: number) {
     const ice = this.iceMeta;
-    const none = { rect: [0, 0, 0, 0], a: [0, 0, 0, 0], b: [0, 0, 1, 1], lake: [this.lake.y0, this.lake.y1, 0, 0], h: 1, shed: 0 };
+    const none = { rect: [0, 0, 0, 0], a: [0, 0, 0, 0], b: [0, 0, 1, 1], c: [0, 0, 0, 0], l: [1, 0, 0, 0], k: 1, box: [0, 0, 1, 1], lake: [this.lake.y0, this.lake.y1, 0, 0], h: 1, shed: 0 };
     const m = this.melt;
     if (!ice || !this.iceTex || m >= ICE_GONE) return none;
     // The sheet rides with the camera while it melts, so the melt stays in view.
@@ -477,29 +496,53 @@ export class WaterEngine {
     const half = -ice.minSd;
     const narrow = this.cssW < 860;
     const lakeH = Math.max(1, this.lake.y1 - this.lake.y0);
-    // A few large floes at every width: their size follows the lake.
-    const cell = Math.max(this.cssW * 0.42, lakeH * 0.42);
     // First the sheet only gets wet. Then the letters open from their
     // edges, leads open along the cracks and the sheet lets go of the
-    // banks. Then it is floes: each shrinks to nothing in its own time
-    // (the shader does that), and all of them gather toward the outlet.
+    // banks. Half way, the letters run together into one pool. Then it is
+    // floes: whole rounded islands that shrink, each in its own time (the
+    // shader does that), and all of them gather toward the outlet.
     const wet = smooth(0, 0.15, m);
     const go = smooth(0.15, 0.6, m);
     const late = smooth(0.55, 0.9, m);
     // The name only gets bolder until half way; after that the water it
     // let in takes the ice around it.
-    const open = half * (0.42 * go + 3.5 * smooth(0.5, 0.68, m) + 2.5 * late * late);
+    const poolAt = (t: number) => half * 1.1 * smooth(0.5, ISLANDS, t);
+    const openAt = (t: number) => half * 0.42 * smooth(0.15, 0.6, t) + poolAt(t);
+    const gapAt = (t: number) => (narrow ? 0.55 : 1) * (56 * smooth(0.15, 0.6, t) + 24 * smooth(0.55, 0.9, t));
+    const edgeAt = (t: number) => (narrow ? 26 : 34) + 0.4 * poolAt(t);
+    const pool = poolAt(m);
+    const open = openAt(m);
     const lead = 0.075 * go * go + 0.04 * late;
-    const gap = (narrow ? 0.55 : 1) * (56 * go + 50 * late);
-    const gather = 1 + 1.2 * smooth(0.5, 0.9, m);
+    const gap = gapAt(m);
+    const gather = 1 + 0.35 * smooth(0.5, 0.9, m);
+    // The floes are laid out for the lake, not scattered: when the sheet
+    // has become islands (ISLANDS) there is one open band of ice between the
+    // north shore and the pool the name left. The cells are sized so whole
+    // rows of floes lie in that band and whole columns fit the page, which
+    // is what leaves a few large floes at every width and never a cut one.
+    const drift0 = ISLANDS * this.meltRange * 0.74;
+    const bx = this.iceBox;
+    const bankM = gapAt(ISLANDS) * 1.6 + 8;
+    const poolM = openAt(ISLANDS) + 0.8 * edgeAt(ISLANDS) + 12;
+    const bandTop = this.lake.y0 + bankM;
+    const band = Math.max(80, r.y + drift0 + (bx[1] - bx[3]) * r.h - poolM - bandTop);
+    const cols = Math.max(3, Math.round(this.cssW / (band * 1.2)));
+    const cell = this.cssW / cols;
+    const rows = Math.max(1, Math.floor(band / (cell * 0.95)));
+    const cellH = Math.max(band / rows, cell * 0.95);
+    const phaseY = 0.5 - (bandTop + (0.5 * band) / rows - (r.y + drift0)) / cellH;
     // Partly melted ice keeps dripping while the page is held still.
     const shed = 0.42 * Math.sin(Math.PI * Math.min(1, m / ICE_GONE)) ** 0.7;
     return {
       rect: [r.x, r.y + drift, r.w, r.h],
       a: [open, lead, m, gap],
       b: [this.meltPath.x, this.lake.y1 - lakeH * 0.16, gather, cell],
+      c: [narrow ? 20 : 32, smooth(0.5, 0.55, m), smooth(0.48, 0.56, m), edgeAt(m)],
+      k: Math.max(this.cssW * 0.42, lakeH * 0.42),
+      l: [cellH / cell, (0.2 * band) / rows / cellH, r.x / cell, phaseY],
+      box: [bx[0] * r.w, bx[1] * r.h, bx[2] * r.w, bx[3] * r.h],
       lake: [this.lake.y0, this.lake.y1, wet, 1],
-      h: narrow ? 17 : 26,
+      h: narrow ? 13 : 19,
       shed,
     };
   }
@@ -509,6 +552,11 @@ export class WaterEngine {
     gl.uniform4fv(prog.u.uIce, ice.rect);
     gl.uniform4fv(prog.u.uIceA, ice.a);
     gl.uniform4fv(prog.u.uIceB, ice.b);
+    gl.uniform4fv(prog.u.uIceC, ice.c);
+    gl.uniform4fv(prog.u.uIceBox, ice.box);
+    gl.uniform1f(prog.u.uIceW, this.cssW);
+    gl.uniform1f(prog.u.uIceK, ice.k);
+    gl.uniform4fv(prog.u.uIceL, ice.l);
     gl.uniform4fv(prog.u.uLake, ice.lake);
     bindTex(gl, sdfUnit, (this.iceTex ?? this.grain).tex, prog.u.uIceSdf);
   }
@@ -773,6 +821,8 @@ export class WaterEngine {
 
 /** The melt at which the last floe is gone. The rest of the scroll range is open water. */
 const ICE_GONE = 0.9;
+/** The melt at which the sheet has become separate floes. */
+const ISLANDS = 0.58;
 
 /** Speed of the current where the flow map is 1, in CSS px per second. */
 const FLOW_SPEED = 78;
