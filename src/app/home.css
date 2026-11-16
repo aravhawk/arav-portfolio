@@ -289,6 +289,22 @@ html[data-water='on'] [data-ice] [data-ice-line] {
   width: 76%;
 }
 
+/* Kilo Bench: the results stand on a pier that runs out into the pool. */
+.feat-lanes .slab {
+  position: absolute;
+  right: 0;
+  bottom: 3%;
+  width: 60%;
+}
+/* RydAR: the app stands on the ground the road bends around. */
+.feat-bends .slab {
+  position: absolute;
+  right: 6%;
+  top: 50%;
+  width: 58%;
+  translate: 0 -50%;
+}
+
 /* Upstream: labels on the outer bank, tributaries run from them. */
 .tribs {
   position: absolute;
@@ -366,8 +382,8 @@ html[data-water='on'] [data-ice] [data-ice-line] {
 }
 .model-disc {
   width: calc(max(54px, var(--d) * min(250px, 38%)));
-  width: max(54px, calc(var(--d) * 15vw));
-  max-width: 250px;
+  width: max(64px, calc(var(--d) * 18vw));
+  max-width: 300px;
   aspect-ratio: 1;
   --bed-r: 50%;
   border-radius: 50%;
@@ -378,6 +394,7 @@ html[data-water='on'] [data-ice] [data-ice-line] {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
 }
 @media (hover: hover) and (pointer: fine) {
   .model-name:hover {
@@ -543,7 +560,21 @@ html[data-water='on'] [data-ice] [data-ice-line] {
     gap: 6% 2%;
   }
   .model-disc {
-    width: max(48px, calc(var(--d) * 30vw));
+    width: max(52px, calc(var(--d) * 34vw));
+  }
+  .model-name {
+    font-size: 0.8125rem;
+  }
+  .feat-lanes .slab {
+    left: 0;
+    right: auto;
+    bottom: 3%;
+    width: 68%;
+  }
+  .feat-bends .slab {
+    left: 21%;
+    right: auto;
+    width: 56%;
   }
   .switch {
     grid-template-columns: repeat(3, 80px);

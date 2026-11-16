@@ -49,6 +49,7 @@ export function ProfileSwitch() {
           aria-checked={active === i}
           tabIndex={active === i ? 0 : -1}
           className="switch-opt mono"
+          data-bed={`branch:${i}`}
           onClick={() => pick(i)}
           onKeyDown={(e) => onKey(e, i)}
         >

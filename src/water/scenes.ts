@@ -46,7 +46,25 @@ interface Ports {
 
 type Feature = (c: Ctx, r: Rect, el: HTMLElement) => Ports;
 
-const streamW = (viewW: number) => Math.round(Math.max(30, Math.min(84, viewW * 0.055)));
+/**
+ * The main stream: about a twelfth of a desktop viewport. A narrow layout
+ * keeps the slim lane it had, so the stream never takes reading width.
+ */
+const streamW = (viewW: number) =>
+  viewW < 860 ? Math.round(Math.max(30, Math.min(42, viewW * 0.055))) : Math.round(Math.max(72, Math.min(130, viewW * 0.085)));
+
+/** A stream is never one width for long: it swells and narrows a little. */
+const vary = (w: number): number[] => [w, w * 1.1, w * 0.95, w * 1.07, w];
+
+/** The rect of a child of a feature, in the same world space as the feature's own rect. */
+function inner(el: HTMLElement, r: Rect, sel: string): Rect | null {
+  const s = el.querySelector<HTMLElement>(sel);
+  if (!s) return null;
+  const e = el.getBoundingClientRect();
+  const q = s.getBoundingClientRect();
+  if (q.width < 2 || q.height < 2) return null;
+  return { x: r.x + q.left - e.left, y: r.y + q.top - e.top, w: q.width, h: q.height };
+}
 
 function within(a: Anchors, prefix: string, r: Rect): Anchor[] {
   return a.all(prefix).filter((x) => cy(x.rect) >= r.y - 2 && cy(x.rect) <= r.y + r.h + 2);
@@ -57,14 +75,14 @@ function connect(c: Ctx, from: Pt, to: Pt, width = c.w) {
   const { b } = c;
   if (to.y <= from.y + 4) return;
   if (Math.abs(to.x - from.x) < 10) {
-    b.channel([pt(from.x, from.y - 6), pt(to.x, to.y + 6)], { width, straight: true });
+    b.channel([pt(from.x, from.y - 6), pt(to.x, to.y + 6)], { width: vary(width), straight: true });
     return;
   }
   const mid = (from.y + to.y) / 2;
   const k = Math.min(38, (to.y - from.y) / 5);
   b.channel(
     [pt(from.x, from.y - 6), pt(from.x, mid - k * 1.6), pt(lerp(from.x, to.x, 0.5), mid), pt(to.x, mid + k * 1.6), pt(to.x, to.y + 6)],
-    { width },
+    { width: vary(width) },
   );
 }
 
@@ -104,7 +122,9 @@ const tributaries: Feature = (c, r) => {
     const tw = Math.round((c.narrow ? 11 : 15) + Math.sqrt(n) * (c.narrow ? 9 : 12));
     const y = cy(t.rect);
     // The head of each tributary sits just past its label.
-    const hx = leftSide ? t.rect.x + t.rect.w + 34 : t.rect.x - 34;
+    // It keeps more than a label's height of dry stone between the two.
+    const gap = (c.narrow ? 24 : 30) + tw * 0.5 + 5;
+    const hx = leftSide ? t.rect.x + t.rect.w + gap : t.rect.x - gap;
     const dir = xm > hx ? 1 : -1;
     const span = Math.abs(xm - hx);
     b.disc(pt(hx, y), tw * 0.5 + 5);
@@ -117,29 +137,31 @@ const tributaries: Feature = (c, r) => {
   return { in: top, out: bot };
 };
 
-/** Kilo Bench: one header trough, parallel flumes of different reach. */
+/**
+ * Kilo Bench: one wide pool, with the benchmark's real results standing in
+ * it on a pier that runs out from the bank. The stream fills the pool and
+ * leaves by the far corner.
+ */
 const lanes: Feature = (c, r) => {
   const { b } = c;
-  const n = c.narrow ? 4 : 5;
-  const xin = c.narrow ? c.lane : r.x + r.w * 0.12;
-  const reach = [0.52, 0.86, 0.38, 0.7, 1];
-  const padX = r.w * 0.1;
-  const lw = Math.max(22, Math.min(54, (r.w - padX * 2) / (n * 1.9)));
-  const y0 = r.y + lw * 0.9;
-  const xs: number[] = [];
-  for (let i = 0; i < n; i++) xs.push(r.x + padX + ((r.w - padX * 2) * (i + 0.5)) / n);
-  // On narrow layouts the last flume is the side lane itself.
-  if (c.narrow) xs[n - 1] = c.lane;
-  b.channel([pt(Math.min(xin, xs[0]), y0), pt(Math.max(xin, xs[n - 1]), y0)], { width: lw, straight: true, speed: 0.6 });
-  b.channel([pt(xin, r.y - 6), pt(xin, y0)], { width: c.w, straight: true });
-  for (let i = 0; i < n; i++) {
-    const last = i === n - 1;
-    const yEnd = last ? r.y + r.h + 6 : y0 + (r.h - lw * 2.2) * reach[i];
-    b.channel([pt(xs[i], y0), pt(xs[i], yEnd)], { width: last ? c.w : lw, straight: true, speed: 0.35 + reach[i] * 0.65 });
-    if (!last) b.disc(pt(xs[i], yEnd), lw * 0.78);
-    b.agitate(pt(xs[i], y0 + lw), lw * 0.8, 0.35);
-  }
-  return { in: pt(xin, r.y), out: pt(xs[n - 1], r.y + r.h) };
+  const xin = c.narrow ? c.lane : r.x + r.w * 0.26;
+  const xout = c.narrow ? c.lane : r.x + r.w * 0.2;
+  const x0 = r.x + r.w * (c.narrow ? 0.06 : 0.02);
+  const x1 = c.narrow ? c.lane + c.w / 2 : r.x + r.w * 0.88;
+  const body = { x: x0, y: r.y + r.h * 0.06, w: x1 - x0, h: r.h * 0.88 };
+  const m = Math.min(body.w, body.h);
+  // Three bodies that overlap: a shore with a bay and a point, not a tank.
+  b.pool(body, m * 0.3);
+  b.disc(pt(body.x + body.w * 0.2, body.y + body.h * 0.2), m * 0.24);
+  b.disc(pt(body.x + body.w * 0.72, body.y + body.h * 0.84), m * 0.2);
+  b.channel([pt(xin, r.y - 6), pt(xin, body.y + m * 0.2)], { width: c.w, straight: true });
+  b.channel([pt(xout, body.y + body.h - m * 0.2), pt(xout, r.y + r.h + 6)], { width: c.w, straight: true });
+  b.channel(
+    [pt(xin, body.y + 10), pt(lerp(body.x, xin, 0.5), cy(body)), pt(xout, body.y + body.h - 10)],
+    { width: m * 0.5, speed: 0.45, flowOnly: true },
+  );
+  b.agitate(pt(xin, body.y + m * 0.16), c.w * 1.3, 0.5);
+  return { in: pt(xin, r.y), out: pt(xout, r.y + r.h) };
 };
 
 /** Agent Bridge: two pools, one canal, traffic both ways. */
@@ -198,39 +220,50 @@ const basins: Feature = (c, r) => {
   return { in: pt(xin, r.y), out };
 };
 
-/** cc-switch: one inflow, three branches, one gate open at a time. */
+/**
+ * cc-switch: the stream meets a header, three straight branches drop from
+ * it, one above each option of the switch, and a collector carries the
+ * water on. Only the selected branch is open to the header and runs; the
+ * other two are dammed at the top and stand still.
+ */
 const fork: Feature = (c, r, el) => {
   const { b, a } = c;
   const branches = within(a, 'branch:', r);
   const active = Number(el.dataset.active || 0);
-  const xin = c.narrow ? c.lane : cx(r);
-  const yFork = r.y + r.h * 0.2;
-  const yJoin = r.y + r.h * 0.9;
-  b.channel([pt(xin, r.y - 6), pt(xin, yFork)], { width: c.w, straight: true });
-  b.disc(pt(xin, yFork), c.w * 1.05);
-  const n = Math.max(1, branches.length);
-  const span = c.narrow ? r.w * 0.56 : r.w * 0.62;
-  const x0 = c.narrow ? r.x + r.w * 0.12 : cx(r) - span / 2;
-  branches.forEach((br, i) => {
-    const x = n === 1 ? cx(r) : x0 + (span * i) / (n - 1);
+  if (!branches.length) return pass(c, r, el);
+  const xs = branches.map((x) => cx(x.rect));
+  const left = Math.min(...branches.map((x) => x.rect.x));
+  const right = Math.max(...branches.map((x) => x.rect.x + x.rect.w));
+  const top = Math.min(...branches.map((x) => x.rect.y));
+  const pitch = xs.length > 1 ? Math.abs(xs[1] - xs[0]) : 90;
+  const bw = Math.max(20, Math.min(c.w * 0.62, pitch - 30));
+  // The stream passes the switch on its open side.
+  const roomRight = r.x + r.w - right;
+  const side = c.narrow || roomRight >= left - r.x ? 1 : -1;
+  const xm = c.narrow ? c.lane : side > 0 ? Math.max(right + 30 + c.w / 2, r.x + r.w * 0.8) : Math.min(left - 30 - c.w / 2, r.x + r.w * 0.2);
+  const y0 = r.y + Math.max(bw * 0.5 + 12, r.h * 0.1);
+  const y1 = top - 24 - bw * 0.5;
+  const far = side > 0 ? Math.min(...xs) : Math.max(...xs);
+  b.channel([pt(xm, r.y - 6), pt(xm, y0)], { width: c.w, straight: true });
+  b.channel([pt(xm, y0), pt(far, y0)], { width: bw, straight: true, speed: 0.8 });
+  b.channel([pt(far, y1), pt(xm, y1)], { width: bw, straight: true, speed: 0.8 });
+  b.channel([pt(xm, y1), pt(xm, r.y + r.h + 6)], { width: c.w, straight: true });
+  xs.forEach((x, i) => {
     const open = i === active;
-    const path = [pt(xin, yFork), pt(x, yFork + (yJoin - yFork) * 0.3), pt(x, yFork + (yJoin - yFork) * 0.7), pt(xin, yJoin)];
-    b.channel(path, { width: c.w * 0.92, speed: open ? 1 : 0 });
-    // The open branch runs; the other two stand still.
-    if (open) b.agitate(pt(x, yFork + (yJoin - yFork) * 0.34), c.w, 0.6);
-    void br;
+    // A closed branch starts below a dam of dry stone.
+    const ya = open ? y0 : y0 + bw * 0.5 + 16;
+    b.channel([pt(x, ya), pt(x, y1)], { width: bw, straight: true, speed: open ? 1 : 0 });
+    if (open) b.agitate(pt(x, y0 + bw), bw, 0.6);
   });
-  b.disc(pt(xin, yJoin), c.w * 0.9);
-  b.channel([pt(xin, yJoin), pt(xin, r.y + r.h + 6)], { width: c.w, straight: true });
-  return { in: pt(xin, r.y), out: pt(xin, r.y + r.h) };
+  return { in: pt(xm, r.y), out: pt(xm, r.y + r.h) };
 };
 
 /** TensorPoW: a tensor. A grid of cells the water fills in order. */
 const grid: Feature = (c, r) => {
   const { b } = c;
-  const n = 4;
+  const n = 3;
   const size = Math.min(r.w * (c.narrow ? 0.74 : 0.8), r.h * 0.8);
-  const gap = size * 0.07;
+  const gap = size * 0.06;
   const cell = (size - gap * (n - 1)) / n;
   const ox = c.narrow ? r.x + r.w * 0.04 : cx(r) - size / 2;
   const oy = cy(r) - size / 2;
@@ -245,7 +278,7 @@ const grid: Feature = (c, r) => {
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) order.push(centre(j % 2 ? n - 1 - i : i, j));
   }
-  b.channel(order, { width: Math.max(12, cell * 0.26), straight: true, speed: 0.8 });
+  b.channel(order, { width: Math.max(14, cell * 0.3), straight: true, speed: 0.8 });
   const xin = c.narrow ? c.lane : order[0].x;
   const xout = c.narrow ? c.lane : order[order.length - 1].x;
   connectInto(c, pt(xin, r.y), order[0]);
@@ -253,28 +286,38 @@ const grid: Feature = (c, r) => {
   return { in: pt(xin, r.y), out: pt(xout, r.y + r.h) };
 };
 
-/** RydAR: the stream becomes the road, two tight bends back to back. */
-const bends: Feature = (c, r) => {
+/**
+ * RydAR: the stream becomes the road. One wide meander, two tight bends,
+ * and the app stands on the dry ground inside them.
+ */
+const bends: Feature = (c, r, el) => {
   const { b } = c;
-  const l = r.x + r.w * (c.narrow ? 0.1 : 0.16);
-  const rt = c.narrow ? c.lane : r.x + r.w * 0.84;
-  const xin = c.narrow ? c.lane : rt;
+  const slab = inner(el, r, '.slab');
+  const w = c.w * (c.narrow ? 1.2 : 1.12);
+  const rt = c.narrow ? c.lane : r.x + r.w * 0.86;
   const h = r.h;
+  const lim = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+  const yT = slab ? lim((r.y + slab.y) / 2, r.y + w * 0.5 + 4, r.y + h * 0.3) : r.y + h * 0.16;
+  const yB = slab ? lim((slab.y + slab.h + r.y + h) / 2, r.y + h * 0.7, r.y + h - w * 0.5 - 4) : r.y + h * 0.84;
+  const xl = slab ? Math.max(r.x + w * 0.5 + 2, (r.x + slab.x) / 2) : r.x + r.w * (c.narrow ? 0.1 : 0.14);
+  const span = rt - xl;
   const pts = [
-    pt(xin, r.y - 6),
-    pt(xin, r.y + h * 0.1),
-    pt(lerp(l, rt, 0.5), r.y + h * 0.2),
-    pt(l, r.y + h * 0.32),
-    pt(l + (rt - l) * 0.06, r.y + h * 0.5),
-    pt(lerp(l, rt, 0.5), r.y + h * 0.56),
-    pt(rt - (rt - l) * 0.06, r.y + h * 0.66),
-    pt(rt, r.y + h * 0.84),
-    pt(xin, r.y + h + 6),
+    pt(rt, r.y - 6),
+    pt(rt - span * 0.06, yT - (yT - r.y) * 0.3),
+    pt(rt - span * 0.3, yT),
+    pt(xl + span * 0.3, yT),
+    pt(xl + span * 0.04, lerp(yT, yB, 0.14)),
+    pt(xl, lerp(yT, yB, 0.5)),
+    pt(xl + span * 0.04, lerp(yT, yB, 0.86)),
+    pt(xl + span * 0.3, yB),
+    pt(rt - span * 0.3, yB),
+    pt(rt - span * 0.06, yB + (r.y + h - yB) * 0.3),
+    pt(rt, r.y + h + 6),
   ];
-  b.channel(pts, { width: c.w * 1.25 });
-  b.agitate(pts[3], c.w * 1.4, 0.5);
-  b.agitate(pts[6], c.w * 1.4, 0.5);
-  return { in: pt(xin, r.y), out: pt(xin, r.y + r.h) };
+  b.channel(pts, { width: [w, w * 1.08, w * 0.96, w * 1.1, w * 0.96, w * 1.08, w] });
+  b.agitate(pts[4], w * 1.2, 0.5);
+  b.agitate(pts[6], w * 1.2, 0.5);
+  return { in: pt(rt, r.y), out: pt(rt, r.y + r.h) };
 };
 
 /** A plain run: the stream passes straight through a section. */

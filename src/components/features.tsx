@@ -50,9 +50,6 @@ export function Fork() {
   return (
     <div className="feat feat-fork" data-bed="feat:fork" data-active="0">
       <ProfileSwitch />
-      <span className="sr-only" data-bed="branch:0" />
-      <span className="sr-only" data-bed="branch:1" />
-      <span className="sr-only" data-bed="branch:2" />
     </div>
   );
 }

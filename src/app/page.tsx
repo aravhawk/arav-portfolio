@@ -124,7 +124,9 @@ export default async function Home() {
         {/* ---------- 03 Kilo Bench ---------- */}
         <section className="beat wrap" data-side="right" aria-label="Kilo Bench">
           <Copy p={P['kilo-bench']} />
-          <div className="feat feat-lanes" data-bed="feat:lanes" />
+          <div className="feat feat-lanes" data-bed="feat:lanes">
+            <Slab media={P['kilo-bench'].media[0]} sizes="(max-width: 860px) 70vw, 30vw" />
+          </div>
         </section>
 
         {/* ---------- 04 Agent Bridge ---------- */}
@@ -188,7 +190,9 @@ export default async function Home() {
         {/* ---------- 08 RydAR ---------- */}
         <section className="beat wrap" data-side="left" aria-label="RydAR">
           <Copy p={P.rydar} />
-          <div className="feat feat-bends" data-bed="feat:bends" />
+          <div className="feat feat-bends" data-bed="feat:bends">
+            <Slab media={P.rydar.media[0]} sizes="(max-width: 860px) 60vw, 30vw" />
+          </div>
         </section>
 
         {/* ---------- interests and what is next ---------- */}
