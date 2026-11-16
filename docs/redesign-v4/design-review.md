@@ -1,7 +1,10 @@
 # aravjain.dev v4: design review
 
-Five rounds by the build thread, then one independent critic. Captures for
-every round are outside git in `~/.t3/portfolio-redesign-v4/rounds/<n>/`.
+Five rounds by the build thread, then independent critics, each a fresh
+agent that saw only captures. Their scores were low, so the rounds went on:
+this file records every score as it was given. Captures for every round are
+outside git in `~/.t3/portfolio-redesign-v4/rounds/<n>/`, and the critics'
+full reviews in `~/.t3/portfolio-redesign-v4/critic/review-<n>.md`.
 Each round asked the same questions: is it water and not jelly, is anything
 covered, does anything lag or go soft, are the fonts premium, does a
 stranger get who he is in five seconds, is the ending at least as good as
@@ -96,13 +99,103 @@ either running or cleanly off, fonts loaded.
 Results of the final gates are in the build's final report and in
 `perf.md`.
 
-## Independent critic
+## Independent critics
 
-One fresh agent with no access to this thread's reasoning. It was given
-only: the final captures (both themes, four widths, inner pages, the
-close-ups and the motion strips), the reference captures (Igloo, Lando
-Norris, Lusion, Apple, Cyera, Grail, Preymaker, and v2's ending and v3's
-best frames), the three blind type sheets, and the owner's verbatim words.
+Each critic was a fresh agent with no access to this thread's reasoning or
+to the code. Each was given only: captures from a production build (both
+themes, four widths, inner pages, 2x close-ups, the melt and wake strips),
+the reference captures (Igloo, Lando Norris, Lusion, Apple, Cyera, Grail,
+Preymaker, v2's ending and v3's best frames), and the owner's verbatim
+words. Each had to quote text from named images first, as proof it could
+see them. The first also ranked the three type systems blind before seeing
+anything else (typography.md). The same ten questions each time; 8.5 was
+defined as "would not look out of place beside the references".
 
-_Scores before and after, and what was fixed, are recorded below once the
-critic has run._
+| | Critic 1 (round 5 build) | Critic 2 (round 6 build) | Critic 3 (after K1 to K3) |
+|---|---|---|---|
+| a. Real flowing water, bold and central | 5 | 5.5 | 4.5 |
+| b. Nothing covered or hard to read | 7 | 7 | 6 |
+| c. Nothing soft or low resolution | 6 | 7 | 6.5 |
+| d. Typography | 5 | 6.5 | 6.5 |
+| e. Five-second read | 8.5 | 8 | 7.5 |
+| f. Ending against v2's | 5.5 | 7 | 7.5 |
+| g. Light and dark both first class | 6.5 | 6 | 5.5 |
+| h. Project pages | 6.5 | 5.5 | 4 |
+| i. Phone | 6 | 7 | 6.5 |
+| j. Craft against the references | 4.5 | 5 | 5 |
+| **Overall** | **5.5** | **5.8** | **5.5** |
+
+Three different agents scored three different builds, so the columns are
+not a controlled series: critic 3's 4 for project pages, for instance,
+rests on a capture of mine that showed only the first and last screen of
+each page. What the three have in common is the useful part.
+
+What all three said, in their words:
+
+- The name: "embossed plastic or soap, a Photoshop layer style" (1),
+  "chunky rounded extruded lettering ... 2000s 3D text, not ice" (2),
+  "bevelled extrusion ... reads as WordArt" (3). Three materials, the same
+  verdict.
+- The water: "a caustics texture laid in a tray" (1), "a uniform
+  swimming-pool caustic pattern ... in narrow plastic tubes" (2), "teal
+  fill with one repeating caustic texture in carved channels" (3).
+- The ground: "about 85% flat grey" (1), "a flat light-grey sheet" (2),
+  "white paper ground with a faint noise texture" (3).
+- Against Igloo, Lusion and Apple: "a tidy, original, above-average
+  portfolio. Beside the references it looks like a clever diagram" (1).
+
+What they said was good: nothing ever covers copy; the five-second read;
+the copy's restraint; the stream as one continuous line; the open-source
+comb where each branch is a real repository; "Dry land" for the 404; the
+serif statement; and, by the third, the ending ("the dark ending is the
+best frame in the build and beats v2").
+
+## Round 6: the deep water pass (after critic 1)
+
+Done in this thread before the work was split.
+
+| Critic 1's finding | What changed |
+|---|---|
+| The name is not ice | A standing block with fracture planes, cut faces and a shadow (later replaced twice more) |
+| The melt is a font-weight slider | The letters sink and clear instead of thinning (later replaced) |
+| Most of the site is flat grey | An oblique camera so walls, waterline and bed read as depth; rivers about twice as wide; a lake from bank to bank |
+| The water reads as a texture | Caustics from the summed curvature of every moving layer: one coherent net that tightens round a wake |
+| The type is the weakest of the three and looks default | TASA Orbiter and Spline Sans Mono, the system the blind ranking put first, with a Newsreader accent |
+| Empty pools where media should be | Pages without media no longer open on a pool; the stream runs in from the top |
+| The ending is a downgrade from v2 | The wedge of land is gone; the words are set in the picture as v2 had them |
+| The play button covers the video's caption | The control sits under the picture |
+| The ending repeated under every inner page | A plain footer |
+
+Found while doing it: the overlap test's check of the ending was vacuous
+(it skipped every element marked as chrome, which is all of the ending's
+text). It now hides the words, photographs the picture behind each line
+three times in both themes, and fails any line under WCAG AA. That failed
+the light ending at 1.6 to 1, which is why the light theme's ending became
+a blue-hour dawn instead of a pale morning.
+
+## Round 7: the water world, the ending, the type scale (after critic 2)
+
+From here the implementation was done by Kilo Code from written briefs
+(tasks K1, K2, K3) and reviewed in this thread from its captures, one task
+at a time.
+
+| Critic 2's finding | What changed |
+|---|---|
+| The pool: "a stock pool texture ... with stepped pool edges" | The terraces are gone; the bed shelves from clear shallows to a dark middle; glacial teal in place of pool blue; caustics that vary with depth |
+| Flat grey background | Lit stone with a visible grain, a wet shore, natural banks |
+| Tubes bent into icons; shapes that explain nothing | Kilo Bench is a pool with the benchmark's real results beside it; RydAR is one meander with the app inside its bends; cc-switch is three branches under the three options of its switch |
+| The wake is a grey smudge | The foam veil is gone; the wake is ripples that bend the light, and a click sends a ring |
+| Ragged, stair-stepped channel edges | Every land and water edge is antialiased from the distance field |
+| Dark theme is daylight water on charcoal | Night water: a dark teal body and a luminous net in the shallows |
+| Body copy tiny against the headings | Reading text 18px at 1440, sentences under project names 22px, and the whole scale grows with the screen past 1440 |
+| A dead screen before the ending; the ending's flat mountains and hard sun; a clipped full stop | The ending's first frames are the page's own water; ranges with a lit side, haze and a reflection; the sun behind the ridge with bloom; the full stop fixed |
+| Infiniview's image caught mid scroll | The composed hero frame |
+
+Sent back to Kilo after review of K1 and K2 (task K3): the meltwater read
+as grey fog and lingered; the melt ended in scattered fragments, worst on
+phones; the dark theme's caustics were drawn as outlined shapes; the last
+reach of open water was a flat field.
+
+## Round 8: the frozen lake (after critic 3)
+
+_Kilo task K4, and the fourth score, are recorded below when they are in._
