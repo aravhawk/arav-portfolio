@@ -46,7 +46,8 @@ export interface BedData {
   docH: number;
 }
 
-const SD_CLAMP_PX = 200;
+/** Far enough that a lake keeps deepening well out from its shore. */
+const SD_CLAMP_PX = 360;
 
 export class BedPainter {
   readonly div: number;

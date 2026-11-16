@@ -349,7 +349,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
     engine.pointerMove(e.clientX + window.scrollX, e.clientY + window.scrollY);
   };
   const onDown = (e: PointerEvent) => {
-    engine.splash(e.clientX + window.scrollX, e.clientY + window.scrollY, e.pointerType === 'touch' ? 22 : 16, 0.55);
+    engine.splash(e.clientX + window.scrollX, e.clientY + window.scrollY, e.pointerType === 'touch' ? 24 : 20, 1.15);
   };
   const onLeave = () => engine.pointerLeave();
   window.addEventListener('pointermove', onMove, { passive: true });

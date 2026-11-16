@@ -3,12 +3,13 @@
  * resolution on half-float targets.
  *
  * Shared layout
- *   bedA  RGBA16F  r: signed distance to the bank in CSS px (negative = water)
+ *   bedA  RGBA16F  r: signed distance to the bank in CSS px (negative = water, clamped at 360)
  *                  g: unused, b,a: unit gradient of the distance field
  *   bedB  RGBA8    r,g: flow direction * speed (0.5 centred), b: agitation
  *   wave  RGBA16F  r: surface height, g: its velocity, b,a: height gradient
  *   vel   RGBA16F  r,g: velocity added by the pointer (px/s), b: pressure, a: divergence
- *   dye   RGBA16F  r: foam, g: meltwater silt, b: unused
+ *   dye   RGBA16F  g: meltwater, the rest unused (no foam is drawn: a wake
+ *                  shows by bending light, never as a layer on the water)
  */
 
 /**
@@ -139,7 +140,8 @@ uniform vec2 uPtrForce;     // x: strength (speed based), y: radius px
 uniform vec4 uDrop;         // x,y world, z radius, w strength (one discrete splash)
 uniform vec4 uIce;          // ice name rect in world px: x, y, w, h
 uniform sampler2D uIceSdf;
-uniform vec2 uIceMelt;      // x: erosion px, y: melt rate (drips)
+uniform sampler2D uIceLow;
+uniform vec3 uIceMelt;      // x: erosion px, y: melt rate (drips), z: rounding
 uniform float uAmbient;     // strength of flow-driven ripples
 uniform sampler2D uDetail;
 
@@ -216,14 +218,15 @@ void main() {
     float stir = fl.z * 1.5 + speed * smoothstep(-14.0, -2.0, sd) * 0.22;
     v += n * stir * uAmbient * 0.008;
   }
-  // Meltwater dripping off the ice edge.
+  // Meltwater dripping off the ice edge: each drip starts a ring, and the
+  // rings leave the letters for as long as they melt.
   if (uIceMelt.y > 0.0) {
     vec2 iuv = (world - uIce.xy) / uIce.zw;
     if (iuv.x > 0.0 && iuv.x < 1.0 && iuv.y > 0.0 && iuv.y < 1.0) {
-      float isd = texture(uIceSdf, iuv).r + uIceMelt.x;
-      float edge = exp(-isd * isd / 18.0);
-      float n = texture(uDetail, world / 60.0 + vec2(0.9, 0.7) * uTime).r;
-      v -= edge * smoothstep(0.62, 0.9, n) * uIceMelt.y * 0.05;
+      float isd = mix(texture(uIceSdf, iuv).r, texture(uIceLow, iuv).r, uIceMelt.z) + uIceMelt.x;
+      float edge = exp(-(isd - 3.0) * (isd - 3.0) / 22.0);
+      float n = texture(uDetail, world / 46.0 + vec2(0.9, 0.7) * uTime).r;
+      v -= edge * smoothstep(0.6, 0.82, n) * min(uIceMelt.y, 1.2) * 0.11;
     }
   }
 
@@ -322,7 +325,7 @@ void main() {
   o = vec4(c.rg - grad, c.b, c.a);
 }`;
 
-/** Foam and meltwater silt, carried by the full velocity field. */
+/** Meltwater, carried by the full velocity field. */
 export const DYE = `${HEAD}
 ${SIM_COMMON}
 uniform sampler2D uDye;
@@ -336,7 +339,8 @@ uniform vec4 uPtr;
 uniform vec2 uPtrForce;
 uniform vec4 uIce;
 uniform sampler2D uIceSdf;
-uniform vec2 uIceMelt;
+uniform sampler2D uIceLow;
+uniform vec3 uIceMelt;
 uniform sampler2D uDetail;
 float segDist(vec2 p, vec2 a, vec2 b) {
   vec2 pa = p - a, ba = b - a;
@@ -357,28 +361,19 @@ void main() {
   vec4 dn4 = texture(uDye, src + vec2(texel.x, 0.0)) + texture(uDye, src - vec2(texel.x, 0.0))
            + texture(uDye, src + vec2(0.0, texel.y)) + texture(uDye, src - vec2(0.0, texel.y));
   d = mix(d, dn4 * 0.25, 0.22);
-  float foam = d.r * exp(-uDt * 0.55);
-  float silt = d.g * exp(-uDt * 0.2);
+  // Meltwater lasts long enough to reach the outlet and run down the stream.
+  float silt = d.g * exp(-uDt * 0.13);
 
-  // Foam where the surface is steep or the flow is stirred.
-  vec4 w = texture(uWave, here);
-  float steep = length(w.ba);
-  float n = texture(uDetail, world / 90.0 + vec2(0.4, 0.3) * uTime).r;
-  foam += smoothstep(0.012, 0.05, steep) * 0.04;
-  foam += fl.z * smoothstep(0.5, 0.8, n) * 0.07;
-  if (uPtrForce.x > 0.0) {
-    float dd = segDist(world, uPtr.xy, uPtr.zw);
-    foam += exp(-dd * dd / (uPtrForce.y * uPtrForce.y * 0.6)) * uPtrForce.x * 1.4;
-  }
-  // The melting ice sheds pale silt that the current carries off.
+  // The melting ice sheds cold clear water all round its edge, and the
+  // lake's current carries it off toward the outlet.
   if (uIceMelt.y > 0.0) {
     vec2 iuv = (world - uIce.xy) / uIce.zw;
     if (iuv.x > 0.0 && iuv.x < 1.0 && iuv.y > 0.0 && iuv.y < 1.0) {
-      float isd = texture(uIceSdf, iuv).r + uIceMelt.x;
-      silt += exp(-isd * isd / 160.0) * uIceMelt.y * 0.5;
+      float isd = mix(texture(uIceSdf, iuv).r, texture(uIceLow, iuv).r, uIceMelt.z) + uIceMelt.x;
+      silt += exp(-isd * isd / 190.0) * min(uIceMelt.y, 1.2) * uDt * 1.5;
     }
   }
-  o = vec4(min(foam, 1.5), min(silt, 1.5), 0.0, 0.0);
+  o = vec4(0.0, min(silt, 1.0), 0.0, 0.0);
 }`;
 
 /**

@@ -20,7 +20,10 @@ export interface Palette {
   absorb: [number, number, number];
   scatter: [number, number, number];
   sky: [number, number, number];
-  foam: [number, number, number];
+  /** the cool light that edges night water; zero by day */
+  rim: [number, number, number];
+  /** what meltwater lends the water it runs through */
+  melt: [number, number, number];
   ice: [number, number, number];
   /** ambient, key, caustic gain, glint gain */
   light: [number, number, number, number];
@@ -37,29 +40,37 @@ const srgb = (hex: string): [number, number, number] => {
   return [c[0], c[1], c[2]];
 };
 
-/** Both themes are first class: the same world under two lights. */
+/**
+ * Both themes are first class, and they are two lightings, not two tints.
+ * Day: cold glacial water, pale and clear at the bank, steel teal further
+ * out, deep blue-green in the middle. Night: water near black with a teal
+ * cast, a dim bed, caustics drawn as thin bright lines in the shallows, and
+ * a cool rim of light where water meets stone.
+ */
 export const PALETTES: Record<'light' | 'dark', Palette> = {
   light: {
     land: srgb('#E4E7E8'),
-    bed: srgb('#D9E2E4'),
-    absorb: [0.04, 0.0135, 0.0082],
-    scatter: [0.003, 0.05, 0.108],
+    bed: srgb('#DDE6E4'),
+    absorb: [0.028, 0.0104, 0.0086],
+    scatter: [0.006, 0.046, 0.054],
     sky: [1.0, 1.0, 1.0],
-    foam: [1.0, 1.0, 1.0],
-    ice: srgb('#F2F9FC'),
+    rim: [0, 0, 0],
+    melt: [0.1, 0.2, 0.21],
+    ice: srgb('#F4FAFC'),
     light: [0.5, 0.78, 1.5, 1.25],
-    grain: [0.05, 0.05, 0.2],
+    grain: [0.05, 0.05, 0.26],
   },
   dark: {
     land: srgb('#15181B'),
-    bed: srgb('#5E8496'),
-    absorb: [0.046, 0.0165, 0.0098],
-    scatter: [0.003, 0.046, 0.105],
-    sky: [0.78, 0.92, 1.0],
-    foam: [0.6, 0.76, 0.82],
-    ice: srgb('#E4F3F9'),
-    light: [0.22, 1.08, 2.1, 1.8],
-    grain: [0.12, 0.12, 0.42],
+    bed: srgb('#22525C'),
+    absorb: [0.05, 0.02, 0.0175],
+    scatter: [0.001, 0.0125, 0.0155],
+    sky: [0.62, 0.84, 0.95],
+    rim: [0.012, 0.05, 0.058],
+    melt: [0.012, 0.05, 0.056],
+    ice: srgb('#9CC3CF'),
+    light: [0.16, 0.9, 2.3, 1.5],
+    grain: [0.12, 0.12, 0.5],
   },
 };
 
@@ -461,22 +472,28 @@ export class WaterEngine {
 
   private iceUniforms(scrollY: number) {
     const ice = this.iceMeta;
-    if (!ice || !this.iceTex) return { rect: [0, 0, 0, 0], state: [0, 0, 0, 0], alive: 0, erode: 0 };
+    if (!ice || !this.iceTex) return { rect: [0, 0, 0, 0], state: [0, 0, 0, 0], alive: 0, erode: 0, shed: 0 };
     // The floe drifts with the camera while it melts, so it stays in view.
     const drift = Math.min(scrollY, this.meltRange) * 0.74;
     const r = this.iceRect;
     const m = this.melt;
     const half = -ice.minSd;
-    // Ice in water does not get thinner strokes, it gets lower and clearer.
-    // The letters keep nearly their whole outline (so the name reads to the
-    // end), sink to the waterline, lose their frost, and are last seen as
-    // clear glass bending the light under them before that goes too.
-    const erode = Math.pow(m, 1.5) * half * 0.26;
-    const round = 0.4 * smooth(0.05, 0.8, m);
-    const height = 1 - smooth(0.04, 0.72, m);
-    const frost = 1 - smooth(0.18, 0.84, m);
-    const alive = 1 - smooth(0.8, 0.985, m);
-    return { rect: [r.x, r.y + drift, r.w, r.h], state: [erode, height, round, frost], alive, erode };
+    // Ice in water melts from its edges. The outline rounds toward a
+    // smoothed copy of itself while it is worn back, so strokes soften and
+    // close up instead of thinning to hairlines. The wear is slow for the
+    // first two thirds (the name stays bold) and fast after, and it ends
+    // past the thickest stroke, so nothing at all is left at the end. The
+    // block stays ice to the last: it sinks, it does not fade.
+    const early = 0.16 * Math.pow(Math.min(m / 0.65, 1), 1.4);
+    const late = Math.pow(Math.max(0, (m - 0.65) / 0.35), 1.25);
+    const erode = half * (early + 0.3 * late + 0.95 * smooth(0.9, 1, m));
+    const round = 0.55 * smooth(0.08, 0.95, m);
+    const height = 1 - smooth(0.04, 0.92, m);
+    const alive = m < 1 ? 1 : 0;
+    // Ice that is partly melted keeps shedding water even when the page is
+    // held still, so the plume is there at any scroll position.
+    const shed = 0.42 * Math.sin(Math.PI * Math.min(1, Math.max(0, m))) ** 0.7;
+    return { rect: [r.x, r.y + drift, r.w, r.h], state: [erode, height, round, 1], alive, erode, shed };
   }
 
   private simulate(dt: number, top: number) {
@@ -538,9 +555,10 @@ export class WaterEngine {
     gl.uniform1f(w.u.uDt, sub);
     gl.uniform4fv(w.u.uPtr, seg);
     gl.uniform4f(w.u.uIce, ice.rect[0], ice.rect[1], ice.rect[2], ice.rect[3]);
-    gl.uniform2f(w.u.uIceMelt, ice.erode, ice.rect[2] > 0 ? this.meltRate : 0);
+    gl.uniform3f(w.u.uIceMelt, ice.erode, ice.rect[2] > 0 ? this.meltRate + ice.shed : 0, ice.state[2]);
     gl.uniform1f(w.u.uAmbient, 1);
     if (this.iceTex) bindTex(gl, 3, this.iceTex.tex, w.u.uIceSdf);
+    if (this.iceLow) bindTex(gl, 5, this.iceLow.tex, w.u.uIceLow);
     bindTex(gl, 4, this.detail.tex, w.u.uDetail);
     for (let i = 0; i < steps; i++) {
       bindTex(gl, 0, this.wave!.read.tex, w.u.uWave);
@@ -589,7 +607,7 @@ export class WaterEngine {
     drawTo(gl, this.vel!.write);
     this.vel!.swap();
 
-    // Foam and silt.
+    // Meltwater.
     const dy = this.p.dye;
     gl.useProgram(dy.prog);
     common(dy, 3);
@@ -597,6 +615,7 @@ export class WaterEngine {
     bindTex(gl, 1, this.vel!.read.tex, dy.u.uVel);
     bindTex(gl, 2, this.waveOut!.tex, dy.u.uWave);
     if (this.iceTex) bindTex(gl, 5, this.iceTex.tex, dy.u.uIceSdf);
+    if (this.iceLow) bindTex(gl, 7, this.iceLow.tex, dy.u.uIceLow);
     bindTex(gl, 6, this.detail.tex, dy.u.uDetail);
     gl.uniform2f(dy.u.uShift, 0, shift);
     gl.uniform1f(dy.u.uDt, dt);
@@ -605,7 +624,9 @@ export class WaterEngine {
     gl.uniform4fv(dy.u.uPtr, seg);
     gl.uniform2f(dy.u.uPtrForce, moving ? Math.min(speed / 700, 1) * 0.05 : 0, 12);
     gl.uniform4f(dy.u.uIce, ice.rect[0], ice.rect[1], ice.rect[2], ice.rect[3]);
-    gl.uniform2f(dy.u.uIceMelt, ice.erode, ice.rect[2] > 0 ? this.meltRate : 0);
+    // The plume is fed steadily, not by how fast the page moves, so a quick
+    // scroll cannot leave a smear along the floe's path.
+    gl.uniform3f(dy.u.uIceMelt, ice.erode, ice.rect[2] > 0 ? this.meltRate * 0.3 + ice.shed : 0, ice.state[2]);
     drawTo(gl, this.dye!.write);
     this.dye!.swap();
 
@@ -645,7 +666,10 @@ export class WaterEngine {
     gl.uniform3fv(r.u.uAbsorb, pal.absorb);
     gl.uniform3fv(r.u.uScatter, pal.scatter);
     gl.uniform3fv(r.u.uSky, pal.sky);
-    gl.uniform3fv(r.u.uFoam, pal.foam);
+    gl.uniform3fv(r.u.uRim, pal.rim);
+    gl.uniform3fv(r.u.uMelt, pal.melt);
+    gl.uniform1f(r.u.uPx, 1 / this.dpr);
+    gl.uniform1f(r.u.uNight, Math.min(1, Math.max(0, this.theme)));
     gl.uniform3fv(r.u.uIceCol, pal.ice);
     gl.uniform4fv(r.u.uLight, pal.light);
     gl.uniform3fv(r.u.uGrainAmt, pal.grain);
