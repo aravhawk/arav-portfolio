@@ -34,16 +34,17 @@
   mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather, 9%));
 }
 
-/* Without WebGL the picture is a still: the same sky and the same dark
-   water as gradients. */
+/* Without WebGL the picture is a still: the same sky, the far shore in
+   its haze, the mist on the waterline and the same dark near water, as
+   gradients. */
 .ending[data-gl='off'] .ending-canvas,
 html:not([data-js]) .ending-canvas {
   -webkit-mask-image: none;
   mask-image: none;
-  background: linear-gradient(to bottom, #0b2350 0%, #3d5590 24%, #d89a8c 40.5%, #e8b9a0 41.5%, #14305a 42.5%, #0b2143 64%, #050f22 100%);
+  background: linear-gradient(to bottom, #6b7cb4 0%, #9b95be 15%, #dcc1c2 29%, #e2c8c4 33%, #9a7f95 34.5%, #886b80 37%, #d6b0a2 38%, #9e7472 40%, #906f7a 50%, #31365a 70%, #16203a 100%);
 }
 :root[data-theme='dark'] .ending[data-gl='off'] .ending-canvas {
-  background: linear-gradient(to bottom, #050c1c 0%, #16263c 24%, #b9652c 40.5%, #e19a4e 41.5%, #0e2a3a 42.5%, #071925 64%, #03090f 100%);
+  background: linear-gradient(to bottom, #716874 0%, #a2877e 15%, #dcba7a 29%, #e6c682 33%, #9a7350 34.5%, #8c6344 37%, #d9a852 38%, #a47239 40%, #946941 50%, #362f32 70%, #171b22 100%);
 }
 
 .ending-copy {
@@ -80,8 +81,11 @@ html:not([data-js]) .ending-canvas {
 }
 .ending-line {
   display: block;
-  padding: 0.08em 0.06em 0.16em 0;
-  margin: -0.08em 0 -0.16em 0;
+  /* Room on the right for the serif's overhang: the full stop is never cut. */
+  padding: 0.08em 0.14em 0.16em 0;
+  margin: -0.08em -0.14em -0.16em 0;
+  width: max-content;
+  max-width: calc(100% + 0.14em);
 }
 
 .ending-links {
@@ -227,7 +231,7 @@ html[data-js] .ending-full[data-gl='on'] .ending-line {
   transition: clip-path 180ms var(--ease-out);
 }
 html[data-js] .ending-full[data-gl='on'][data-arrived] .ending-line {
-  clip-path: inset(-10% 0 -10% 0);
+  clip-path: inset(-10% -6% -10% 0);
   transition: clip-path 900ms var(--ease-in-out);
 }
 html[data-js] .ending-full[data-gl='on'] .ending-kicker,

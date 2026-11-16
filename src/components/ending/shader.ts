@@ -19,6 +19,7 @@ out vec4 o;
 uniform vec2 uRes;       // device px
 uniform float uTime;
 uniform float uProg;     // 0 looking straight down, 1 arrived
+uniform float uPre;      // 0..1 while the picture is still scrolling into view: the camera starts to lift
 uniform float uTheme;    // 0 blue hour (light), 1 first light (dark)
 uniform float uSunUp;    // 0..1, the sun climbing after arrival
 uniform vec3 uShallow;   // the page's water seen from above, linear
@@ -26,6 +27,7 @@ uniform vec3 uDeep;      // open water body colour, linear
 uniform float uHorizon;  // where the horizon rests, in v (-1 bottom .. 1 top)
 uniform float uSunAz;    // the sun's bearing, radians right of straight ahead
 uniform float uCalm;     // u (0..1) left of which the water is kept calm for the words
+uniform float uNear;     // v (0..1 from the bottom) under which the water is kept calm on a narrow screen; 0 when unused
 
 const float TAN_HALF = 0.3249;   // 36 degree vertical field of view
 const float H0 = 8.0;            // eye height looking down
@@ -58,6 +60,16 @@ Sky skyKey() {
   return s;
 }
 
+vec3 sunBloom(float sd, Sky s) {
+  return s.band * (pow(sd, 9.0) * 0.07 + pow(sd, 60.0) * 0.22 + pow(sd, 420.0) * 0.5 + pow(sd, 2600.0) * 0.5);
+}
+
+/** The colour of the air at the horizon toward a bearing: what distance fades to. */
+vec3 airAt(float az, Sky s) {
+  float a = max(cos(az - atan(s.sun.x, s.sun.z)), 0.0);
+  return s.hor + s.band * (pow(a, 5.0) * 0.3 + pow(a, 2.0) * 0.08);
+}
+
 vec3 skyColor(vec3 d, Sky s) {
   float h = max(d.y, 0.0);
   vec3 col = mix(s.hor, s.mid, smoothstep(0.0, 0.17, h));
@@ -70,8 +82,9 @@ vec3 skyColor(vec3 d, Sky s) {
   col += s.band * exp(-h * 30.0) * pow(az, 2.0) * 0.14;
   // The sun: a soft disc inside two wide skirts of glow.
   float sd = max(dot(normalize(d), s.sun), 0.0);
-  col += s.band * (pow(sd, 9.0) * 0.07 + pow(sd, 60.0) * 0.2 + pow(sd, 420.0) * 0.55);
-  col += vec3(1.0, 0.9, 0.7) * smoothstep(0.99972, 0.99995, sd) * 7.0;
+  col += sunBloom(sd, s);
+  // The disc has no hard rim: it is the brightest part of its own glow.
+  col += vec3(1.0, 0.9, 0.7) * (smoothstep(0.9996, 0.99999, sd) * 2.4 + smoothstep(0.9999, 1.0, sd) * 1.6);
   // High thin cloud, lit from below near the sun.
   float c = fbm2(vec2(atan(d.x, d.z) * 3.2 + uTime * 0.004, h * 9.0));
   float cloud = smoothstep(0.5, 0.86, c) * smoothstep(0.03, 0.2, h) * (1.0 - smoothstep(0.4, 0.8, h));
@@ -79,33 +92,66 @@ vec3 skyColor(vec3 d, Sky s) {
   return col;
 }
 
-// Four ridge lines as silhouettes in elevation over azimuth, nearest last.
-// Each drops away where the sun comes up, which opens the bright gap, and
-// each stands in more haze than the one in front of it.
+// Four ranges, furthest first. Each is a profile in elevation over bearing
+// with a little relief inside it: the faces turned to the sun are lit, the
+// others are in shade, and spurs run down from the crests. Each range
+// further back stands in more air, so it is paler and nearer the sky's own
+// colour. The ranges drop where the sun comes up, and its glow spills over
+// them.
+float ridgeH(float x) {
+  return (1.0 - abs(n1(x) * 2.0 - 1.0)) * 0.56 + (1.0 - abs(n1(x * 2.7 + 3.1) * 2.0 - 1.0)) * 0.27
+    + (1.0 - abs(n1(x * 6.3 + 1.7) * 2.0 - 1.0)) * 0.12 + n1(x * 17.0) * 0.05;
+}
+
+/** The same profile without its fine teeth: what the light sees as a slope. */
+float ridgeBroad(float x) {
+  return (1.0 - abs(n1(x) * 2.0 - 1.0)) * 0.56 + (1.0 - abs(n1(x * 2.7 + 3.1) * 2.0 - 1.0)) * 0.27;
+}
+
 vec3 withRidges(vec3 col, vec3 d, Sky s) {
   float az = atan(d.x, d.z);
   float el = asin(clamp(d.y, -1.0, 1.0));
   float sunAz = atan(s.sun.x, s.sun.z);
   float off = abs(az - sunAz);
-  float gap = mix(0.16, 1.0, smoothstep(0.04, 0.5, off));
+  float side = clamp((sunAz - az) * 9.0, -1.0, 1.0);
+  float gap = mix(0.72, 1.0, smoothstep(0.03, 0.5, off));
   float aa = fwidth(el) * 1.5 + 1e-4;
+  vec3 air = airAt(az, s);
+  float cover = 0.0;
   for (int i = 0; i < 4; i++) {
     float near = float(i) / 3.0;
     float f = mix(4.2, 9.0, near);
     float x = az * f + 9.7 * float(i);
-    // Ridged noise: peaks are creases, not bumps.
-    float r = (1.0 - abs(n1(x) * 2.0 - 1.0)) * 0.56 + (1.0 - abs(n1(x * 2.7 + 3.1) * 2.0 - 1.0)) * 0.27
-      + (1.0 - abs(n1(x * 6.3 + 1.7) * 2.0 - 1.0)) * 0.12 + n1(x * 17.0) * 0.05;
-    float height = mix(0.072, 0.03, near) * (0.22 + 0.78 * r * r) * gap;
+    float r = ridgeH(x);
+    float amp = mix(0.074, 0.03, near) * gap;
+    float height = amp * (0.22 + 0.78 * r * r);
     float m = 1.0 - smoothstep(height - aa, height + aa, el);
-    vec3 rock = mix(s.mid * 0.5 + s.hor * 0.1, s.zen * 0.26, near);
-    // Light from behind picks out the far crests next to the sun.
-    rock += s.band * 0.05 * (1.0 - near) * exp(-off * 3.5);
-    // Haze gathers at the foot of each ridge.
-    float foot = 1.0 - smoothstep(0.0, height + 1e-4, el);
-    rock = mix(rock, s.hor * 0.8, s.haze * (0.5 - 0.3 * near) * foot);
-    col = mix(col, rock, m * step(0.0, el + 0.002));
+    if (m > 0.0) {
+      float rel = clamp(el / max(height, 1e-4), 0.0, 1.0);
+      // A face that falls away toward the sun is lit; one that rises toward it is not.
+      float slope = (ridgeBroad(x + 0.06) - ridgeBroad(x - 0.06)) / 0.12;
+      // Spurs lean away from the crest, so the relief reads as slopes, not stripes.
+      float spur = n1(x * 3.4 + (1.0 - rel) * 4.0 * side + 3.0 * float(i)) - 0.5;
+      float lit = clamp(0.5 - side * slope * 0.4 + spur * 0.8, 0.0, 1.0);
+      lit = smoothstep(0.12, 0.88, lit);
+      vec3 shade = s.zen * 0.22 + s.mid * 0.06;
+      vec3 sunlit = s.mid * 0.34 + s.hor * 0.2 + s.band * 0.07 * exp(-off * 1.6);
+      vec3 rock = mix(shade, sunlit, lit * (0.55 + 0.45 * rel));
+      // A thin bright edge on the crest where the light comes over it.
+      rock += s.band * 0.1 * exp(-off * 3.0) * smoothstep(0.8, 1.0, rel);
+      // Aerial perspective, and the air that pools at the foot.
+      float airK = mix(0.4, 0.0, near) * s.haze;
+      rock = mix(rock, air, clamp(airK + (1.0 - rel) * (1.0 - rel) * 0.22, 0.0, 0.9));
+      float a = m * step(0.0, el + 0.002);
+      col = mix(col, rock, a);
+      cover = max(cover, a);
+    }
   }
+  // The sun's glow spills over whatever stands in front of it.
+  float sd = max(dot(normalize(d), s.sun), 0.0);
+  col += sunBloom(sd, s) * 0.5 * cover;
+  // A thin band of mist lies on the waterline.
+  col = mix(col, air, exp(-max(el, 0.0) / 0.0035) * 0.6);
   return col;
 }
 
@@ -117,11 +163,16 @@ void main() {
   Sky s = skyKey();
 
   // The move: sink and pitch up, eased so it settles.
+  // One move from the first pixel to the last. While the picture is still
+  // coming into view the look lifts from straight down until the horizon is
+  // just above the frame: the water is already seen receding. Once it fills
+  // the screen the horizon comes in at once and the move settles slowly.
   float p = clamp(uProg / 0.82, 0.0, 1.0);
-  float e = p * p * (3.0 - 2.0 * p);
+  float q1 = 1.0 - p;
+  float e = 1.0 - q1 * q1 * mix(1.0, q1, 0.5);
   float pitchFinal = atan(-uHorizon * TAN_HALF);
-  // It starts already lifting: the first frame is water in perspective.
-  float pitch = mix(-1.0, pitchFinal, e);
+  float pre = uPre * uPre * (3.0 - 2.0 * uPre);
+  float pitch = mix(mix(-1.3, -0.37, pre), pitchFinal, e);
   float eye = mix(H0, H1, e * e);
   vec3 d = normalize(vec3(uv.x * aspect * TAN_HALF, uv.y * TAN_HALF, 1.0));
   float cp = cos(pitch), sp = sin(pitch);
@@ -129,6 +180,9 @@ void main() {
 
   // The side the words stand on: in the lee, calm and a little shaded.
   float lee = (1.0 - smoothstep(uCalm - 0.16, uCalm + 0.14, vUv.x)) * e;
+  // On a narrow screen the words run nearly the full width, so the whole
+  // near reach is the lee and the glitter keeps to the water beyond it.
+  lee = max(lee, step(0.001, uNear) * (1.0 - smoothstep(uNear - 0.01, uNear + 0.13, vUv.y)) * e);
 
   vec3 col;
   if (d.y >= 0.0) {
@@ -137,7 +191,7 @@ void main() {
     float t = eye / -d.y;
     vec3 P = vec3(d.x * t, 0.0, d.z * t);
     float dist = length(P.xz);
-    float fog = 1.0 - exp(-dist * 0.011 * s.haze);
+    float fog = 1.0 - exp(-dist * 0.0045 * s.haze);
     // Water: ripples compress with distance; reflect the sky; add the body.
     vec2 q = P.xz;
     float calm = (1.0 / (1.0 + dist * 0.07)) * (1.0 - 0.55 * lee);
@@ -159,16 +213,24 @@ void main() {
     // From straight above it is still the page's water: the same colour, the
     // same net of light on the bed. It gives way as the camera comes down.
     float down = 1.0 - e;
-    vec2 w = q * 2.1 + 0.5 * vec2(fbm2(q * 1.1 + tt * 0.15), fbm2(q * 1.1 + 7.0 - tt * 0.15));
-    float c1 = 1.0 - abs(n2(w + vec2(tt * 0.22, 0.0)) * 2.0 - 1.0);
-    float c2 = 1.0 - abs(n2(w * 1.6 + 3.3 - vec2(0.0, tt * 0.19)) * 2.0 - 1.0);
-    float net = pow(c1, 7.0) * 0.75 + pow(c2, 7.0) * 0.5;
-    body = mix(body, uShallow * (0.8 + net), down * down);
+    // The page's open water is deep and clear: no net on the bed out here,
+    // only the slow, broad light it has in its own lake.
+    float broad = fbm2(q * 0.22 + vec2(tt * 0.05, -tt * 0.03));
+    vec2 gs = vec2(n2(q * 0.9 + vec2(tt * 0.4, 0.0)) - 0.5, n2(q * 0.9 + 5.0 - vec2(0.0, tt * 0.4)) - 0.5);
+    float topK = down * down;
+    // Its ripples are seen the way the page's are: one face lighter, one
+    // darker. They are what shows the look lifting.
+    float rip = clamp((gs.x * 0.6 + gs.y * 0.8) * 0.5 + (g.x * 0.6 + g.y * 0.8) * 1.2, -0.14, 0.18) * (1.0 - smoothstep(0.72, 1.0, vUv.y) * (1.0 - uPre)) / (1.0 + dist * 0.012);
+    body = mix(body, uShallow * (0.88 + 0.26 * broad) * (1.0 + rip), topK);
+    fres *= 1.0 - 0.85 * topK;
     col = mix(body, refl, clamp(fres + 0.05 * e, 0.0, 1.0));
     // Sun glitter: a broken streak toward the sun.
     float sd = max(dot(r, s.sun), 0.0);
     col += vec3(1.0, 0.86, 0.62) * (pow(sd, 900.0) * 14.0 + pow(sd, 90.0) * 0.55) * mix(0.75, 1.0, uTheme) * (1.0 - lee) * e;
-    col = mix(col, s.hor, fog * e);
+    vec3 air = airAt(atan(d.x, d.z), s);
+    col = mix(col, air, fog * e);
+    // The same mist, seen on the water side of the line.
+    col = mix(col, air, exp(d.y / 0.0035) * 0.6 * e);
     col *= 1.0 - 0.56 * lee;
   }
 

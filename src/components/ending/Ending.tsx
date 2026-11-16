@@ -10,15 +10,14 @@ import { Arrow } from '../bits';
 import { ENDING_FRAG } from './shader';
 import './ending.css';
 
-const lin = (hex: string) => {
+/* The page's open water where it meets the ending, per theme: the colour
+   measured on screen just above the picture, so the handover has no seam.
+   (The shader encodes with a 2.2 power; this is its inverse.) */
+const g22 = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
-    const s = v / 255;
-    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  });
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.pow(v / 255, 2.2));
 };
-/* The page's water from above, and open water, per theme (linear). */
-const SHALLOW = { light: lin('#2a7fc4'), dark: lin('#1f6fae') };
+const SHALLOW = { light: g22('#2b6473'), dark: g22('#203a41') };
 const DEEP = { light: [0.005, 0.034, 0.085], dark: [0.004, 0.028, 0.05] };
 
 interface Props {
@@ -168,6 +167,7 @@ export function Ending({ note }: Props) {
     let lastP = -1;
     let narrow = false;
     let calm = 0.6;
+    let near = 0;
     let aspect = 1.6;
     let feather = -1;
 
@@ -185,6 +185,7 @@ export function Ending({ note }: Props) {
       // The words keep to the left; the water there is kept calm for them.
       const b = block.current?.getBoundingClientRect();
       calm = b && w > 0 ? Math.min(0.9, (b.right - cv.getBoundingClientRect().left) / w + 0.03) : 0.6;
+      near = narrow && b && h > 0 ? Math.min(0.6, 1 - (b.top - cv.getBoundingClientRect().top) / h + 0.02) : 0;
       dirty = true;
     };
     measure();
@@ -208,8 +209,9 @@ export function Ending({ note }: Props) {
       last = now;
       const still = reduced.matches;
       const p = still ? 1 : Math.min(1, Math.max(0, (window.scrollY - top) / span));
-      if (p !== lastP) dirty = true;
-      lastP = p;
+      const pre = still ? 1 : Math.min(1, Math.max(0, (window.scrollY - (top - window.innerHeight)) / window.innerHeight));
+      if (p + pre !== lastP) dirty = true;
+      lastP = p + pre;
       // The top edge feathers into the page's water while the camera is
       // still coming down, and is a clean edge once it has arrived.
       const f = Math.round(9 * (1 - Math.min(1, p / 0.45)) * 10) / 10;
@@ -246,6 +248,7 @@ export function Ending({ note }: Props) {
       gl.uniform2f(u.uRes, cv.width, cv.height);
       gl.uniform1f(u.uTime, time);
       gl.uniform1f(u.uProg, p);
+      gl.uniform1f(u.uPre, pre);
       gl.uniform1f(u.uTheme, theme);
       gl.uniform1f(u.uSunUp, still ? 1 : sunUp);
       const mixc = (a: number[], bb: number[], i: number) => a[i] + (bb[i] - a[i]) * theme;
@@ -256,6 +259,7 @@ export function Ending({ note }: Props) {
       gl.uniform1f(u.uHorizon, narrow ? 0.3 : 0.24);
       gl.uniform1f(u.uSunAz, Math.atan((narrow ? 0.7 : 0.46) * aspect * 0.3249));
       gl.uniform1f(u.uCalm, calm);
+      gl.uniform1f(u.uNear, near);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }, 40);
 
