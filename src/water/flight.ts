@@ -11,6 +11,7 @@
 
 import { onFrame } from '@/lib/frame';
 import { haptic } from '@/lib/haptics';
+import { emit, flightSignal, pictureSignal, pointerSignal } from '@/lib/signals';
 import { BedPainter } from './bed';
 import { makeCallouts } from './callouts';
 import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
@@ -611,6 +612,7 @@ export class FlightEngine extends WaterEngine {
     this.runGates();
     gl.uniform3fv(r.u.uGate, this.gateNow);
     gl.uniform3fv(r.u.uSurge, this.surge);
+    pictureSignal(this.time, st, this.gateNow, this.surge, this.ray, this.lift);
     if (st[0] > 0.5 && !this.still && this.time > this.dripAt) {
       // Meltwater drips from the columns into the shallows: real rings, most from the tallest.
       this.dripAt = this.time + 0.22 + 0.3 * Math.random();
@@ -619,6 +621,7 @@ export class FlightEngine extends WaterEngine {
       while (i < 3 && pick > this.colH[i]) pick -= this.colH[i++];
       const a = Math.random() * Math.PI * 2;
       this.splash(COLS.xs[i] + Math.cos(a) * COLS.r * 1.15, COLS.y + Math.sin(a) * COLS.r * 1.15, 12 + 8 * Math.random(), 0.5);
+      emit('drip', i, this.colH[i] / COLS.hMax);
     }
     if (st[2] > 0.5 && !this.still) {
       // The light sets out with a real ring where the thread enters the pool.
@@ -898,10 +901,14 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     boxTimer = window.setTimeout(measureBox, 760);
   };
   // One light tick, once, when the camera settles and the sun's edge clears the ranges.
-  engine.onDawn = () => haptic('light');
+  engine.onDawn = () => {
+    haptic('light');
+    emit('dawn');
+  };
 
   let meltFelt = false;
   engine.onMelt = (done) => {
+    emit('melt', done ? 1 : 0);
     if (done && !meltFelt) {
       meltFelt = true;
       haptic('soft');
@@ -1076,6 +1083,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   const onMove = (e: PointerEvent) => {
     if (e.pointerType === 'touch') return;
     const hit = toWater(e);
+    pointerSignal(e.clientX / viewW, e.clientY / viewH, hit ? hit.reach : 0);
     if (!hit) {
       engine.pointerLeave();
       return;
@@ -1085,9 +1093,13 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   };
   const onDown = (e: PointerEvent) => {
     const hit = toWater(e);
+    emit('press', e.clientX / viewW, e.clientY / viewH, hit ? hit.reach : 0);
     if (hit) engine.splash(hit.x, hit.y, Math.min(90, Math.max(16, hit.reach * 1.5)), 1.5);
   };
-  const onLeave = () => engine.pointerLeave();
+  const onLeave = () => {
+    engine.pointerLeave();
+    pointerSignal(0.5, 0.5, 0);
+  };
   window.addEventListener('pointermove', onMove, { passive: true });
   window.addEventListener('pointerdown', onDown, { passive: true });
   document.addEventListener('pointerleave', onLeave);
@@ -1124,6 +1136,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const rest = s >= SETTLE_AT - 0.02;
     callouts.frame(cam, aspect, viewW, viewH, s);
     engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight });
+    flightSignal(now, s, cam, aspect, melt, dayNow, rest);
   }, 10);
 
   return {
