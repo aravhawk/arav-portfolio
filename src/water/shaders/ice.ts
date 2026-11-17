@@ -321,7 +321,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
       // largest. (They gather toward the outlet with the sheet's frame.)
       float g = smoothstep(0.5, 0.9, uIceA.z);
       // (The big plates ride on almost to the end: there is ice afloat in every frame until the last sweep.)
-      lead += cellA * (g * g * (0.07 + 0.62 * cr.y * cr.y) + 1.5 * smoothstep(0.84, 0.9, uIceA.z) * smoothstep(0.84, 0.9, uIceA.z));
+      lead += cellA * (g * g * (0.06 + 0.52 * cr.y * cr.y) + 1.5 * smoothstep(0.84, 0.9, uIceA.z) * smoothstep(0.84, 0.9, uIceA.z));
       // (A melting edge is not ruled.)
       lead += (textureLod(uDetail, il / 150.0 + 0.6, 0.0).r - 0.5) * 16.0 * g;
       kS *= 0.35;
@@ -356,11 +356,11 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     // fractures it meets, so its shore has bays and points and runs out into the leads round it.
     if (lsd < uNameS * 2.4 + 140.0) {
       float un1 = textureLod(uSnow, il / vec2(1300.0, 700.0) + 0.41, 0.0).r;
-      float un2 = textureLod(uSnow, il / vec2(420.0, 260.0) + 0.17, 0.0).g;
+      float un2 = textureLod(uSnow, il / vec2(560.0, 340.0) + 0.17, 0.0).g;
       float toEye = max(min(uNameG.x, uNameG.y) - u.y, 0.0);
       float dE = lsd - 0.32 * min(toEye, lsd);
-      float R = uNameS * (0.8 + 0.6 * un1 + 0.34 * un2) + 40.0 * exp(-cr.x / 46.0) * smoothstep(50.0, 170.0, uNameS);
-      f = smax(f, R - dE, 14.0);
+      float R = uNameS * (0.8 + 0.6 * un1 + 0.24 * un2) + 40.0 * exp(-cr.x / 46.0) * smoothstep(50.0, 170.0, uNameS);
+      f = smax(f, R - dE, 22.0);
     }
     // And it leaves: one lead opens from behind the letters down the lake, its head running on ahead of the melt
     // until it reaches the outlet; then it widens, and the sheet either side of it goes as plates.

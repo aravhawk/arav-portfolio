@@ -1410,6 +1410,8 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   }
   float mirK = fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.5 * farK * (1.0 - uNight)) * (1.0 - 0.74 * uNight);
   mirK = mix(mirK, min(fres * 1.25, 0.94) * gloss * (0.75 + 0.25 * wet), farDay);
+  // (Once the sheet is plates and the eye has left the first frame, a plate's top is ice with a little sky on it, not a pane of blue.)
+  mirK *= 1.0 - 0.6 * smoothstep(0.5, 0.72, uIceA.z) * (1.0 - uNight);
   col = mix(col, mir, mirK);
   if (farDay > 0.0) {
     // The sun's column: under the sun the ice gives its light back in a long broken streak that comes down the lake toward the eye.
@@ -2577,6 +2579,31 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       col *= 1.0 - 0.34 * (1.0 - smoothstep(0.0, 5.0, chip)) * sheetK * (1.0 - aC);
       col = mix(col, plate, aC);
     }
+  }
+  // The lake's own current, once the name's meltwater has found its way out: the water in the pool draws toward the
+  // mouth of the lead behind the letters, and runs off down the lead toward the outlet. It is seen as water is seen
+  // moving: fine threads of light on it, torn, travelling the way it goes.
+  if (lakeK > 0.0 && uNameL.x > 0.0 && footL < 26.0) {
+    vec2 us = uIceB.xy + (pw - uIceB.xy) * uIceB.z;
+    float yM = max(uNameG.x, uNameG.y) + uNameB.w;
+    vec2 ld = leadAt(us.y);
+    float inPool = 1.0 - smoothstep(yM - 30.0, yM + 70.0, us.y);
+    float acr = us.x - ld.x;
+    float runL = uTime * 44.0;
+    vec2 toM = us - vec2(leadAt(yM).x, yM + 40.0);
+    float rho = length(toM);
+    float lodT = lodFor(footL, 70.0, 512.0);
+    float thL = textureLod(uDetail, vec2(acr / 120.0 + 0.3, (us.y - runL) / 2400.0), lodT).r;
+    float thP = textureLod(uDetail, vec2(atan(toM.x, -toM.y) * 1.2 + 0.2, (rho + runL * 0.7) / 1700.0), lodT).r;
+    float th = mix(thL, thP, inPool);
+    // (Soft and long: a sheen that travels, not a scratch.)
+    float lineT = 1.0 - smoothstep(0.0, 0.05 + footL * 0.004, abs(th - 0.56));
+    float tornT = smoothstep(0.38, 0.7, textureLod(uDetail, vec2(acr / 330.0 + 0.6, (us.y - runL * 1.2) / 900.0), lodFor(footL, 330.0, 512.0)).r);
+    float kL = exp(-acr * acr / (uNameL.y * uNameL.y * 1.4 + 400.0)) * (1.0 - smoothstep(uNameL.x - 0.08, uNameL.x - 0.01, ld.y));
+    float kP = (1.0 - smoothstep(150.0, 430.0, rho)) * smoothstep(60.0, 200.0, rho);
+    float kT = mix(kL, kP, inPool) * smoothstep(0.03, 0.25, uNameL.x) * (1.0 - smoothstep(0.86, 0.99, uIceA.z)) * (1.0 - smoothstep(8.0, 26.0, footL));
+    vec3 foamT = mix(vec3(0.8, 0.93, 1.0) * (S.amb * 1.2 + S.key * 0.22), gFoamN * 0.8, uNight);
+    col = mix(col, foamT, lineT * lineT * tornT * kT * mix(0.13, 0.12, uNight));
   }
   // The current, drawn: fine bright threads that run with the stream,
   // quicker and whiter in the narrows, and the odd small plate of ice

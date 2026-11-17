@@ -34,6 +34,7 @@
 export const NAME_ICE = `
 uniform vec3 uNameW;       // where the first frame's words stand, in the frame: x: the right end of the left block, y: the left end of the right one (both 1 when they are stacked), z: how far up the frame their top is
 uniform vec4 uNameP;       // x: how far from the blocks' feet meltwater lies on the sheet px, y: 0..1 how wet the blocks are, z: 0..1 the sheet has opened under them, w: 0..1 the pool has opened behind them
+uniform float uNameT;      // the tangent of half the first camera's field of view: where a place on the lake stood in the first frame
 uniform vec4 uNameQ;       // the blocks' slump. x: how far their tops have melted down, in the raster's px, y: 0..1 how rounded and wet they have become, z: 0..1 how much of what stands under the water has gone, w: how far the water they stand in has spread from their feet px
 
 // The first camera, for which the outlines are laid: where it is, how deep the name's middle lies from it, and the slope of its line of sight to that middle.
@@ -531,6 +532,60 @@ vec3 nameGround(vec3 col, vec2 p, vec3 dir, float foot, float onIce) {
 }
 
 /**
+ * The pieces that come away. Now and then a small block breaks from a
+ * letter's foot and floats off across the pool toward the eye, turning a
+ * little, melting as it goes. Each is born at a point in the melt and its
+ * place is a function of the melt (with a slow bob of its own), so the page
+ * scrolled back puts every one of them back. pw: the place on the water.
+ */
+vec3 nameCalves(vec3 col, vec2 pw, vec3 dir, float foot, float onWater) {
+  float m = uIceA.z;
+  if (m < 0.1 || m > 0.6 || uNameM.w <= 0.0) return col;
+  bool two = uNameG.z > -5e3;
+  float yNear = min(uNameG.x, uNameG.y);
+  // (Most of the water is nowhere near them.)
+  if (abs(pw.x - gNmC.x) > uIceBox.z + 260.0 || pw.y > max(uNameG.x, uNameG.y) + 20.0 || pw.y < yNear - 360.0) return col;
+  vec2 lean = dir.xy / max(-dir.z, 0.05);
+  for (int i = 0; i < 8; i++) {
+    float fi = float(i);
+    float h1 = hash11(fi * 7.31 + 1.7);
+    float h2 = hash11(fi * 3.17 + 9.2);
+    float born = 0.11 + 0.36 * fract(fi * 0.381966 + 0.13);
+    float age = (m - born) / 0.2;
+    if (age <= 0.0 || age >= 1.0) continue;
+    float fx = (fi + 0.5) / 8.0 * 2.0 - 1.0 + (h1 - 0.5) * 0.16;
+    float yf = two && i - 2 * (i / 2) == 1 ? uNameG.x : yNear;
+    vec2 from = vec2(gNmC.x + fx * uIceBox.z * 0.94, yf - 6.0);
+    vec2 way = normalize(vec2(fx * 0.55 + (h2 - 0.5) * 0.8, -1.0));
+    vec2 c = from + way * (26.0 + 150.0 * pow(age, 0.7)) + vec2(sin(uTime * 0.31 + fi * 2.1), cos(uTime * 0.27 + fi * 1.3)) * 2.5;
+    float sz = (7.0 + 9.0 * h1) * (1.0 - 0.7 * age * age) * smoothstep(0.0, 0.07, age);
+    vec2 q = pw - c;
+    if (abs(q.x) > sz * 2.2 + 8.0 || abs(q.y) > sz * 2.2 + 8.0 + 10.0 * abs(lean.y)) continue;
+    float ang = h2 * 6.283 + (0.5 + h1) * age * 1.4 + 0.12 * sin(uTime * 0.2 + fi);
+    mat2 R = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
+    float c1 = fract(h1 * 13.0), c2 = fract(h2 * 29.0);
+    // (A broken piece with four sides of its own; it stands a hand out of the water, so the eye sees its near side under its top.)
+    vec2 qa = R * q;
+    float foot_ = max(max(abs(qa.x) * (0.8 + 0.5 * c1) + abs(qa.y) * 0.42, abs(qa.y) * (1.0 + 0.5 * c2)), max(qa.x * 0.9 - qa.y * (0.3 + 0.6 * c2), -qa.x * 0.7 + qa.y * (0.2 + 0.7 * c1))) - sz;
+    vec2 qb = R * (q - lean * (0.36 * sz + 1.5));
+    float top_ = max(max(abs(qb.x) * (0.8 + 0.5 * c1) + abs(qb.y) * 0.42, abs(qb.y) * (1.0 + 0.5 * c2)), max(qb.x * 0.9 - qb.y * (0.3 + 0.6 * c2), -qb.x * 0.7 + qb.y * (0.2 + 0.7 * c1))) - sz * 0.9;
+    float aa = max(0.8 * foot, 0.3);
+    float aTop = 1.0 - smoothstep(-aa, aa, top_);
+    float aSide = (1.0 - smoothstep(-aa, aa, foot_)) * (1.0 - aTop);
+    vec3 litD = S.amb * 1.25 + S.key * 0.22;
+    vec3 litN = S.amb * 5.0 + uAurora * 0.1;
+    vec3 lit = mix(litD, litN, uNight);
+    vec3 topC = mix(vec3(0.72, 0.86, 0.96), vec3(0.62, 0.72, 0.82), uNight) * lit * (0.9 + 0.25 * h2);
+    vec3 sideC = mix(vec3(0.24, 0.5, 0.72), vec3(0.3, 0.45, 0.58), uNight) * lit * 0.85;
+    // (Its own soft shade on the water, and the pale of it under the water round its foot.)
+    col *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 5.0, foot_)) * onWater * (1.0 - aTop) * (1.0 - aSide);
+    col = mix(col, sideC, aSide * onWater);
+    col = mix(col, topC, aTop * onWater);
+  }
+  return col;
+}
+
+/**
  * The swept field, laid over the sheet after the air (it lies close under
  * the eye, and black ice in haze is grey): the bare ice, the drifts that
  * feather in across its edges, the blocks' image in it and in the open
@@ -557,14 +612,21 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   // (The first frame's words stand at the foot of the frame, on calm snow: whatever the screen's shape, the bare ice and
   // the image in it stop short of them, under drifts.)
   // (Between the two blocks, where there are two, it may come on toward the eye.)
-  float between = smoothstep(uNameW.x + 0.02, uNameW.x + 0.08, vUv.x) * (1.0 - smoothstep(uNameW.y - 0.08, uNameW.y - 0.02, vUv.x));
+  // (They are measured in the first frame, and this is asked of the place on the lake, not of the pixel: where the
+  // snow was left for the words it lies still when the eye has moved on, and no ruled line travels over the ice.)
+  float dycH = p.y - uIceP.x;
+  float zcH = max(dycH * uIceP.z + uIceP.y * uIceP.w, 1.0);
+  vec2 hv = vec2(0.5 + 0.5 * (p.x - gNmC.x) / zcH / (uNameT * uLens.y), 0.5 + 0.5 * (dycH * uIceP.w - uIceP.y * uIceP.z) / zcH / uNameT);
+  float between = smoothstep(uNameW.x + 0.02, uNameW.x + 0.08, hv.x) * (1.0 - smoothstep(uNameW.y - 0.08, uNameW.y - 0.02, hv.x));
   // (By day the edge is drifted snow; before dawn the sheet there is dark ice too, and the image only fades.)
   // (The drifts only ever hold it further back from the words, never let it nearer.)
-  float clearW = smoothstep(0.0, mix(0.008, 0.045, uNight), vUv.y - mix(uNameW.z + 0.004, 0.0, between) - clamp(0.012 + (lvl - 0.5) * 0.05 + fin * 0.025, 0.0, 0.04) * (1.0 - uNight));
+  float clearW = smoothstep(0.0, mix(0.008, 0.045, uNight), hv.y - mix(uNameW.z + 0.004, 0.0, between) - clamp(0.012 + (lvl - 0.5) * 0.05 + fin * 0.025, 0.0, 0.04) * (1.0 - uNight));
   // (On a small or a very wide screen the words stand right under the letters' feet: the ice is bare as far as the feet all the same,
   // so no letter ever stands on snow.)
   // (Never into the words themselves: where they stand that close, they win.)
-  K *= max(clearW, smoothstep(-1.035, -1.005, nameSeat(p).y) * smoothstep(0.004, 0.012, vUv.y - uNameW.z) * (1.0 - uNight));
+  K *= max(clearW, smoothstep(-1.035, -1.005, nameSeat(p).y) * smoothstep(0.004, 0.012, hv.y - uNameW.z) * (1.0 - uNight));
+  // (Before dawn, once the letters have gone and the sheet is plates, the plates here are rimed like the rest: pale tops on dark water.)
+  K *= 1.0 - uNight * smoothstep(0.5, 0.64, uIceA.z);
   float fd = nameFoot(p);
   // The meltwater on the sheet at the blocks' feet: its edge wanders.
   float wob = (textureLod(uGrain, p / 310.0, 0.0).g - 0.5) * 22.0 + (textureLod(uGrain, p / 71.0 + 0.3, 0.0).b - 0.5) * 7.0;
@@ -621,6 +683,8 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
     float strength = mix(mix(0.26, 0.36, pond) * (1.0 - 0.8 * uNameP.z), mix(0.16, 0.1, smoothstep(0.1, 0.6, cosw)) * (1.0 - 0.7 * smoothstep(0.0, 0.2 * uNameB.z, uNameM.z)), onWater * (1.0 - onIce));
     col = mix(col, mc * mix(vec3(0.6, 0.76, 0.96), vec3(0.5, 0.7, 0.9), uNight), mir * strength * mirK);
   }
+  // The pieces that have come away from the letters, afloat.
+  if (onWater > 0.0) col = nameCalves(col, pw, dir, foot, onWater * (1.0 - onIce));
   // Snow snakes: thin streamers the wind drives across the bare ice.
   if (K * onIce > 0.0) {
     vec2 ws = wl - vec2(uTime * 85.0, 0.0);

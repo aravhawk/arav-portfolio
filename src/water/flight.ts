@@ -518,11 +518,15 @@ export class FlightEngine extends WaterEngine {
    * right one (both 1 when they are stacked), and how far up the frame their top is. The bare ice round the name keeps clear of them.
    */
   nameWords: [number, number, number] = [1, 1, 0.2];
+  /** The tangent of half the first camera's field of view (the first frame's words are measured in its picture). */
+  nameTan = 0.466;
   /** Something the picture depends on has changed: draw again, even when nothing moves. */
   touch() {
     this.dirty = true;
   }
 
+  /** When the next drop falls from the melting letters. */
+  private nameDripAt = 0;
   /** The rings the last blades leave, each with its own moment. */
   private ringQ: { at: number; x: number; y: number }[] = [];
   private nameRings() {
@@ -551,6 +555,7 @@ export class FlightEngine extends WaterEngine {
     const st = this.nameStand;
     const gl = this.gl;
     if (prog.u.uNameW) gl.uniform3fv(prog.u.uNameW, this.nameWords);
+    if (prog.u.uNameT) gl.uniform1f(prog.u.uNameT, this.nameTan);
     if (!prog.u.uNameG) return;
     if (!st || !this.iceMeta || ice.rect[2] <= 0) {
       gl.uniform4f(prog.u.uNameG, 0, 0, -1e4, 0);
@@ -707,6 +712,17 @@ export class FlightEngine extends WaterEngine {
     const m = this.iceTex ? Math.min(1, Math.max(0, melt)) : 0;
     const rate = Math.abs(m - this.melt) / Math.max(dt, 1e-3);
     this.meltRate += (Math.min(rate, 1.1) - this.meltRate) * (1 - Math.exp(-dt * 6));
+    // While the letters melt, water runs off them and falls into the pool at their feet: a small ring, here and there,
+    // every little while. (They are real rings in the simulation, and only while there is water there for them.)
+    if (this.nameStand && !this.still && m > 0.035 && m < NAME_GONE - 0.02 && this.time >= this.nameDripAt) {
+      const st = this.nameStand;
+      const r = this.iceRect;
+      const two = st.split > -5e3;
+      const row = two && Math.random() < 0.5 ? 0 : two ? 1 : 0;
+      const x = r.x + r.w * (0.14 + 0.72 * Math.random());
+      this.splash(x, st.yf[row] - 5 - 14 * Math.random(), 9 + 6 * Math.random(), 0.28 + 0.3 * Math.random());
+      this.nameDripAt = this.time + 0.16 + 0.5 * Math.random();
+    }
     // The last of the letters goes under: a ring leaves where each blade stood.
     if (this.nameStand && !this.still && this.melt < NAME_GONE && m >= NAME_GONE && this.melt > NAME_GONE - 0.08) this.nameRings();
     this.melt = m;
@@ -1338,6 +1354,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     if (destroyed || token !== buildToken) return;
     engine.iceRect = ice.rect;
     engine.nameCut = hero.cut;
+    engine.nameTan = Math.tan((hero.pose.fov * Math.PI) / 360);
     // The blocks: each line stands where the first camera sees its baseline meet the sheet.
     const [cy, ch, cc, cs] = hero.cut;
     const dy0 = ice.rect.y + ice.rect.h / 2 - cy;
