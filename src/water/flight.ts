@@ -259,7 +259,7 @@ export class FlightEngine extends WaterEngine {
   /** How much of each later station's subject is there to see from this camera. */
   private stations(cam: Basis): [number, number, number, number] {
     const near = (x: number, y: number, a: number, b: number) => 1 - smooth(a, b, Math.hypot(cam.pos[0] - x, cam.pos[1] - y));
-    return [near(1340, COLS.y, 2300, 2900), near(1300, DAM.y, 2300, 2900), near(LATTICE.x, LATTICE.y, 2300, 2900), near(1700, (CANYON.y0 + CANYON.y1) / 2, 4600, 5400)];
+    return [near(1340, COLS.y, 1750, 2350), near(1300, DAM.y, 2300, 2900), near(LATTICE.x, LATTICE.y, 2300, 2900), near(1700, (CANYON.y0 + CANYON.y1) / 2, 3700, 4600)];
   }
 
   /** Each stream's width at the confluence. */

@@ -11,6 +11,28 @@ import { BENDS, CANYON, COLS, DAM, FACE, LATTICE, SLUICES, T2 } from '../world';
 
 const f = (n: number) => n.toFixed(1);
 
+const fr = (x: number) => x - Math.floor(x);
+const v3 = (a: number, b: number, c: number) => `vec3(${a.toFixed(5)}, ${b.toFixed(5)}, ${c.toFixed(3)})`;
+const colPlanes = () => {
+  const out: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    for (let k = 0; k < 6; k++) {
+      const a = i * 0.9 + k * 1.0472 + 0.16 * Math.sin(k * 2.7 + i * 5.0);
+      out.push(v3(Math.cos(a), Math.sin(a), COLS.r * (0.86 + 0.24 * fr(Math.sin(k * 12.9 + i * 7.0) * 43.7))));
+    }
+  }
+  return out.join(', ');
+};
+const colTops = () =>
+  [0, 1, 2, 3]
+    .map((i) => {
+      const x = 0.16 * Math.sin(i * 3.1 + 1.0);
+      const y = 0.14 * Math.cos(i * 1.7);
+      const l = Math.hypot(x, y, 1);
+      return v3(x / l, y / l, 1 / l);
+    })
+    .join(', ');
+
 /** What every station shares: where the eye's ray meets the water, and the air between. */
 export const STATION_COMMON = `
 uniform vec4 uSt;          // how much of each of the last four stations' subjects is there to see (0 far off): columns, dam, lattice, canyon
@@ -41,25 +63,18 @@ float colX(int i) { return i == 0 ? COL_X.x : i == 1 ? COL_X.y : i == 2 ? COL_X.
 float colH(int i) { return i == 0 ? uColH.x : i == 1 ? uColH.y : i == 2 ? uColH.z : uColH.w; }
 
 // A column is six upright faces, none quite the same width, under a top that is cut a little out of level.
+// (Its planes are worked out once, here: xy the face's normal, z how far out it stands.)
+const vec3 COL_P[24] = vec3[24](${colPlanes()});
+const vec3 COL_T[4] = vec3[4](${colTops()});
 float colHit(vec3 ro, vec3 rd, int i, out vec3 n, out float tF) {
-  float fi = float(i);
-  vec3 o = ro - vec3(colX(i), COL_Y + 14.0 * sin(fi * 2.3), -FREEBOARD);
-  float h = colH(i);
+  vec3 o = ro - vec3(colX(i), COL_Y + 14.0 * sin(float(i) * 2.3), -FREEBOARD);
   float tN = 0.0;
   tF = 1e9;
   n = vec3(0.0, 0.0, 1.0);
   for (int k = 0; k < 7; k++) {
-    vec3 pn;
-    float d;
-    if (k < 6) {
-      float fk = float(k);
-      float a = fi * 0.9 + fk * 1.0472 + 0.16 * sin(fk * 2.7 + fi * 5.0);
-      pn = vec3(cos(a), sin(a), 0.0);
-      d = COL_R * (0.86 + 0.24 * fract(sin(fk * 12.9 + fi * 7.0) * 43.7));
-    } else {
-      pn = normalize(vec3(0.16 * sin(fi * 3.1 + 1.0), 0.14 * cos(fi * 1.7), 1.0));
-      d = h * pn.z;
-    }
+    vec3 pl = k < 6 ? COL_P[i * 6 + k] : COL_T[i];
+    vec3 pn = k < 6 ? vec3(pl.xy, 0.0) : pl;
+    float d = k < 6 ? pl.z : colH(i) * pl.z;
     float den = dot(rd, pn);
     float num = d - dot(o, pn);
     if (den < -1e-5) { float t = num / den; if (t > tN) { tN = t; n = pn; } }
@@ -114,45 +129,64 @@ vec3 colColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, int i) {
 /** The columns over the finished ground, and in the water before them. tw: where the ray meets the water, or -1. */
 vec3 columns(vec3 col, vec3 dir, float tw) {
   vec3 pwp = uCamPos + dir * max(tw, 0.0);
-  // (Water is only seen where the land above it is not in the way.)
-  bool wet = tw > 0.0 && textureLod(uBedA, bedUv(pwp.xy), 0.0).r < -2.0 && textureLod(uBedA, bedUv(uCamPos.xy + dir.xy * (uCamPos.z / -dir.z)), 0.0).r < 0.0;
+  // Most of the frame has nothing of them in it: neither a column on its line of sight nor the shallows under it.
+  vec2 fwd = normalize(dir.xy + 1e-6);
+  bool rect = tw > 0.0 && abs(pwp.x - 1340.0) < 800.0 && abs(pwp.y - COL_Y) < 520.0;
+  float any = 0.0;
   for (int i = 0; i < 4; i++) {
-    vec3 c = vec3(colX(i), COL_Y, 0.0);
-    // (Each is only looked for near its own line of sight.)
-    vec3 toC = c - uCamPos;
-    float along = dot(toC.xy, normalize(dir.xy + 1e-6));
-    if (along < 0.0) continue;
-    vec2 off = toC.xy - normalize(dir.xy + 1e-6) * along;
-    bool near = dot(off, off) < 4.0 * COL_R * COL_R;
-    if (!near && !wet) continue;
-    vec3 n;
-    float tF;
-    float t = near ? colHit(uCamPos, dir, i, n, tF) : -1.0;
-    if (t > 0.0 && (tw < 0.0 || t < tw)) {
-      // Its outline is geometry: smoothed by counting two more rays.
-      float cov = 1.0;
-      vec3 n2;
-      float tF2;
+    vec2 toC = vec2(colX(i), COL_Y) - uCamPos.xy;
+    float along = dot(toC, fwd);
+    vec2 off = toC - fwd * along;
+    any += step(0.0, along) * step(dot(off, off), 4.0 * COL_R * COL_R);
+  }
+  if (any < 0.5 && !rect) return col;
+  // (Water is only seen where the land above it is not in the way.)
+  bool wet = rect && textureLod(uBedA, bedUv(pwp.xy), 0.0).r < -2.0 && textureLod(uBedA, bedUv(uCamPos.xy + dir.xy * (uCamPos.z / -dir.z)), 0.0).r < 0.0;
+  // The nearest column on this line of sight, if any. (The ice itself is shaded once, for that one.)
+  float best = -1.0;
+  int bi = 0;
+  vec3 n;
+  float tF;
+  for (int i = 0; i < 4; i++) {
+    vec3 n1;
+    float f1;
+    vec2 toC = vec2(colX(i), COL_Y) - uCamPos.xy;
+    float along = dot(toC, fwd);
+    vec2 off = toC - fwd * along;
+    if (along < 0.0 || dot(off, off) > 4.0 * COL_R * COL_R) continue;
+    float t = colHit(uCamPos, dir, i, n1, f1);
+    if (t > 0.0 && (best < 0.0 || t < best)) { best = t; bi = i; n = n1; tF = f1; }
+  }
+  if (best > 0.0 && (tw < 0.0 || best < tw)) {
+    // Its outline is geometry: smoothed by counting two more rays.
+    float cov = 1.0;
+    vec3 n2;
+    float tF2;
+    if (uLean < 0.5) {
       for (int k = 0; k < 2; k++) {
         vec3 rd = normalize(dir + (uCamR * (k == 0 ? 0.5 : -0.5) + uCamU * (k == 0 ? -0.5 : 0.5)) * uPxAng);
-        if (colHit(uCamPos, rd, i, n2, tF2) < 0.0) cov -= 0.33;
+        if (colHit(uCamPos, rd, bi, n2, tF2) < 0.0) cov -= 0.33;
       }
-      col = mix(col, inAir(colColor(uCamPos, dir, t, tF, n, i), dir, t), cov * uSt.x);
-    } else if (wet) {
-      float d = length(pwp.xy - c.xy);
-      float h = colH(i);
-      // Its mirror image, shaken by its own rings.
-      float much = clamp(h / ${f(COLS.hMax)}, 0.1, 1.0);
-      float ring = sin(d * 0.1 - uTime * 4.2 + float(i) * 1.7) * exp(-max(d - COL_R, 0.0) / (70.0 + 150.0 * much)) * (0.35 + 0.65 * much);
-      vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3(0.012 * ring + 0.003 * sin(pwp.y * 0.21 + uTime * 0.9), 0.0, 0.0));
-      float t2 = near ? colHit(pwp, rd2, i, n, tF) : -1.0;
-      if (t2 > 0.0) col = mix(col, inAir(colColor(pwp, rd2, t2, tF, n, i), dir, tw + t2) * 0.74, 0.58 * uSt.x);
-      // The rings themselves: each column stands in its own, the tallest in the widest.
-      col *= 1.0 + ring * 0.2 * smoothstep(COL_R * 0.8, COL_R * 1.1, d) * uSt.x;
-      // A dark, wet foot where it meets the water.
-      col *= 1.0 - 0.35 * (1.0 - smoothstep(COL_R * 0.9, COL_R * 1.5, d)) * uSt.x;
     }
+    return mix(col, inAir(colColor(uCamPos, dir, best, tF, n, bi), dir, best), cov * uSt.x);
   }
+  if (!wet) return col;
+  // Water carries the column it is nearest to: its mirror image, shaken by its own rings.
+  int i = int(clamp(floor((pwp.x - COL_X.x) / (COL_X.y - COL_X.x) + 0.5), 0.0, 3.0));
+  float d = length(pwp.xy - vec2(colX(i), COL_Y));
+  if (d > 460.0) return col;
+  float h = colH(i);
+  float much = clamp(h / ${f(COLS.hMax)}, 0.1, 1.0);
+  float ring = sin(d * 0.1 - uTime * 4.2 + float(i) * 1.7) * exp(-max(d - COL_R, 0.0) / (70.0 + 150.0 * much)) * (0.35 + 0.65 * much);
+  if (uLean < 1.5) {
+    vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3(0.012 * ring + 0.003 * sin(pwp.y * 0.21 + uTime * 0.9), 0.0, 0.0));
+    float t2 = colHit(pwp, rd2, i, n, tF);
+    if (t2 > 0.0) col = mix(col, inAir(colColor(pwp, rd2, t2, tF, n, i), dir, tw + t2) * 0.74, 0.58 * uSt.x);
+  }
+  // The rings themselves: each column stands in its own, the tallest in the widest.
+  col *= 1.0 + ring * 0.2 * smoothstep(COL_R * 0.8, COL_R * 1.1, d) * uSt.x;
+  // A dark, wet foot where it meets the water.
+  col *= 1.0 - 0.35 * (1.0 - smoothstep(COL_R * 0.9, COL_R * 1.5, d)) * uSt.x;
   return col;
 }
 // (The shallows the columns stand in are a hand deep: the pale bed shows through.)
@@ -198,7 +232,7 @@ float damHit(vec3 ro, vec3 rd, out vec3 n, out float tF, out float kind) {
   vec3 n1;
   float f1;
   kind = 0.0;
-  if (boxHit(ro, rd, vec3(${f(DAM.x0)}, DAM_Y, -FREEBOARD - 4.0), vec3(${f(DAM.x1)}, DAM_Y + DAM_T, DAM_H + 110.0), n1, f1) < 0.0) return -1.0;
+  if (boxHit(ro, rd, vec3(${f(DAM.x0)}, DAM_Y, -FREEBOARD - 4.0), vec3(${f(DAM.x1)}, DAM_Y + DAM_T, DAM_H * 2.0 - 16.0 - FREEBOARD), n1, f1) < 0.0) return -1.0;
   for (int i = 0; i < 4; i++) {
     float xa = i == 0 ? ${f(DAM.x0)} : gateX(i - 1) + GATE_W;
     float xb = i == 3 ? ${f(DAM.x1)} : gateX(i) - GATE_W;
@@ -245,14 +279,16 @@ vec3 dam(vec3 col, vec3 dir, float tw) {
   if (t > 0.0 && (tw < 0.0 || t < tw)) return mix(col, inAir(damColor(uCamPos, dir, t, tF, n, kind), dir, t), uSt.y);
   if (tw < 0.0) return col;
   vec3 pwp = uCamPos + dir * tw;
-  if (textureLod(uBedA, bedUv(pwp.xy), 0.0).r > -2.0) return col;
   float d = pwp.y - DAM_Y;
+  if (d < -420.0 || d > 1010.0 || abs(pwp.x - 1300.0) > 620.0) return col;
+  if (textureLod(uBedA, bedUv(pwp.xy), 0.0).r > -2.0) return col;
   if (d < DAM_T) {
     // The head pond: the dam's mirror image, and the draw toward the open sluice.
     vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3(0.003 * sin(pwp.y * 0.2 + uTime * 0.8), 0.0, 0.0));
-    float t2 = damHit(pwp, rd2, n, tF, kind);
+    float t2 = uLean < 1.5 ? damHit(pwp, rd2, n, tF, kind) : -1.0;
     if (t2 > 0.0) col = mix(col, inAir(damColor(pwp, rd2, t2, tF, n, kind), dir, tw + t2) * 0.74, 0.55 * uSt.y);
     for (int i = 0; i < 3; i++) {
+      if (gateOf(i) < 0.02) continue;
       vec2 q = pwp.xy - vec2(gateX(i), DAM_Y);
       float pull = gateOf(i) * exp(-length(q * vec2(1.0, 0.55)) / 90.0);
       float streak = textureLod(uGrain, vec2(atan(q.x, -q.y) * 0.9, (length(q) + uTime * 70.0) / 900.0), 1.5).r;
@@ -260,7 +296,6 @@ vec3 dam(vec3 col, vec3 dir, float tw) {
     }
     return col;
   }
-  if (d > 1010.0) return col;
   int i = pwp.x < 1170.0 ? 0 : pwp.x < 1430.0 ? 1 : 2;
   float cx = i == 0 ? ${sluiceX(0)} : i == 1 ? ${sluiceX(1)} : ${sluiceX(2)};
   float sg = i == 0 ? uSurge.x : i == 1 ? uSurge.y : uSurge.z;
@@ -383,6 +418,7 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
     float tF2;
     vec2 id2;
     for (int k = 0; k < 2; k++) {
+      if (uLean > 0.5) break;
       vec3 rd = normalize(dir + (uCamR * (k == 0 ? 0.5 : -0.5) + uCamU * (k == 0 ? -0.5 : 0.5)) * uPxAng);
       if (cubesHit(uCamPos, rd, n2, tF2, id2) < 0.0) cov -= 0.33;
     }
@@ -399,7 +435,7 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
   float run = textureLod(uGrain, vec2(d / 160.0, (s - uTime * 110.0) / 1700.0), 2.0).r;
   float head = exp(-abs(s - latPulse()) / 90.0);
   vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3(band * (run - 0.5) * 0.05, 0.0, 0.0));
-  float t2 = cubesHit(pwp, rd2, n, tF, id);
+  float t2 = uLean < 1.5 ? cubesHit(pwp, rd2, n, tF, id) : -1.0;
   if (t2 > 0.0) col = mix(col, inAir(cubeColor(pwp, rd2, t2, tF, n, id), dir, tw + t2) * 0.78, 0.66 * uSt.z);
   col = mix(col, vec3(0.86, 0.95, 1.0) * (S.key * mix(0.22, 0.06, uNight) + S.amb * 0.9), band * (0.16 + 0.6 * smoothstep(0.42, 0.7, run)) * uSt.z);
   col += vec3(0.3, 0.82, 0.95) * band * head * mix(0.25, 0.6, uNight) * uSt.z;
@@ -461,7 +497,7 @@ float glacierTop(vec2 p) {
   return CY_H * smoothstep(0.0, 320.0, min(e.x, e.y));
 }
 // The first ice a ray meets before tMax: wall is 1 on the canyon's side, 0 on the top.
-float glacierHit(vec3 ro, vec3 rd, float tMax, out float wall) {
+float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, out float wall) {
   vec3 n1;
   float tF;
   float t = boxHit(ro, rd, vec3(CY_LO, -FREEBOARD - 8.0), vec3(CY_HI, CY_H + 1.0), n1, tF);
@@ -471,7 +507,8 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, out float wall) {
   float tEnd = min(tMax, tF);
   wall = 0.0;
   float near = 1e5;
-  for (int i = 0; i < 56; i++) {
+  for (int i = 0; i < 48; i++) {
+    if (i >= steps) break;
     if (t > tEnd) return -1.0;
     vec3 p = ro + rd * t;
     float w = CY_W - canyonD(p.xy);
@@ -482,7 +519,7 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, out float wall) {
     t += d;
   }
   // (A ray that runs out of steps sliding along a wall has, to the eye, met it.)
-  if (near < 9.0) { wall = 1.0; return t; }
+  if (near < 14.0) { wall = 1.0; return t; }
   return -1.0;
 }
 vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
@@ -527,14 +564,14 @@ vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
 /** The glacier over the finished ground, and its walls in the water between them. */
 vec3 canyon(vec3 col, vec3 dir, float tw) {
   float wall;
-  float t = glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, wall);
+  float t = glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, uLean > 0.5 ? 36 : 48, wall);
   if (t >= 0.0) return mix(col, inAir(glacierColor(uCamPos, dir, t, wall, 1.0), dir, t), uSt.w);
   if (tw < 0.0) return col;
   vec3 pwp = uCamPos + dir * tw;
   if (any(lessThan(pwp.xy, CY_LO)) || any(greaterThan(pwp.xy, CY_HI)) || canyonD(pwp.xy) > CY_W) return col;
   vec4 wv = textureLod(uGrain, pwp.xy / 300.0 + vec2(0.0, -uTime * 0.25), 1.0);
   vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3((wv.rg - 0.5) * 0.09, 0.0));
-  float t2 = glacierHit(pwp + vec3(0.0, 0.0, 1.0), rd2, 1400.0, wall);
+  float t2 = uLean < 1.5 ? glacierHit(pwp + vec3(0.0, 0.0, 1.0), rd2, 900.0, 18, wall) : -1.0;
   if (t2 >= 0.0) col = mix(col, inAir(glacierColor(pwp, rd2, t2, wall, mix(0.3, 0.12, uNight)), dir, tw + t2) * 0.8, 0.6 * uSt.w);
   // Fast water on the outside of each bend, piled white against the wall; slack on the inside.
   vec2 r1 = pwp.xy - CY_C1;
