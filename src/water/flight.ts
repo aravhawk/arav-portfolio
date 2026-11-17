@@ -442,7 +442,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(prog.u.uIceA, (shade ? hole : pond) * (1 - k) + old * k, ice.a[1], ice.a[2], ice.a[3]);
     gl.uniform4f(prog.u.uIceC, ice.c[0], ice.c[1], smooth(0.36, 0.57, m), ice.c[3]);
     if (prog.u.uIceRim) gl.uniform1f(prog.u.uIceRim, 0);
-    if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (1 - k), smooth(0, 0.14, m), smooth(0.12, 0.3, m), 0);
+    if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (1 - k), smooth(0, 0.14, m), smooth(0.12, 0.3, m), smooth(0.41, 0.49, m));
   }
 
   protected simCell() {
