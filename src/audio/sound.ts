@@ -70,6 +70,9 @@ const TRIM = { wind: 0.3, whistle: 0.035, wake: 0.14, aurora: 0.0075 };
 /** After the page has gone somewhere in one frame: how long the world is steered slowly into its new place, seconds. */
 const SETTLE = 1.2;
 
+/** How long after its moment a note of the arrival is still played, where the picture's frames come too far apart to set it ahead, seconds. */
+const LATE = 0.4;
+
 /** How long the dominant is held before a resolution that no light event prepares: two beats. */
 const PREPARE = 2 * BEAT;
 
@@ -480,22 +483,25 @@ export class Sound {
     // out under them. Where the line ends the ribbon leaves the water: there the theme is stated whole, harmonised,
     // from the ribbon's first light to the end of its rise, and over it the ladder climbs with the ribbon's head, a
     // rung for each sixth of the way to the top of the frame, the last as it leaves it.
+    // (These are the piece's one arrival: where the picture cannot keep time and a frame comes later than the look
+    // ahead reaches, a note whose moment has just gone by is still played, at once, and not left out of the theme.)
     if (this.dawnClock >= 0 && sc.clock < this.dawnClock + DAWN.over + 1) {
       const d0 = this.dawnClock;
       const tan = sc.cam.tan;
+      const since = from - LATE;
       const tau0 = d0 + lineTime(0.01);
       if (tau0 > from && tau0 <= until) {
         this.ahead('air', 'air', tau0, sc, (T) => whoosh(g, T, lineTime(1) - lineTime(0.01), 420, 2500, 0.05, lightPan(LIGHT.foot * 0.5, sc.aspect, tan)));
       }
       for (let i = 0; i < GATHER.length; i++) {
         const tau = d0 + gatherTime(i);
-        if (tau <= from || tau > until) continue;
+        if (tau <= since || tau > until) continue;
         const v = gatherVoice(i, sc.aspect, tan, sc.night);
         this.ahead('gather', `ga${i}`, tau, sc, (T) => [-1, 1].map((side) => bell(g, v.midi, T + (side > 0 ? 0.009 : 0), 0.5 * v.gain, v.pan + side * v.width, { bright: v.bright, long: v.long, send: v.send })));
       }
       for (let i = 0; i < ARRIVAL.length; i++) {
         const tau = d0 + arrivalTime(i);
-        if (tau <= from || tau > until) continue;
+        if (tau <= since || tau > until) continue;
         const last = i === ARRIVAL.length - 1;
         const pan = lightPan(LIGHT.base, sc.aspect, tan);
         this.ahead('arrival', `ar${i}`, tau, sc, (T) => {
@@ -510,7 +516,7 @@ export class Sound {
       }
       for (let j = 0; j < CLIMB.length; j++) {
         const tau = d0 + climbTime(j, this.dawnTop);
-        if (tau <= from || tau > until) continue;
+        if (tau <= since || tau > until) continue;
         const v = climbVoice(j, this.dawnTop, sc.aspect, tan, sc.night);
         this.ahead('climb', `cl${j}`, tau, sc, (T) => bell(g, v.midi, T, v.gain, v.pan, { bright: v.bright, long: v.long, send: v.send }));
       }

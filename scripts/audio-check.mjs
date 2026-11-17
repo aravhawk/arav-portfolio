@@ -22,12 +22,14 @@
  * 2. Sync (--sync <base> [--label name] [--load]). On the running site,
  *    with sound turned on by a real click, it causes each moment and reads
  *    the conductor's own trace. Moments on the picture's own clock (the
- *    shards' pulse, the lattice, the gates, the surge, the drips, the dawn's
- *    line of light) are set ahead: for each, the time it is heard (the
+ *    shards' pulse, the lattice, the gates, the surge, the drips, the crests
+ *    that land on the block, and the arrival: the gathering along the line
+ *    of light, the theme and the ladder up the ribbon) are set ahead: for each, the time it is heard (the
  *    audio time it starts at, through the device's latency as the output
  *    timestamps give it) against the time of the frame that shows it.
- *    Moments a visitor causes (a press, the switch, the ice breaking under
- *    a scroll) are asked for at once: the cause against the start on the
+ *    Moments a visitor causes (a press, the switch, a tick of the rail, the
+ *    ice cracking and the name's letters going under as the page is
+ *    scrolled) are asked for at once: the cause against the start on the
  *    audio clock. It also listens to the effects' bus and finds each sound's
  *    real onset in the stream. --load runs a second renderer on the GPU.
  *
@@ -973,6 +975,18 @@ async function sync(base) {
   // The melt's first crack: from the frozen lake, begin to scroll.
   await to(0, 1500);
   await glide(0.05, 1.6, 5);
+  // A tick of the rail: the page goes to the basin in one frame (a hover, a press and the jump).
+  {
+    const bb = await page.locator('.fl-rail a').nth(2).boundingBox();
+    if (bb) {
+      await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2, { steps: 3 });
+      await page.waitForTimeout(250);
+      await page.mouse.down();
+      await page.waitForTimeout(60);
+      await page.mouse.up();
+      await page.waitForTimeout(2500);
+    }
+  }
   // A press on water: the basin.
   await to(stops[2] + 1.0, 2500);
   for (const [x, y] of [[650, 720], [900, 650], [1150, 760], [760, 800]]) {
