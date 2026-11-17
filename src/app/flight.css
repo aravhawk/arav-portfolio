@@ -356,9 +356,13 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   font-size: clamp(1.9rem, 2.8vw + 0.4rem, 3.5rem);
   color: var(--ink);
 }
-/* Every other one a tone quieter, as the list has always been set; over a picture the quiet tone is the second ink. */
+/* Every other one a tone quieter, as the list has always been set; over a picture the quiet tone is the second ink
+   (before dawn a little lighter than that, so it holds on the dark bank). */
 .fl-into-list li:nth-child(even) {
   color: var(--ink-2);
+}
+:root[data-theme='dark'] .fl-into-list li:nth-child(even) {
+  color: #ccd3d7;
 }
 .fl-into-next {
   max-width: 30ch;
@@ -462,9 +466,12 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     max-width: none;
     min-width: 68vw;
   }
-  .fl-into-list {
+  .fl .fl-into-list {
     max-width: none;
     font-size: clamp(1.6rem, 7.6vw, 2.4rem);
+  }
+  .fl-into-words {
+    gap: var(--s-3);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -624,5 +631,37 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   }
   :is(html[data-flight='off'], html:not([data-scripted])) .fl .fl-pool {
     min-height: 120px;
+  }
+}
+
+/* ---------- short, wide screens ----------
+   A phone on its side, or a desktop window at 200 percent zoom: the frame
+   is wide but there is little height. The first frame's two lines keep to
+   the foot, side by side and smaller, clear of the name. */
+@media (max-height: 540px) and (min-aspect-ratio: 5/4) {
+  .fl-hero-words {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--s-5);
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  .fl-hero-words .fl-role {
+    font-size: clamp(1rem, 2.6vw, 1.35rem);
+    line-height: 1.08;
+  }
+  .fl-hero-words .fl-intro {
+    max-width: 32ch;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+  }
+  .fl-view-words,
+  .fl-up-words,
+  .fl-into-words {
+    gap: var(--s-2);
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+  .fl-end-block {
+    margin-bottom: 14px;
   }
 }

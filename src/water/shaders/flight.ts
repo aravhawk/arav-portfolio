@@ -71,6 +71,8 @@ uniform vec3 uKeyDir;
 uniform vec3 uAmbCol;
 uniform vec4 uSkyK;        // x: haze, y: how much aurora is left, z: 0..1 how far the sky has come to the ending's, w: the light left in the water's own body
 uniform vec4 uSea;         // x: 1 when the open sea is near enough to be seen, y: 0..1 the camera has settled on the ending, z: u left of which the water is kept calm for the words, w: v under which it is (narrow screens), or 0
+uniform vec4 uCalmBox;     // where the words now showing stand, in vUv: x0, y0, x1, y1
+uniform vec2 uCalmK;       // x: 0..1 how much the picture is calmed for them, y: 1 when they are light in both themes (the ending)
 uniform vec4 uRay;         // the line of light at the ending. xy: where it comes ashore (the camera's rest), z: 0..1 how far it has run, w: its strength
 
 uniform sampler2D uBedA;
@@ -1205,15 +1207,17 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 
 /* ---------- the open sea: the ending's water ---------- */
 
-const float SEA_Y = ${DELTA.sea.toFixed(1)};
 // The sea is drawn at the scale of the eye that comes to rest over it: this many units to one of its heights.
 const float SEA_S = 60.0;
 
-/** How much of the water at a place is open sea: clear of the delta's front and of every shore. */
+/**
+ * How much of the water at a place is open sea: north of the delta's head,
+ * and well clear of every shore. (The channels are too narrow to be far
+ * from a bank anywhere, so they stay the river's own water; along the coast
+ * the shallows grade out into the deep.)
+ */
 float seaAt(vec2 pw, float sd) {
-  // (The coast runs level from the western cape, then falls away to the east past the delta's front.)
-  float coast = ${(T2 + 9500).toFixed(1)} - 0.7 * clamp(pw.x - 1000.0, 0.0, 1700.0);
-  return uSea.x * smoothstep(-220.0, 420.0, pw.y - coast) * smoothstep(60.0, 300.0, -sd);
+  return uSea.x * step(${(DELTA.y - 250).toFixed(1)}, pw.y) * smoothstep(70.0, 310.0, -sd);
 }
 
 /**
@@ -1314,7 +1318,8 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     float halo = exp(-line * line / (w * w * 40.0)) * 0.14 + exp(-abs(line) / (w * 14.0)) * 0.06;
     float tip = exp(-pow((dip - head * 0.9) / max(head * 0.12, 1e-3), 2.0)) * (1.0 - smoothstep(0.9, 1.0, uRay.z));
     vec3 rayC = mix(vec3(1.0, 0.9, 0.78), vec3(1.0, 0.8, 0.46), uNight);
-    col += rayC * (core * 2.4 + halo) * shown * uRay.w * (1.0 + 2.0 * tip) * (1.0 - 0.75 * lee);
+    // (It stops short of the words: in their lee the water keeps no light.)
+    col += rayC * (core * 2.4 + halo) * shown * uRay.w * (1.0 + 2.0 * tip) * (1.0 - lee) * (1.0 - lee);
   }
   gLee = lee;
   return col;
@@ -1624,6 +1629,28 @@ void main() {
   if (uBloom > 0.0) col += textureLod(uGlowTex, vUv, 0.0).rgb * uBloom;
   vec2 vc = vUv - 0.5;
   col *= 1.0 - dot(vc, vc) * mix(0.42, 0.5, uSea.y);
+  // The words' lee. Where words stand the picture keeps itself readable
+  // behind them, softly: under dark words nothing is left darker than a
+  // light haze, under light words nothing brighter than a deep shade. Only
+  // the pixels that would fight the words are touched, and the edge of the
+  // lee is wide and soft, so it reads as air and shade, never as a plate.
+  if (uCalmK.x > 0.0) {
+    vec2 cq = abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5;
+    cq.x *= uLens.y;
+    float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);
+    float ck = 1.0 - smoothstep(-0.014, 0.17, cd);
+    ck *= ck * uCalmK.x;
+    if (ck > 0.0) {
+      float l = max(dot(col, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
+      float shadeK = mix(uNight, 1.0, uCalmK.y);
+      const float CAP = 0.082;
+      const float FLOOR = 0.165;
+      float capped = 0.5 * (l + CAP - sqrt((l - CAP) * (l - CAP) + 0.09 * CAP * CAP));
+      float lifted = 0.5 * (l + FLOOR + sqrt((l - FLOOR) * (l - FLOOR) + 0.09 * FLOOR * FLOOR));
+      col *= mix(1.0, capped / l, ck * shadeK);
+      col += (lifted - l) * vec3(0.95, 1.0, 1.07) * ck * (1.0 - shadeK);
+    }
+  }
   vec3 xa = col * 1.12;
   col = clamp((xa * (2.51 * xa + 0.03)) / (xa * (2.43 * xa + 0.59) + 0.14), 0.0, 1.0);
   col = pow(max(col, 0.0), vec3(1.0 / 2.2));

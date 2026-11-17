@@ -119,7 +119,7 @@ const NIGHT: Key = {
  */
 export function skyAt(theme: number, day: number, lift: number, sunAz: number, ridge: number): SkyKeys {
   // The sun waits behind the ranges, its upper edge just under the crest, and clears it when the camera settles.
-  const elEnd = ridge - 0.014 + 0.026 * lift;
+  const elEnd = ridge - 0.014 + 0.022 * lift;
   // Late in the light theme's day: the sun has come round to the right, still clear of the ranges, and the light is gold.
   const late: Key = {
     zen: [0.045, 0.13, 0.42],

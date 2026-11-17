@@ -250,9 +250,9 @@ function seaKeys(aspect: number, sunAz: number, s9: number, s10: number): Key[] 
     ? [
         // Out of the glacier and up over the west bank.
         { s: s9 + 0.25, pos: [1900, T + 7300, 260], aim: [1800, T + 8200, 0], fov: 60 },
-        // The delta: the channels above the middle, the bank at the foot.
-        { s: s9 + 1.1, pos: [1180, T + 7240, 620], aim: [1640, T + 8560, 0], fov: 60 },
-        { s: s10 - 0.55, pos: [1190, T + 7275, 610], aim: [1646, T + 8580, 0], fov: 60 },
+        // The delta, looked at across its west shore: the bank fills the foot of the frame, the channels fan away above it.
+        { s: s9 + 1.1, pos: [700, T + 7500, 500], aim: [1458, T + 8258, 0], fov: 60 },
+        { s: s10 - 0.55, pos: [716, T + 7522, 492], aim: [1468, T + 8274, 0], fov: 60 },
         { s: s10 + 0.35, ...back(1750, 250, 52, 330) },
         { s: s10 + 0.95, ...back(620, 105, 42, 90) },
         { s: SETTLE_AT, ...rest },
@@ -283,8 +283,9 @@ export function dayAt(s: number): number {
   const keys: [number, number][] = [
     [0, 0],
     [h, 0],
-    [s8 + 0.6, 0.1],
-    [s9 + 0.1, 0.44],
+    // (Through the canyon's hold, where the app's picture and its words are read, the light is still the day's.)
+    [s8 + 2.75, 0.1],
+    [s9 + 0.45, 0.42],
     [s9 + 1.1, 0.55],
     [s9 + SECTIONS.delta - 0.55, 0.6],
     [SETTLE_AT - 0.25, 1],

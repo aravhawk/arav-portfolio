@@ -51,6 +51,11 @@ export interface FlightMoment {
   /** where the ending's words end, in u, and (narrow screens) how high they reach, in v from the foot; 0 when unused */
   calm: number;
   near: number;
+  /** where the words now showing stand, in the frame (u, v from the foot): x0, y0, x1, y1 */
+  box: [number, number, number, number];
+  /** 0..1, how much the picture is calmed behind them, and whether they are light in both themes */
+  boxK: number;
+  boxLight: boolean;
 }
 
 export class FlightEngine extends WaterEngine {
@@ -212,6 +217,9 @@ export class FlightEngine extends WaterEngine {
     this.sunAz = ((x0 + at) / w - 0.5) * 2 * PANO.az;
     this.ridge = Math.min(0.075, Math.max(0.012, crest));
   }
+
+  /** How far the sky has come to the ending's, as last drawn. */
+  private dusk = 0;
 
   /** The light event: the sun's last lift and the line of light, each 0..1, run once by the clock when the camera first comes to rest. */
   private lift = dawned ? 1 : 0;
@@ -505,7 +513,7 @@ export class FlightEngine extends WaterEngine {
       this.onMelt?.(false);
     }
 
-    const key = `${cam.pos.join(',')}|${cam.f.join(',')}|${cam.tan}|${m}|${at.settle}|${at.calm}|${at.near}`;
+    const key = `${cam.pos.join(',')}|${cam.f.join(',')}|${cam.tan}|${m}|${at.settle}|${at.calm}|${at.near}|${at.boxK}|${at.box.join(',')}`;
     if (key !== this.camKey) {
       this.camKey = key;
       this.dirty = true;
@@ -607,10 +615,13 @@ export class FlightEngine extends WaterEngine {
     gl.uniform3fv(r.u.uKeyDir, sky.keyDir);
     gl.uniform3fv(r.u.uAmbCol, sky.amb);
     gl.uniform4f(r.u.uSkyK, sky.haze, sky.aurora, sky.dusk, sky.under);
+    this.dusk = sky.dusk;
     // The open sea is only worked out when the camera is near enough to see it.
     const toSea = Math.hypot(cam.pos[0] - 1900, cam.pos[1] - DELTA.sea);
     const seaOn = cam.pos[1] > DELTA.sea ? 1 : 1 - smooth(4300, 5600, toSea);
     gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
+    gl.uniform4fv(r.u.uCalmBox, at.box);
+    gl.uniform2f(r.u.uCalmK, at.boxK, at.boxLight ? 1 : 0);
     gl.uniform4f(r.u.uRay, REST.x, REST.y, this.ray, seaOn > 0 ? this.ray * (0.55 + 0.45 * this.lift) : 0);
     this.bindIce(r, ice, 7, 9);
     gl.uniform1f(r.u.uIceH, ICE_H);
@@ -701,7 +712,8 @@ export class FlightEngine extends WaterEngine {
     const f = this.film;
     // Leanest: by day, when only the sun blooms, the halo is let go.
     const l2 = Math.min(1, Math.max(0, this.leanNow - 1));
-    const bloom = 0.55 * (1 - l2 * (1 - night));
+    // (At the ending the sun itself is in the frame: its own skirts carry it, and the glow is held back.)
+    const bloom = 0.55 * (1 - l2 * (1 - night)) * (1 - 0.45 * this.dusk);
     gl.useProgram(r.prog);
     bindTex(gl, 14, f[3].tex, r.u.uGlowTex);
     // (Unit 15 is the scratch unit: the pool's picture is put back on it for each draw.)
@@ -813,6 +825,54 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   let calm = 0.6;
   let nearV = 0;
   let dayNow = 0;
+  // The words' lee: where the block of words now showing stands, so the
+  // picture can keep itself readable behind it (see the shading pass).
+  /** Where a block's words really are: the union of its lines, which can run wider than the block that holds them. */
+  const inkOf = (host: HTMLElement) => {
+    let x0 = 1e9;
+    let y0 = 1e9;
+    let x1 = -1e9;
+    let y1 = -1e9;
+    for (const el of host.querySelectorAll<HTMLElement>('p, h2, li, a, button, .fl-film, .switch')) {
+      const r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) continue;
+      x0 = Math.min(x0, r.left);
+      y0 = Math.min(y0, r.top);
+      x1 = Math.max(x1, r.right);
+      y1 = Math.max(y1, r.bottom);
+    }
+    return x1 < x0 ? null : { x0, y0, x1, y1 };
+  };
+  const box: [number, number, number, number] = [0, 0, 0, 0];
+  let boxK = 0;
+  let boxOn = false;
+  let boxLight = false;
+  let boxTimer = 0;
+  let boxLast = 0;
+  const measureBox = () => {
+    // (The first frame's two lines stand at opposite ends of the near ice, which is calm already.)
+    const w = words.find((x) => x.on && !x.el.classList.contains('fl-hero-words'));
+    boxOn = !!w;
+    if (!w) return;
+    const u = inkOf(w.el);
+    if (!u) {
+      boxOn = false;
+      return;
+    }
+    // (A little room all round, and for the short rise the words arrive with.)
+    const pad = 12;
+    box[0] = (u.x0 - pad) / viewW;
+    box[1] = 1 - (u.y1 + pad) / viewH;
+    box[2] = (u.x1 + pad) / viewW;
+    box[3] = 1 - (u.y0 - pad - 16) / viewH;
+    boxLight = w.el.classList.contains('fl-end-words');
+  };
+  const scheduleBox = () => {
+    measureBox();
+    window.clearTimeout(boxTimer);
+    // Again once the words have arrived where they rest.
+    boxTimer = window.setTimeout(measureBox, 760);
+  };
   // One light tick, once, when the camera settles and the sun's edge clears the ranges.
   engine.onDawn = () => haptic('light');
 
@@ -836,11 +896,13 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     // (Each section but the last is one screen longer than its stretch of scroll, so its words can stay pinned to the end of it.)
     unit = first ? first.offsetHeight / (SECTIONS.hero + 1) : viewH;
     callouts.measure();
+    scheduleBox();
     // The ending's words keep to the left (on a narrow screen, to the foot): the water there is kept calm for them.
-    const b = endBlock?.getBoundingClientRect();
+    const b = endBlock ? inkOf(endBlock) : null;
     const narrow = viewW < 720;
-    calm = b && b.width > 0 ? Math.min(0.9, b.right / viewW + 0.03) : 0.6;
-    nearV = narrow && b && b.height > 0 ? Math.min(0.6, 1 - (b.top - (endPin?.getBoundingClientRect().top ?? 0)) / viewH + 0.02) : 0;
+    const pinTop = endPin?.getBoundingClientRect().top ?? 0;
+    calm = b ? Math.min(0.9, b.x1 / viewW + 0.03) : 0.6;
+    nearV = narrow && b ? Math.min(0.6, 1 - (b.y0 - pinTop) / viewH + 0.02) : 0;
   }
 
   /** The bed is the same for every screen; it is carved once. */
@@ -1015,18 +1077,26 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   const off = onFrame((now) => {
     if (!built) return;
     const raw = window.scrollY / unit;
+    // Nothing may glide when motion is reduced: each section shows its
+    // composed frame, and its words stand with it for the whole of its
+    // stretch (they are set for that frame, so nothing is ever hidden).
+    const s = mqStill.matches ? stillScroll(raw) : raw;
+    sNow = s;
     // Each block of words comes in and goes out with its stretch of scroll.
+    let changed = false;
     for (const w of words) {
-      const on = raw >= w.from && raw < w.to;
+      const on = s >= w.from && s < w.to;
       if (on !== w.on) {
         w.on = on;
         w.el.toggleAttribute('data-on', on);
+        changed = true;
       }
     }
-    // Nothing may glide when motion is reduced: each section shows its
-    // composed frame.
-    const s = mqStill.matches ? stillScroll(raw) : raw;
-    sNow = s;
+    if (changed) scheduleBox();
+    // The lee comes in with the words and goes out with them.
+    const dtBox = boxLast ? Math.min(0.05, (now - boxLast) / 1000) : 0;
+    boxLast = now;
+    boxK = boxOn ? Math.min(1, boxK + dtBox / (mqStill.matches ? 0.001 : 0.35)) : Math.max(0, boxK - dtBox / (mqStill.matches ? 0.001 : 0.25));
     const pose = poseAt(keys, s);
     // (Nothing banks when motion is reduced.)
     if (mqStill.matches) pose.roll = 0;
@@ -1034,8 +1104,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const melt = (s - MELT.from) / (MELT.to - MELT.from);
     dayNow = dayAt(s);
     const rest = s >= SETTLE_AT - 0.02;
-    callouts.frame(cam, aspect, viewW, viewH, raw);
-    engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV });
+    callouts.frame(cam, aspect, viewW, viewH, s);
+    engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight });
   }, 10);
 
   return {
@@ -1048,6 +1118,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       ro.disconnect();
       forkWatch.disconnect();
       window.clearTimeout(recarve);
+      window.clearTimeout(boxTimer);
       solver.dispose();
       window.clearTimeout(resizeTimer);
       window.removeEventListener('resize', onResize);
