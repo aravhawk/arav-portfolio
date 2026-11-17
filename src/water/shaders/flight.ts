@@ -1313,8 +1313,8 @@ vec3 confAir(vec3 c, vec3 dir, float t) {
   float thin = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
   vec3 air = airAt(dir.xy);
   air = mix(air, mix(S.hor, air, 0.45), uNight);
-  // (Far off the cliff is lost in the air sooner than the ground is: from the basin it is a pale line, not a row of falls.)
-  return mix(c, air, 1.0 - exp(-t * (1.0 + 5.0 * smoothstep(1500.0, 2400.0, t)) * 0.00021 * S.haze * thin));
+  // (The same air as the ground it stands on, at any distance: far off the cliff is a low shelf of ice in the land's own light, never a paler shape hung in front of it.)
+  return mix(c, air, 1.0 - exp(-t * 0.00021 * S.haze * thin));
 }
 /** The cliff's second face: from the corner north along the river that leaves, looking west. */
 vec3 confWest(vec3 col, vec3 dir, float landAt0) {
