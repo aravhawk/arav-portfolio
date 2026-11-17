@@ -572,4 +572,47 @@ effects, as igloo.inc and other award sites have.
   Open models as four columns of ice sized by pulls, cc-switch as a dam
   with three sluices the switch really opens, TensorPoW as a lattice of
   ice, RydAR as a canyon the camera banks through.
+- 2026-11-16 21:35 CT. K9b done and reviewed (`4e8f21e`, six signed commits): station
+  5, four columns of ice as tall as each model's pulls with callouts;
+  station 6, a dam of ice with three sluices the home page's real switch
+  opens; station 7, a four by four lattice of ice; station 8, a canyon of
+  blue ice the camera banks through with the app seen in the ice wall.
+  The flight now runs lake, statement, eight stations, run-out, old
+  ending. Legibility passes at 390, 768, 1440 and 2560 in both themes;
+  existing pages untouched. **Frame rate regressed and is open:** 1440
+  passes on tier 0; 1728 holds p95 16.8 ms but drops to the leanest tier
+  with 2.4 percent slow frames; contended 13 percent. Kilo's own
+  shortfalls per station are in `.tools/out/k9b/REPORT.md` (the ice is
+  flat-lit, the dam is blocky, meltwater reads as lines).
+
+## Change of hands (Arav, t266u, 2026-11-16 about 9:21 PM CT)
+
+Arav's Claude plan is now Ultra (no 5-hour session limit, about double
+the weekly limit). **Kilo is stopped.** K9b was the last Kilo task; its
+committed work is kept; nothing more is sent to Kilo. From here all core
+implementation happens in Claude Code on Fable 5.2: this thread
+implements directly, or uses a single Claude helper where that is
+genuinely useful, never more than one at a time. Effort: High for
+thinking, planning, design decisions and review; Medium for run-throughs
+and testing; Low for trivial steps. No need to pace work around a
+session window. Unchanged: the 9.5 bar with the critic panel, the sound
+phase after it, signed SSH commits and pushed checkpoints, no PR, no
+merge. The briefs written for Kilo (`.tools/briefs/K9c-*.md` onward) are
+still the specifications; the "gateway kills a response at 600 seconds"
+rule in them was Kilo's and no longer applies. Independent critics now
+run as a single Claude helper at Medium effort, captures only, as the
+first one did.
+
+## What is left, in order
+1. The delta, the ending inside the flight, the flight becomes the home
+   page (`.tools/briefs/K9c-ending-and-swap.md`).
+2. Frame rate: every profile back inside the gate with eight stations
+   (tier 0 at 1440 and 1728; the contended profile).
+3. A polish pass over all eight stations and the hero from the reports'
+   own shortfalls and critic 7's findings.
+4. Project and inner pages in the home's world, led by large real media
+   (assets staged in `.tools/assets/`, facts in `project-facts.md`).
+5. Full gates, then a panel of three independent critics. Rounds until
+   the median is 9.5 with none under 9.
+6. The sound phase.
 
