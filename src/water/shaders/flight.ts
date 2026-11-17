@@ -420,7 +420,7 @@ vec3 iceInside(vec2 q, vec2 v, float thick, float foot, float seed) {
     float dim = exp(-d * 0.011);
     // Air: cloudy, in curtains that stand upright, each with one hard side.
     float cloud = g1.g * 0.62 + g2.g * 0.56;
-    veil += smoothstep(0.54, 0.74 + 0.2 * g1.b, cloud) * dim * 0.5;
+    veil += smoothstep(0.6, 0.82 + 0.2 * g1.b, cloud) * dim * 0.48;
     if (gSlabSoft < 0.5) {
       // A fracture: a long, nearly straight break across the block, in a
       // set of two or three. Its edge is a hairline; the break itself is a
@@ -541,8 +541,9 @@ vec4 slabColor(vec2 uv, float face, float t, vec3 rd) {
   vec3 lightD = S.key * 0.2 * thru + S.amb * 0.92;
   vec3 lightN = S.amb * 1.15 + uAurora * 0.05 + uSlabTint * 0.1;
   vec3 light = mix(lightD, lightN, uNight);
-  vec3 col = mix(body, airC, in_.x * 0.55) * light;
-  col += mix(vec3(0.85, 0.95, 1.0) * (S.key * 0.2 + S.amb * 0.5), uAurora * 0.55 + uSlabTint * 0.35 + vec3(0.02, 0.04, 0.05), uNight) * in_.y;
+  vec3 col = mix(body, airC, in_.x * mix(0.55, 0.3, uNight)) * light;
+  // (Before dawn a fracture is a thread of the sky's green, not a bright seam.)
+  col += mix(vec3(0.85, 0.95, 1.0) * (S.key * 0.2 + S.amb * 0.5), uAurora * 0.26 + uSlabTint * 0.3 + vec3(0.012, 0.03, 0.04), uNight) * in_.y;
   float aCov = 1.0;
   if (front) {
     // The polished front. The picture lies a little way in: it shifts
@@ -1055,7 +1056,8 @@ vec3 confAir(vec3 c, vec3 dir, float t) {
   float thin = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
   vec3 air = airAt(dir.xy);
   air = mix(air, mix(S.hor, air, 0.45), uNight);
-  return mix(c, air, 1.0 - exp(-t * 0.00021 * S.haze * thin));
+  // (Far off the cliff is lost in the air sooner than the ground is: from the basin it is a pale line, not a row of falls.)
+  return mix(c, air, 1.0 - exp(-t * (1.0 + 5.0 * smoothstep(1500.0, 2400.0, t)) * 0.00021 * S.haze * thin));
 }
 /** The cliff's second face: from the corner north along the river that leaves, looking west. */
 vec3 confWest(vec3 col, vec3 dir, float landAt0) {
@@ -1190,7 +1192,7 @@ vec3 confRiver(vec3 col, vec2 pw, float footL, float na, float nb, float shade) 
     // The boil at its foot: a fan of broken water, wider under a wider fall.
     vec2 d = vec2((pw.x - mx) * LIP_LEN, out_);
     float r2 = dot(d * vec2(1.0, 1.25), d * vec2(1.0, 1.25));
-    boil += exp(-r2 / (w * w * 0.32 + 520.0)) * (0.55 + 0.005 * w) * step(-6.0, out_);
+    boil += exp(-r2 / (w * w * 0.5 + 1100.0)) * (0.75 + 0.005 * w) * step(-6.0, out_);
   }
   // Streaks, long down the current, in the pale water.
   float streak = 0.55 + 0.45 * smoothstep(0.3, 0.7, textureLod(uDetail, vec2(pw.y / 70.0, (pw.x + uTime * uFlowSpeed * 0.7) / 900.0), lodFor(footL, 70.0, 512.0)).r);
@@ -1996,8 +1998,11 @@ vec3 pulseRings(vec2 pw) {
   return acc;
 }
 // A shard is five leaning faces that meet near a point: a convex solid, cut by planes.
+// How far behind the face the ray meets, along the ray, the next face would have been met: small at an arris.
+float gShardEdge = 1e3;
 float shardHit(vec3 ro, vec3 rd, vec4 s, float turn, out vec3 n, out float tF) {
   float tN = 0.0;
+  float tN2 = -1e3;
   tF = 1e9;
   n = vec3(0.0, 0.0, 1.0);
   vec3 o = ro - vec3(s.xy, -FREEBOARD - 6.0);
@@ -2015,10 +2020,11 @@ float shardHit(vec3 ro, vec3 rd, vec4 s, float turn, out vec3 n, out float tF) {
     }
     float den = dot(rd, pn);
     float num = d - dot(o, pn);
-    if (den < -1e-5) { float t = num / den; if (t > tN) { tN = t; n = pn; } }
+    if (den < -1e-5) { float t = num / den; if (t > tN) { tN2 = tN; tN = t; n = pn; } else if (t > tN2) tN2 = t; }
     else if (den > 1e-5) tF = min(tF, num / den);
     else if (num < 0.0) return -1.0;
   }
+  gShardEdge = tN - tN2;
   return tN < tF && tN > 0.0 ? tN : -1.0;
 }
 /**
@@ -2041,7 +2047,9 @@ vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow)
   vec2 across = vec2(dot(ri, tu), dot(ri, tv)) / max(-dot(ri, n), 0.25);
   float foot = t * uPxAng;
   float faceId = fract(n.x * 7.31 + n.y * 3.17);
-  vec3 in_ = iceInside(q, across, thick, foot, 3.0 + faceId * 5.0);
+  float edgeK = 1.0 - smoothstep(0.5 + foot, 4.0 + 3.0 * foot, gShardEdge);
+  // (A shard is a smaller piece than the block: what is in it is finer.)
+  vec3 in_ = iceInside(q * 1.8, across, thick * 1.8, foot * 1.8, 3.0 + faceId * 5.0);
   float deepK = 1.0 - exp(-thick / (s.w * 0.9));
   vec3 body = mix(vec3(0.42, 0.7, 0.84), vec3(0.02, 0.12, 0.27), deepK);
   float thru = 0.55 + 0.45 * max(dot(n, L), 0.0) + 0.5 * max(dot(-n, L), 0.0);
@@ -2061,10 +2069,11 @@ vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow)
   float up = clamp(mp.z / s.z, 0.0, 1.0);
   float rise = smoothstep(-0.04, 0.1, mp.z / s.z) * (1.0 - smoothstep(0.42, 0.82, up));
   float axis = length(mp.xy) / s.w;
-  float thread = exp(-axis * axis / 0.012) * rise;
+  // (The thread is not even: brighter beads climb it slowly.)
+  float thread = exp(-axis * axis / 0.007) * rise * (0.4 + 0.6 * smoothstep(0.3, 0.7, n1(mp.z / 13.0 - uTime * 0.35 + s.x)));
   float halo = exp(-axis / 0.34) * rise;
   float lamp = glow * mix(0.9, 1.0, uNight);
-  vec3 hot = vec3(0.9, 1.0, 1.0) * thread * 2.4 + vec3(0.2, 0.72, 0.95) * halo * (0.5 + 1.1 * in_.x + 1.6 * in_.y) * mix(1.5, 0.9, uNight);
+  vec3 hot = vec3(0.9, 1.0, 1.0) * thread * 2.6 + vec3(0.2, 0.72, 0.95) * halo * (0.3 + 1.7 * in_.x + 2.4 * in_.y) * mix(1.5, 0.9, uNight);
   // (Frost hides the thread and keeps the glow; clear ice shows both.)
   col += hot * lamp * (1.0 - 0.75 * frost) + vec3(0.2, 0.7, 0.92) * halo * frost * lamp * 0.55;
   // The sky on it, and the sun on a face turned its way.
@@ -2072,8 +2081,12 @@ vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow)
   float fr = 0.04 + 0.96 * pow(1.0 - cosi, 5.0);
   vec3 rf = reflect(rd, nF);
   rf.z = abs(rf.z);
-  col = mix(col, skyColor(rf, 0.0), fr * 0.55);
+  col = mix(col, skyColor(rf, 0.0), fr * 0.45);
   col += S.band * pow(max(dot(rf, S.sun), 0.0), 40.0) * 0.5 * (1.0 - uNight) * (1.0 - gSlabSoft);
+  // Every arris is worn bright, and single crystals in the skin catch the light as the eye moves.
+  col += mix(vec3(0.8, 0.92, 1.0) * (S.key * 0.2 + S.amb * 0.75), uAurora * 0.45 + vec3(0.03, 0.06, 0.08), uNight) * edgeK * (0.55 + 0.45 * gr2.g);
+  float glint = smoothstep(0.975, 1.0, textureLod(uGrain, q / 46.0 + faceId, 0.0).r) * smoothstep(0.35, 0.8, fract(gr2.a * 7.0 + dot(rd.xy, vec2(3.1, 2.3)) * 6.0)) * (1.0 - smoothstep(0.4, 1.2, foot)) * (1.0 - gSlabSoft);
+  col += mix(S.key * 0.5 + S.amb * 0.4, uAurora * 0.8, uNight) * glint;
   // The waterline: a dark wet band, a bright lip over it.
   float wl = hp.z;
   col = mix(col, col * vec3(0.3, 0.48, 0.6), (1.0 - smoothstep(4.0, 11.0, wl)) * 0.7);
