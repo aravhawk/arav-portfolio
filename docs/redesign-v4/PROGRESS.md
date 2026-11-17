@@ -872,3 +872,64 @@ In between, Kilo did round 3's words and inner pages on the branch
   4 (Kilo Bench first), the melt, and the night's snow with the delta
   and the ending's air.
 - From here at most four helpers run at once.
+
+## Serial from here (Arav, Nov 17, about 1:20 PM CT)
+
+The overnight fan-out burned the week's Fable allowance. New standing
+rules: **one helper at a time**, each result integrated before the next
+starts; Kilo allowed for well-scoped mechanical work only (one task at
+a time, tight brief; about $300 already spent on this site); Fable High
+for design, planning, integration review and the critic panels, never
+above High, Medium for run-throughs and testing, Low for trivial steps;
+a critic panel only after a full round of fixes, its three critics run
+one after another; signed checkpoints often; if the limit hits again,
+commit, push and stop cleanly. The target is unchanged.
+
+When this thread resumed, the stopped helpers from the outage had been
+restarted by auto-resume alongside four relaunches. All were cancelled
+except one: R3c (stations 5 to 8, RydAR first), which is running.
+
+### Review of Kilo's R3a and R3b (this thread, Fable High)
+
+Looked at every composed frame and the 24-position strips in both
+themes, and at the inner pages top to bottom. Kept as built: the two
+states of a station's words (a small tag in transit, the composed
+block at rest, nothing between), the three placements, whole captions
+in one treatment, the nav in one fixed place, the rail's names on
+hover; on inner pages the larger type, tighter rhythm, flat charts,
+Upstream led by T3 Code, the post's measure.
+
+Fixed here:
+
+| commit | what |
+| --- | --- |
+| `e48c87d` | the one failing gate: before dawn the captions tied to their points (Upstream's seven, Open models' four) measured 3.9 to 4.3 to 1. They now have a lee of their own (the picture keeps itself readable behind them, tighter and softer than the words' lee). Worst at 1440 before dawn: 5.81 and 4.76 |
+| `755bbe5` | "3,202" on one page and "3,203" on another: each page is rebuilt on its own schedule, so two pages a few minutes apart could show a count that had ticked between. One reading an hour is now held for the whole server process; a test holds it |
+| `e2c61a6` | `scripts/titles-test.mjs`: at each station's composed frame it hides the words and measures the picture behind each title, lightest against darkest as a ratio. At 1440 by day: Infiniview 2.34, Kilo Bench 2.26, TensorPoW 2.70, RydAR 1.78 cross an edge; Upstream, Agent Bridge, Open models, cc-switch stand on one surface (1.15 to 1.28). The cure is in the picture (the bank and the wide frame's camera), so it goes to R3c and R3d, each held to this test |
+| `9360b6a` and the one before | inner pages: captions a shade stronger (two on the Infiniview page measured 4.45 over the new ground); light screenshots on dark pages held to 70 percent so they sit in the night |
+
+Gates after these: lint and typecheck clean; 309 tests; the home page's
+legibility over the whole page at 1440 and 390 in both themes, 3,666
+lines, 0 failures; all twelve inner pages at 1440 and 390 in both
+themes, 0 failures; 200 visible words; 0 console errors.
+
+Still open from the two briefs, with where each goes:
+
+- R3a item 2, titles on one calm surface: R3c (TensorPoW, RydAR) and
+  R3d (Infiniview, Kilo Bench, Agent Bridge), measured by the new test.
+- R3a item 6, the dead frame in the melt (11 of 80 positions without
+  copy at rest; the brief asks 6 or fewer): R3e, which owns the melt.
+- R3a: the swap between a tag and the composed block takes about half
+  a second on an idle machine and longer under load; it has not been
+  seen at real speed. To be looked at in the run-through before the
+  next panel. Captures now wait 2.4 s at each stop for it.
+- R3b item 2 (a band of the page's own scene returning lower down the
+  page), item 6 (the post's margin holds tags only: no date or
+  contents), item 8 (pill buttons and the glass nav unchanged), and
+  item 1's per-page layout work on Infiniview, Agent Bridge,
+  TensorPoW and RydAR: a small task of their own after R3f.
+
+Order from here, one at a time: R3c (running), R3e (the melt), R3d
+(stations 1 to 4), R3f (night snow, delta, ending), the rest of R3b,
+the frame-rate task (resumed from the work left in its checkout),
+stills and cards retaken, full gates, then panel 10.
