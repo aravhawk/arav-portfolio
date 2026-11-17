@@ -386,8 +386,10 @@ export class SceneReader {
       // Each station's own water, where it stands in the frame.
       const pl = placesOf();
       const live = sig.tribs;
-      let fallW = pl.fallW;
-      if (live) for (let i = 0; i < pl.falls.length; i++) fallW = Math.max(fallW, live[i] ?? 0);
+      // (Published widths take over from the plan's: each stream is sized against the widest there is to see.)
+      let fallW = live ? 0 : pl.fallW;
+      if (live) for (let i = 0; i < pl.falls.length; i++) fallW = Math.max(fallW, live[i] ?? pl.falls[i].w);
+      fallW = Math.max(fallW, 1e-6);
       falls = pl.falls.map((f, i) => ({ ...seenAt(cam, sig.aspect, f.x, f.y), size: sat((live?.[i] ?? f.w) / fallW) }));
       armsSeen = pl.arms.map((a) => ({ ...seenAt(cam, sig.aspect, a.x, a.y), size: sat(a.w / pl.armW) }));
       spill = { ...seenAt(cam, sig.aspect, pl.spill.x, pl.spill.y), size: 0.3 };

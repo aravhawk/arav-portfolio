@@ -60,6 +60,25 @@ class PathRec {
     if (!this.run.length) this.moveTo(x, y);
     else this.run.push({ x, y });
   }
+  /** A curve is noted as eight straight pieces, and so is any other the world may draw. */
+  quadraticCurveTo(cx: number, cy: number, x: number, y: number) {
+    if (!this.run.length) this.moveTo(cx, cy);
+    const a = this.run[this.run.length - 1];
+    for (let i = 1; i <= 8; i++) {
+      const t = i / 8;
+      const u = 1 - t;
+      this.run.push({ x: u * u * a.x + 2 * u * t * cx + t * t * x, y: u * u * a.y + 2 * u * t * cy + t * t * y });
+    }
+  }
+  bezierCurveTo(c1x: number, c1y: number, c2x: number, c2y: number, x: number, y: number) {
+    if (!this.run.length) this.moveTo(c1x, c1y);
+    const a = this.run[this.run.length - 1];
+    for (let i = 1; i <= 8; i++) {
+      const t = i / 8;
+      const u = 1 - t;
+      this.run.push({ x: u * u * u * a.x + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * x, y: u * u * u * a.y + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * y });
+    }
+  }
   closePath() {}
   ellipse(x: number, y: number, rx: number, ry: number) {
     this.shapes.push({ k: 'ellipse', x, y, rx, ry });
