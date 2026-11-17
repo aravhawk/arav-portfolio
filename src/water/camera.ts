@@ -231,7 +231,8 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s6 - 0.6, pos: [440, T + 400, 460], aim: [1240, T + 1115, 58], fov: 58 },
         // Past the dam's east end, turning to look back at it.
         { s: s6 + 0.3, pos: [1560, T + 1750, 420], aim: [1300, T + 2550, 20], fov: 58 },
-        { s: s6 + 0.75, pos: [2040, T + 2860, 520], aim: [1320, T + 2760, 20], fov: 60 },
+        // (Wide of its east end and well over it, already looking back: the wall is never an edge sliding past the lens.)
+        { s: s6 + 0.75, pos: [2330, T + 3420, 720], aim: [1340, T + 2850, 0], fov: 60 },
         // From the east bank below it: the dam across the frame, its three sluices, the channels running out toward the eye; the bank at the foot.
         { s: s6 + 1.2, pos: [2300, T + 4250, 860], aim: [1330, T + 3000, 0], fov: 62 },
         { s: s7 - 0.6, pos: [2290, T + 4275, 850], aim: [1333, T + 3010, 0], fov: 62 },
@@ -248,7 +249,8 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s6 - 0.6, pos: [772, T + 95, 243], aim: [1316, T + 1090, 94], fov: 42 },
         // Past the dam's east end, turning to look back at it.
         { s: s6 + 0.3, pos: [1520, T + 1720, 280], aim: [1300, T + 2520, 20], fov: 46 },
-        { s: s6 + 0.75, pos: [1960, T + 2800, 300], aim: [1320, T + 2760, 30], fov: 46 },
+        // (Wide of its east end and well over it, already looking back: the wall is never an edge sliding past the lens.)
+        { s: s6 + 0.75, pos: [2200, T + 3150, 500], aim: [1420, T + 2810, 10], fov: 45 },
         // From the east bank below it: the dam across the frame, the open sluice's water coming toward the eye, the bank at lower left.
         { s: s6 + 1.2, pos: [2130, T + 3800, 640], aim: [1520, T + 2900, 0], fov: 42 },
         { s: s7 - 0.6, pos: [2122, T + 3824, 630], aim: [1522, T + 2908, 0], fov: 42 },
