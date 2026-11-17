@@ -391,8 +391,6 @@ export class FlightEngine extends WaterEngine {
 
   /** The camera the name is cut for (see the ice field). */
   nameCut: [number, number, number, number] = [0, 0, 1, 0];
-  /** How much deeper than true the name lies on the lake, so that camera sees it true. */
-  nameStretch = 1;
   /**
    * The name as blocks standing on the sheet (see the ice field and the
    * name's own shader): the upright plane each line's faces stand in, each
@@ -406,9 +404,6 @@ export class FlightEngine extends WaterEngine {
     // (The cut is a hair wider than the drawn letter: its edge is blended over a pixel, and the blend belongs to the ice.)
     if (ice.rect[2] > 0) this.gl.uniform4f(prog.u.uIceA, ice.a[0] + 3, ice.a[1], ice.a[2], ice.a[3]);
     if (prog.u.uIceP) this.gl.uniform4fv(prog.u.uIceP, this.nameCut);
-    // (The far wall of a cut is seen across this much of the lake from the first camera.)
-    // (While the name is a pond no wall stands round it: the opening is the letter itself.)
-    if (prog.u.uIceRim) this.gl.uniform1f(prog.u.uIceRim, ICE_H * this.nameStretch * (1 - ice.n[1]));
     if (prog.u.uIceLean) this.gl.uniform1f(prog.u.uIceLean, this.leanNow);
     const st = this.nameStand;
     const gl = this.gl;
@@ -441,7 +436,6 @@ export class FlightEngine extends WaterEngine {
     const k = smooth(0.5, 0.6, m);
     gl.uniform4f(prog.u.uIceA, (shade ? hole : pond) * (1 - k) + old * k, ice.a[1], ice.a[2], ice.a[3]);
     gl.uniform4f(prog.u.uIceC, ice.c[0], ice.c[1], smooth(0.36, 0.57, m), ice.c[3]);
-    if (prog.u.uIceRim) gl.uniform1f(prog.u.uIceRim, 0);
     if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (1 - k), smooth(0, 0.14, m), smooth(0.12, 0.3, m), smooth(0.41, 0.49, m));
   }
 
@@ -1014,7 +1008,6 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     if (destroyed || token !== buildToken) return;
     engine.iceRect = ice.rect;
     engine.nameCut = hero.cut;
-    engine.nameStretch = hero.name.stretch;
     // The blocks: each line stands where the first camera sees its baseline meet the sheet.
     const [cy, ch, cc, cs] = hero.cut;
     const dy0 = ice.rect.y + ice.rect.h / 2 - cy;
