@@ -26,6 +26,9 @@ uniform float uIceRim;     // the flight: how far the opening is carried on past
 uniform float uIceLean;    // the flight's governor: at 2 the cracks are let go while they are only hairlines (0 everywhere else)
 uniform vec4 uIceN;        // the name as a melt pond (the flight): x: half its broadest stroke px, y: 0..1 how much of a pond it still is, z: how far each letter's pond has spread past its outline px, w: the even growth the page's pool would add px (left out here)
 uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet is 0..1, w: 1 while the sheet is whole, 0 once it is gone
+uniform vec4 uNameG;       // the standing letters. x: the upright plane the far line's faces stand in (world y), y: the near line's (the same when there is one line), z: the height in the raster that parts the two lines (far below it when there is one), w: 1 when the letters stand on the sheet as blocks (0: they are cut through it)
+uniform vec4 uNameB;       // x: the far line's baseline, y: the near line's, in the raster's true units up from its middle, z: the capitals' height, w: a block's depth front to back while it is whole
+uniform vec4 uNameM;       // the blocks' melt. x: how far every face has melted back px, y: the depth left, z: how far they have sunk, w: 0..1 how much of them is left to see
 uniform sampler2D uIceSdf; // signed distance to the letters px (negative inside), _, gradient
 uniform sampler2D uDetail;
 uniform sampler2D uSnow;   // three draws of one smooth field, in half floats: about -0.7..0.7
@@ -56,6 +59,33 @@ float smax(float a, float b, float k) {
 vec2 icePt(vec2 c) {
   vec2 h = ih2(c);
   return vec2(0.25 + 0.5 * mod(c.y, 2.0) + 0.3 * (h.x - 0.5), 0.5 + uIceL.y * (h.y - 0.5));
+}
+
+/**
+ * How far a place on the lake is from where the standing letters' feet are
+ * (negative under a block): each block stands on the strip its baseline
+ * covers, as deep as the block is thick. Meltwater gathers from here.
+ */
+float nameFoot(vec2 u) {
+  float cx = uIce.x + uIce.z * 0.5;
+  float dy0 = uIce.y + uIce.w * 0.5 - uIceP.x;
+  float z0 = dy0 * uIceP.z + uIceP.y * uIceP.w;
+  float d = 1e3;
+  for (int i = 0; i < 2; i++) {
+    if (i == 1 && uNameG.z < -5e3) break;
+    float yf = i == 0 ? uNameG.x : uNameG.y;
+    float dyo = max(max(yf - u.y, u.y - yf - uNameB.w), 0.0);
+    if (dyo > 500.0) continue;
+    // (The foot of a letter is its outline a little above the baseline, so a round letter has a foot too.)
+    float zc = (yf - uIceP.x) * uIceP.z + uIceP.y * uIceP.w;
+    float b = (i == 0 ? uNameB.x : uNameB.y) + 0.05 * uNameB.z;
+    vec2 uv = vec2(0.5 + (u.x - cx) * z0 / zc / uIce.z, 0.5 + b * (z0 / uIceP.y) / uIce.w);
+    vec2 cl = clamp(uv, 0.002, 0.998);
+    float sd = (texture(uIceSdf, cl).r + abs(uv.x - cl.x) * uIce.z) * zc / z0;
+    float di = sd < 0.0 && dyo <= 0.0 ? max(sd, -min(u.y - yf, yf + uNameB.w - u.y)) : length(vec2(max(sd, 0.0), dyo));
+    d = min(d, di);
+  }
+  return d;
 }
 
 /** Distance to the one rounded pool the letters run together into. */
@@ -117,7 +147,10 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // (Seen from the ground most of the lake is far from the name: there the
   // box's distance is the whole answer and the raster is not read.)
   bool nearName = uIceP.y <= 0.0 || boxD < 420.0;
-  if (nearName) {
+  if (uNameG.w > 0.5) {
+    // The letters stand on the sheet: it opens from under their feet.
+    lsd = nameFoot(u);
+  } else if (nearName) {
     vec2 cl = clamp(iuv, 0.002, 0.998);
     lsd = (texture(uIceSdf, cl).r + length((iuv - cl) * uIce.zw)) * nk;
     if (lsd > 0.0) lsd = max(lsd, boxD);
@@ -146,7 +179,13 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   } else if (uIceC.z > 0.0) {
     float pn = textureLod(uDetail, il / (cell * 0.9) + 0.17, 0.0).r - 0.5
              + 0.5 * (textureLod(uDetail, il / (cell * 0.31) + 0.58, 0.0).g - 0.5);
-    open = mix(lsd, poolSd(il) + pn * uIceC.w, uIceC.z);
+    float wide = uIceC.w;
+    if (uNameG.w > 0.5) {
+      // (The pool the standing letters leave is not a ruled lozenge: the sheet has gone further in some places than others.)
+      pn += 1.5 * (textureLod(uDetail, il / (cell * 2.3) + 0.71, 0.0).b - 0.5);
+      wide *= 1.7;
+    }
+    open = mix(lsd, poolSd(il) + pn * wide, uIceC.z);
   }
   float f = uIceA.x - open;
 

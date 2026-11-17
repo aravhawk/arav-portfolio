@@ -581,6 +581,8 @@ export interface NameRaster {
   /** world units per texel */
   scale: number;
   rect: Rect;
+  /** each line of letters, in the raster's true units up from its middle: where its baseline and the top of its capitals lie */
+  lines: { base: number; cap: number }[];
 }
 
 /**
@@ -620,12 +622,14 @@ export function rasterName(layout: NameLayout, fontFamily: string): NameRaster {
   ctx.font = font;
   ctx.fillStyle = '#fff';
   ctx.textBaseline = 'alphabetic';
+  const lines: NameRaster['lines'] = [];
   layout.lines.forEach((text, i) => {
     const m = ctx.measureText(text);
     const asc = m.actualBoundingBoxAscent || fontPx * 0.72;
     // Each line's capitals are centred in its band.
     const mid = -textH / 2 + lineH * (i + 0.5);
     const baseline = mid + asc / 2;
+    lines.push({ base: -baseline * k, cap: (asc - baseline) * k });
     const start = -runOf(text) / 2;
     let x = start;
     for (let n = 0; n < text.length; n++) {
@@ -633,5 +637,5 @@ export function rasterName(layout: NameLayout, fontFamily: string): NameRaster {
       x = start + ctx.measureText(text.slice(0, n + 1)).width + ls * (n + 1);
     }
   });
-  return { alpha: ctx.getImageData(0, 0, tw, th).data, tw, th, scale, rect };
+  return { alpha: ctx.getImageData(0, 0, tw, th).data, tw, th, scale, rect, lines };
 }

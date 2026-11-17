@@ -21,6 +21,7 @@
  */
 
 import { ICE_FIELD } from './ice';
+import { NAME_ICE } from './name';
 import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
 import { PANO } from './terrain';
 import { BASIN, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, SHEET_COLS, SHEET_GAP, SHEET_SRC, sheetSpan, slabFaces, STREAM, T2, TARN, TRIBS } from '../world';
@@ -2421,6 +2422,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
 #endif
 
 ${STATION_COMMON}
+${NAME_ICE}
 ${COLUMNS}
 ${DAM_ICE}
 ${DAM_WATER}
@@ -2591,6 +2593,11 @@ void main() {
   vec2 ndc = vUv * 2.0 - 1.0;
   vec3 dir = normalize(uCamF + uCamR * (ndc.x * uLens.y * uLens.x) + uCamU * (ndc.y * uLens.x));
   vec3 col;
+  // What the name's blocks need to know of the ground at this pixel: how far off its plane is, how much of the pixel is
+  // the sheet's top (or land), and how far off the sheet's cut face is, where one is seen.
+  float gndT = 1e9;
+  float gndIce = 0.0;
+  float gndWall = 1e9;
 
   // ---- the slab, in front of everything it covers
   float slabCov = 0.0;
@@ -2824,6 +2831,11 @@ void main() {
     }
     if (aCut > 0.0) col = mix(col, iceCut(p, cutS, length(tilt) * uIceH * (1.0 - gPond) / max(foot / sinE, 1e-3)), aCut);
     if (aIce > 0.0) col = mix(col, iceTop(p, il, cr, f0, sd0, dir, foot), aIce);
+    // The name's blocks stand on the sheet: their shade, their image and the meltwater at their feet lie on it.
+    col = nameGround(col, p, dir, foot, aIce);
+    gndT = t;
+    gndIce = max(aIce, aLand);
+    if (aCut > 0.5) gndWall = t + cutS * uIceH / sinE;
 
     // ---- the air: haze that lies low and thickens with distance. From
     // high up the ray crosses less of it; near the ground it hides the far
@@ -2865,6 +2877,7 @@ void main() {
       if (aR > 0.0) col = mix(col, rockColor(hp, nR, tR), aR);
     }
   }
+  col = nameIce(col, dir, gndT, gndIce, gndWall);
   if (uShardOn > 0.5) {
     vec4 pl = pulseAt();
     vec3 L = keyDir();
@@ -2966,7 +2979,7 @@ void main() {
   // moves (it is also the dither).
   col = max(col, 0.0);
   // (Before dawn, while the name is cut in the sheet, the letters are light in a slot, not a lamp: they throw almost no halo over the ice.)
-  if (uBloom > 0.0) col += textureLod(uGlowTex, vUv, 0.0).rgb * uBloom * (1.0 - 0.86 * uNight * smoothstep(0.75, 1.0, uGlow));
+  if (uBloom > 0.0) col += textureLod(uGlowTex, vUv, 0.0).rgb * uBloom * (1.0 - 0.86 * uNight * smoothstep(0.75, 1.0, uGlow)) * (1.0 - 0.85 * gNmCov);
   vec2 vc = vUv - 0.5;
   col *= 1.0 - dot(vc, vc) * mix(0.42, 0.5, uSea.y);
   // The words' lee. Where words stand the picture keeps itself readable
