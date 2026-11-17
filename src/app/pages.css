@@ -1769,6 +1769,47 @@
     grid-auto-flow: column;
     gap: 14px;
   }
+  /* The ledger on a phone: the repository and the date on one line, the change under them. */
+  .ledger thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  .ledger,
+  .ledger tbody {
+    display: block;
+  }
+  .ledger tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px var(--s-4);
+    padding: 13px 0;
+    border-top: 1px solid var(--line-2);
+  }
+  .ledger tbody tr:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .ledger td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+  .ledger td:first-child {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .ledger td:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    color: var(--ink);
+  }
+  .ledger td:last-child {
+    grid-column: 2;
+    grid-row: 1;
+  }
   .term-body {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
