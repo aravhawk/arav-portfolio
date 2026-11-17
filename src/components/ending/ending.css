@@ -180,10 +180,14 @@
   font-family: var(--font-display);
   font-weight: var(--display-wght);
   font-size: clamp(1.5rem, 1.5vw + 1rem, 2.5rem);
-  letter-spacing: -0.045em;
+  letter-spacing: -0.02em;
   line-height: 1;
 }
+/* (A date is set in the text face with tabular figures: in the mono, its comma stands in a cell of its own.) */
 .foot-note {
+  font-size: 0.875rem;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
 .foot .ending-links {

@@ -13,7 +13,7 @@
    brighter toward the side it comes from. */
 .pg-ground {
   /* Small labels stand on a textured ground: the third ink is a shade stronger here than on the home page's glass. */
-  --ink-3: #40494f;
+  --ink-3: #3a4349;
   --ink-dim: #6a7379;
   --pg-body: clamp(1.0625rem, 0.42vw + 0.86rem, 1.25rem);
   --pg-lead: clamp(1.25rem, 0.9vw + 0.95rem, 1.75rem);
@@ -52,7 +52,7 @@
   background-repeat: repeat, repeat, no-repeat, repeat, repeat;
 }
 :root[data-theme='dark'] .pg-ground {
-  --ink-3: #b6bfc4;
+  --ink-3: #c1c9ce;
   --ink-dim: #8a949a;
   --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 40px 70px -40px rgba(0, 0, 0, 0.85), 0 12px 24px -18px rgba(0, 0, 0, 0.6);
   --panel: rgba(12, 18, 25, 0.42);
@@ -164,7 +164,7 @@
   font-size: clamp(1.9rem, 2.6vw + 0.7rem, 3.6rem);
   font-weight: 680;
   line-height: 1.02;
-  letter-spacing: -0.036em;
+  letter-spacing: -0.022em;
   max-width: 21ch;
 }
 .band-lead {
@@ -239,7 +239,7 @@
 }
 /* At display sizes the tracking is open enough that no pair of letters touches. */
 .pg-ground .display {
-  letter-spacing: -0.028em;
+  letter-spacing: 0;
 }
 /* A rule is a groove cut in the snow. */
 .pg-ground {
@@ -248,6 +248,16 @@
 }
 :root[data-theme='dark'] .pg-ground {
   --seq-bg: #1b232e;
+}
+/* A date is set in the text face with tabular figures: in the mono, its comma stands in a cell of its own. */
+.pg-ground .post-when,
+.pg-ground .band-short .band-label {
+  font-family: var(--font-text);
+  font-size: clamp(0.9375rem, 0.2vw + 0.9rem, 1.0625rem);
+  font-weight: 520;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
 }
 .cap {
   margin-top: 14px;
@@ -282,7 +292,7 @@
   font-size: clamp(1.625rem, 1.5vw + 1.1rem, 2.75rem);
   font-weight: 700;
   line-height: 1.04;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
   grid-column: 1 / -1;
 }
 
@@ -414,7 +424,7 @@
   font-size: clamp(2rem, 3.4vw + 0.8rem, 4.9rem);
   font-weight: 720;
   line-height: 0.99;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
   text-wrap: balance;
 }
 .say-s {
@@ -432,7 +442,7 @@
   font-size: clamp(1.375rem, 1.4vw + 0.95rem, 2.4rem);
   font-weight: 660;
   line-height: 1.12;
-  letter-spacing: -0.028em;
+  letter-spacing: -0.022em;
 }
 /* A result: a number set large. One row of these on a page, at most. */
 .figs {
@@ -453,7 +463,7 @@
   font-size: min(var(--pg-num), calc((100vw - 2 * var(--gutter)) / var(--cols, 1) / 4.3));
   font-weight: var(--display-wght);
   line-height: 0.86;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums lining-nums;
   white-space: nowrap;
 }
@@ -563,7 +573,7 @@
   font-size: clamp(2rem, 2.6vw + 1rem, 4rem);
   font-weight: var(--display-wght);
   line-height: 0.98;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.012em;
   padding-bottom: 0.05em;
 }
 .strip-next-line {
@@ -663,7 +673,7 @@
   font-size: clamp(1.875rem, 2.2vw + 1rem, 3.5rem);
   font-weight: 740;
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
 }
 .run-copy .body {
   max-width: 34ch;
@@ -734,7 +744,7 @@
   font-family: var(--font-display);
   font-size: 1.7em;
   font-weight: 740;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
@@ -797,7 +807,7 @@
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 1.2vw + 1rem, 2.4rem);
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -951,7 +961,7 @@
   font-size: clamp(1.5rem, 1.6vw + 0.9rem, 2.6rem);
   font-weight: 700;
   line-height: 1.04;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
 }
 .act-copy .body,
 .paper-cap .body {
@@ -968,7 +978,7 @@
   font-size: clamp(2.2rem, 4.6vw + 0.5rem, 6rem);
   font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.034em;
+  letter-spacing: -0.016em;
 }
 .modes li:nth-child(even) {
   color: var(--ink-3);
@@ -1038,7 +1048,7 @@
   font-size: clamp(1.5rem, 2vw + 0.9rem, 3.2rem);
   font-weight: 680;
   line-height: 1.1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
   text-wrap: balance;
 }
 .views-h {
@@ -1145,13 +1155,15 @@
   background: var(--seq-bg);
   box-shadow: inset 0 0 0 2px var(--ink);
 }
-.seq-route {
+/* Who speaks to whom is drawn by the arrow here, and said in words for a reader who cannot see it (and on a phone, where there are no lifelines). */
+.pg-ground .seq-route {
   position: absolute;
   width: 1px;
   height: 1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+  font-size: 0;
 }
 .seq-title {
   font-family: var(--font-display);
@@ -1256,7 +1268,7 @@
   font-size: clamp(1.25rem, 1.6vw + 0.7rem, 2.6rem);
   font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
   font-variant-numeric: tabular-nums;
 }
 /* (A model's name breaks at its hyphens only.) */
@@ -1281,7 +1293,7 @@
   font-family: var(--font-display);
   font-size: clamp(1.375rem, 1vw + 1rem, 2rem);
   font-weight: 680;
-  letter-spacing: -0.028em;
+  letter-spacing: -0.022em;
   line-height: 1.1;
 }
 .model-title a {
@@ -1307,7 +1319,7 @@
   font-family: var(--font-display);
   font-size: clamp(1.375rem, 1vw + 1rem, 2rem);
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -1429,7 +1441,7 @@
   font-family: var(--font-display);
   font-size: clamp(1.25rem, 0.9vw + 1rem, 1.875rem);
   font-weight: 680;
-  letter-spacing: -0.028em;
+  letter-spacing: -0.022em;
   line-height: 1.12;
 }
 .prov-n {
@@ -1738,7 +1750,7 @@
   font-size: clamp(2.2rem, 4.4vw + 0.5rem, 5.6rem);
   font-weight: var(--display-wght);
   line-height: 0.95;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.012em;
   padding-bottom: 0.06em;
 }
 .feat-line {
@@ -1835,7 +1847,7 @@
   font-size: clamp(1.375rem, 1.2vw + 0.85rem, 2.1rem);
   font-weight: 700;
   line-height: 1.04;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
   /* A repository's name breaks at its hyphens, never inside a word. */
   overflow-wrap: normal;
 }
@@ -1977,7 +1989,7 @@
   font-size: clamp(2.1rem, 4.4vw + 0.6rem, 5.6rem);
   font-weight: 740;
   line-height: 0.97;
-  letter-spacing: -0.032em;
+  letter-spacing: -0.02em;
   padding-bottom: 0.06em;
 }
 .post-about {
@@ -2091,7 +2103,7 @@
 .prose h4 {
   font-family: var(--font-display);
   color: var(--ink);
-  letter-spacing: -0.028em;
+  letter-spacing: -0.022em;
   line-height: 1.08;
   text-wrap: balance;
 }
@@ -2229,7 +2241,7 @@
   font-size: clamp(1.25rem, 0.8vw + 1rem, 1.75rem);
   font-weight: 660;
   line-height: 1.1;
-  letter-spacing: -0.028em;
+  letter-spacing: -0.022em;
 }
 
 /* ---------- narrow ---------- */
@@ -2529,6 +2541,8 @@
   }
   .seq-msg,
   .seq-bridge-bridge {
+    grid-column: 1 !important;
+    grid-row: auto !important;
     justify-items: start;
     justify-self: stretch;
     gap: 4px;
@@ -2551,12 +2565,13 @@
   .seq-ack::before {
     background: var(--bar);
   }
-  .seq-route {
+  .pg-ground .seq-route {
     position: static;
     width: auto;
     height: auto;
     overflow: visible;
     clip: auto;
+    font-size: clamp(0.75rem, 0.1vw + 0.72rem, 0.8125rem);
   }
   .seq-aside {
     margin-top: 22px;

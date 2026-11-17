@@ -110,7 +110,7 @@ export function Footer({ note }: Props) {
           <Link className="foot-mark" href="/" aria-label="Arav Jain, home">
             Arav Jain
           </Link>
-          {note ? <p className="label foot-note">{note}</p> : null}
+          {note ? <p className="foot-note">{note}</p> : null}
         </div>
         <Contact />
         <nav className="foot-meta label" aria-label="Site">
