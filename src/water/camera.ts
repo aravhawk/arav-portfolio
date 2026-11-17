@@ -196,8 +196,8 @@ function benchPose(aspect: number, drift: number): Pose {
   // (The plates lie under the water: this far below the land.)
   const bed = 36;
   if (upright) {
-    const pitch = rad(68);
-    const share = 0.86;
+    const pitch = rad(76);
+    const share = 0.9;
     // The plates' middle stands this far above the frame's.
     const lift = Math.atan(0.2 * th);
     const range = w / (2 * aspect * th * share) / Math.cos(lift);
@@ -209,8 +209,8 @@ function benchPose(aspect: number, drift: number): Pose {
   }
   const pitch = rad(28);
   // The plates' near edge takes this share of the frame's width, and stands this far in from its left side.
-  const share = Math.min(0.5, Math.max(0.34, 0.875 - 0.69 / aspect));
-  const left = 1 - share - 0.035;
+  const share = Math.min(0.56, Math.max(0.36, 0.95 - 0.69 / aspect));
+  const left = 1 - share - 0.03;
   const depth = w / (2 * aspect * th * share);
   // (The camera stands a little further back from the plates' middle than it is high.)
   const BACK = 1.07;

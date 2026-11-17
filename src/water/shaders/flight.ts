@@ -624,8 +624,8 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
   // The body. Clear ice takes the red out of the light that crosses it and then the green: where the eye looks
   // through a hand of it, it is pale; through the block's heart it is dark, blue toward green.
   float deepK = 1.0 - exp(-max(thick, 0.0) / 85.0);
-  float heart = smoothstep(2.0, 70.0, edgeD);
-  vec3 body = mix(vec3(0.36, 0.68, 0.8), vec3(0.008, 0.075, 0.115), deepK * (0.45 + 0.55 * heart));
+  float heart = smoothstep(2.0, 52.0, edgeD);
+  vec3 body = mix(vec3(0.36, 0.68, 0.8), vec3(0.008, 0.075, 0.115), deepK * (0.58 + 0.42 * heart));
   body *= 0.86 + 0.28 * gr2.g;
   // Light comes through it from the sun's side, and what is in it catches that light.
   float thru = 0.55 + 0.45 * max(dot(n, L), 0.0) + 0.5 * max(dot(-n, L), 0.0);
@@ -716,10 +716,10 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
     col += mix(vec3(0.82, 0.93, 1.0) * S.amb * 0.9, uAurora * 0.3, uNight) * (1.0 - smoothstep(0.0, 2.6 + foot, abs(zUp - nh - 1.5))) * 0.75;
     // The waves break on it: white water thrown up the face, higher with each wave that lands.
     float beat = blockBeat(q.x + face * 190.0) * (fi == 3 || fi == 1 ? 0.3 : 1.0);
-    float reach = 12.0 + 62.0 * beat * beat;
+    float reach = 10.0 + 44.0 * beat * beat;
     float spray = (1.0 - smoothstep(reach * (0.35 + 0.65 * gr.b), reach * (0.75 + 0.9 * gr.b) + 2.0, zUp)) * (0.55 + 0.45 * beat);
     vec3 white = mix(vec3(0.93, 0.96, 1.0) * (S.amb * 1.25 + S.key * 0.28), vec3(0.34, 0.5, 0.56) * 0.34 + uAurora * 0.16, uNight);
-    col = mix(col, white, clamp(spray, 0.0, 1.0) * (0.55 + 0.45 * gr.a) * (1.0 - gSlabSoft * 0.5));
+    col = mix(col, white, clamp(spray, 0.0, 1.0) * (0.45 + 0.45 * gr.a) * (1.0 - gSlabSoft * 0.5));
     // The outline is worn and chipped: no edge that stands against the sky or the water is a ruled line.
     float px = max(foot, 0.2);
     vec4 gw = textureLod(uGrain, q / vec2(900.0, 1400.0) + face * 0.41, 0.0);
@@ -1284,7 +1284,7 @@ vec3 confCliff(vec3 col, vec3 dir, float landAt0) {
   float berm = LIP_H * (0.1 * n1(h.x / 210.0 + 2.0) + 0.07 * n1(h.x / 61.0 + 7.0) + 0.035 * n1(h.x / 17.0)) + 2.0;
   for (int i = 0; i < ${TRIBS.length}; i++) {
     float w = uTribW[i];
-    if (w > 0.0) berm *= smoothstep(w * 0.5 + 2.0, w * 0.5 + 34.0, abs(h.x - TRIB_M[i].x) * LIP_LEN);
+    if (w > 0.0) berm *= smoothstep(w * 0.5 + 1.0, w * 0.5 + 11.0, abs(h.x - TRIB_M[i].x) * LIP_LEN);
   }
   float top = LIP_H + berm;
   float aC = (1.0 - smoothstep(top - px, top + px, h.z)) * smoothstep(0.0, 2.0 * px, h.x - lipWest(h.y));
@@ -2557,10 +2557,10 @@ vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow)
   float axis0 = length(mp.xy) / s.w;
   // (It is not even: brighter lengths climb it slowly, with dark between them where a fracture stands in the way.)
   float lengths = smoothstep(0.3, 0.7, n1(mp.z / 13.0 - uTime * 0.35 + s.x)) * smoothstep(0.25, 0.5, textureLod(uGrain, vec2(faceId, mp.z / 700.0 + shell.z * 0.05), 0.0).g + 0.2);
-  float thread = exp(-axis * axis / 0.006) * rise * (0.2 + 0.8 * lengths) * (1.0 - 0.7 * gSlabSoft);
+  float thread = exp(-axis * axis / 0.0028) * rise * (0.12 + 0.88 * lengths) * (1.0 - 0.8 * gSlabSoft);
   float halo = exp(-axis0 / 0.34) * rise;
   float lamp = glow * mix(0.9, 1.0, uNight);
-  vec3 hot = vec3(0.9, 1.0, 1.0) * thread * 2.4 + vec3(0.2, 0.72, 0.95) * halo * (0.3 + 1.7 * in_.x + 2.4 * in_.y + 0.2 * (1.0 - smoothstep(0.0, 0.1, shell.x))) * mix(0.32, 0.9, uNight);
+  vec3 hot = vec3(0.9, 1.0, 1.0) * thread * mix(1.5, 2.4, uNight) + vec3(0.2, 0.72, 0.95) * halo * (0.3 + 1.7 * in_.x + 2.4 * in_.y + 0.2 * (1.0 - smoothstep(0.0, 0.1, shell.x))) * mix(0.32, 0.9, uNight);
   // (Frost hides the thread and keeps the glow; clear ice shows both.)
   col += hot * lamp * (1.0 - 0.75 * frost) + vec3(0.2, 0.7, 0.92) * halo * frost * lamp * mix(0.25, 0.55, uNight);
   // The sky on it, and the sun on a face turned its way.

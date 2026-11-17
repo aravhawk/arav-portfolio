@@ -204,8 +204,8 @@ export const sheetSpan = (n: number) => SHEET_COLS.slice(0, n).reduce((w, c) => 
 export const SHEET = { x0: 1800, y: 9330 + DY, upp: 0.95 };
 /** The pool's shore, a closed line: bays and points, no ruled side. (POOL is the box round it.) */
 export const POOL_SHORE: [number, number][] = [
-  [1712, 9250],
-  [1750, 9160],
+  [1738, 9250],
+  [1772, 9160],
   [1840, 9128],
   [1930, 9150],
   [2040, 9112],
@@ -222,10 +222,10 @@ export const POOL_SHORE: [number, number][] = [
   [2060, 9650],
   [1960, 9700],
   [1846, 9668],
-  [1760, 9590],
+  [1780, 9590],
   [1790, 9500],
-  [1728, 9420],
-  [1745, 9330],
+  [1754, 9420],
+  [1768, 9330],
 ];
 export const POOL: Rect = { x: 1712, y: 9104 + DY, w: 764, h: 596 };
 /**
