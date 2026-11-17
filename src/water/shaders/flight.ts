@@ -39,7 +39,16 @@ export function freeboardAt(y: number) {
   return FLIGHT_FREEBOARD * (1 + STEP.more * smoothJs(STEP.y0, STEP.y1, y) * (1 - smoothJs(STEP.out0, STEP.out1, y)));
 }
 
-export const FLIGHT = `#version 300 es
+/**
+ * The pass comes in two variants. The sea's code slows every frame that
+ * carries it, even where it never runs (the driver's cost follows the whole
+ * shader's shape), so the flight is drawn by the variant without it, and
+ * the one with it is used only while the camera is near the sea.
+ */
+export const flightSource = (sea: boolean) => FLIGHT_SRC.replace('//#SEA', sea ? '#define SEA' : '');
+
+const FLIGHT_SRC = `#version 300 es
+//#SEA
 precision highp float;
 in vec2 vUv;
 out vec4 o;
@@ -302,6 +311,7 @@ vec3 withRidges(vec3 col, vec3 d, float soft) {
       vec3 rock = alb * mix(day, night, uNight);
       float far = clamp(m.a / 0.84, 0.0, 1.0);
       float airK = 1.0 - exp(-(mix(0.07, 0.1, uNight) + far * mix(1.25, 1.9, uNight)) * S.haze);
+#ifdef SEA
       if (gDusk > 0.0) {
         // Against the low light the ranges are the ending's: shaded faces
         // in the sky's own deep colour, the faces the light finds a little
@@ -316,10 +326,13 @@ vec3 withRidges(vec3 col, vec3 d, float soft) {
         rock = mix(rock, low, gDusk);
         airK = mix(airK, clamp(0.1 + far * 0.62 * S.haze, 0.0, 0.9), gDusk);
       }
+#endif
       rock = mix(rock, air, airK);
       col = mix(col, rock, cover);
+#ifdef SEA
       // The sun's glow spills over whatever stands in front of it.
       if (gDusk > 0.0) col += sunBloom(max(dot(d, S.sun), 0.0)) * 0.5 * cover * gDusk * gSunK;
+#endif
     }
   }
   // A thin band of mist lies along the foot of the ranges.
@@ -1074,6 +1087,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // The sun on ripple faces turned toward it: a broad, graded sheen.
   float sd = max(dot(rf, S.sun), 0.0);
   col += S.band * (pow(sd, 240.0) * 1.6 + pow(sd, 40.0) * 0.12) * (1.0 - shade) * (1.0 - uNight) * (1.0 - gDeep);
+#ifdef SEA
   // Near the sea the light is low and ahead: the channels catch it, a path
   // of glints on the ripple faces under the sun's bearing.
   if (uSea.x > 0.0 && S.sun.z > 0.0) {
@@ -1085,6 +1099,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       col += S.band * pathS * (0.1 + 1.25 * face * face) * (0.3 + 0.7 * fres) * uSea.x * (1.0 - shade) * mix(1.0, 0.5, uNight);
     }
   }
+#endif
   // In the name the sun's path is broken glitter: single ripple faces
   // catching it, thickest under the sun and thinning to either side.
   if (gDeep > 0.0) {
@@ -1205,6 +1220,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   return col;
 }
 
+#ifdef SEA
 /* ---------- the open sea: the ending's water ---------- */
 
 // The sea is drawn at the scale of the eye that comes to rest over it: this many units to one of its heights.
@@ -1227,8 +1243,21 @@ float seaAt(vec2 pw, float sd) {
  * words stand a lee: calmer water, a little shaded, with no glitter in it.
  * t: how far along the ray the water is. footL: a pixel's length on it.
  */
+/** The sea's swell: four octaves, or the two broad ones when the governor has asked for its leanest frame. */
+float seaH(vec2 p) {
+  float a = 0.5, s = 0.0;
+  for (int i = 0; i < 4; i++) {
+    if (i >= 2 && gL2 >= 1.0) break;
+    s += a * n2(p) * (i >= 2 ? 1.0 - gL2 : 1.0);
+    p = p * 2.03 + 11.7;
+    a *= 0.5;
+  }
+  return s;
+}
 // The lee at this pixel: the shade it lays on the water is put on after the air.
 float gLee = 0.0;
+// How much of this pixel is open sea.
+float gSea = 0.0;
 vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float e = uSea.y;
   float lee = (1.0 - smoothstep(uSea.z - 0.16, uSea.z + 0.14, vUv.x)) * e;
@@ -1242,8 +1271,10 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float calm = (1.0 / (1.0 + dist * 0.07)) * (1.0 - 0.55 * lee);
   float tt = uTime * 0.32;
   vec2 qa = q * 1.7 + vec2(tt, 0.3 * tt);
-  float f0 = fbm2(qa);
-  vec2 g = vec2(f0 - fbm2(qa + vec2(0.11, 0.0)), f0 - fbm2(qa + vec2(0.0, 0.11))) * broad;
+  float f0 = seaH(qa);
+  vec2 g = vec2(f0 - seaH(qa + vec2(0.11, 0.0)), f0 - seaH(qa + vec2(0.0, 0.11))) * broad;
+  // (A lean frame lets the finest ripples go.)
+  fine *= 1.0 - gL2;
   if (fine > 0.0) {
     vec2 qb = q * 5.3 - vec2(0.2 * tt, tt);
     float f1 = n2(qb);
@@ -1324,6 +1355,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   gLee = lee;
   return col;
 }
+#endif
 
 ${STATION_COMMON}
 ${COLUMNS}
@@ -1541,15 +1573,20 @@ void main() {
         cut += wall * aWall;
       }
       if (aWall < 1.0) {
+#ifdef SEA
         // Past the delta's front the water is the open sea.
-        float seaK = uSea.x > 0.0 ? seaAt(pw, bw.r) : 0.0;
+        float seaK = seaAt(pw, bw.r);
         vec3 wc = vec3(0.0);
         if (seaK < 1.0) wc = waterColor(pw, bw, dir, foot, footL, iceShade, slabOn) + slabLight * 0.26;
         if (seaK > 0.0) {
           wc = mix(wc, seaColor(pw, dir, (uCamPos.z + gFree) / -dir.z, footL), seaK);
           gLee *= seaK * (1.0 - aWall) * (1.0 - aLand);
+          gSea = seaK * (1.0 - aWall) * (1.0 - aLand);
         }
         cut += wc * (1.0 - aWall);
+#else
+        cut += (waterColor(pw, bw, dir, foot, footL, iceShade, slabOn) + slabLight * 0.26) * (1.0 - aWall);
+#endif
       }
       col += cut * (1.0 - aLand);
     }
@@ -1567,11 +1604,18 @@ void main() {
     air = mix(air, mix(S.hor, air, 0.45), uNight);
     // (The cut water close under the eye is kept out of the haze: the name is the darkest thing in the frame.)
     float clearK = gDeep * (1.0 - aLand) * (1.0 - aIce) * (1.0 - aCut) * (1.0 - smoothstep(2500.0, 4500.0, t));
+#ifdef SEA
+    // (Over the open sea at the end of the day the air is clearer: the water keeps its depth out to the mist on the horizon.)
+    col = mix(col, air, fog * (1.0 - clearK) * (1.0 - 0.55 * gSea * gDusk));
+#else
     col = mix(col, air, fog * (1.0 - clearK));
+#endif
     // The horizon is soft: the same mist that lies at the ranges' foot.
     col = mix(col, air, exp(dir.z / 0.006) * 0.75);
+#ifdef SEA
     // The lee's shade, on the water the words stand over.
     col *= 1.0 - 0.56 * gLee;
+#endif
   }
   if (uShardOn > 0.5) {
     vec3 pl = pulseAt();
@@ -1634,7 +1678,8 @@ void main() {
   // light haze, under light words nothing brighter than a deep shade. Only
   // the pixels that would fight the words are touched, and the edge of the
   // lee is wide and soft, so it reads as air and shade, never as a plate.
-  if (uCalmK.x > 0.0) {
+  // (Most of the frame is nowhere near them: it is let go at once.)
+  if (uCalmK.x > 0.0 && vUv.y < uCalmBox.w + 0.17 && vUv.y > uCalmBox.y - 0.17 && vUv.x < uCalmBox.z + 0.17 && vUv.x > uCalmBox.x - 0.17) {
     vec2 cq = abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5;
     cq.x *= uLens.y;
     float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);

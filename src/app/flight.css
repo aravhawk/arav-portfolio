@@ -358,10 +358,10 @@ html[data-flight='on'] .fl-name [data-ice-line] {
 }
 /* Every other one a tone quieter, as the list has always been set; over a picture the quiet tone is the second ink
    (before dawn a little lighter than that, so it holds on the dark bank). */
-.fl-into-list li:nth-child(even) {
+.fl .fl-into-list li:nth-child(even) {
   color: var(--ink-2);
 }
-:root[data-theme='dark'] .fl-into-list li:nth-child(even) {
+:root[data-theme='dark'] .fl .fl-into-list li:nth-child(even) {
   color: #ccd3d7;
 }
 .fl-into-next {

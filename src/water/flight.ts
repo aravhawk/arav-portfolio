@@ -15,9 +15,9 @@ import { BedPainter } from './bed';
 import { makeCallouts } from './callouts';
 import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
-import { type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
+import { type Pending, type Program, type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
-import { FLIGHT, freeboardAt } from './shaders/flight';
+import { flightSource, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
@@ -76,7 +76,7 @@ export class FlightEngine extends WaterEngine {
   protected sources() {
     const s = super.sources();
     delete s.render;
-    s.flight = FLIGHT;
+    s.flight = flightSource(false);
     s.ground = GROUND;
     s.mountH = MOUNT_H;
     s.mountPano = MOUNT_PANO;
@@ -116,6 +116,30 @@ export class FlightEngine extends WaterEngine {
     await tick();
     this.bakeRanges();
     await tick();
+  }
+
+  /**
+   * The pass's second variant, with the sea in it (see the shading pass).
+   * It is handed to the driver once the page is running and taken when the
+   * driver has finished; until then, and wherever the sea is far off, the
+   * first variant draws.
+   */
+  private seaPending: Pending | null = null;
+  private seaProg: Program | null = null;
+  warmSea() {
+    if (this.seaPending || this.seaProg || this.gl.isContextLost()) return;
+    this.seaPending = compileBegin(this.gl, flightSource(true), 'flightSea');
+  }
+  private seaReady(): Program | null {
+    if (!this.seaProg && this.seaPending && compileDone(this.gl, this.seaPending)) {
+      try {
+        this.seaProg = compileEnd(this.gl, this.seaPending);
+      } catch (err) {
+        if (process.env.NODE_ENV !== 'production') console.warn(err);
+      }
+      this.seaPending = null;
+    }
+    return this.seaProg;
   }
 
   /** The snow's relief, baked once. */
@@ -546,7 +570,13 @@ export class FlightEngine extends WaterEngine {
 
   private draw(cam: Basis, aspect: number, at: FlightMoment) {
     const gl = this.gl;
-    const r = this.p.flight;
+    // The open sea is only worked out when the camera is near enough to see
+    // it: from inside the canyon on. Further off the first variant draws.
+    const toSea = Math.hypot(cam.pos[0] - 1900, cam.pos[1] - DELTA.sea);
+    let seaOn = cam.pos[1] > DELTA.sea ? 1 : 1 - smooth(2600, 3400, toSea);
+    const sea = seaOn > 0 ? this.seaReady() : null;
+    if (!sea) seaOn = 0;
+    const r = sea ?? this.p.flight;
     const tier = TIERS[this.tier];
     gl.useProgram(r.prog);
     const pal = this.palette();
@@ -616,9 +646,6 @@ export class FlightEngine extends WaterEngine {
     gl.uniform3fv(r.u.uAmbCol, sky.amb);
     gl.uniform4f(r.u.uSkyK, sky.haze, sky.aurora, sky.dusk, sky.under);
     this.dusk = sky.dusk;
-    // The open sea is only worked out when the camera is near enough to see it.
-    const toSea = Math.hypot(cam.pos[0] - 1900, cam.pos[1] - DELTA.sea);
-    const seaOn = cam.pos[1] > DELTA.sea ? 1 : 1 - smooth(4300, 5600, toSea);
     gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
     gl.uniform4fv(r.u.uCalmBox, at.box);
     gl.uniform2f(r.u.uCalmK, at.boxK, at.boxLight ? 1 : 0);
@@ -677,7 +704,7 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 11, ((this.faceOn ? this.faceTex : null) ?? this.slabTex ?? this.grain.tex) as WebGLTexture, r.u.uSlabTex);
     bindTex(gl, 12, this.ground.tex, r.u.uGround);
     bindTex(gl, 13, this.pano.tex, r.u.uPano);
-    this.finish(night);
+    this.finish(r, night);
   }
 
   /**
@@ -701,11 +728,10 @@ export class FlightEngine extends WaterEngine {
    * Then take this frame's highlights, small, for the next frame's glow: a
    * frame's delay in a soft halo is not seen.
    */
-  private finish(night: number) {
+  private finish(r: Program, night: number) {
     const gl = this.gl;
     const w = this.canvas.width;
     const h = this.canvas.height;
-    const r = this.p.flight;
     // (Making a texture binds it: on a unit the scene does not use.)
     gl.activeTexture(gl.TEXTURE15);
     this.filmTargets(w, h);
@@ -752,6 +778,7 @@ export class FlightEngine extends WaterEngine {
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
     if (this.faceTex) this.gl.deleteTexture(this.faceTex);
     if (this.sheetTex) this.gl.deleteTexture(this.sheetTex);
+    if (this.seaProg) this.gl.deleteProgram(this.seaProg.prog);
     freeTarget(this.gl, this.ground);
     freeTarget(this.gl, this.pano);
     super.destroy();
@@ -988,6 +1015,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   measureView();
   built = true;
   html.dataset.flight = 'on';
+  // The sea's variant of the pass is compiled once the first frames are out.
+  const warm = window.setTimeout(() => engine.warmSea(), 900);
 
   // The product picture: the slab appears when it has loaded.
   const img = new Image();
@@ -1119,6 +1148,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       forkWatch.disconnect();
       window.clearTimeout(recarve);
       window.clearTimeout(boxTimer);
+      window.clearTimeout(warm);
       solver.dispose();
       window.clearTimeout(resizeTimer);
       window.removeEventListener('resize', onResize);

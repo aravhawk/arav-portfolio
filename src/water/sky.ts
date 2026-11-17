@@ -133,7 +133,8 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
     amb: [0.25, 0.35, 0.56],
     haze: 1.0,
     aurora: 0,
-    dusk: 0.12,
+    // (Not yet the ending's sky: its extra terms cost nothing until the camera is out over the sea.)
+    dusk: 0,
     under: 0.9,
   };
   // The old light ending: the blue hour, the sun on the ranges.
