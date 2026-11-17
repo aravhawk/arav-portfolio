@@ -2476,7 +2476,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     shelfP = max(uIceN.x, 1.0) * (0.065 + 0.25 * un * un) + uIceN.z * 0.3;
     float z = max(gIceF, 0.0) / shelfP;
     // (Its bed is not level either: here and there a shoal of ice comes up under the middle of a stroke, and the deep water over it is teal, not black.)
-    float shoalP = smoothstep(0.44, 0.84, textureLod(uSnow, pw / vec2(900.0, 2700.0) + 0.57, 0.0).g + 0.5);
+    // (Not where the letters stand as blocks: that water is the lake's own depth, dark all through, and pale ice stands in it.)
+    float shoalP = smoothstep(0.44, 0.84, textureLod(uSnow, pw / vec2(900.0, 2700.0) + 0.57, 0.0).g + 0.5) * (1.0 - uNameG.w);
     float hw = min(0.03 + 2.0 * pow(z, 1.5), mix(9.0, 2.1, shoalP));
     vec3 thru = exp(-vec3(2.7, 0.95, 1.0) * hw);
     // The net of light lies on the shallow bed by day.
