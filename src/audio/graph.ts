@@ -78,13 +78,15 @@ export interface Graph {
   wakePan: Steer;
   aurora: Steer;
   shimmer: { gain: Steer; pan: Steer }[];
+  /** the world's own level: it dips for a breath when the page goes somewhere in one frame, and comes back in the new place */
+  world: Steer;
   worldCut: Steer;
   echo: Steer;
   fxEcho: Steer;
   echoTime: Steer;
   worldSend: Steer;
-  /** Cross-fade the place: how much of the open room, the canyon and the still room. */
-  rooms(w: [number, number, number], t: number): void;
+  /** Cross-fade the place: how much of the open room, the canyon and the still room. `slow`: so many times more slowly. */
+  rooms(w: [number, number, number], t: number, slow?: number): void;
   water: Water;
   padIn: GainNode;
   bellIn: GainNode;
@@ -316,7 +318,7 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
       verb.connect(send).connect(delay).connect(conv).connect(gain(LEVEL.verb * trim)).connect(mix);
       sends.push(new Steer(send.gain, 0.35, room === ROOMS.open ? 1 : 0));
     }
-    rooms = (w, t) => sends.forEach((s, i) => s.to(w[i], t));
+    rooms = (w, t, slow = 1) => sends.forEach((s, i) => s.to(w[i], t, slow));
   } else {
     // One small reverb for a phone: six delays that feed themselves through a low-pass. How long it rings and how
     // dark it is follow the place, instead of three rooms.
@@ -336,11 +338,11 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
       damp.push(new Steer(lp.frequency, 0.3, 4200));
     });
     verbOut.connect(mix);
-    rooms = (w, t) => {
+    rooms = (w, t, slow = 1) => {
       const fb = 0.86 * w[0] + 0.7 * w[1] + 0.62 * w[2];
       const cut = 4200 * w[0] + 1500 * w[1] + 7000 * w[2];
-      back.forEach((s) => s.to(fb, t));
-      damp.forEach((s) => s.to(cut, t));
+      back.forEach((s) => s.to(fb, t, slow));
+      damp.forEach((s) => s.to(cut, t, slow));
     };
   }
 
@@ -456,6 +458,7 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
     wakePan: new Steer(wakePan.pan, 0.04, 0),
     aurora: new Steer(auroraBus.gain, 0.6, 0),
     shimmer,
+    world: new Steer(worldBus.gain, 0.09, LEVEL.world),
     worldCut: new Steer(worldLP.frequency, 0.15, 18000),
     echo: new Steer(echoSend.gain, 0.15, 0),
     fxEcho: new Steer(fxEcho.gain, 0.15, 0),

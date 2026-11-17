@@ -13,8 +13,9 @@
  * of them and a bell phrase is said inside one chord, so the harmony moves
  * between phrases and never under one. When the camera reaches a new place
  * the new movement waits for the phrase being said to end. Two things do
- * not wait: the run out to sea takes its dominant at once and holds it, and
- * the dawn resolves it on the event itself.
+ * not wait: the run out to sea takes its dominant at once and holds it
+ * through the sun's lift and the line of light's run, and the tonic comes
+ * as the ribbon of light leaves the water.
  */
 
 import { type Graph, type PadNote, bassTo, bell, hush, padOff, padOn } from './graph';
@@ -66,6 +67,11 @@ export class Score {
     return this.chordNow;
   }
 
+  /** The movement being played now (-1 before the first chord). */
+  get movement(): number {
+    return this.move;
+  }
+
   /** Bells set for later than `t` are taken back: a phrase is ended, never talked over. */
   private cut(t: number) {
     for (const b of this.rung) if (b.t > t) hush(b.head, t);
@@ -73,12 +79,13 @@ export class Score {
     this.phraseEnd = Math.min(this.phraseEnd, t);
   }
 
-  /** Bring the arrival: the piece goes to its tonic now. (If the frame that brought the dawn has already taken it there, it stays: the harmony does not move twice.) */
-  arrive(t: number) {
-    this.cut(t);
-    if (this.move === MOVE.rest) return;
-    this.want = MOVE.rest;
-    this.nextChord = t;
+  /**
+   * The light event has begun: the harmony waits where it is (on the dominant) until `until`, and the bells leave
+   * the air to the event's own. The tonic comes with the ribbon of light, as the movement changes.
+   */
+  hold(t: number, until: number) {
+    this.cut(t + 0.3);
+    this.nextChord = Math.max(this.nextChord, until);
   }
 
   /** Called every frame with the time the frame's sound is for. */

@@ -13,7 +13,7 @@
 
 import { type Basis, SETTLE_AT, groundUnder, projectPoint, sectionStarts } from '@/water/camera';
 import { skyAt } from '@/water/sky';
-import { BASIN, BENDS, CANYON, CANYON_LINE, COLS, ISLAND, LATTICE, SLUICES } from '@/water/world';
+import { BASIN, BENDS, CANYON, CANYON_LINE, COLS, DAM, ISLAND, LATTICE, NAME, SHARDS, SLUICES } from '@/water/world';
 import { type Ground, type Reach, arms, groundAt, spills, tribs } from './plan';
 import { MOVE } from './theory';
 
@@ -35,6 +35,7 @@ export interface SignalsLike {
   surge: ArrayLike<number>;
   ray: number;
   lift: number;
+  rise?: number;
   px: number;
   py: number;
   far: number;
@@ -78,10 +79,11 @@ export interface Scene {
   /** how it banks (-1 left side down, 1 right side down) and how fast it turns (radians a second, to the right positive) */
   bank: number;
   turn: number;
-  /** 0..1 how much of the upper frame is sky, how squarely the lens faces north (where the aurora hangs), how much aurora this hour has */
+  /** 0..1 how much of the upper frame is sky, how squarely the lens faces north, how much aurora this hour has, and the bearing the first light stands on (radians from +y toward +x) */
   sky: number;
   north: number;
   aurora: number;
+  dawnAz: number;
   /** 0..1 how much of the ground in frame is open water, how near the nearest of it is, and which side it is on (-1 left, 1 right) */
   water: number;
   near: number;
@@ -113,13 +115,16 @@ export interface Scene {
   px: number;
   pv: number;
   far: number;
-  /** the picture's clock as last drawn, and the time (ms) of the frame that drew it; the sluices; the ending's light */
+  /** the page went somewhere in one frame (a tick of the rail, a link to an anchor, a restored position): nothing was passed on the way */
+  jump: boolean;
+  /** the picture's clock as last drawn, and the time (ms) of the frame that drew it; the sluices; the ending's light (the sun's lift, the line's run, the ribbon's rise) */
   clock: number;
   clockAt: number;
   gate: ArrayLike<number>;
   surge: ArrayLike<number>;
   ray: number;
   lift: number;
+  rise: number;
   /** each station's own water, as it stands in the frame */
   falls: Source[];
   spill: Source;
@@ -127,8 +132,11 @@ export interface Scene {
   shallows: Seen;
   sluice: Seen;
   thread: Seen;
+  lanes: Seen;
   bend: Seen;
   arms: Source[];
+  /** the name on the lake: its middle, as it stands in the frame */
+  name: Seen;
   /** the camera and the frame's shape, for placing a sound where its cause is seen */
   cam: Basis | null;
   aspect: number;
@@ -159,11 +167,14 @@ function toLine(x: number, y: number, line: { x: number; y: number }[]): number 
 const US = [0.08, 0.29, 0.5, 0.71, 0.92];
 const VS = [0.56, 0.7, 0.84, 0.97];
 
-/** Which movement of the piece a place in the flight belongs to. */
-export function movementAt(home: boolean, s: number, melt: number, rest: boolean): number {
+/**
+ * Which movement of the piece a place in the flight belongs to.
+ * @param risen the ribbon of light has left the water (or stands already): until then the camera at rest still waits on the dominant
+ */
+export function movementAt(home: boolean, s: number, melt: number, rest: boolean, risen = true): number {
   if (!home) return MOVE.page;
   const [, say, , , , bridge, models, , , canyon, delta, sea] = sectionStarts();
-  if (rest) return MOVE.rest;
+  if (rest) return risen ? MOVE.rest : MOVE.approach;
   if (s < say) return melt > 0.06 ? MOVE.melt : MOVE.ice;
   // (Each movement begins as the camera leaves for its first station, half a screen before the section's own start.)
   if (s < bridge + 0.45) return MOVE.river;
@@ -197,11 +208,14 @@ export function seenAt(cam: Basis | null, aspect: number, x: number, y: number, 
   return { k: inside(p[0]) * inside(p[1]), pan: Math.min(1, Math.max(-1, p[0] * 2 - 1)), far: p[2] };
 }
 
-/** How much of a seen thing is heard: all of it at the lens, half at about eleven hundred units, next to nothing from a station away, nothing out of frame. */
+/** How much of a seen thing is heard: all of it at the lens, half at about eleven hundred units, next to nothing from a station away (where it is a few pixels of the frame), nothing out of frame. */
 export const heard = (s: Seen) => {
-  const h = s.k / (1 + (s.far / 1100) * (s.far / 1100));
+  const h = (s.k / (1 + (s.far / 1100) * (s.far / 1100))) * (1 - smooth(2400, 3400, s.far));
   return h < 0.02 ? 0 : h;
 };
+
+/** The ribbon is first seen at this much of its rise (the shading pass's own number: see `LIGHT` in mapping.ts). */
+const RISEN = 0.04;
 
 export interface Env {
   /** 0 by day, 1 before dawn */
@@ -296,8 +310,12 @@ export class SceneReader {
       this.seen = true;
     }
     this.y = sig.scrollY;
-    // (A jump, a link to an anchor or a restored position, is not speed.)
-    if (sv > 12) sv = 0;
+    // (A jump, a tick of the rail, a link to an anchor or a restored position, is not speed: nothing between was passed.)
+    const jump = sv > 12;
+    if (jump) {
+      sv = camV = meltRate = turn = 0;
+      this.meltRate = 0;
+    }
     if (camV > 30000) camV = 0;
     if (Math.abs(turn) > 6) turn = 0;
     this.sv += (Math.min(sv, 8) - this.sv) * k(0.09);
@@ -339,7 +357,9 @@ export class SceneReader {
     let shallows = UNSEEN;
     let sluice = UNSEEN;
     let thread = UNSEEN;
+    let lanes = UNSEEN;
     let bend = UNSEEN;
+    let name = UNSEEN;
     if (cam) {
       let wAll = 0;
       let wWet = 0;
@@ -375,8 +395,10 @@ export class SceneReader {
         white /= wWet;
         sea /= wWet;
       }
-      // The tarn is where the frame is mostly its still water.
-      tarn = wAll ? smooth(0.12, 0.5, tarn / wAll) : 0;
+      // The tarn is where the frame is mostly its still water, or where both its shards stand in it from near by
+      // (an upright screen holds them against the sky, over a foot of bank, and little of the tarn is under the frame's foot).
+      const shards = Math.min(...SHARDS.map((sh) => heard(seenAt(cam, sig.aspect, sh.x, sh.y, sh.h * 0.5))));
+      tarn = Math.max(wAll ? smooth(0.12, 0.5, tarn / wAll) : 0, smooth(0.28, 0.4, shards));
       // Between the canyon's walls: inside its length and below its rim (an eye above the rim is in open air).
       walls = smooth(CANYON.y0 - 500, CANYON.y0 + 150, cam.pos[1]) * (1 - smooth(CANYON.y1 - 100, CANYON.y1 + 500, cam.pos[1])) * (1 - smooth(CANYON.h - 120, CANYON.h + 60, cam.pos[2]));
       if (walls > 0) wallD = Math.max(12, CANYON.w / 2 - toLine(cam.pos[0], cam.pos[1], CANYON_LINE));
@@ -398,13 +420,19 @@ export class SceneReader {
       let open = 0;
       for (let i = 1; i < 3; i++) if ((sig.gate[i] ?? 0) > (sig.gate[open] ?? 0)) open = i;
       sluice = seenAt(cam, sig.aspect, SLUICES[open][1].x, SLUICES[open][1].y);
-      thread = seenAt(cam, sig.aspect, LATTICE.x, LATTICE.y - LATTICE.pitch * 2 - 90);
+      // (The sluices' water falls on the wall's downstream side: from upstream, where the columns stand, the wall hides it.)
+      sluice.k *= smooth(DAM.y - 200, DAM.y + 150, cam.pos[1]);
+      thread = seenAt(cam, sig.aspect, LATTICE.x, LATTICE.y - LATTICE.pitch * 2 - 110);
+      lanes = seenAt(cam, sig.aspect, LATTICE.x, LATTICE.y);
+      name = seenAt(cam, sig.aspect, NAME.x, NAME.y);
       for (const b of BENDS) {
         const s = seenAt(cam, sig.aspect, b.x, b.y);
         if (heard(s) >= heard(bend)) bend = s;
       }
     }
     const [, , , , , , , , , , , seaAt] = sectionStarts();
+    const hour = home ? skyAt(1, sig.day, 0, 0.62, 0.03) : null;
+    const rise = home ? (sig.rise ?? sig.ray) : 0;
 
     return {
       home,
@@ -423,7 +451,8 @@ export class SceneReader {
       turn: this.turn,
       sky,
       north: cam ? sat(cam.f[1]) : 0,
-      aurora: home ? skyAt(1, sig.day, 0, 0.62, 0.03).aurora : 0,
+      aurora: hour ? hour.aurora : 0,
+      dawnAz: hour ? Math.atan2(hour.sun[0], hour.sun[1]) : 0,
       water,
       near,
       pan,
@@ -441,27 +470,32 @@ export class SceneReader {
       walls,
       wallD,
       approach: home ? smooth(seaAt - APPROACH, SETTLE_AT, sig.s) : 0,
-      move: movementAt(home, sig.s, melt, home && sig.rest),
+      // (With motion reduced no light event runs: the ribbon simply stands, and the piece does not wait for it.)
+      move: movementAt(home, sig.s, melt, home && sig.rest, env.calm || rise >= RISEN),
       // (Over the flight the picture says the pointer's ray meets the ground, and whether that ground is open water is
       // read from the plan. On an inner page the picture's own bed says whether it is water.)
       over: sig.far > 0 && now - sig.moved < 4000 && (!home || wetUnder(cam, sig.aspect, sig.px, sig.py, melt, sig.gate) > 0.4),
       px: sig.px,
       pv: this.pv,
       far: sig.far,
+      jump: home && jump,
       clock: sig.clock,
       clockAt: sig.clockAt,
       gate: sig.gate,
       surge: sig.surge,
       ray: home ? sig.ray : 0,
       lift: home ? sig.lift : 0,
+      rise,
       falls,
       spill,
       slab,
       shallows,
       sluice,
       thread,
+      lanes,
       bend,
       arms: armsSeen,
+      name,
       cam,
       aspect: sig.aspect,
     };

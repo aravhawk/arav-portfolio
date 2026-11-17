@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARRIVAL, ARRIVAL_AT, BEAT, CHORDS, LATTICE_START, MOTIF, MOTIF_BEATS, MOTIF_STEPS, MOVE, MOVEMENTS, PENTA, SHARD_ROUNDS, type Variation, bassNote, climb, derives, hz, ladder, latticeNote, motifBeats, motifNotes, motifPhrase, rung, shardNote, snap, vary, voiceLead } from '@/audio/theory';
+import { ARRIVAL, ARRIVAL_AT, BEAT, CHORDS, CLIMB, GATHER, LATTICE_START, MOTIF, MOTIF_BEATS, MOTIF_STEPS, MOVE, MOVEMENTS, PENTA, SHARD_ROUNDS, type Variation, bassNote, climb, derives, hz, ladder, latticeNote, motifBeats, motifNotes, motifPhrase, rung, shardNote, snap, vary, voiceLead } from '@/audio/theory';
 
 /** D major: the one key signature everything on the site keeps to. */
 const D_MAJOR = [2, 4, 6, 7, 9, 11, 1];
@@ -183,6 +183,25 @@ describe('the theme', () => {
     expect(ARRIVAL_AT[0]).toBe(0);
     expect(ARRIVAL_AT[4]).toBe(1);
     expect(ARRIVAL_AT).toEqual(MOTIF_BEATS.map((b) => b / 5));
+  });
+
+  it('before the arrival the theme gathers: its first three notes, then the same three an octave up; over the arrival the ladder climbs', () => {
+    // The gathering is the theme begun and not finished, twice, rising: as the approach leaves it, an octave apart.
+    expect(GATHER).toHaveLength(6);
+    expect(GATHER.slice(3)).toEqual(MOTIF.slice(0, 3));
+    expect(GATHER.slice(0, 3)).toEqual(MOTIF.slice(0, 3).map((m) => m - 12));
+    expect(derives(GATHER.slice(0, 3))).toBe(true);
+    expect(derives(GATHER.slice(3))).toBe(true);
+    for (let i = 1; i < GATHER.length; i++) expect(GATHER[i]).toBeGreaterThan(GATHER[i - 1]);
+    // It stops where the theme's fourth note would come: the arrival's first chord then begins the theme again, whole.
+    expect(ARRIVAL[0][0]).toBe(MOTIF[0]);
+    // The ladder: every rung of the key from the D above the theme to the D an octave over it, rising, above everything the arrival's chords play.
+    expect(CLIMB).toEqual(ladder(86, 98));
+    expect(CLIMB).toHaveLength(6);
+    expect(pc(CLIMB[0])).toBe(2);
+    expect(pc(CLIMB[5])).toBe(2);
+    for (const m of CLIMB) expect(PENTA).toContain(pc(m));
+    expect(Math.min(...CLIMB)).toBeGreaterThan(Math.max(...ARRIVAL.flat()));
   });
 });
 

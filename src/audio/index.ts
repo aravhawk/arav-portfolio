@@ -204,39 +204,77 @@ async function build(ctx: AudioContext): Promise<Running | null> {
   onFrame(turn, 30);
 
   // Moments, the instant they are published: by the picture inside its frame, or by a handler.
-  listen((type, a, b, c, at) => {
-    if (live()) sound.fire(type, a, b, c, read(), at);
+  listen((type, a, b, c, at, d) => {
+    if (live()) sound.fire(type, a, b, c, read(), at, d);
   });
 
   // Links and controls: a hover is heard once as the pointer comes onto one, a press as it lands.
+  // A hover is the pointer's doing. When the page moves a control under a pointer that is standing still (the nav
+  // coming back as the scroll rests, a link carried past by the scroll) the browser reports the pointer over it
+  // all the same, at the place it already was: that is not a hover, and nothing sounds.
   let over: Element | null = null;
+  let lastX = NaN;
+  let lastY = NaN;
   const control = (e: Event) => (e.target instanceof Element ? e.target.closest(CONTROL) : null);
+  // A tick of the rail: which it is, of how many, and which way the page will go if it is pressed.
+  const railOf = (el: Element | null) => {
+    const rail = el?.closest('.fl-rail');
+    if (!el || !rail) return null;
+    const ticks = Array.from(rail.querySelectorAll('a'));
+    const i = ticks.indexOf(el as HTMLAnchorElement);
+    if (i < 0) return null;
+    const now = ticks.findIndex((a) => a.getAttribute('aria-current') === 'true');
+    return { i, n: ticks.length, dir: Math.sign(i - now) };
+  };
+  const press = (el: Element, x: number) => {
+    const r = railOf(el);
+    sound.fire('tap', x, r ? r.i : 0, r ? r.n : 0, read(), performance.now());
+  };
+  document.addEventListener(
+    'pointermove',
+    (e) => {
+      lastX = e.clientX;
+      lastY = e.clientY;
+    },
+    { capture: true, passive: true },
+  );
   document.addEventListener(
     'pointerover',
     (e) => {
       if (e.pointerType !== 'mouse') return;
       const el = control(e);
+      const came = e.clientX !== lastX || e.clientY !== lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
       if (el === over) return;
       over = el;
-      if (el && live()) sound.fire('hover', e.clientX / env.viewW, 0, 0, read(), performance.now());
+      if (!el || !came || !live()) return;
+      const r = railOf(el);
+      sound.fire('hover', e.clientX / env.viewW, r ? r.i : 0, r ? r.n : 0, read(), performance.now());
     },
     { capture: true, passive: true },
   );
   document.addEventListener(
     'pointerdown',
     (e) => {
-      if (control(e) && live()) sound.fire('tap', e.clientX / env.viewW, 0, 0, read(), performance.now());
+      const el = control(e);
+      if (el && live()) press(el, e.clientX / env.viewW);
     },
     { capture: true, passive: true },
   );
   document.addEventListener(
     'click',
     (e) => {
+      const any = control(e);
+      if (!any || !live()) return;
       // (A control worked from the keyboard has no pointer press: its click is its press.)
-      const el = e.detail === 0 ? control(e) : null;
-      if (!el || !live()) return;
-      const r = el.getBoundingClientRect();
-      sound.fire('tap', (r.left + r.width / 2) / env.viewW, 0, 0, read(), performance.now());
+      if (e.detail === 0) {
+        const r = any.getBoundingClientRect();
+        press(any, (r.left + r.width / 2) / env.viewW);
+      }
+      // A tick of the rail takes the page to its section: a route within the flight.
+      const rail = railOf(any);
+      if (rail && rail.dir !== 0) sound.fire('jump', rail.dir, 0, 0, read(), performance.now());
     },
     { capture: true, passive: true },
   );

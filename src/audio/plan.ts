@@ -254,10 +254,13 @@ export function groundAt(x: number, y: number, melt: number, gate: ArrayLike<num
     if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) continue;
     if (op.chan) {
       if (!onChannel(op, x, y)) continue;
-      // (Later strokes paint over earlier ones, as on the bed.)
-      sluice = op.sluice;
+      // (Later strokes paint over earlier ones, as on the bed. A stroke that only sets the water moving carves
+      // nothing: under it a sluice's channel is still that sluice's, running or dry as its gate says.)
       flow = op.speed;
-      if (!op.flowOnly) wet = true;
+      if (!op.flowOnly) {
+        wet = true;
+        sluice = op.sluice;
+      }
     } else if (inside(op.shape, x, y)) {
       wet = op.wet;
       if (!op.wet) {
@@ -270,9 +273,10 @@ export function groundAt(x: number, y: number, melt: number, gate: ArrayLike<num
   // The lake: ice until it melts, then all but still water.
   if (y < LAKE.y1) return { wet: melt, flow: 0.06, white: 0, ice: 1 - melt, sea: 0 };
   if (sluice >= 0) {
-    // A sluice's channel carries what its gate lets through.
+    // A sluice's channel carries what its gate lets through: shut, it is a dry bed of gravel.
     const open = gate[sluice] ?? 0;
-    return { wet: 0.3 + 0.7 * open, flow: open, white: 0.75 * open * (y < SLUICES[sluice][0].y + 450 ? 1 : 0.4), ice: 0, sea: 0 };
+    if (open < 0.02) return DRY;
+    return { wet: open, flow: open, white: 0.75 * open * (y < SLUICES[sluice][0].y + 450 ? 1 : 0.4), ice: 0, sea: 0 };
   }
   let white = 0;
   for (const a of pl.agit) {

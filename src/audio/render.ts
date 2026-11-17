@@ -13,6 +13,7 @@
 
 import { MELT, SETTLE_AT, basisOf, dayAt, flightKeys, poseAt, stillScroll } from '@/water/camera';
 import { dawnLight, nextDrip, stationsNear, stepGates } from '@/water/moments';
+import { COLS } from '@/water/world';
 import { ClockMap } from './clock';
 import { FULL, LEAN, buildGraph } from './graph';
 import type { Mix } from './mapping';
@@ -47,6 +48,10 @@ export interface SceneSpec {
   lean?: boolean;
   /** a frame this long, in ms, at each of these seconds: the picture's clock is disturbed there */
   stalls?: [number, number][];
+  /** the page goes to these scroll positions in one frame (a tick of the rail): [seconds, screens] */
+  jumps?: [number, number][];
+  /** the light event at the ending has already run in this visit: the sun is up and the ribbon stands */
+  dawned?: boolean;
 }
 
 export interface Rendered {
@@ -56,10 +61,11 @@ export interface Rendered {
   phrases: Phrase[];
   trace: SoundEvent[];
   /** the scene and the mix, four times a second */
-  series: { t: number; scene: Partial<Scene>; mix: Partial<Mix>; water: number[] }[];
-  /** whether the water model ran, and how often what was set ahead was taken back */
+  series: { t: number; scene: Partial<Scene>; mix: Partial<Mix>; water: number[]; shimmer: number[] }[];
+  /** whether the water model ran, how often what was set ahead was taken back, and how many frames the scene called a jump */
   water: boolean;
   disturbed: number;
+  jumps: number;
 }
 
 const at = (keys: number[][], t: number, col = 1): number => {
@@ -98,20 +104,26 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
   // The page's clock begins a second before the audio's, and the two then run together: no device, no latency.
   const map = ClockMap.fixed(1000);
 
-  const sig: SignalsLike = { at: 0, s: 0, cam: null, aspect, melt: 0, day: 0, rest: false, clock: spec.clock0 ?? 0, clockAt: 0, st: [0, 0, 0, 0], gate: [1, 0, 0], surge: [0, 0, 0], ray: 0, lift: 0, px: 0.5, py: 0.5, far: 0, moved: -1e9, scrollY: 0, tribs: null };
+  const jumps = (spec.jumps ?? []).slice().sort((a, b) => a[0] - b[0]);
+  const lit = spec.dawned ? 1 : 0;
+  const sig: SignalsLike = { at: 0, s: 0, cam: null, aspect, melt: 0, day: 0, rest: false, clock: spec.clock0 ?? 0, clockAt: 0, st: [0, 0, 0, 0], gate: [1, 0, 0], surge: [0, 0, 0], ray: lit, lift: lit, rise: lit, px: 0.5, py: 0.5, far: 0, moved: -1e9, scrollY: 0, tribs: null };
   const gate = [1, 0, 0];
   const surge = [0, 0, 0];
-  const colH = [1, 0.75, 0.2, 0.065];
+  // (The columns' heights as the page's own numbers give them, in world units.)
+  const colH = [1, 0.75, 0.2, 0.135].map((h) => h * COLS.hMax);
   let clock = spec.clock0 ?? 0;
   let open = 0;
   let s = scroll[0][1];
   let dawnT = -1;
   let melted = false;
-  let drip: { at: number; i: number } | null = null;
+  let drip: { at: number; i: number; x: number; y: number } | null = null;
   let dripAt = 0;
   let ev = 0;
   let pw = 0;
   let st = 0;
+  let jp = 0;
+  let off = 0;
+  let jumped = 0;
   let last = -1;
   const series: Rendered['series'] = [];
   const fps = 60;
@@ -130,8 +142,14 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
       sound.setOn(power[pw][1] > 0, t, power[pw][2]);
       pw++;
     }
-    // The page's smooth scroll eases toward where the wheel has put it.
-    const target = at(scroll, t);
+    // The page's smooth scroll eases toward where the wheel has put it. A tick of the rail puts the page somewhere
+    // in one frame, and the scroll's script carries on from there.
+    while (jp < jumps.length && t >= jumps[jp][0]) {
+      off = jumps[jp][1] - at(scroll, t);
+      s = jumps[jp][1];
+      jp++;
+    }
+    const target = at(scroll, t) + off;
     s += (target - s) * (1 - Math.exp(-dt / 0.136));
     if (Math.abs(target - s) < 1e-5) s = target;
     let rest = false;
@@ -172,6 +190,7 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
     // The sound's turn.
     const scene = reader.read(sig, now, { night: step(night, t), calm, viewW: 1440, viewH: 900 });
     const mix = sound.frame(scene, { now: t, frameAt: now, map });
+    if (scene.jump) jumped++;
     if (home && sig.cam) {
       // The flight's frame, second half: the picture's own clockwork, in the order the flight runs it.
       // (A scene that begins past the lake begins with its ice long gone: that is not a moment.)
@@ -181,14 +200,15 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
         sound.fire('melt', 1, 0, 0, t, now);
       } else if (melt < 0.9 && melted) melted = false;
       if (calm) {
-        sig.lift = sig.ray = rest ? 1 : 0;
+        // (Nothing moves by the clock: at the ending the light is simply there.)
+        sig.lift = sig.ray = sig.rise = rest || lit ? 1 : 0;
       } else {
-        if (rest && dawnT < 0) {
+        if (rest && dawnT < 0 && !lit) {
           dawnT = clock;
           sound.fire('dawn', 0, 0, 0, t, now);
         }
         clock += Math.min(dt, 1 / 20);
-        if (dawnT >= 0) ({ lift: sig.lift, ray: sig.ray } = dawnLight(clock - dawnT));
+        if (dawnT >= 0) ({ lift: sig.lift, ray: sig.ray, rise: sig.rise } = dawnLight(clock - dawnT));
       }
       const near = stationsNear(sig.cam.pos);
       stepGates(gate, surge, open, Math.min(0.05, dt), calm);
@@ -200,7 +220,7 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
       if (near[0] > 0.5 && !calm) {
         if (!drip) {
           drip = nextDrip(Math.max(clock, dripAt), colH, rng);
-          sound.fire('drip', drip.i, colH[drip.i], drip.at, t, now);
+          sound.fire('drip', drip.x, drip.y, drip.at, t, now, colH[drip.i] / COLS.hMax);
         }
         if (clock >= drip.at) {
           dripAt = clock;
@@ -217,11 +237,11 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
       void _a;
       const { water, shimmer: _sh, ...mix0 } = mix;
       void _sh;
-      series.push({ t: +t.toFixed(2), scene: rest0, mix: mix0, water: water.map((v) => +v[0].toFixed(3)) });
+      series.push({ t: +t.toFixed(2), scene: rest0, mix: mix0, water: water.map((v) => +v[0].toFixed(3)), shimmer: mix.shimmer.map((v) => +v[0].toFixed(3)) });
     }
   }
   // (Everything the water was told has reached the audio thread before the render begins.)
   await graph.water.flush();
   const buf = await ctx.startRendering();
-  return { sampleRate, channels: [buf.getChannelData(0), buf.getChannelData(1)], chords: sound.score.history, phrases: sound.score.phrases, trace: sound.trace ?? [], series, water: graph.water.live, disturbed: sound.disturbed };
+  return { sampleRate, channels: [buf.getChannelData(0), buf.getChannelData(1)], chords: sound.score.history, phrases: sound.score.phrases, trace: sound.trace ?? [], series, water: graph.water.live, disturbed: sound.disturbed, jumps: jumped };
 }

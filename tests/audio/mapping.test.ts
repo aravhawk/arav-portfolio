@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DAWN, GATE, LAP } from '@/water/moments';
-import { W, WATER, arrivalIndex, arrivalOf, arrivalRay, arrivalTime, camN, chirpAt, chirpLen, crackVoice, dripVoice, dropVoice, gust, latticeAt, latticeTime, latticeVoice, mixOf, roomsOf, scrollN, seaAt, shardVoice, slapTime, surgeRing, swellAt, uiVoice, waterOf, windPanOf } from '@/audio/mapping';
+import { DAWN, GATE, LAP, RIBBON, stationsNear } from '@/water/moments';
+import { ARRIVE_AT, BLOCK_EARS, BLOCK_MID, LIGHT, NAME_MELT, SHEET_BREAKS, SHIMMER_AT, W, WATER, arrivalOf, arrivalTime, bearingAt, blockSet, camN, climbTime, climbVoice, curtainAt, curtainsAt, gatherTime, gatherVoice, landings, lightPan, lineRun, lineTime, nameLetters, nameMelt, railVoice, ribbonHead, ribbonTime, sinkAt, sinkOrder, sinkVoice, unsmooth, chirpAt, chirpLen, crackVoice, dripVoice, dropVoice, gust, latticeAt, latticeTime, latticeVoice, mixOf, roomsOf, scrollN, seaAt, shardVoice, slapTime, surgeRing, swellAt, uiVoice, waterOf, windPanOf } from '@/audio/mapping';
 import { APPROACH, type Scene, SceneReader, type Seen, type SignalsLike, groundAt, heard, movementAt, seenAt, wetUnder } from '@/audio/scene';
-import { ARRIVAL, MOTIF, MOVE, PENTA } from '@/audio/theory';
-import { END_AT, MELT, SETTLE_AT, basisOf, dayAt, flightKeys, poseAt, sectionStarts, stillStops } from '@/water/camera';
-import { CANYON, COLS, DELTA, LAKE, LATTICE, SHARDS, SLUICES, STREAM, TARN } from '@/water/world';
+import { ARRIVAL, ARRIVAL_AT, CLIMB, GATHER, MOTIF, MOVE, PENTA } from '@/audio/theory';
+import { END_AT, MELT, SETTLE_AT, basisOf, dayAt, endLens, flightKeys, heroDesign, poseAt, sectionStarts, stillStops } from '@/water/camera';
+import { CANYON, COLS, DELTA, LAKE, LATTICE, NAME, SHARDS, SLAB, SLUICES, STREAM, TARN } from '@/water/world';
 
 const UNSEEN: Seen = { k: 0, pan: 0, far: 0 };
 const NEAR: Seen = { k: 1, pan: 0, far: 300 };
@@ -28,6 +28,7 @@ const scene = (over: Partial<Scene> = {}): Scene => ({
   sky: 0,
   north: 0,
   aurora: 0,
+  dawnAz: 0,
   water: 0.3,
   near: 0.5,
   pan: 0,
@@ -50,20 +51,24 @@ const scene = (over: Partial<Scene> = {}): Scene => ({
   px: 0.5,
   pv: 0,
   far: 0,
+  jump: false,
   clock: 0,
   clockAt: 0,
   gate: [1, 0, 0],
   surge: [1, 0, 0],
   ray: 0,
   lift: 0,
+  rise: 0,
   falls: [],
   spill: { ...UNSEEN, size: 0 },
   slab: UNSEEN,
   shallows: UNSEEN,
   sluice: UNSEEN,
   thread: UNSEEN,
+  lanes: UNSEEN,
   bend: UNSEEN,
   arms: [],
+  name: UNSEEN,
   cam: null,
   aspect: 1.6,
   ...over,
@@ -194,18 +199,42 @@ describe('the mix follows the scene', () => {
     expect(waterOf(scene({ falls: [{ k: 1, pan: 0, far: 3000, size: 1 }] }), 0)[W.falls][GAIN]).toBeLessThan(v[W.falls][GAIN]);
   });
 
-  it('the still pool has one spill and the lattice one thread: a trickle, where it enters', () => {
+  it('thin water: the rock pool’s one brook where it leaves, and the lattice’s thread, which runs in at the pool’s head and along every lane', () => {
     const spill = waterOf(scene({ pool: 0.6, spill: { k: 1, pan: -0.5, far: 300, size: 0.3 } }), 0)[W.thin];
     expect(spill[GAIN]).toBeGreaterThan(0.1);
     expect(spill[PAN]).toBeLessThan(-0.3);
     expect(spill[RATE]).toBeLessThan(40);
     expect(spill[NOISE]).toBeLessThan(0.05);
-    const thread = waterOf(scene({ lattice: 1, thread: { k: 1, pan: 0.4, far: 300 } }), 0)[W.thin];
+    // The thread is heard between where it enters and the middle of the lattice, spread across the lanes it runs in.
+    const thread = waterOf(scene({ lattice: 1, thread: { k: 1, pan: 0.6, far: 300 }, lanes: { k: 1, pan: 0.1, far: 500 } }), 0)[W.thin];
     expect(thread[GAIN]).toBeGreaterThan(0.1);
-    expect(thread[PAN]).toBeGreaterThan(0.2);
-    // The thread is thinner and higher than the spill.
+    expect(thread[PAN]).toBeGreaterThan(0.1);
+    expect(thread[PAN]).toBeLessThan(0.6);
+    expect(thread[7]).toBeGreaterThan(spill[7] * 3);
+    // It is thinner and higher than the brook.
     expect(thread[RATE]).toBeLessThan(spill[RATE]);
     expect(thread[LO]).toBeGreaterThan(spill[LO]);
+    // With the entry out of frame the lanes are still heard.
+    expect(waterOf(scene({ lattice: 1, lanes: { k: 1, pan: 0.1, far: 500 } }), 0)[W.thin][GAIN]).toBeGreaterThan(0.1);
+  });
+
+  it('the meltwater at the name’s feet: none on the whole sheet, a few bubbles as it gathers, more as the ice under the blocks opens, gone once the lake is plates', () => {
+    const name = { k: 1, pan: -0.2, far: 1700 };
+    const at = (melt: number, more: Partial<Scene> = {}) => waterOf(scene({ melt, ice: 1 - melt, water: 0, name, ...more }), 0)[W.thin];
+    expect(at(0)[GAIN]).toBe(0);
+    expect(at(0.03)[GAIN]).toBe(0);
+    expect(at(0.12)[GAIN]).toBeGreaterThan(0);
+    expect(at(0.3)[GAIN]).toBeGreaterThan(at(0.12)[GAIN] * 3);
+    expect(at(0.5)[GAIN]).toBeGreaterThan(at(0.3)[GAIN]);
+    expect(at(0.5)[RATE]).toBeGreaterThan(at(0.12)[RATE] * 2);
+    // (Lower as the hole opens: there is more water under each bubble.)
+    expect(at(0.5)[LO]).toBeLessThan(at(0.12)[LO]);
+    expect(at(0.85)[GAIN]).toBe(0);
+    // It stands where the name does, across the letters, and is not there with the name out of frame or the page held still.
+    expect(at(0.4)[PAN]).toBeLessThan(-0.1);
+    expect(at(0.4)[7]).toBeGreaterThan(0.3);
+    expect(at(0.4, { name: UNSEEN })[GAIN]).toBe(0);
+    expect(at(0.4, { calm: true })[GAIN]).toBe(0);
   });
 
   it('the tarn is nearly silent', () => {
@@ -224,13 +253,50 @@ describe('the mix follows the scene', () => {
     expect(mixOf(tarn, 0).wind).toBeLessThan(mixOf(river, 0).wind * 0.4);
   });
 
-  it('the basin laps at its block and the shallows at the columns', () => {
-    const basin = waterOf(scene({ basin: 0.8, slab: { k: 1, pan: 0.3, far: 400 } }), 0)[W.lap];
-    expect(basin[GAIN]).toBeGreaterThan(0.2);
-    expect(basin[PAN]).toBeGreaterThan(0);
+  it('the basin laps at its block, louder while a set is running, and the shallows at the columns', () => {
+    const basin = (clock: number) => waterOf(scene({ basin: 0.8, slab: { k: 1, pan: 0.3, far: 400 }, clock }), 0)[W.lap];
+    expect(basin(0)[GAIN]).toBeGreaterThan(0.15);
+    expect(basin(0)[PAN]).toBeGreaterThan(0);
+    // (The sets come and go on the picture's clock, about every seventeen seconds.)
+    const levels = Array.from({ length: 40 }, (_, i) => basin(i)[GAIN]);
+    expect(Math.max(...levels)).toBeGreaterThan(Math.min(...levels) * 2);
+    const hi = levels.indexOf(Math.max(...levels));
+    expect(blockSet(BLOCK_MID, hi)).toBeGreaterThan(0.9);
     const cols = waterOf(scene({ cols: 1, shallows: { k: 1, pan: -0.3, far: 400 } }), 0)[W.lap];
     expect(cols[GAIN]).toBeGreaterThan(0.2);
-    expect(cols[RATE]).toBeLessThan(basin[RATE]);
+    expect(cols[RATE]).toBeLessThan(basin(0)[RATE]);
+  });
+
+  it('the basin’s sea lands on the block in sets, each crest at a time known ahead, one end of the face before the other', () => {
+    for (const ear of BLOCK_EARS) {
+      const all = landings(ear.along, 0, 60);
+      // A crest every three to five seconds, never two together, each inside the window asked about.
+      expect(all.length).toBeGreaterThan(11);
+      all.forEach((l, i) => {
+        expect(l.tau).toBeGreaterThan(0);
+        expect(l.tau).toBeLessThanOrEqual(60);
+        if (i) expect(l.tau - all[i - 1].tau).toBeGreaterThan(2.5);
+        if (i) expect(l.tau - all[i - 1].tau).toBeLessThan(5.6);
+        if (i) expect(l.n).toBe(all[i - 1].n + 1);
+        expect(l.hard).toBeGreaterThanOrEqual(0);
+        expect(l.hard).toBeLessThanOrEqual(1);
+      });
+      // Sets: some crests land hard and some hardly at all.
+      expect(Math.max(...all.map((l) => l.hard))).toBeGreaterThan(0.8);
+      expect(Math.min(...all.map((l) => l.hard))).toBeLessThan(0.1);
+      // Looked for a quarter of a second at a time, as the page does, the same crests are found, once each.
+      const found: number[] = [];
+      for (let t = 0; t < 60; t += 0.25) for (const l of landings(ear.along, t, t + 0.25)) found.push(l.tau);
+      expect(found).toHaveLength(all.length);
+      found.forEach((tau, i) => expect(tau).toBeCloseTo(all[i].tau, 4));
+    }
+    // The two ends of the face are not struck together.
+    const a = landings(BLOCK_EARS[0].along, 0, 30).map((l) => l.tau);
+    const b = landings(BLOCK_EARS[1].along, 0, 30).map((l) => l.tau);
+    expect(Math.min(...a.map((t) => Math.min(...b.map((u) => Math.abs(u - t)))))).toBeGreaterThan(0.05);
+    expect(BLOCK_EARS[0].x).toBeLessThan(0);
+    expect(BLOCK_EARS[1].x).toBeGreaterThan(0);
+    expect(Math.abs(BLOCK_EARS[0].x)).toBeLessThan(SLAB.w / 2);
   });
 
   it('the open sluice rushes, and swells as the surge runs down the channel', () => {
@@ -386,19 +452,50 @@ describe('the mix follows the scene', () => {
     expect(mid.windHz).toBeCloseTo((day.windHz + dark.windHz) / 2, 6);
   });
 
-  it('the aurora has a voice only before dawn, while the hour has it and the lens is on the sky; its partials move with the picture’s clock', () => {
-    const on = { night: 1, aurora: 1, sky: 1, north: 1 };
+  it('the aurora has a voice only before dawn, while the hour has it and there is sky in frame; it follows the curtains on the picture’s clock and thins from the top as first light grows', () => {
+    const cam = basisOf(poseAt(flightKeys(1.6), 0));
+    const on = { night: 1, aurora: 1, sky: 1, cam, dawnAz: 0.225 };
     expect(mixOf(scene(on), 0).aurora).toBeGreaterThan(0.9);
     expect(mixOf(scene({ ...on, night: 0 }), 0).aurora).toBe(0);
     expect(mixOf(scene({ ...on, aurora: 0 }), 0).aurora).toBe(0);
-    expect(mixOf(scene({ ...on, sky: 0, north: 0 }), 0).aurora).toBeLessThan(0.15);
+    expect(mixOf(scene({ ...on, sky: 0 }), 0).aurora).toBeLessThan(0.3);
     expect(mixOf(scene({ ...on, home: false }), 0).aurora).toBe(0);
+    expect(mixOf(scene({ ...on, rest: true }), 0).aurora).toBe(0);
     const a = mixOf(scene({ ...on, clock: 10 }), 0).shimmer;
     const b = mixOf(scene({ ...on, clock: 14 }), 0).shimmer;
     expect(a).not.toEqual(b);
     // (The sound's own time does not move them: only the picture's clock does.)
     expect(mixOf(scene({ ...on, clock: 10 }), 99).shimmer).toEqual(a);
-    expect(new Set(a.map(([g]) => g.toFixed(3))).size).toBeGreaterThan(3);
+    // Each partial keeps its place across the frame and is as loud as the curtains are bright on that bearing.
+    a.forEach(([g, pan], i) => {
+      expect(pan).toBe(SHIMMER_AT[i]);
+      expect(g).toBeCloseTo(curtainsAt(bearingAt(cam, 1.6, pan), 10, 0.225), 9);
+      expect(g).toBeGreaterThanOrEqual(0);
+      expect(g).toBeLessThanOrEqual(1);
+    });
+    // A length of curtain drifts along the sky: over five minutes every place has had it and has been without it.
+    for (const az of [-0.5, 0, 0.5]) {
+      const there = Array.from({ length: 300 }, (_, t) => curtainAt(0, az, t).there);
+      expect(Math.max(...there)).toBeGreaterThan(0.9);
+      expect(Math.min(...there)).toBeLessThan(0.1);
+      // (Slowly: it does not come and go inside a second.)
+      for (let t = 1; t < 300; t++) expect(Math.abs(there[t] - there[t - 1])).toBeLessThan(0.2);
+    }
+    // The ripple along a border comes round every 2 pi / 0.5 seconds at a place, and runs along the sky.
+    expect(curtainAt(0, 0.2, 0).ripple).toBeCloseTo(curtainAt(0, 0.2, (2 * Math.PI) / 0.5).ripple, 6);
+    expect(curtainAt(0, 0.2, 3).ripple).toBeCloseTo(curtainAt(0, 0.2 + (0.5 * 3) / 14, 6).ripple, 6);
+    // Nothing of it toward the first light.
+    expect(curtainsAt(0.225, 10, 0.225)).toBeLessThan(0.16);
+    // As the first light grows the hour has less of it, and it thins from the top: the highest partial goes first.
+    const full = mixOf(scene({ ...on, clock: 40 }), 0);
+    const thin = mixOf(scene({ ...on, clock: 40, aurora: 0.8 }), 0);
+    expect(thin.aurora).toBeLessThanOrEqual(full.aurora);
+    full.shimmer.forEach(([g], i) => {
+      if (g <= 0) return;
+      const left = thin.shimmer[i][0] / g;
+      expect(left).toBeCloseTo(Math.max(0, 1 - 0.2 * (1 + 0.9 * i)), 6);
+    });
+    expect(mixOf(scene({ ...on, clock: 40, aurora: 0.4 }), 0).shimmer.slice(1).every(([g]) => g === 0)).toBe(true);
   });
 
   it('the ice cracks as fast as it melts, and not at all when it is whole, gone, or held still', () => {
@@ -505,35 +602,154 @@ describe('each moment is built from where and what it is', () => {
     for (const x of [0, 0.3, 0.6, 1]) expect(PENTA).toContain(pc(uiVoice('hover', x).midi));
   });
 
-  it('the arrival: the swell rises with the sun’s lift and lets go after it; each chord comes as the light reaches its place, at a time known ahead', () => {
-    expect(arrivalOf(0, 0)).toBe(0);
-    expect(arrivalOf(0.5, 0)).toBeGreaterThan(0.3);
-    expect(arrivalOf(1, 0)).toBe(1);
-    expect(arrivalOf(1, 6)).toBeLessThan(0.4);
-    expect(arrivalOf(1, 60)).toBeLessThan(0.001);
-    expect(arrivalIndex(0)).toBe(-1);
-    let last = -1;
-    for (let ray = 0.005; ray <= 1; ray += 0.005) {
-      const i = arrivalIndex(ray);
-      expect(i).toBeGreaterThanOrEqual(last);
-      last = i;
-    }
-    expect(last).toBe(ARRIVAL.length - 1);
-    // The time each is set for is the time the picture's own easing brings the light there.
+  it('the ending’s light, as the shading pass draws it: the line runs out from the foot of the frame to the far shore, then the ribbon climbs from the water out of the top of the frame', () => {
     const smooth = (a: number, b: number, x: number) => {
       const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
       return t * t * (3 - 2 * t);
     };
-    let before = 0;
-    for (let i = 0; i < ARRIVAL.length; i++) {
-      const t = arrivalTime(i);
-      expect(t).toBeGreaterThan(before);
-      before = t;
-      expect(t).toBeGreaterThanOrEqual(DAWN.ray[0]);
-      expect(t).toBeLessThanOrEqual(DAWN.ray[1]);
-      expect(smooth(DAWN.ray[0], DAWN.ray[1], t)).toBeCloseTo(arrivalRay(i), 6);
-      expect(arrivalIndex(smooth(DAWN.ray[0], DAWN.ray[1], t + 0.001))).toBe(i);
+    for (const y of [0, 0.04, 0.3, 0.5, 0.77, 1]) expect(smooth(0, 1, unsmooth(y))).toBeCloseTo(y, 9);
+    // The line: nowhere at the dawn, at the far shore before `ray` has run its share, and never back.
+    expect(lineRun(0)).toBe(0);
+    expect(lineRun(LIGHT.run)).toBe(1);
+    let was = 0;
+    for (let ray = 0; ray <= 1; ray += 0.01) {
+      expect(lineRun(ray)).toBeGreaterThanOrEqual(was);
+      was = lineRun(ray);
     }
+    for (const p of [0.05, 0.3, 0.6, 0.95]) expect(lineRun(smooth(DAWN.ray[0], DAWN.ray[1], lineTime(p)))).toBeCloseTo(p, 6);
+    expect(lineTime(0)).toBeCloseTo(DAWN.ray[0], 6);
+    // The ribbon: not seen until `first`, then its head climbs; the time asked for is the time the picture puts it there.
+    expect(ribbonHead(0)).toBe(0);
+    expect(ribbonHead(LIGHT.first)).toBeGreaterThan(0);
+    for (const e of [0.05, 0.12, 0.2, 0.24]) expect(ribbonHead(smooth(DAWN.rise[0], DAWN.rise[1], ribbonTime(e)))).toBeCloseTo(e, 6);
+    expect(smooth(DAWN.rise[0], DAWN.rise[1], ARRIVE_AT)).toBeCloseTo(LIGHT.first, 9);
+    // The line has reached the far shore before the ribbon leaves the water: a breath between the two.
+    expect(lineTime(1)).toBeLessThan(ARRIVE_AT - 0.25);
+    expect(lineTime(1)).toBeGreaterThan(DAWN.ray[0] + 1);
+    // Where the light stands across the frame: the ribbon's foot is right of the middle, and it leans further right both as it climbs and, in the water, toward the eye.
+    const L = endLens(1.6);
+    const tan = Math.tan((L.fov * Math.PI) / 360);
+    expect(lightPan(0, 1.6, tan)).toBeCloseTo(RIBBON.at(1.6), 9);
+    expect(lightPan(0, 0.46, tan)).toBeCloseTo(RIBBON.at(0.46), 9);
+    expect(lightPan(0.2, 1.6, tan)).toBeGreaterThan(lightPan(0.05, 1.6, tan));
+    expect(lightPan(LIGHT.foot, 1.6, tan)).toBeGreaterThan(lightPan(0.2, 1.6, tan));
+    expect(lightPan(LIGHT.foot, 1.6, tan)).toBeLessThan(0.75);
+  });
+
+  it('the arrival: the theme gathers as the line runs out, is stated whole as the ribbon climbs with the ladder following its head, and the bed’s swell comes to its height with the ribbon', () => {
+    const L = endLens(1.6);
+    const tan = Math.tan((L.fov * Math.PI) / 360);
+    // The gathering: six notes inside the line's run, the last as it reaches the far shore, each sooner after the one before or about as soon.
+    const gather = GATHER.map((_, i) => gatherTime(i));
+    gather.forEach((t, i) => {
+      expect(t).toBeGreaterThan(DAWN.ray[0]);
+      expect(t).toBeLessThanOrEqual(lineTime(1));
+      if (i) expect(t).toBeGreaterThan(gather[i - 1]);
+    });
+    expect(gather[1] - gather[0]).toBeGreaterThan(gather[2] - gather[1]);
+    expect(lineTime(1) - gather[5]).toBeLessThan(0.1);
+    // Each is further off than the last: softer, more of the place round it, and its two bells closer together, closing on where the line ends.
+    const voices = GATHER.map((_, i) => gatherVoice(i, 1.6, tan, 0));
+    voices.forEach((v, i) => {
+      expect(v.midi).toBe(GATHER[i]);
+      if (!i) return;
+      const u = voices[i - 1];
+      expect(v.gain).toBeLessThan(u.gain);
+      expect(v.send).toBeGreaterThan(u.send);
+      expect(v.width).toBeLessThan(u.width);
+      expect(v.pan).toBeLessThan(u.pan);
+    });
+    expect(voices[0].width).toBeGreaterThan(0.4);
+    expect(voices[5].width).toBeLessThan(0.05);
+    expect(voices[5].pan).toBeCloseTo(lightPan(0, 1.6, tan), 6);
+    expect(gatherVoice(2, 1.6, tan, 1).bright).toBeLessThan(voices[2].bright);
+    // The theme, whole: its first chord on the ribbon's first light, its last as the rise ends, its own rhythm between.
+    const chords = ARRIVAL.map((_, i) => arrivalTime(i));
+    expect(chords[0]).toBeCloseTo(ARRIVE_AT, 9);
+    expect(chords[4]).toBeCloseTo(DAWN.rise[1], 9);
+    chords.forEach((t, i) => expect((t - chords[0]) / (chords[4] - chords[0])).toBeCloseTo(ARRIVAL_AT[i], 9));
+    expect(chords[4]).toBeLessThan(DAWN.over);
+    // The ladder: a rung each sixth of the way up, the last as the ribbon's head leaves the top of the frame; all within the rise.
+    const top = 0.24;
+    const climb = CLIMB.map((_, j) => climbTime(j, top));
+    climb.forEach((t, j) => {
+      expect(t).toBeGreaterThan(ARRIVE_AT);
+      expect(t).toBeLessThan(DAWN.rise[1]);
+      if (j) expect(t).toBeGreaterThan(climb[j - 1] + 0.1);
+      expect(ribbonHead((t - DAWN.rise[0]) / (DAWN.rise[1] - DAWN.rise[0]) < 0 ? 0 : (() => { const x = (t - DAWN.rise[0]) / (DAWN.rise[1] - DAWN.rise[0]); return x * x * (3 - 2 * x); })())).toBeCloseTo(LIGHT.base + ((j + 1) / CLIMB.length) * (top - LIGHT.base), 6);
+    });
+    expect(climb[CLIMB.length - 1]).toBeCloseTo(ribbonTime(top), 9);
+    const rungs = CLIMB.map((_, j) => climbVoice(j, top, 1.6, tan, 0));
+    rungs.forEach((v, j) => {
+      expect(v.midi).toBe(CLIMB[j]);
+      if (!j) return;
+      expect(v.midi).toBeGreaterThan(rungs[j - 1].midi);
+      expect(v.gain).toBeLessThan(rungs[j - 1].gain);
+      expect(v.send).toBeGreaterThan(rungs[j - 1].send);
+      // (It leans toward the sun as it climbs.)
+      expect(v.pan).toBeGreaterThan(rungs[j - 1].pan);
+    });
+    // The bed's swell: it leans in with the sun's lift, comes to its height with the ribbon, and lets go after it.
+    expect(arrivalOf(0, 0, 0)).toBe(0);
+    expect(arrivalOf(1, 0, 0)).toBeCloseTo(0.55, 9);
+    expect(arrivalOf(1, 0.5, 0)).toBeGreaterThan(arrivalOf(1, 0, 0));
+    expect(arrivalOf(1, 0.999, 0)).toBeGreaterThan(0.99);
+    expect(arrivalOf(1, 1, 0)).toBe(1);
+    expect(arrivalOf(1, 1, 6)).toBeLessThan(0.4);
+    expect(arrivalOf(1, 1, 60)).toBeLessThan(0.001);
+  });
+
+  it('the name on the lake: each letter has its place and its turn to go under, and the sheet breaks after the last', () => {
+    for (const aspect of [1.6, 0.46]) {
+      const hero = heroDesign(aspect).name;
+      const at = nameLetters(aspect);
+      // A letter for each letter of the name, none for the space, inside the name's width, about its middle.
+      expect(at).toHaveLength(hero.lines.join('').replace(/ /g, '').length);
+      for (const l of at) {
+        expect(Math.abs(l.x - NAME.x)).toBeLessThan(hero.width / 2);
+        expect(l.y).toBe(NAME.y);
+      }
+      expect(Math.min(...at.map((l) => l.x))).toBeLessThan(NAME.x - hero.width * 0.3);
+      expect(Math.max(...at.map((l) => l.x))).toBeGreaterThan(NAME.x + hero.width * 0.3);
+      // Their order: every letter once, and never two neighbours one after the other.
+      const order = sinkOrder(at.length);
+      expect(order.slice().sort((a, b) => a - b)).toEqual(at.map((_, i) => i));
+      for (let i = 1; i < order.length; i++) expect(Math.abs(order[i] - order[i - 1])).toBeGreaterThan(1);
+    }
+    for (const n of [4, 6, 8, 9, 10]) expect(new Set(sinkOrder(n)).size).toBe(n);
+    // On a wide screen the name is one line and there is a gap where the space is.
+    const wide = nameLetters(1.6).map((l) => l.x);
+    expect(wide[4] - wide[3]).toBeGreaterThan((wide[1] - wide[0]) * 1.8);
+    // Their turns are spread evenly through the stretch of the melt in which the picture lets the blocks go.
+    expect(nameMelt(NAME_MELT.left[0]).left).toBe(1);
+    expect(nameMelt(NAME_MELT.left[1]).left).toBe(0);
+    for (let turn = 0; turn < 8; turn++) {
+      expect(sinkAt(turn, 8)).toBeLessThan(1);
+      expect(sinkAt(turn, 8)).toBeGreaterThan(0);
+      if (turn) expect(sinkAt(turn - 1, 8) - sinkAt(turn, 8)).toBeCloseTo(1 / 8, 9);
+    }
+    // Each is a small low drop where its letter stood, each lower than the one before, in key.
+    const v = Array.from({ length: 8 }, (_, turn) => sinkVoice(turn, 8, -0.7 + 0.2 * turn));
+    v.forEach((x, i) => {
+      expect(PENTA).toContain(pc(x.midi));
+      expect(x.gain).toBeLessThan(0.5);
+      expect(x.pan).toBeCloseTo(0.95 * (-0.7 + 0.2 * i), 9);
+      if (i) expect(x.midi).toBeLessThan(v[i - 1].midi);
+    });
+    // The water under the blocks opens before any of them goes, and the sheet breaks only once all have gone.
+    expect(nameMelt(NAME_MELT.left[0]).hole).toBe(1);
+    expect(nameMelt(0.2).pond).toBeGreaterThan(nameMelt(0.2).hole);
+    expect(SHEET_BREAKS).toBeGreaterThan(NAME_MELT.left[1]);
+    expect(SHEET_BREAKS).toBeLessThan(0.6);
+  });
+
+  it('the rail plays down the flight: each tick its own note, the first the highest, a press the hover’s note an octave down', () => {
+    const notes = Array.from({ length: 12 }, (_, i) => railVoice('hover', i, 12, 0.98).midi);
+    for (let i = 1; i < 12; i++) expect(notes[i]).toBeLessThan(notes[i - 1]);
+    for (const m of notes) expect(PENTA).toContain(pc(m));
+    expect(railVoice('hover', 3, 12, 0.98).midi - railVoice('tap', 3, 12, 0.98).midi).toBe(12);
+    expect(railVoice('hover', 3, 12, 0.98).gain).toBeLessThan(uiVoice('hover', 0.98).gain);
+    expect(railVoice('tap', 3, 12, 0.98).pan).toBeGreaterThan(0.3);
   });
 
   it('the lattice’s light: sixteen cubes in order each lap, at times known ahead, four to a row a third of a second apart', () => {
@@ -568,7 +784,7 @@ describe('each moment is built from where and what it is', () => {
 describe('the scene is read from what the picture publishes', () => {
   const sig = (s: number, at: number, more: Partial<SignalsLike> = {}): SignalsLike => {
     const cam = basisOf(poseAt(flightKeys(1.6), s));
-    return { at, s, cam, aspect: 1.6, melt: (s - MELT.from) / (MELT.to - MELT.from), day: dayAt(s), rest: s >= SETTLE_AT - 0.02, clock: at / 1000, clockAt: at, tribs: null, st: [0, 0, 0, 0], gate: [1, 0, 0], surge: [1, 0, 0], ray: 0, lift: 0, px: 0.5, py: 0.5, far: 0, moved: -1e9, scrollY: 0, ...more };
+    return { at, s, cam, aspect: 1.6, melt: (s - MELT.from) / (MELT.to - MELT.from), day: dayAt(s), rest: s >= SETTLE_AT - 0.02, clock: at / 1000, clockAt: at, tribs: null, st: stationsNear(cam.pos), gate: [1, 0, 0], surge: [1, 0, 0], ray: 0, lift: 0, rise: 0, px: 0.5, py: 0.5, far: 0, moved: -1e9, scrollY: 0, ...more };
   };
   const env = { night: 0, calm: false, viewW: 1440, viewH: 900 };
 
@@ -598,7 +814,12 @@ describe('the scene is read from what the picture publishes', () => {
     const end = new SceneReader().read(sig(END_AT, 1000), 1000, env);
     expect(end.sea).toBeGreaterThan(0.8);
     expect(end.rest).toBe(true);
-    expect(end.move).toBe(MOVE.rest);
+    // At rest the piece still waits on the dominant until the ribbon of light has left the water.
+    expect(end.move).toBe(MOVE.approach);
+    expect(new SceneReader().read(sig(END_AT, 1000, { rise: 0.03 }), 1000, env).move).toBe(MOVE.approach);
+    expect(new SceneReader().read(sig(END_AT, 1000, { rise: 0.05 }), 1000, env).move).toBe(MOVE.rest);
+    // (Where no light event runs, with motion reduced or the sun already up, the ribbon simply stands.)
+    expect(new SceneReader().read(sig(END_AT, 1000, { ray: 1, lift: 1, rise: 1 }), 1000, env).move).toBe(MOVE.rest);
   });
 
   it('the tarn is found at its station and nowhere else', () => {
@@ -607,6 +828,16 @@ describe('the scene is read from what the picture publishes', () => {
       const sc = new SceneReader().read(sig(s, 1000), 1000, env);
       if (i === 5) expect(sc.tarn).toBeGreaterThan(0.6);
       else expect(sc.tarn, `station ${i}`).toBeLessThan(0.2);
+    });
+    // An upright screen holds the two shards against the sky over a foot of bank: little of the tarn lies under
+    // the frame's foot, and it is the tarn all the same (the shards' call and answer are heard there).
+    const tall = (i: number) => {
+      const cam = basisOf(poseAt(flightKeys(0.46), stops[i]));
+      return new SceneReader().read({ ...sig(stops[i], 1000), cam, aspect: 0.46, st: stationsNear(cam.pos) }, 1000, env);
+    };
+    expect(tall(5).tarn).toBeGreaterThan(0.6);
+    stops.forEach((_, i) => {
+      if (i !== 5) expect(tall(i).tarn, `station ${i}, upright`).toBeLessThan(0.2);
     });
   });
 
@@ -628,9 +859,25 @@ describe('the scene is read from what the picture publishes', () => {
     expect(sc.sv).toBeGreaterThan(0.9);
     expect(sc.sv).toBeLessThan(1.1);
     expect(sc.camV).toBeGreaterThan(100);
-    // Then a jump to another part of the page.
+    expect(sc.jump).toBe(false);
+    // Then a jump to another part of the page (a tick of the rail): nothing between was passed, so nothing sped up, and the scene says so.
     const jumped = r.read(sig(20, 2040), 2040, env);
+    expect(jumped.jump).toBe(true);
     expect(jumped.sv).toBeLessThan(sc.sv + 0.01);
+    expect(jumped.camV).toBeLessThan(sc.camV + 0.01);
+    expect(r.read(sig(20, 2056.7), 2056.7, env).jump).toBe(false);
+    // From the frozen lake straight to a station: the lake melted on the way in no frame, and the melt has no rate.
+    const r2 = new SceneReader();
+    r2.read(sig(0.05, 1000), 1000, env);
+    r2.read(sig(0.05, 1016.7), 1016.7, env);
+    const far = r2.read(sig(stillStops()[2], 1033.4), 1033.4, env);
+    expect(far.jump).toBe(true);
+    expect(far.meltRate).toBe(0);
+    expect(mixOf(far, 0).cracks).toBe(0);
+    // A hard flick of the wheel is not a jump.
+    const r3 = new SceneReader();
+    r3.read(sig(3, 1000), 1000, env);
+    expect(r3.read(sig(3.12, 1016.7), 1016.7, env).jump).toBe(false);
   });
 
   it('the melt’s rate is its change per second', () => {
@@ -677,8 +924,10 @@ describe('the scene is read from what the picture publishes', () => {
     for (const g of gates) expect(g.k).toBeGreaterThan(0.9);
     expect(gates[0].pan).toBeLessThan(gates[1].pan);
     expect(gates[1].pan).toBeLessThan(gates[2].pan);
-    // The dam is seen from downstream, looking back: the columns stand far behind it, in frame but much further off than from their own station.
-    for (const x of COLS.xs) expect(seenAt(cam(7), 1.6, x, COLS.y, 0).far).toBeGreaterThan(seenAt(cam(6), 1.6, x, COLS.y, 0).far * 1.5);
+    // The dam is seen from downstream, looking back upstream. The columns stand far behind it: the picture has stopped
+    // their drips by then (they are not near), so none is set, and their shallows are not heard.
+    expect(stationsNear(cam(7).pos)[0]).toBe(0);
+    expect(stationsNear(cam(6).pos)[0]).toBe(1);
     // At their own station the columns, the lattice and both shards are in frame.
     for (const x of COLS.xs) expect(seenAt(cam(6), 1.6, x, COLS.y, 0).k).toBeGreaterThan(0.9);
     expect(seenAt(cam(8), 1.6, LATTICE.x, LATTICE.y, 0).k).toBeGreaterThan(0.9);
@@ -702,37 +951,139 @@ describe('the scene is read from what the picture publishes', () => {
     expect(movementAt(true, sea - APPROACH + 0.01, 1, false)).toBe(MOVE.approach);
     expect(movementAt(true, SETTLE_AT - 0.1, 1, false)).toBe(MOVE.approach);
     expect(movementAt(true, END_AT, 1, true)).toBe(MOVE.rest);
+    // (At rest, but the ribbon of light has not yet left the water: the dominant is still held.)
+    expect(movementAt(true, END_AT, 1, true, false)).toBe(MOVE.approach);
     expect(movementAt(false, 3, 1, false)).toBe(MOVE.page);
   });
 
-  it('each station’s own water stands where it is seen: the streams left to right, the spill, the block, the thread, the delta’s channels', () => {
+  it('at each station’s composed stop, what has a voice is what is in frame, on the side it is in frame', () => {
     const stops = stillStops();
-    const at = (i: number) => new SceneReader().read(sig(stops[i], 1000), 1000, env);
-    // The confluence: seven streams, most of them in frame, each further right than the last one seen to its left.
+    const at = (i: number, more: Partial<SignalsLike> = {}) => new SceneReader().read(sig(stops[i], 1000, more), 1000, env);
+    const gain = (sc: Scene, v: number) => waterOf(sc, 0)[v][GAIN];
+
+    // 1 The statement: the river runs down the right of the frame. The cliff's falls, the block and everything later are a station or more away and silent.
+    const say = at(1);
+    expect(say.pan).toBeGreaterThan(0.5);
+    expect(gain(say, W.stream)).toBeGreaterThan(0.1);
+    expect(Math.max(...say.falls.map(heard))).toBe(0);
+    for (let i = 0; i < 7; i++) expect(gain(say, W.falls + i)).toBe(0);
+    expect(gain(say, W.lap) + gain(say, W.thin) + gain(say, W.sluice) + gain(say, W.wall)).toBe(0);
+
+    // 2 The basin: the block stands right of the middle with the basin's water round it. The far cliff is a few pixels at the horizon: its falls are all but silent.
+    const basin = at(2);
+    expect(basin.basin).toBeGreaterThan(0.8);
+    expect(basin.slab.k).toBe(1);
+    expect(basin.slab.pan).toBeGreaterThan(0.05);
+    expect(basin.slab.pan).toBeLessThan(0.5);
+    expect(heard(basin.slab)).toBeGreaterThan(0.3);
+    expect(gain(basin, W.lap)).toBeGreaterThan(0.15);
+    for (let i = 0; i < 7; i++) expect(gain(basin, W.falls + i)).toBeLessThan(0.03);
+
+    // 3 The confluence: all seven falls stand across the frame over the cliff, the broadest furthest right, each next one further left; the river below them runs off to the right.
     const conf = at(3);
     expect(conf.falls).toHaveLength(7);
-    const inFrame = conf.falls.filter((f) => f.k > 0.5);
-    expect(inFrame.length).toBeGreaterThanOrEqual(4);
-    const pans = inFrame.map((f) => f.pan);
-    expect(Math.max(...pans) - Math.min(...pans)).toBeGreaterThan(0.5);
-    // The biggest stream is the first, and each is sized against it.
+    conf.falls.forEach((f, i) => {
+      expect(f.k, `fall ${i}`).toBe(1);
+      expect(heard(f)).toBeGreaterThan(0.35);
+      if (i) expect(f.pan).toBeLessThan(conf.falls[i - 1].pan);
+      if (i) expect(f.size).toBeLessThanOrEqual(conf.falls[i - 1].size);
+      expect(gain(conf, W.falls + i)).toBeGreaterThan(0.05);
+    });
+    expect(conf.falls[0].pan).toBeGreaterThan(0.2);
+    expect(conf.falls[6].pan).toBeLessThan(-0.3);
     expect(conf.falls[0].size).toBe(1);
     expect(conf.falls[6].size).toBeLessThan(0.3);
-    // Published widths take over from the plan's.
-    const live = new SceneReader().read(sig(stops[3], 1000, { tribs: [10, 10, 10, 10, 10, 10, 168] }), 1000, env);
+    expect(conf.pan).toBeGreaterThan(0.3);
+    // (Published widths take over from the plan's.)
+    const live = at(3, { tribs: [10, 10, 10, 10, 10, 10, 168] });
     expect(live.falls[6].size).toBe(1);
     expect(live.falls[0].size).toBeLessThan(0.1);
-    // The basin has its block and its water in frame; the pool its spill; the lattice its thread; the delta its channels.
-    expect(at(2).basin).toBeGreaterThan(0.3);
-    expect(heard(at(2).slab)).toBeGreaterThan(0.2);
-    expect(at(4).pool).toBeGreaterThan(0.2);
-    expect(at(8).thread.k + at(8).lattice).toBeGreaterThanOrEqual(0);
-    expect(at(10).arms).toHaveLength(5);
-    expect(at(10).arms.filter((a) => a.k > 0.5).length).toBeGreaterThanOrEqual(2);
-    // None of it is heard from the frozen lake.
+
+    // 4 The rock pool: still water under the lens, and its one brook leaving from the far shore, near the middle of the frame. The tarn beyond is not yet the tarn.
+    const pool = at(4);
+    expect(pool.pool).toBeGreaterThan(0.8);
+    expect(pool.spill.k).toBe(1);
+    expect(Math.abs(pool.spill.pan)).toBeLessThan(0.3);
+    expect(heard(pool.spill)).toBeGreaterThan(0.5);
+    expect(gain(pool, W.thin)).toBeGreaterThan(0.3);
+    expect(pool.tarn).toBeLessThan(0.2);
+
+    // 5 The tarn: both shards in frame, the further one left of the nearer, and next to no water sound.
+    const tarn = at(5);
+    expect(tarn.tarn).toBeGreaterThan(0.9);
+    const shards = SHARDS.map((sh) => seenAt(tarn.cam, 1.6, sh.x, sh.y, sh.h / 2));
+    for (const sh of shards) expect(sh.k).toBe(1);
+    expect(waterOf(tarn, 0).reduce((s, v) => s + v[GAIN] * v[RATE], 0)).toBeLessThan(1);
+
+    // 6 The columns: the shallows in the middle of the frame. The dam is in the distance with its back to the eye: the sluice's rush is on its far side and is not heard.
+    const cols = at(6);
+    expect(cols.cols).toBe(1);
+    expect(cols.shallows.k).toBe(1);
+    expect(Math.abs(cols.shallows.pan)).toBeLessThan(0.3);
+    expect(gain(cols, W.lap)).toBeGreaterThan(0.2);
+    expect(cols.sluice.k).toBe(0);
+    expect(gain(cols, W.sluice)).toBe(0);
+
+    // 7 The dam, from downstream: the one running channel comes toward the eye near the middle of the frame; the two shut ones are dry beds and say nothing; the lattice is under the lens.
+    const dam = at(7);
+    expect(dam.dam).toBe(1);
+    expect(dam.sluice.k).toBe(1);
+    expect(Math.abs(dam.sluice.pan)).toBeLessThan(0.3);
+    expect(heard(dam.sluice)).toBeGreaterThan(0.3);
+    expect(gain(dam, W.sluice)).toBeGreaterThan(0.08);
+    for (const i of [1, 2]) for (const p of SLUICES[i].slice(1, 4)) expect(groundAt(p.x, p.y, 1, [1, 0, 0]).wet).toBe(0);
+    for (const p of SLUICES[0].slice(1, 4)) expect(groundAt(p.x, p.y, 1, [1, 0, 0]).wet).toBe(1);
+    expect(dam.lanes.k).toBe(0);
+    // (With the middle gate open instead, the water is heard further right: the sluices run left to right in the picture.)
+    expect(at(7, { gate: [0, 1, 0] }).sluice.pan).toBeGreaterThan(dam.sluice.pan + 0.2);
+
+    // 8 The lattice: the whole of it in frame, the thread coming in from the right of it.
+    const lat = at(8);
+    expect(lat.lattice).toBe(1);
+    expect(lat.lanes.k).toBe(1);
+    expect(lat.thread.k).toBe(1);
+    expect(lat.thread.pan).toBeGreaterThan(lat.lanes.pan);
+    expect(gain(lat, W.thin)).toBeGreaterThan(0.2);
+    expect(waterOf(lat, 0)[W.thin][PAN]).toBeGreaterThan(lat.lanes.pan * 0.4);
+
+    // 9 The canyon: closed in, fast water under the lens.
+    const can = at(9);
+    expect(can.walls).toBe(1);
+    expect(gain(can, W.wall)).toBeGreaterThan(0.15);
+    expect(mixOf(can, 0).rooms[1]).toBe(1);
+
+    // 10 The delta: five channels, all in frame, all in the right half of it (the bank and the words are on the left), west to east.
+    const delta = at(10);
+    expect(delta.arms).toHaveLength(5);
+    delta.arms.forEach((a, i) => {
+      expect(a.k).toBeGreaterThan(0.5);
+      expect(a.pan).toBeGreaterThanOrEqual(0);
+      expect(gain(delta, W.arms + i)).toBeGreaterThan(0.1);
+    });
+    expect(delta.arms[4].pan).toBeGreaterThan(delta.arms[0].pan + 0.5);
+
+    // 11 The sea: all sea, and nothing of the river's.
+    const sea = at(11);
+    expect(sea.sea).toBeGreaterThan(0.9);
+    expect(gain(sea, W.sea)).toBeGreaterThan(0);
+    for (const v of [W.falls, W.thin, W.lap, W.sluice, W.wall, W.arms]) expect(gain(sea, v)).toBe(0);
+
+    // None of any of it is heard from the frozen lake; the name is in the middle of that frame.
     const top = at(0);
-    expect(Math.max(...top.falls.map(heard), heard(top.spill), ...top.arms.map(heard))).toBeLessThan(0.05);
+    expect(Math.max(...top.falls.map(heard), heard(top.spill), ...top.arms.map(heard))).toBe(0);
     expect(waterOf(top, 0).reduce((s, v) => s + v[GAIN], 0)).toBe(0);
+    expect(top.name.k).toBe(1);
+    expect(Math.abs(top.name.pan)).toBeLessThan(0.05);
+  });
+
+  it('a thing a station or more away is not heard, however squarely it is in frame', () => {
+    expect(heard({ k: 1, pan: 0, far: 300 })).toBeGreaterThan(0.9);
+    expect(heard({ k: 1, pan: 0, far: 1100 })).toBeCloseTo(0.5, 6);
+    expect(heard({ k: 1, pan: 0, far: 2400 })).toBeGreaterThan(0.15);
+    expect(heard({ k: 1, pan: 0, far: 3000 })).toBeLessThan(0.07);
+    expect(heard({ k: 1, pan: 0, far: 3400 })).toBe(0);
+    expect(heard({ k: 0, pan: 0, far: 300 })).toBe(0);
+    for (let far = 100; far < 4000; far += 100) expect(heard({ k: 1, pan: 0, far: far + 100 })).toBeLessThanOrEqual(heard({ k: 1, pan: 0, far }));
   });
 
   it('the camera’s bank and turn, the sky it sees, the wall it flies under, the run out to sea', () => {

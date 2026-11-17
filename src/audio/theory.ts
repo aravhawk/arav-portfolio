@@ -362,10 +362,18 @@ export const SHARD_ROUNDS = [
 export const shardNote = (round: number, which: number) => SHARD_ROUNDS[((round % 3) + 3) % 3][which & 1];
 
 /**
- * The arrival: the theme whole, each note harmonised below (I, I, IV, V, I),
- * as the line of light runs in. `ARRIVAL_AT` is how far the light has come
- * when each chord sounds: the theme's own rhythm, laid along the light's run.
+ * The arrival, on the light event's own clock, in three parts.
+ *
+ * While the line of light runs out across the sea the theme gathers: its
+ * first three notes, then the same three an octave up, each further off
+ * than the last (GATHER). Where the line ends a ribbon of light leaves the
+ * water, and there the theme is stated whole, each note harmonised below
+ * (ARRIVAL: I, I, IV, V, I); `ARRIVAL_AT` is the theme's own rhythm, laid
+ * from the ribbon's first light to the end of its rise. Over it the ribbon's
+ * own climb: the ladder, a rung for each sixth of its way to the top of the
+ * frame, the last as it leaves it (CLIMB).
  */
+export const GATHER = [...MOTIF.slice(0, 3).map((m) => m - 12), ...MOTIF.slice(0, 3)];
 export const ARRIVAL = [
   [78, 74, 69],
   [81, 78, 74],
@@ -374,3 +382,4 @@ export const ARRIVAL = [
   [74, 69, 66, 62],
 ];
 export const ARRIVAL_AT = MOTIF_BEATS.map((b) => b / MOTIF_BEATS[MOTIF_BEATS.length - 1]);
+export const CLIMB = ladder(86, 98);

@@ -11,9 +11,13 @@
  *    crest factor, spectral centroid, the share of energy above 6 kHz
  *    (harshness), DC offset, clicks (a second difference that stands far
  *    above what surrounds it) and the largest sample-to-sample jump, and
- *    silence wherever a scene says there must be silence. A WAV and a
- *    spectrogram of each scene are written, so a person can listen and
- *    look.
+ *    silence wherever a scene says there must be silence. A scene may
+ *    also say what the conductor must have done in it (its trace of
+ *    moments and the harmony it moved through): the arrival's notes at
+ *    their times on the light event's clock, the name's letters going
+ *    under in their stretch of the melt and the sheet breaking after the
+ *    last, nothing sounding for a jump. A WAV and a spectrogram of each
+ *    scene are written, so a person can listen and look.
  *
  * 2. Sync (--sync <base> [--label name] [--load]). On the running site,
  *    with sound turned on by a real click, it causes each moment and reads
@@ -30,7 +34,7 @@
  * Playwright is not a dependency of this repo. Point NODE_PATH at an
  * install that has it:
  *
- *   NODE_PATH=.tools/node_modules node scripts/audio-check.mjs [--out .tools/out/w8/renders] [--only hero-rest,dawn] [--solo bed|world|fx|ui]
+ *   NODE_PATH=.tools/node_modules node scripts/audio-check.mjs [--out .tools/out/w19/renders] [--only hero-rest,dawn] [--solo bed|world|fx|ui]
  *   NODE_PATH=.tools/node_modules node scripts/audio-check.mjs --sync http://localhost:3155
  */
 import { createRequire } from 'node:module';
@@ -449,17 +453,121 @@ function spectrogram(chs, sr) {
 
 /* ---------- the scenes ---------- */
 
+/** The moments of one kind in a render's trace, in order (those taken back left out). */
+// (A moment held back a few hundredths on purpose, behind another of its kind in the same frame, is noted with a `+`.)
+const of = (meta, type) => meta.trace.filter((e) => e.type === type || e.type === `${type}+`).sort((a, b) => a.audio - b.audio);
+
+/**
+ * What the arrival must be, wherever a scene has the light event in it:
+ * one low bell at the dawn; the six notes of the gathering inside the
+ * line's run, in order; then, not before the ribbon's first light, the
+ * theme's five chords from that light to the end of the rise and the six
+ * rungs of the ladder between them; the harmony on the dominant until the
+ * ribbon leaves the water and on the tonic from then.
+ */
+function arrivalCheck(K) {
+  return (meta) => {
+    const bad = [];
+    const dawn = of(meta, 'dawn');
+    if (dawn.length !== 1) return [`the dawn came ${dawn.length} times`];
+    const t0 = dawn[0].audio;
+    const rel = (type) => of(meta, type).map((e) => e.audio - t0);
+    const near = (a, b, what, tol = 0.02) => Math.abs(a - b) > tol && bad.push(`${what}: ${a.toFixed(3)} s after the dawn, not ${b.toFixed(3)}`);
+    const gather = rel('gather');
+    const chords = rel('arrival');
+    const climb = rel('climb');
+    if (gather.length !== 6) bad.push(`${gather.length} notes in the gathering, not 6`);
+    if (chords.length !== 5) bad.push(`${chords.length} chords of the theme, not 5`);
+    if (climb.length !== 6) bad.push(`${climb.length} rungs of the ladder, not 6`);
+    gather.forEach((t, i) => near(t, K.gather[i], `gathering note ${i}`));
+    chords.forEach((t, i) => near(t, K.arrival[i], `the theme's chord ${i}`));
+    if (gather.length && gather[gather.length - 1] > K.lineEnd + 0.02) bad.push('the gathering ran on past the line of light');
+    if (chords.length && gather.length && chords[0] - gather[gather.length - 1] < 0.25) bad.push('no breath between the line reaching the far shore and the ribbon');
+    if (climb.length && chords.length && (climb[0] < chords[0] || climb[climb.length - 1] > K.DAWN.rise[1])) bad.push('the ladder is not inside the ribbon\'s rise');
+    for (let j = 1; j < climb.length; j++) if (climb[j] <= climb[j - 1]) bad.push('the ladder does not climb in time');
+    // The harmony: the tonic comes with the ribbon, from the dominant, and not before.
+    const rest = meta.chords.find((c) => c.move === 'rest');
+    if (!rest) bad.push('the tonic never came');
+    else {
+      if (rest.t - t0 < K.ARRIVE_AT - 0.06 || rest.t - t0 > K.ARRIVE_AT + 0.06) bad.push(`the tonic came ${(rest.t - t0).toFixed(2)} s after the dawn, not with the ribbon at ${K.ARRIVE_AT.toFixed(2)}`);
+      const before = meta.chords.filter((c) => c.t < rest.t).pop();
+      if (!before || !/^A/.test(before.chord) || before.move !== 'approach') bad.push(`before the tonic the harmony was ${before ? `${before.chord} (${before.move})` : 'nothing'}`);
+      if (meta.chords.some((c) => c.t > t0 - 0.5 && c.t < rest.t - 0.01 && c !== before)) bad.push('the harmony moved between the dawn and the ribbon');
+    }
+    if (of(meta, 'resolve').length) bad.push('the still resolution sounded over a light event');
+    return bad;
+  };
+}
+
+/** Where no light event runs (reduced motion, or the sun already up): the resolution and one soft chord, no sweep. */
+const stillArrivalCheck = (meta) => {
+  const bad = [];
+  for (const type of ['dawn', 'gather', 'arrival', 'climb', 'air']) if (of(meta, type).length) bad.push(`${of(meta, type).length} of '${type}' with no light event`);
+  if (of(meta, 'resolve').length !== 1) bad.push(`the resolution was marked ${of(meta, 'resolve').length} times, not once`);
+  if (!meta.chords.some((c) => c.move === 'rest' && /^D/.test(c.chord))) bad.push('the tonic never came');
+  return bad;
+};
+
+/**
+ * The name's melt, in the picture's order: cracks first (under the
+ * letters), then every letter's last going under, once each, inside its
+ * stretch of the melt, then the sheet's break, once, after the last
+ * letter; and the meltwater at their feet before any of them goes.
+ */
+function nameCheck(K, { back = false } = {}) {
+  return (meta) => {
+    const bad = [];
+    const meltAt = (t) => {
+      const s = meta.series.reduce((best, x) => (Math.abs(x.t - t) < Math.abs(best.t - t) ? x : best), meta.series[0]);
+      return s.scene.melt;
+    };
+    const cracks = of(meta, 'crack');
+    const letters = of(meta, 'letter');
+    const breaks = of(meta, 'break');
+    if (!cracks.length) bad.push('no crack');
+    if (letters.length !== K.letters) bad.push(`${letters.length} letters went under, not ${K.letters}`);
+    if (breaks.length !== 1) bad.push(`the sheet broke ${breaks.length} times`);
+    if (cracks.length && letters.length && cracks[0].audio > letters[0].audio) bad.push('a letter went under before the first crack');
+    for (const l of letters) {
+      const m = meltAt(l.audio);
+      if (m < K.NAME_MELT.left[0] - 0.04 || m > K.NAME_MELT.left[1] + 0.06) bad.push(`a letter went under at melt ${m.toFixed(2)}`);
+    }
+    if (breaks.length && letters.length && breaks[0].audio < letters[letters.length - 1].audio) bad.push('the sheet broke before the last letter had gone');
+    // The meltwater: heard (the thin voice) by the time the ice under the blocks has begun to open, and before the first letter goes.
+    const first = letters.length ? letters[0].audio : Infinity;
+    const wet = meta.series.filter((x) => x.t < first && x.water[9] > 0.05);
+    if (!wet.length) bad.push('no meltwater before the letters went');
+    if (meta.series.some((x) => x.scene.melt < K.NAME_MELT.pond[0] - 0.01 && x.water[9] > 0)) bad.push('meltwater on a sheet that has not begun to melt');
+    if (back) {
+      // (The page went back up: nothing went under a second time, and the sheet did not break again.)
+      const turn = meta.series.reduce((best, x) => (x.scene.melt > best.scene.melt ? x : best), meta.series[0]).t;
+      if (letters.some((l) => l.audio > turn + 0.3)) bad.push('a letter went under on the way back up');
+    }
+    return bad;
+  };
+}
+
+/** A tick of the rail: the page goes somewhere in one frame, and nothing sounds for what it did not pass. */
+const jumpCheck = (n) => (meta) => {
+  const bad = [];
+  for (const type of ['crack', 'letter', 'break', 'melt']) if (of(meta, type).length) bad.push(`${of(meta, type).length} of '${type}' for a jump`);
+  if (of(meta, 'jump').length !== n) bad.push(`${of(meta, 'jump').length} jumps heard, not ${n}`);
+  if (meta.jumps !== n) bad.push(`the scene saw ${meta.jumps} jumps, not ${n}`);
+  return bad;
+};
+
 function scenes(K) {
   const [, say, view, up, bench, bridge, models, fork, lattice, canyon, delta] = K.starts;
   const stop = K.stops;
+  const arrival = arrivalCheck(K);
   // Arrive at a station's composed frame from a little before it, and hold.
   const station = (i, night = 0) => ({ seconds: 18, scroll: [[0, stop[i] - 0.8], [3.2, stop[i]]], night: [[0, night]], clock0: 2.2 });
   return {
     'hero-rest': { seconds: 26, scroll: [[0, 0]] },
     'hero-rest-night': { seconds: 26, scroll: [[0, 0]], night: [[0, 1]] },
-    'melt-slow': { seconds: 34, scroll: [[0, 0], [3, 0], [30, 2.0]], transients: true },
-    'melt-medium': { seconds: 18, scroll: [[0, 0], [3, 0], [11, 2.0]], transients: true },
-    'melt-fast': { seconds: 12, scroll: [[0, 0], [3, 0], [5.2, 2.0]], transients: true },
+    'melt-slow': { seconds: 34, scroll: [[0, 0], [3, 0], [30, 2.0]], transients: true, check: nameCheck(K) },
+    'melt-medium': { seconds: 18, scroll: [[0, 0], [3, 0], [11, 2.0]], transients: true, check: nameCheck(K) },
+    'melt-fast': { seconds: 12, scroll: [[0, 0], [3, 0], [5.2, 2.0]], transients: true, check: nameCheck(K) },
     'river-fast': { seconds: 18, scroll: [[0, say], [3, say], [11, bridge - 0.4]], transients: true },
     'station-0-statement': station(1),
     'station-1-infiniview': station(2),
@@ -480,8 +588,8 @@ function scenes(K) {
       transients: true,
     },
     switch: { seconds: 20, scroll: [[0, stop[7]]], events: [[5, 'switch', 1], [9.5, 'switch', 2], [14, 'switch', 0]], transients: true },
-    dawn: { seconds: 28, scroll: [[0, K.END_AT - 2.6], [3, K.END_AT - 2.6], [10, K.END_AT]], transients: true },
-    'dawn-night': { seconds: 28, scroll: [[0, K.END_AT - 2.6], [3, K.END_AT - 2.6], [10, K.END_AT]], night: [[0, 1]], transients: true },
+    dawn: { seconds: 28, scroll: [[0, K.END_AT - 2.6], [3, K.END_AT - 2.6], [10, K.END_AT]], transients: true, check: arrival },
+    'dawn-night': { seconds: 28, scroll: [[0, K.END_AT - 2.6], [3, K.END_AT - 2.6], [10, K.END_AT]], night: [[0, 1]], transients: true, check: arrival },
     theme: { seconds: 24, scroll: [[0, stop[3]]], night: [[0, 0], [7, 1], [16, 0]], transients: true },
     'ui-and-route': {
       seconds: 14,
@@ -518,8 +626,8 @@ function scenes(K) {
     'theme-hero': { seconds: 30, scroll: [[0, 0]], solo: 'bed', transients: true },
     'theme-hero-night': { seconds: 30, scroll: [[0, 0]], night: [[0, 1]], solo: 'bed', transients: true },
     'theme-flight': { seconds: 150, scroll: [[0, 0], [3, 0], [3 + K.END_AT / 0.22, K.END_AT]], solo: 'bed', transients: true },
-    'theme-arrival': { seconds: 30, scroll: [[0, K.END_AT - 2.2], [3, K.END_AT - 2.2], [12, K.END_AT]], transients: true },
-    'theme-arrival-alone': { seconds: 30, scroll: [[0, K.END_AT - 2.2], [3, K.END_AT - 2.2], [12, K.END_AT]], solo: 'bed', transients: true },
+    'theme-arrival': { seconds: 30, scroll: [[0, K.END_AT - 2.2], [3, K.END_AT - 2.2], [12, K.END_AT]], transients: true, check: arrival },
+    'theme-arrival-alone': { seconds: 30, scroll: [[0, K.END_AT - 2.2], [3, K.END_AT - 2.2], [12, K.END_AT]], solo: 'bed', transients: true, check: arrival },
     // The three rooms, on the same sounds (the effects' bus only): three presses on water in each place.
     'room-open': { seconds: 14, scroll: [[0, stop[2]]], solo: 'fx', events: [[4, 'press', 0.5, 0.86, 16], [6.5, 'press', 0.4, 0.74, 30], [9, 'press', 0.62, 0.66, 50]], transients: true },
     'room-canyon': { seconds: 14, scroll: [[0, stop[9]]], solo: 'fx', events: [[4, 'press', 0.5, 0.86, 16], [6.5, 'press', 0.4, 0.74, 30], [9, 'press', 0.62, 0.66, 50]], transients: true, clock0: 2.2 },
@@ -530,8 +638,81 @@ function scenes(K) {
     'lean-hero': { seconds: 26, scroll: [[0, 0]], lean: true, transients: true },
     'lean-melt': { seconds: 18, scroll: [[0, 0], [3, 0], [11, 2.0]], lean: true, transients: true },
     'lean-confluence': { ...station(3), lean: true },
-    'lean-dawn': { seconds: 28, scroll: [[0, K.END_AT - 2.6], [3, K.END_AT - 2.6], [10, K.END_AT]], lean: true, transients: true },
+    'lean-dawn': { seconds: 28, scroll: [[0, K.END_AT - 2.6], [3, K.END_AT - 2.6], [10, K.END_AT]], lean: true, transients: true, check: arrival },
     'lean-flight': { seconds: 86, scroll: [[0, 0], [3, 0], [3 + K.END_AT / 0.45, K.END_AT]], lean: true, transients: true },
+    // ---- as the picture now is ----
+    // The arrival alone on each of its buses, on an upright screen, and where no light event runs.
+    'arrival-bells': { seconds: 22, scroll: [[0, K.END_AT - 0.9], [2, K.END_AT - 0.9], [5, K.END_AT]], solo: 'bed', transients: true, check: arrival },
+    'arrival-upright': { seconds: 24, scroll: [[0, K.END_AT - 1.6], [2, K.END_AT - 1.6], [7, K.END_AT]], aspect: 0.46, transients: true, check: arrival },
+    // (Reduced motion: the ribbon is simply there. The resolution, no sweep.)
+    'arrival-still': { seconds: 20, calm: true, scroll: [[0, K.END_AT - 2.6], [3, K.END_AT - 2.6], [6, K.END_AT]], transients: true, check: stillArrivalCheck },
+    // (The sun is already up from an earlier visit to the ending in this page's life.)
+    'arrival-again': { seconds: 20, dawned: true, scroll: [[0, K.END_AT - 1.4], [3, K.END_AT - 1.4], [8, K.END_AT]], transients: true, check: stillArrivalCheck },
+    // A tick of the rail to the ending from the frozen lake: the dominant at once, the whole arrival, nothing for the lake it did not melt.
+    'arrival-by-rail': { seconds: 22, scroll: [[0, 0]], events: [[4, 'tap', 0.985, 11, 12], [4.09, 'jump', 1]], jumps: [[4.1, K.END_AT]], transients: true, check: (m) => [...arrival(m), ...jumpCheck(1)(m)] },
+    // The name's melt as a story, at a reading pace: the first cracks under the letters, meltwater, the letters going under, the sheet's break.
+    'name-melt': { seconds: 30, scroll: [[0, 0], [3, 0], [27, 1.4]], transients: true, check: nameCheck(K) },
+    'name-melt-night': { seconds: 30, scroll: [[0, 0], [3, 0], [27, 1.4]], night: [[0, 1]], transients: true, check: nameCheck(K) },
+    'name-melt-ice': { seconds: 30, scroll: [[0, 0], [3, 0], [27, 1.4]], solo: 'fx', transients: true, check: nameCheck(K) },
+    'name-melt-water': { seconds: 30, scroll: [[0, 0], [3, 0], [27, 1.4]], solo: 'world', transients: true, check: nameCheck(K) },
+    'name-melt-upright': { seconds: 30, scroll: [[0, 0], [3, 0], [27, 1.4]], aspect: 0.46, transients: true, check: nameCheck(K) },
+    // Down past the name and back up again: the letters go under once, on the way down only.
+    'name-melt-back': { seconds: 30, scroll: [[0, 0], [3, 0], [14, 1.3], [17, 1.3], [27, 0.4]], transients: true, check: nameCheck(K, { back: true }) },
+    // The rail: a hover down three ticks, then three jumps (lake to basin, basin to canyon, canyon back to the statement).
+    'rail-jump': {
+      seconds: 22,
+      scroll: [[0, 0]],
+      events: [[2, 'hover', 0.985, 0, 12], [2.4, 'hover', 0.985, 1, 12], [2.8, 'hover', 0.985, 2, 12], [4, 'tap', 0.985, 2, 12], [4.09, 'jump', 1], [10, 'tap', 0.985, 9, 12], [10.09, 'jump', 1], [16, 'tap', 0.985, 1, 12], [16.09, 'jump', -1]],
+      jumps: [[4.1, stop[2]], [10.1, stop[9]], [16.1, stop[1]]],
+      transients: true,
+      clock0: 2.2,
+      check: jumpCheck(3),
+    },
+    'rail-jump-world': { seconds: 22, scroll: [[0, 0]], events: [[4.09, 'jump', 1], [10.09, 'jump', 1], [16.09, 'jump', -1]], jumps: [[4.1, stop[2]], [10.1, stop[9]], [16.1, stop[1]]], solo: 'world', clock0: 2.2, check: jumpCheck(3) },
+    // The basin's sea, long enough for two sets to come and go: each crest that lands on the block's face.
+    'basin-sets': {
+      seconds: 44,
+      scroll: [[0, stop[2]]],
+      solo: 'world',
+      transients: true,
+      check: (m) => {
+        const n = of(m, 'slap').length;
+        return n >= 8 && n <= 24 ? [] : [`${n} crests landed in 44 s`];
+      },
+    },
+    // The dam from downstream: one running channel, two dry beds. The middle gate is opened, then the first again.
+    'dam-channels': { ...station(7), seconds: 20, solo: 'world', events: [[8, 'switch', 1], [14, 'switch', 0]], transients: true },
+    // The lattice's thread, in every lane; the columns' drips, where they land.
+    'lattice-thread': { ...station(8), seconds: 22, solo: 'world', transients: true, period: [9] },
+    // The tarn on an upright screen: the shards stand against the sky over a foot of bank, and still call and answer.
+    'tarn-upright': {
+      ...station(5),
+      seconds: 22,
+      aspect: 0.46,
+      transients: true,
+      check: (m) => (of(m, 'pulse').length >= 3 ? [] : [`${of(m, 'pulse').length} pulses heard at the tarn on an upright screen`]),
+    },
+    // The night: the aurora's voice following the curtains at the lake, and thinning as the first light grows down the flight.
+    'aurora-curtains': { seconds: 70, scroll: [[0, 0]], night: [[0, 1]], solo: 'bed', transients: true, clock0: 12 },
+    'aurora-thins': {
+      seconds: 44,
+      scroll: [[0, delta + 1.1], [3, delta + 1.1], [40, K.SETTLE_AT - 0.08]],
+      night: [[0, 1]],
+      solo: 'bed',
+      transients: true,
+      check: (m) => {
+        const bad = [];
+        const a = m.series.map((x) => x.mix.aurora);
+        if (!(a[4] > 0.4)) bad.push(`the aurora's voice at the delta is ${a[4]}`);
+        if (!(a[a.length - 2] < 0.05)) bad.push(`the aurora's voice as the sun is about to rise is ${a[a.length - 2]}`);
+        // It thins from the top: when the highest partial has gone the lowest is still there.
+        const hour = m.series.map((x) => x.scene.aurora);
+        const i = hour.findIndex((h) => h < 0.7);
+        if (i < 0) bad.push('the hour never lost its aurora');
+        else if (m.series.slice(i).some((x) => x.shimmer[4] > 0)) bad.push('the highest partial outlasted the first light');
+        return bad;
+      },
+    },
     // The picture's clock disturbed: three long frames at the tarn and the lattice. What was set ahead is taken back, nothing clicks.
     'stalled': { seconds: 24, scroll: [[0, stop[5]], [10, stop[5]], [12, stop[8]]], stalls: [[5.9, 300], [8.4, 120], [17.9, 250]], transients: true, clock0: 2.2, disturbedMin: 3 },
   };
@@ -572,7 +753,7 @@ async function serveSource(page) {
 
 async function renders() {
   const { chromium } = loadPlaywright();
-  const out = resolve(arg('out', '.tools/out/w8/renders'));
+  const out = resolve(arg('out', '.tools/out/w19/renders'));
   mkdirSync(out, { recursive: true });
   const only = arg('only', '');
   const browser = await chromium.launch({ headless: true });
@@ -582,14 +763,29 @@ async function renders() {
   await serveSource(page);
   const K = await page.evaluate(async () => {
     const c = await import('https://audio.check/src/water/camera');
-    return { stops: c.stillStops(), starts: c.sectionStarts(), END_AT: c.END_AT, SETTLE_AT: c.SETTLE_AT };
+    const m = await import('https://audio.check/src/audio/mapping');
+    const t = await import('https://audio.check/src/audio/theory');
+    const w = await import('https://audio.check/src/water/moments');
+    return {
+      stops: c.stillStops(),
+      starts: c.sectionStarts(),
+      END_AT: c.END_AT,
+      SETTLE_AT: c.SETTLE_AT,
+      DAWN: w.DAWN,
+      ARRIVE_AT: m.ARRIVE_AT,
+      lineEnd: m.lineTime(1),
+      gather: t.GATHER.map((_, i) => m.gatherTime(i)),
+      arrival: t.ARRIVAL.map((_, i) => m.arrivalTime(i)),
+      NAME_MELT: m.NAME_MELT,
+      letters: m.nameLetters(1.6).length,
+    };
   });
   const all = scenes(K);
   const names = Object.keys(all).filter((n) => !only || only.split(',').includes(n));
   const rows = [];
   let failed = 0;
   for (const name of names) {
-    const { transients, silent, disturbedMin, period, ...spec } = all[name];
+    const { transients, silent, disturbedMin, period, check, ...spec } = all[name];
     // (--solo bed|world|fx|ui: hear one bus alone, to set its level.)
     if (arg('solo', '')) spec.solo = arg('solo', '');
     const t0 = Date.now();
@@ -598,7 +794,7 @@ async function renders() {
       const r = await renderScene(s);
       window.__r = r;
       const th = await import('https://audio.check/src/audio/theory');
-      return { sr: r.sampleRate, n: r.channels[0].length, chords: r.chords, trace: r.trace, series: r.series, water: r.water, disturbed: r.disturbed, phrases: r.phrases.map((p) => ({ ...p, derived: th.derives(p.notes) })) };
+      return { sr: r.sampleRate, n: r.channels[0].length, chords: r.chords, trace: r.trace, series: r.series, water: r.water, disturbed: r.disturbed, jumps: r.jumps, phrases: r.phrases.map((p) => ({ ...p, derived: th.derives(p.notes) })) };
     }, spec);
     // The samples come across in pieces: a long scene is tens of megabytes.
     const chs = [];
@@ -643,6 +839,8 @@ async function renders() {
       if (c.move === 'rest' && was.move !== 'rest' && !/^A/.test(was.chord)) problems.push(`the arrival was reached from ${was.chord}, not from the dominant`);
     });
     if (disturbedMin && meta.disturbed < disturbedMin) problems.push(`the clock was disturbed ${disturbedMin} times and noticed ${meta.disturbed}`);
+    // What the conductor must have done in this scene.
+    if (check) problems.push(...check(meta));
     const quiet = (silent ?? []).map(([a, b]) => +rmsOf(chs, meta.sr, a, b).toFixed(1));
     quiet.forEach((q, i) => {
       if (q > -80) problems.push(`not silent ${silent[i][0]} to ${silent[i][1]} s: ${q} dBFS`);
@@ -665,13 +863,13 @@ async function renders() {
 /* ---------- sync ---------- */
 
 /** What the picture does by its own clock: its sounds are set ahead for the frame that shows them. */
-const AHEAD = ['pulse', 'landing', 'lattice', 'lap', 'drip', 'gate-up', 'gate-down', 'ring', 'surge', 'ray'];
+const AHEAD = ['pulse', 'landing', 'lattice', 'lap', 'drip', 'gate-up', 'gate-down', 'ring', 'surge', 'slap', 'air', 'gather', 'arrival', 'climb'];
 /** What a visitor causes, in a handler or by scrolling: asked for at once. */
-const AT_ONCE = ['press', 'switch', 'tap', 'hover', 'crack', 'join', 'slap', 'dawn', 'melt'];
+const AT_ONCE = ['press', 'switch', 'tap', 'hover', 'jump', 'crack', 'letter', 'break', 'dawn', 'melt'];
 
 async function sync(base) {
   const { chromium } = loadPlaywright();
-  const out = resolve(arg('out', '.tools/out/w8'));
+  const out = resolve(arg('out', '.tools/out/w19'));
   const label = arg('label', 'run');
   const load = process.argv.includes('--load');
   mkdirSync(out, { recursive: true });
@@ -896,7 +1094,7 @@ async function sync(base) {
     const unexplained = ahead.filter((r) => r.gap <= frameMs * 1.5).length;
     if (behind.length || unexplained) bad++;
     summary[type] = { n: ev.length, inside: inside.length, ahead: ahead.length, behind: behind.length, unexplained, min: Math.min(...rows.map((r) => r.heard)), max: Math.max(...rows.map((r) => r.heard)) };
-    rowsA.push(`| ${type} | ${ev.length} | ${f(lead.med)} | ${three(stat(rows.map((r) => r.heard)))} | ${inside.length === ev.length ? `all ${ev.length}` : `${inside.length} of ${ev.length}`} | ${ahead.length ? `${ahead.length}, ${f(-Math.min(...ahead.map((r) => r.heard)))}, ${f(Math.max(...ahead.map((r) => r.gap)) - frameMs)}${unexplained ? ` (${unexplained} with no late frame found)` : ''}` : 'none'} | ${behind.length ? `${behind.length}, ${f(Math.max(...behind.map((r) => r.heard)) - frameMs)}` : 'none'} | ${f(-stat(rows.map((r) => r.left)).med)} | ${['ring', 'surge'].includes(type) ? 'water only: not on the bus listened to' : `${f(on.med)} / ${f(on.max)} (${on.n} found)`} |`);
+    rowsA.push(`| ${type} | ${ev.length} | ${f(lead.med)} | ${three(stat(rows.map((r) => r.heard)))} | ${inside.length === ev.length ? `all ${ev.length}` : `${inside.length} of ${ev.length}`} | ${ahead.length ? `${ahead.length}, ${f(-Math.min(...ahead.map((r) => r.heard)))}, ${f(Math.max(...ahead.map((r) => r.gap)) - frameMs)}${unexplained ? ` (${unexplained} with no late frame found)` : ''}` : 'none'} | ${behind.length ? `${behind.length}, ${f(Math.max(...behind.map((r) => r.heard)) - frameMs)}` : 'none'} | ${f(-stat(rows.map((r) => r.left)).med)} | ${['ring', 'surge', 'slap'].includes(type) ? 'water only: not on the bus listened to' : `${f(on.med)} / ${f(on.max)} (${on.n} found)`} |`);
   }
   const rowsB = ['| moment | count | cause to request, ms (min / median / max) | cause to start on the audio clock, ms (min / median / max) | start asked for to onset found in the stream, ms (median / max) | starts within one frame of its cause |', '| --- | --- | --- | --- | --- | --- |'];
   for (const type of AT_ONCE) {
