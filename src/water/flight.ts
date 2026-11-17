@@ -232,6 +232,7 @@ export class FlightEngine extends WaterEngine {
   private surge = new Float32Array(3);
   private dripAt = 0;
   private gateT = 0;
+  private latLap = -1;
   /** The sluices follow the chosen gate: one lifts, the others drop, and a surge runs down the opened channel. */
   private runGates() {
     const dt = Math.min(0.05, Math.max(0, this.time - this.gateT));
@@ -458,6 +459,14 @@ export class FlightEngine extends WaterEngine {
       while (i < 3 && pick > this.colH[i]) pick -= this.colH[i++];
       const a = Math.random() * Math.PI * 2;
       this.splash(COLS.xs[i] + Math.cos(a) * COLS.r * 1.15, COLS.y + Math.sin(a) * COLS.r * 1.15, 12 + 8 * Math.random(), 0.5);
+    }
+    if (st[2] > 0.5 && !this.still) {
+      // The light sets out with a real ring where the thread enters the pool.
+      const lap = Math.floor(this.time / 9);
+      if (lap !== this.latLap) {
+        this.latLap = lap;
+        this.splash(LATTICE.x, LATTICE.y - LATTICE.pitch * 2 - 90, 30, 0.8);
+      }
     }
     gl.uniform1f(r.u.uFlowSpeed, FLOW_SPEED);
     gl.uniform1f(r.u.uQuality, tier.quality);

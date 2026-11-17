@@ -297,10 +297,11 @@ function paintLater(b: BedPainter, gate: number) {
   b.agitate(pt(SLUICES[gate][0].x, DAM.y + DAM.thick + 50), 130, 0.9);
   // The three meet and run on into the still pool.
   b.channel([pt(1300, DAM.y + 960), pt(1300, DAM.y + 1150), pt(1300, T2 + 4060)], { width: [300, 260, 300] });
-  const half = LATTICE.pitch * 2 + 150;
+  const half = LATTICE.pitch * 2 + 110;
   b.pool({ x: LATTICE.x - half, y: LATTICE.y - half, w: half * 2, h: half * 2 }, 210);
-  b.disc(pt(LATTICE.x - half + 60, LATTICE.y + 200), 190);
+  b.disc(pt(LATTICE.x + half - 70, LATTICE.y + 260), 190);
   b.disc(pt(LATTICE.x + half - 40, LATTICE.y - 230), 180);
+  b.channel([pt(1300, LATTICE.y - half - 200), pt(1300, LATTICE.y), pt(1300, LATTICE.y + half + 200)], { width: half * 2.6, speed: 0.04, flowOnly: true, straight: true });
   // Out of the pool, into the canyon, and round to the run-out.
   b.channel([pt(1300, LATTICE.y + half - 40), pt(1300, T2 + 5200), pt(1300, T2 + 5360)], { width: [260, 200, CANYON.w] });
   b.channel(CANYON_LINE, { width: CANYON.w, straight: true });

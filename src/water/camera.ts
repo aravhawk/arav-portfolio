@@ -179,8 +179,9 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s6 + 1.2, pos: [700, T + 1300, 820], aim: [1235, T + 3000, 0], fov: 62 },
         { s: s7 - 0.6, pos: [706, T + 1330, 810], aim: [1238, T + 3012, 0], fov: 62 },
         { s: s7 + 0.3, pos: [1300, T + 3300, 380], aim: [1300, T + 4100, 0], fov: 58 },
-        { s: s7 + 1.15, pos: [1300, T + 3500, 640], aim: [1300, T + 4500, 0], fov: 58 },
-        { s: s8 - 0.6, pos: [1300, T + 3540, 625], aim: [1300, T + 4515, 0], fov: 58 },
+        // The lattice from up the west bank: all sixteen above the middle, the bank at the foot.
+        { s: s7 + 1.15, pos: [640, T + 3200, 760], aim: [1270, T + 4470, 0], fov: 58 },
+        { s: s8 - 0.6, pos: [646, T + 3228, 750], aim: [1272, T + 4480, 0], fov: 58 },
         { s: s8 + 0.3, pos: [1300, T + 5000, 260], aim: [1300, T + 5700, 40], fov: 60 },
         { s: s8 + 3.2, pos: [1300, T + 7700, 400], aim: [1300, T + 8400, 0], fov: 54 },
       ]
@@ -192,8 +193,9 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s6 + 1.2, pos: [740, T + 2020, 500], aim: [1445, T + 3420, 0], fov: 46 },
         { s: s7 - 0.6, pos: [749, T + 2048, 493], aim: [1448, T + 3434, 0], fov: 46 },
         { s: s7 + 0.3, pos: [1300, T + 3350, 280], aim: [1300, T + 4100, 0], fov: 46 },
-        { s: s7 + 1.15, pos: [900, T + 3600, 430], aim: [1340, T + 4560, 0], fov: 44 },
-        { s: s8 - 0.6, pos: [910, T + 3635, 420], aim: [1343, T + 4572, 0], fov: 44 },
+        // The lattice from over its west bank, corner on: every cube and its mirror image.
+        { s: s7 + 1.15, pos: [450, T + 3690, 420], aim: [1200, T + 4500, 20], fov: 42 },
+        { s: s8 - 0.6, pos: [462, T + 3718, 412], aim: [1203, T + 4510, 20], fov: 42 },
         { s: s8 + 0.3, pos: [1300, T + 5000, 200], aim: [1300, T + 5700, 40], fov: 48 },
         { s: s8 + 3.2, pos: [1300, T + 7700, 330], aim: [1300, T + 8500, 0], fov: 42 },
       ];

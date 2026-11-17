@@ -7,7 +7,7 @@
  * behind it, and the water in front of it carries its mirror image.
  */
 
-import { COLS, DAM, SLUICES, T2 } from '../world';
+import { COLS, DAM, LATTICE, SLUICES, T2 } from '../world';
 
 const f = (n: number) => n.toFixed(1);
 
@@ -279,6 +279,137 @@ vec3 dam(vec3 col, vec3 dir, float tw) {
   float white = textureLod(uGrain, vec2(pwp.x / 260.0, (d - uTime * 240.0) / 1500.0), 1.5).r;
   float fall = 0.12 + exp(-(d - DAM_T) / 170.0) + 0.9 * exp(-abs(d - front) / 55.0) * step(sg, 0.98);
   col = mix(col, vec3(0.93, 0.97, 1.0) * (S.key * mix(0.3, 0.1, uNight) + S.amb * 1.1), clamp(min(fall * 1.6, 1.0) * smoothstep(0.42, 0.7, white + 0.45 * fall), 0.0, 1.0) * open * (1.0 - smoothstep(48.0, 72.0, off)) * fade);
+  return col;
+}
+`;
+
+/** Station 7: sixteen cubes of ice in a still pool, one thread of current round them all, a light passing through them in turn. */
+export const LATTICE_ICE = `
+const vec2 LAT_C = vec2(${f(LATTICE.x)}, ${f(LATTICE.y)});
+const float LAT_P = ${f(LATTICE.pitch)};
+const float LAT_S = ${f(LATTICE.size / 2)};
+const float LAT_H = ${f(LATTICE.h)};
+const float LAT_IN = ${f(Math.hypot(2 * LATTICE.pitch, LATTICE.pitch * 2 + 110 - 2 * LATTICE.pitch))};
+const float LAT_LAP = ${f(4 * LATTICE.pitch + (Math.PI * LATTICE.pitch) / 2)};
+float segD(vec2 p, vec2 a, vec2 b, out float h) {
+  vec2 ab = b - a;
+  h = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
+  return length(p - a - ab * h);
+}
+// The thread: in from the pool's head, along the upstream side of each row in turn, out at its foot.
+// Returns how far off it a place is; s is how far along it.
+float threadAt(vec2 q, out float s) {
+  float h;
+  float best = segD(q, vec2(0.0, -2.0 * LAT_P - 110.0), vec2(-2.0 * LAT_P, -2.0 * LAT_P), h);
+  s = h * LAT_IN;
+  for (int j = 0; j < 4; j++) {
+    float fj = float(j);
+    float y = (fj - 2.0) * LAT_P;
+    float sgn = (j == 1 || j == 3) ? -1.0 : 1.0;
+    float d = segD(q, vec2(-2.0 * LAT_P * sgn, y), vec2(2.0 * LAT_P * sgn, y), h);
+    if (d < best) { best = d; s = LAT_IN + fj * LAT_LAP + h * 4.0 * LAT_P; }
+    if (j < 3) {
+      // The turn at the row's end, round to the next.
+      vec2 c = vec2(2.0 * LAT_P * sgn, y + 0.5 * LAT_P);
+      vec2 r = q - c;
+      if (r.x * sgn > 0.0) {
+        d = abs(length(r) - 0.5 * LAT_P);
+        if (d < best) { best = d; s = LAT_IN + fj * LAT_LAP + 4.0 * LAT_P + (atan(r.y, r.x * sgn) + 1.5708) * 0.5 * LAT_P; }
+      }
+    }
+  }
+  float d = segD(q, vec2(-2.0 * LAT_P, LAT_P), vec2(0.0, 2.0 * LAT_P + 110.0), h);
+  if (d < best) { best = d; s = LAT_IN + 3.0 * LAT_LAP + 4.0 * LAT_P + h * LAT_IN; }
+  return best;
+}
+// Where the light is along the thread now, and how lit the cube in column i of row j is by it.
+float latPulse() { return fract(uTime / 9.0) * (LAT_IN * 2.0 + 3.0 * LAT_LAP + 4.0 * LAT_P + 500.0) - 250.0; }
+float cubeGlow(float i, float j) {
+  float along = mod(j, 2.0) < 0.5 ? i : 3.0 - i;
+  float at = LAT_IN + j * LAT_LAP + (along + 0.5) * LAT_P;
+  float d = (latPulse() - at) / (0.8 * LAT_P);
+  return exp(-d * d);
+}
+float cubesHit(vec3 ro, vec3 rd, out vec3 n, out float tF, out vec2 id) {
+  vec3 n1;
+  float f1;
+  float ext = 1.5 * LAT_P + LAT_S;
+  if (boxHit(ro, rd, vec3(LAT_C - ext, -FREEBOARD - 4.0), vec3(LAT_C + ext, LAT_H - FREEBOARD), n1, f1) < 0.0) return -1.0;
+  float best = -1.0;
+  for (int k = 0; k < 16; k++) {
+    vec2 ij = vec2(float(k - (k / 4) * 4), float(k / 4));
+    vec2 c = LAT_C + (ij - 1.5) * LAT_P;
+    float t = boxHit(ro, rd, vec3(c - LAT_S, -FREEBOARD - 4.0), vec3(c + LAT_S, LAT_H - FREEBOARD), n1, f1);
+    if (t > 0.0 && (best < 0.0 || t < best)) { best = t; n = n1; tF = f1; id = ij; }
+  }
+  return best;
+}
+vec3 cubeColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec2 id) {
+  vec3 hp = ro + rd * t;
+  vec2 c = LAT_C + (id - 1.5) * LAT_P;
+  vec3 lp = vec3(hp.xy - c, hp.z + FREEBOARD);
+  vec3 L = keyDir();
+  float glow = cubeGlow(id.x, id.y);
+  vec2 uv = abs(n.z) > 0.5 ? lp.xy / 120.0 : vec2((abs(n.x) > 0.5 ? lp.y : lp.x) / 120.0, lp.z / 120.0);
+  uv += id * 0.37;
+  vec4 gr = textureLod(uGrain, uv, 0.0);
+  vec3 fr3 = fracture(uv * 2.2);
+  vec3 ice = iceBody(n.z > 0.5 ? 0.6 : 0.34 + 0.6 * clamp((tF - t) / (LAT_S * 2.2), 0.0, 1.0)) * (0.7 + 0.5 * fr3.y);
+  float lit = 0.55 + 0.45 * max(dot(n, L), 0.0) + 0.3 * max(dot(-n, L), 0.0);
+  vec3 col = ice * (S.key * (0.1 + 0.2 * lit * lit) + S.amb * 0.95) * (0.9 + 0.2 * gr.r) * (0.8 + 0.4 * max(dot(n, L), 0.0));
+  col = mix(col, ice * (S.amb * 2.4 + uAurora * (0.16 + 0.3 * gr.g)) + vec3(0.004, 0.012, 0.016), uNight);
+  // Its edges are rounded by melting and catch the light; its top is frosted.
+  vec2 e = abs(n.z) > 0.5 ? LAT_S - abs(lp.xy) : vec2(LAT_S - abs(abs(n.x) > 0.5 ? lp.y : lp.x), LAT_H - lp.z);
+  float edge = 1.0 - smoothstep(0.0, 5.0, min(e.x, e.y));
+  col += vec3(0.75, 0.9, 1.0) * (S.key * 0.1 + S.amb * 0.35) * edge;
+  col = mix(col, mix(vec3(0.9, 0.93, 0.96), vec3(0.5, 0.6, 0.72), uNight) * (S.key * mix(0.24, L.z, uNight) + S.amb * 0.8), step(0.5, n.z) * (0.3 + 0.35 * gr.g));
+  col *= 1.0 - 0.4 * (1.0 - smoothstep(1.0, 7.0, lp.z)) * step(n.z, 0.5);
+  float fr = 0.04 + 0.96 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
+  col = mix(col, skyColor(reflect(rd, n), 0.0), fr * 0.5 * step(n.z, 0.5));
+  // The light inside: brightest at the heart, where the eye looks through the most ice.
+  float heart = n.z > 0.5 ? 0.8 : 0.35 + 0.65 * clamp((tF - t) / (LAT_S * 2.0), 0.0, 1.0);
+  col += vec3(0.3, 0.82, 0.95) * glow * heart * mix(0.55, 0.95, uNight) * (0.85 + 0.3 * fr3.y);
+  return col;
+}
+/** The lattice over the finished ground, its mirror image, the thread, and the light on the water. */
+vec3 lattice(vec3 col, vec3 dir, float tw) {
+  vec3 n;
+  float tF;
+  vec2 id;
+  float t = cubesHit(uCamPos, dir, n, tF, id);
+  if (t > 0.0 && (tw < 0.0 || t < tw)) {
+    float cov = 1.0;
+    vec3 n2;
+    float tF2;
+    vec2 id2;
+    for (int k = 0; k < 2; k++) {
+      vec3 rd = normalize(dir + (uCamR * (k == 0 ? 0.5 : -0.5) + uCamU * (k == 0 ? -0.5 : 0.5)) * uPxAng);
+      if (cubesHit(uCamPos, rd, n2, tF2, id2) < 0.0) cov -= 0.33;
+    }
+    return mix(col, inAir(cubeColor(uCamPos, dir, t, tF, n, id), dir, t), cov * uSt.z);
+  }
+  if (tw < 0.0) return col;
+  vec3 pwp = uCamPos + dir * tw;
+  vec2 q = pwp.xy - LAT_C;
+  if (max(abs(q.x), abs(q.y)) > 2.0 * LAT_P + 300.0 || textureLod(uBedA, bedUv(pwp.xy), 0.0).r > -2.0) return col;
+  // The thread of current: the one place the mirror is broken.
+  float s;
+  float d = threadAt(q, s);
+  float band = 1.0 - smoothstep(7.0, 19.0, d);
+  float run = textureLod(uGrain, vec2(d / 160.0, (s - uTime * 110.0) / 1700.0), 2.0).r;
+  float head = exp(-abs(s - latPulse()) / 90.0);
+  vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3(band * (run - 0.5) * 0.05, 0.0, 0.0));
+  float t2 = cubesHit(pwp, rd2, n, tF, id);
+  if (t2 > 0.0) col = mix(col, inAir(cubeColor(pwp, rd2, t2, tF, n, id), dir, tw + t2) * 0.78, 0.66 * uSt.z);
+  col = mix(col, vec3(0.86, 0.95, 1.0) * (S.key * mix(0.22, 0.06, uNight) + S.amb * 0.9), band * (0.16 + 0.6 * smoothstep(0.42, 0.7, run)) * uSt.z);
+  col += vec3(0.3, 0.82, 0.95) * band * head * mix(0.25, 0.6, uNight) * uSt.z;
+  // Each lit cube throws its light on the water round it.
+  vec2 cell = clamp(floor(q / LAT_P + 2.0), 0.0, 3.0);
+  float gl = cubeGlow(cell.x, cell.y) * exp(-max(length(q - (cell - 1.5) * LAT_P) - LAT_S, 0.0) / 46.0);
+  col += vec3(0.2, 0.62, 0.75) * gl * mix(0.1, 0.3, uNight) * uSt.z;
+  // A dark wet foot under each.
+  vec2 fq = abs(q - (cell - 1.5) * LAT_P) - LAT_S;
+  col *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 14.0, max(fq.x, fq.y))) * uSt.z;
   return col;
 }
 `;
