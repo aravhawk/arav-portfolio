@@ -73,18 +73,24 @@ export const STREAM: Pt[] = [
 
 /** The walled basin (the sandbox) and the island in it. */
 export const BASIN: Rect = { x: 1050, y: 4520 + DY, w: 1120, h: 1080 };
-export const ISLAND = { x: 1560, y: 5110 + DY, rx: 275, ry: 150 };
+/**
+ * The block stands at the island's near shore with its foot in the water: the
+ * island is the ice-bound rock behind it and to either side, so the basin's
+ * waves reach the block itself.
+ */
+export const ISLAND = { x: 1575, y: 5275 + DY, rx: 335, ry: 150 };
 
-/** The upright slab that carries the product image. */
+/** The block of ice that carries the product image. */
 export const SLAB = {
-  /** middle of its foot */
-  x: ISLAND.x,
-  y: ISLAND.y - 50,
+  /** middle of the foot of its front face */
+  x: 1560,
+  y: 5060 + DY,
   w: 430,
-  h: 372,
+  /** from the waterline to its top */
+  h: 431,
   thick: 150,
-  /** its foot stands this far above the ground, on a low plinth of ice */
-  lift: 0,
+  /** its foot is at the basin's water, this far below the land (the basin's freeboard) */
+  lift: -59,
   /** which way its face looks, in radians from -y toward -x: it faces the camera that arrives at the basin */
   turn: 0.16,
 };
@@ -119,15 +125,23 @@ export const TRIBS: { head: Pt; mid: Pt; mouth: Pt }[] = [
 /** How wide a stream with this many merged pull requests runs. */
 export const tribWidth = (n: number) => 8 + 16 * Math.min(n, 10);
 
-/** Station 3, the clear pool beside the river, and the picture on its bed. */
-export const POOL: Rect = { x: 1380, y: 8970 + DY, w: 800, h: 630 };
-export const SHEET = { x: 1780, y: 9250 + DY, w: 600, h: 440 };
+/**
+ * Station 3, the clear pool beside the river, and the picture on its bed.
+ * The picture is shown cropped to the part of it that is read: the
+ * leaderboard's table (CROP, in the picture's own pixels). It lies across
+ * the pool as a long sheet, so its rows are as large as the frame allows.
+ */
+export const SHEET_CROP = { x: 110, y: 242, w: 1690, h: 206, srcW: 2000, srcH: 1088 };
+/** On an upright screen the sheet is the table's first columns (the models and their scores), so the rows stay as large. */
+export const SHEET_CROP_TALL = { x: 150, w: 810 };
+export const POOL: Rect = { x: 1240, y: 9030 + DY, w: 1080, h: 430 };
+export const SHEET = { x: 1780, y: 9245 + DY, w: 900, h: (900 * SHEET_CROP.h) / SHEET_CROP.w };
 
 /** Station 4, the tarn, and the two shards of ice that stand in it. */
 export const TARN = { x: 1300, y: 10800 + DY, rx: 820, ry: 640 };
 export const SHARDS: { x: number; y: number; h: number; r: number; turn: number }[] = [
-  { x: 1560, y: 10420 + DY, h: 400, r: 62, turn: 0.5 },
-  { x: 1600, y: 11250 + DY, h: 520, r: 74, turn: -0.35 },
+  { x: 1648, y: 10590 + DY, h: 400, r: 62, turn: 0.5 },
+  { x: 1527, y: 11090 + DY, h: 520, r: 74, turn: -0.35 },
 ];
 
 /** Station 5, the shallows, and the four columns of ice that stand in them: one to a model, as tall as its pulls. */
@@ -216,16 +230,19 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
   b.channel([pt(1600, 4540 + DY), pt(1480, 4800 + DY), pt(1250, 5200 + DY), pt(1420, 5560 + DY)], { width: 420, speed: 0.4, flowOnly: true });
   // The island: dry ground in the middle of it.
   b.dry({ x: ISLAND.x - ISLAND.rx, y: ISLAND.y - ISLAND.ry, w: ISLAND.rx * 2, h: ISLAND.ry * 2 }, 0, ISLAND.ry * 0.96);
-  // Attacks: waves strike the island from every side.
-  for (const [dx, dy] of [
-    [-1.5, -0.9],
-    [1.45, -0.7],
-    [-1.4, 1.1],
-    [1.5, 1.0],
-    [0, -1.7],
-    [0.1, 1.8],
+  // (Two arms of it come forward past the block's flanks: the block's face stands out between them, in the water.)
+  b.dry({ x: SLAB.x - 420, y: SLAB.y - 20, w: 190, h: 260 }, 0, 92);
+  b.dry({ x: SLAB.x + 236, y: SLAB.y - 70, w: 190, h: 280 }, 0, 92);
+  // Attacks: the basin's water is never still round the block and its island.
+  for (const [dx, dy, r] of [
+    [-330, -40, 190],
+    [330, -60, 190],
+    [0, -190, 210],
+    [-430, 230, 190],
+    [450, 220, 190],
+    [0, 470, 190],
   ]) {
-    b.agitate(pt(ISLAND.x + dx * ISLAND.rx, ISLAND.y + dy * ISLAND.ry), 190, 0.6);
+    b.agitate(pt(SLAB.x + dx, SLAB.y + dy), r, 0.6);
   }
 
   // Below the basin the river narrows, bends, and turns east for the confluence.
@@ -247,12 +264,13 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
   });
 
   // The clear pool: fed by a thin spill at its head, drained by another at its foot.
-  b.pool(POOL, 300);
-  b.disc(pt(POOL.x + 200, POOL.y + 230), 200);
-  b.disc(pt(POOL.x + POOL.w - 190, POOL.y + POOL.h - 210), 190);
-  b.channel([pt(700, 8980 + DY), pt(1060, 9080 + DY), pt(1250, 9200 + DY), pt(1420, 9230 + DY)], { width: [46, 40, 44, 60], speed: 0.7 });
-  b.channel([pt(1450, 9540 + DY), pt(1300, 9640 + DY), pt(1160, 9700 + DY), pt(1070, 9790 + DY)], { width: [60, 44, 40, 46], speed: 0.7 });
-  b.channel([pt(1450, 8970 + DY), pt(1780, 9250 + DY), pt(1450, 9540 + DY)], { width: 480, speed: 0.12, flowOnly: true });
+  b.pool(POOL, 190);
+  b.disc(pt(POOL.x + 150, POOL.y + 150), 150);
+  b.disc(pt(POOL.x + POOL.w - 170, POOL.y + POOL.h - 150), 160);
+  b.disc(pt(POOL.x + POOL.w - 330, POOL.y + 70), 120);
+  b.channel([pt(700, 8980 + DY), pt(960, 9090 + DY), pt(1130, 9200 + DY), pt(POOL.x + 30, 9230 + DY)], { width: [46, 40, 44, 60], speed: 0.7 });
+  b.channel([pt(POOL.x + 60, 9420 + DY), pt(1220, 9560 + DY), pt(1140, 9680 + DY), pt(1070, 9790 + DY)], { width: [60, 44, 40, 46], speed: 0.7 });
+  b.channel([pt(POOL.x + 40, 9230 + DY), pt(SHEET.x, SHEET.y), pt(POOL.x + POOL.w - 60, 9300 + DY)], { width: 380, speed: 0.1, flowOnly: true });
 
   // The tarn: wide, dark and still.
   const tarn = new Path2D();

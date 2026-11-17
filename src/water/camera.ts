@@ -127,12 +127,13 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         { s: s3 - 0.6, pos: [1606, 5850 + Y, 548], aim: [1652, 7230 + Y, 0], fov: 60 },
         { s: s3 + 0.3, pos: [900, 7700 + Y, 380], aim: [1100, 8500 + Y, 0], fov: 58 },
         // The pool, looked down into from its rim.
-        { s: s3 + 1.15, pos: [1770, 8400 + Y, 900], aim: [1770, 9080 + Y, 0], fov: 52 },
-        { s: s4 - 0.6, pos: [1770, 8440 + Y, 880], aim: [1770, 9095 + Y, 0], fov: 52 },
+        { s: s3 + 1.15, pos: [1780, 8620 + Y, 760], aim: [1780, 9060 + Y, 0], fov: 52 },
+        { s: s4 - 0.6, pos: [1780, 8644 + Y, 748], aim: [1780, 9070 + Y, 0], fov: 52 },
         { s: s4 + 0.3, pos: [1200, 9650 + Y, 360], aim: [1300, 10500 + Y, 0], fov: 58 },
         // The tarn: both shards, the far shore, the ranges.
-        { s: s4 + 1.2, pos: [1900, 9300 + Y, 500], aim: [1740, 9940 + Y, 0], fov: 58 },
-        { s: s5 - 0.6, pos: [1896, 9340 + Y, 490], aim: [1740, 9900 + Y, 0], fov: 58 },
+        // The tarn, from low over its water: both shards stand against the sky above the middle, the words below on still water.
+        { s: s4 + 1.2, pos: [1560, 9750 + Y, 70], aim: [1580, 10900 + Y, -25], fov: 58 },
+        { s: s5 - 0.6, pos: [1562, 9790 + Y, 68], aim: [1581, 10920 + Y, -25], fov: 58 },
         { s: s5 + 0.3, pos: [1300, T2 - 250, 400], aim: [1300, T2 + 600, 0], fov: 56 },
         ...laterKeys(true, s5, s6, s7, s8),
         ...seaKeys(aspect, sunAz, s9, s10),
@@ -159,12 +160,12 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         // Down the bigger river.
         { s: s3 + 0.3, pos: [860, 7650 + Y, 300], aim: [1000, 8500 + Y, 0], fov: 46 },
         // The pool, looked down into from its rim.
-        { s: s3 + 1.15, pos: [1490, 8470 + Y, 575], aim: [1540, 9080 + Y, 0], fov: 46 },
-        { s: s4 - 0.6, pos: [1496, 8495 + Y, 565], aim: [1543, 9090 + Y, 0], fov: 46 },
+        { s: s3 + 1.15, pos: [1780, 8700 + Y, 600], aim: [1780, 9090 + Y, 0], fov: 46 },
+        { s: s4 - 0.6, pos: [1780, 8722 + Y, 590], aim: [1780, 9100 + Y, 0], fov: 46 },
         { s: s4 + 0.3, pos: [1150, 9700 + Y, 300], aim: [1300, 10500 + Y, 0], fov: 46 },
         // The tarn: one shard near on the left, one far on the right, the ranges beyond.
-        { s: s4 + 1.2, pos: [1120, 9900 + Y, 250], aim: [1400, 10950 + Y, 130], fov: 46 },
-        { s: s5 - 0.6, pos: [1135, 9950 + Y, 242], aim: [1405, 10975 + Y, 130], fov: 46 },
+        { s: s4 + 1.2, pos: [1120, 9900 + Y, 250], aim: [1400, 10950 + Y, 105], fov: 46 },
+        { s: s5 - 0.6, pos: [1135, 9950 + Y, 242], aim: [1405, 10975 + Y, 105], fov: 46 },
         { s: s5 + 0.3, pos: [1300, T2 - 300, 300], aim: [1300, T2 + 600, 0], fov: 44 },
         ...laterKeys(false, s5, s6, s7, s8),
         ...seaKeys(aspect, sunAz, s9, s10),
