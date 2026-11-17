@@ -266,6 +266,16 @@
   background: var(--line);
 }
 
+/* Under a section's label, whose hairline already rules the top, the first row of a list carries none of its own. */
+.bars > :first-child,
+.changes > :first-child,
+.models > :first-child,
+.dia > :first-child,
+.sec-steps-list .steps > :first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
 /* ---------- plates: real media on the snow ---------- */
 
 .plate {

@@ -116,6 +116,7 @@ interface Active {
   drawn: boolean;
   w: number;
   h: number;
+  dpr: number;
   aspect: number;
   keys: Key[];
   box: [number, number, number, number];
@@ -375,6 +376,7 @@ export async function attachBand(host: HTMLElement, opts: BandOpts, isCancelled:
     drawn: false,
     w: 0,
     h: 0,
+    dpr: 0,
     aspect: 1.8,
     keys: [],
     box: [0, 0, 0, 0],
@@ -409,11 +411,14 @@ export async function attachBand(host: HTMLElement, opts: BandOpts, isCancelled:
     const w = host.clientWidth;
     const h = host.clientHeight;
     if (w < 2 || h < 2) return;
-    if (w !== a.w || h !== a.h) {
+    const dpr = window.devicePixelRatio || 1;
+    // (A window moved to a screen of another density keeps its size and changes its pixels.)
+    if (w !== a.w || h !== a.h || dpr !== a.dpr) {
       a.w = w;
       a.h = h;
+      a.dpr = dpr;
       a.aspect = w / h;
-      engine.resize(w, h, 0, window.devicePixelRatio || 1);
+      engine.resize(w, h, 0, dpr);
       a.keys = flightKeys(a.aspect, engine.sunAz);
     }
     measureBox();

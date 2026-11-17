@@ -89,7 +89,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
           ))}
         </ol>
       </Sec>
-      <Sec className="sec-changes" label="In T3 Code, change by change" id="p-t3">
+      <Sec className="sec-changes" label="In T3 Code: eight of them, change by change" id="p-t3">
         <ol className="changes">
           {T3_PRS.map((x) => (
             <li key={x.n} className="change">
