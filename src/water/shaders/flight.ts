@@ -1349,6 +1349,21 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   vec3 clear = uIceCol * mix(mix(vec3(0.2, 0.42, 0.52), vec3(0.035, 0.17, 0.33), farK), vec3(0.013, 0.04, 0.078), uNight) * (0.78 + 0.34 * under) + uScatter * mix(mix(2.0, 0.35, farK), 0.3, uNight);
   clear += (S.hor * 0.05 * (1.0 - uNight) + uAurora * 0.03) * smoothstep(0.22, 0.6, netU) * (1.0 - dust);
   vec3 white = mix(vec3(0.9, 0.92, 0.95), vec3(0.4, 0.47, 0.6), uNight) * lit * (0.97 + 0.03 * big);
+  // The near snow, where the first frame's words stand. It is calm for them, and calm is not soft: its broad swells are
+  // held nearer one tone, and what is left to see is what wind-packed snow has close to: fine ridges cut by the wind,
+  // each with a thin crisp shade on its lee, and a grain. (By day; before dawn that ice is bare.)
+  float nearSnow = nearK * (1.0 - uNight) * (1.0 - smoothstep(3.0, 7.6, foot));
+  if (nearSnow > 0.0) {
+    vec3 flatLit = lightOn(vec3(0.0, 0.0, 1.0), 1.0);
+    float tanEl = L.z / max(length(L.xy), 0.05);
+    float kAz = clamp(dot(LXY - SH_A, SH_D), 0.0, 1.0);
+    vec4 sc = snowTile(p, 286.0, vec2(0.37, 0.11));
+    vec4 sb = snowTile(p, 96.0, vec2(0.71, 0.29));
+    float shC = smoothstep(0.0, 0.07 * clamp(foot / 0.28, 1.0, 3.0), mix(sc.z, sc.w, kAz) - tanEl);
+    float shB = smoothstep(0.0, 0.07 * clamp(foot / 0.1, 1.0, 3.0), mix(sb.z, sb.w, kAz) - tanEl) * (1.0 - smoothstep(0.6, 2.2, foot));
+    vec3 fine = flatLit * (1.0 - 0.19 * shC - 0.11 * shB) * (1.0 + 0.7 * dot(sc.xy, LXY) + 0.03 * (g.g - 0.5));
+    white = mix(white, mix(vec3(0.9, 0.92, 0.95) * fine, white, 0.32), nearSnow);
+  }
   clear *= 1.0 - 0.3 * smoothstep(0.438, 0.35, lvl);
   vec3 col = mix(clear, white, mix(0.42 + 0.34 * smoothstep(0.445, 0.512, lvl), 0.2, uNight) * dust);
   col = mix(col, white, drift);
