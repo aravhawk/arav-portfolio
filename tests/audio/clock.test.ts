@@ -36,6 +36,13 @@ describe('the map between the page’s clock and the audio clock', () => {
     }
     expect(a.lag).toBeCloseTo(0.022, 3);
     expect(b.lag).toBeCloseTo(0.031, 2);
+    // A timestamp that shows no latency at all (some browsers') does not undo what the context reports.
+    const c = new ClockMap();
+    for (let i = 0; i < 90; i++) {
+      const perf = 5000 + i * 16.667;
+      c.feed({ perf, audio: reading(perf, 3000, 10), latency: 0.011, out: { contextTime: (perf - 3000) / 1000 - 0.0002, performanceTime: perf } });
+    }
+    expect(c.lag).toBeCloseTo(0.011, 2);
     // A sound to be heard at a moment is asked for that much earlier on the audio clock, and the two directions agree.
     const want = 7000;
     expect(a.heardAt(want)).toBeCloseTo(a.headAt(want) - 0.022, 3);

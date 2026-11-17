@@ -192,13 +192,16 @@ export function impulse(ctx: BaseAudioContext, rng: Rng, room: Room): AudioBuffe
     const d = buf.getChannelData(c);
     let lp = 0;
     let a = 0;
+    let env = 1;
+    const fall = Math.exp(-room.decay / sr);
     for (let i = 0; i < n; i++) {
       const t = i / sr;
       // (The low-pass closes slowly: its coefficient is worked out every few milliseconds.)
       if ((i & 127) === 0) a = Math.exp((-2 * Math.PI * (room.to + (room.from - room.to) * Math.exp(-t * room.close))) / sr);
       const w = room.wide * (rng() * 2 - 1) + (1 - room.wide) * shared[i];
       lp = a * lp + (1 - a) * w;
-      d[i] = lp * Math.exp(-t * room.decay) * Math.min(1, t / room.soft);
+      d[i] = lp * env * Math.min(1, t / room.soft);
+      env *= fall;
     }
     for (let k = 0; k < room.taps; k++) {
       const at = Math.round(sr * (0.004 + room.span * rng()));
@@ -305,7 +308,10 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
       delay.delayTime.value = pre;
       const conv = ctx.createConvolver();
       conv.normalize = false;
-      conv.buffer = impulse(ctx, rng, room);
+      // (Making the room and handing it to the convolver are each a piece of work: a breath between them.)
+      const imp = impulse(ctx, rng, room);
+      await pause();
+      conv.buffer = imp;
       await pause();
       verb.connect(send).connect(delay).connect(conv).connect(gain(LEVEL.verb * trim)).connect(mix);
       sends.push(new Steer(send.gain, 0.35, room === ROOMS.open ? 1 : 0));

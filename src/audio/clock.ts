@@ -70,8 +70,10 @@ export class ClockMap {
     const o = r.out;
     if (o && o.performanceTime && o.contextTime && o.performanceTime > 0 && o.contextTime > 0) {
       const said = o.contextTime - o.performanceTime / 1000;
-      // (Taken only when it is believable: behind the head, and not by more than half a second.)
-      if (said <= this.head + 0.005 && said > this.head - 0.5) ear = said;
+      // (Taken only when it is believable: behind the head, and not by more than half a second. And where the
+      // context reports more latency than the timestamp shows, the larger is believed: some browsers' timestamps
+      // show none at all, and a sound a few milliseconds early is a smaller fault than one that much late.)
+      if (said <= this.head + 0.005 && said > this.head - 0.5) ear = Math.min(said, ear);
     }
     // What is heard moves smoothly: one odd reading does not shift a scheduled sound.
     this.ear = !Number.isFinite(this.ear) || Math.abs(ear - this.ear) > 0.1 ? ear : this.ear + (ear - this.ear) * Math.min(1, dt / 0.4 + 0.02);
