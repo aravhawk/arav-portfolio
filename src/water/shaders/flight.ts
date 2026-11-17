@@ -1154,8 +1154,38 @@ const vec2 TRIB_M[${TRIBS.length}] = vec2[${TRIBS.length}](${TRIBS.map((t) => `v
 float lipY(float x) { return LIP_O.y + (LIP_O.x - x) * ${LIP.m.toFixed(3)}; }
 // Where the cliff turns its corner: west of here there is no snowfield, and a second face runs north from it.
 const float LIP_W = ${LIP.x1.toFixed(1)};
-/** How high the snowfield stands at a place on it: it eases down to the land at its back. */
-float fieldTop(vec2 q) { return LIP_H * (1.0 - smoothstep(${LIP.back.toFixed(1)}, ${(LIP.back + LIP.backRamp).toFixed(1)}, q.y)); }
+/**
+ * How far north of its straight line the cliff stands at x: it is bent in
+ * plan, in buttresses that come forward and bays that go back, and every
+ * stream has cut a bay of its own where it goes over.
+ */
+float lipBend(float x) {
+  float b = 40.0 * sin(x / 151.0 + 1.3) + 18.0 * sin(x / 63.0 + 0.4) + 8.0 * sin(x / 27.0 + 2.2);
+  for (int i = 0; i < ${TRIBS.length}; i++) {
+    float w = uTribW[i];
+    float d = (x - TRIB_M[i].x) * LIP_LEN / (w * 0.5 + 30.0);
+    // (At a stream's mouth the cliff is where the stream was carved to: the bay is cut back from there.)
+    b = mix(b, 0.0, exp(-d * d * 0.5) * step(0.5, w));
+  }
+  return b;
+}
+/** Where the cliff's second face (the one that runs north along the river that leaves) stands at y: bent as the first is. */
+float lipWest(float y) { return LIP_W + 24.0 * sin(y / 137.0 + 0.8) + 11.0 * sin(y / 53.0 + 2.6); }
+// How steeply the snowfield climbs toward its back where the eye's ray last came down on it.
+float gFieldG = 0.0;
+/**
+ * How high the snowfield stands at a place on it. From the cliff's lip it
+ * climbs in long slopes toward the ranges, each roll a little higher than
+ * the last, to a crest far back; beyond the crest it comes down to the land.
+ */
+float fieldTop(vec2 q) {
+  float behind = q.y - lipY(q.x);
+  float roll = textureLod(uGrain, q / 3100.0 + 0.23, 0.0).g;
+  float climb = smoothstep(60.0, 1250.0, behind);
+  float up = 1.0 + climb * (0.55 + 0.7 * roll) + 0.1 * sin(behind / 150.0 + 4.0 * roll) * smoothstep(120.0, 420.0, behind);
+  float back = 1.0 - smoothstep(${(LIP.back + 80).toFixed(1)}, ${(LIP.back + 80 + 3 * LIP.backRamp).toFixed(1)}, q.y + 260.0 * (roll - 0.5));
+  return LIP_H * up * back;
+}
 /** 1 while the confluence is near enough to be seen. */
 bool confNear() { return uCamPos.y > ${(CONF_Y - 3300).toFixed(1)} && uCamPos.y < ${(CONF_Y + 1500).toFixed(1)}; }
 /**
@@ -1163,14 +1193,17 @@ bool confNear() { return uCamPos.y > ${(CONF_Y - 3300).toFixed(1)} && uCamPos.y 
  * height where the ray comes down on it, nothing anywhere else.
  */
 float confLift(vec3 dir) {
+  gFieldG = 0.0;
   if (!confNear()) return 0.0;
   float h = LIP_H;
   vec2 q = vec2(0.0);
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 4; i++) {
     q = uCamPos.xy + dir.xy * ((uCamPos.z - h) / -dir.z);
     h = fieldTop(q);
   }
-  return q.y > lipY(q.x) && q.x > LIP_W ? h : 0.0;
+  if (q.y < lipY(q.x) + lipBend(q.x) || q.x < lipWest(q.y)) return 0.0;
+  gFieldG = (fieldTop(q + vec2(0.0, 14.0)) - h) / 14.0;
+  return h;
 }
 /** The ice of a cliff's face. f: 0 at its lip, 1 at the water. along: a measure along it. nP: the way it faces, in plan. */
 vec3 cliffIce(float f, float along, float tall, float px, vec2 nP) {
@@ -1187,7 +1220,7 @@ vec3 cliffIce(float f, float along, float tall, float px, vec2 nP) {
   float lobes = textureLod(uGrain, vec2(along / 1500.0, 0.61), 0.0).g;
   float hang = (9.0 + 15.0 * smoothstep(0.3, 0.75, lobes) + 4.0 * flute2) / tall;
   ice *= 1.0 - 0.32 * (1.0 - smoothstep(0.0, 0.09, f - hang)) * step(hang, f);
-  vec3 nC = normalize(vec3(nP + vec2(-nP.y, nP.x) * ((flute2 - 0.5) * 0.5 + (butt - 0.5) * 2.4), 0.22));
+  vec3 nC = normalize(vec3(nP + vec2(-nP.y, nP.x) * ((flute2 - 0.5) * 0.5 + (butt - 0.5) * 0.9), 0.22));
   // (A face of ice is lit through as well as on: turned from the sun it still holds the sky's light.)
   vec3 c = ice * (lightOn(nC, 1.0) * 0.62 + S.amb * 0.55);
   vec3 snow = mix(vec3(0.93, 0.94, 0.96), vec3(0.74, 0.8, 0.9), uNight) * (S.key * mix(0.24, max(keyDir().z, 0.05), uNight) + (S.amb * 0.8 + uAurora * 0.035) * 0.8);
@@ -1207,15 +1240,16 @@ vec3 confAir(vec3 c, vec3 dir, float t) {
 /** The cliff's second face: from the corner north along the river that leaves, looking west. */
 vec3 confWest(vec3 col, vec3 dir, float landAt0) {
   // (It is seen only from the west of it.)
-  if (dir.x < 1e-4 || uCamPos.x > LIP_W) return col;
+  if (dir.x < 1e-4 || uCamPos.x > LIP_W - 40.0) return col;
   float tc = (LIP_W - uCamPos.x) / dir.x;
   if (tc <= 0.0) return col;
+  tc = (lipWest(uCamPos.y + dir.y * tc) - uCamPos.x) / dir.x;
   vec3 h = uCamPos + dir * tc;
-  if (h.y < lipY(LIP_W)) return col;
+  if (h.y < lipY(h.x) + lipBend(h.x)) return col;
   float top = fieldTop(h.xy);
   float px = max(tc * uPxAng, 0.05);
   if (top < 1.0 || h.z > top + px || h.z < -FREEBOARD) return col;
-  float aC = (1.0 - smoothstep(top - px, top + px, h.z)) * smoothstep(0.0, 2.0 * px, h.y - lipY(LIP_W));
+  float aC = (1.0 - smoothstep(top - px, top + px, h.z)) * smoothstep(0.0, 2.0 * px, h.y - lipY(h.x) - lipBend(h.x));
   if (h.z < 0.0) aC *= 1.0 - landAt0;
   if (aC <= 0.0) return col;
   vec3 c = cliffIce((top - h.z) / (top + FREEBOARD), h.y + 400.0, top + FREEBOARD, px, vec2(-1.0, 0.0));
@@ -1223,9 +1257,11 @@ vec3 confWest(vec3 col, vec3 dir, float landAt0) {
 }
 /**
  * The cliff and what comes over it. Glacier ice under a cornice of snow,
- * fluted, blue toward the water; and where a stream reaches the lip, a
- * fall: glassy at the brink, then white strands that open as they drop,
- * and mist standing at the foot. Each fall is as wide as its stream.
+ * fluted, blue toward the water, standing in buttresses and bays with a
+ * ragged crest; and where a stream reaches the lip, a fall: glassy at the
+ * brink, then white strands that open as they drop, and mist standing at
+ * the foot. Each fall is as wide as its stream; a great one leaves the lip
+ * with way on it and comes down clear of the ice, a dark gap behind it.
  * landAt0: how much of this pixel's ground at the land's level is land (the ledge at the cliff's foot stands in front of it).
  */
 vec3 confCliff(vec3 col, vec3 dir, float landAt0) {
@@ -1233,48 +1269,73 @@ vec3 confCliff(vec3 col, vec3 dir, float landAt0) {
   col = confWest(col, dir, landAt0);
   float den = dot(dir.xy, LIP_N);
   if (den > -1e-4) return col;
-  float tc = dot(LIP_O - uCamPos.xy, LIP_N) / den;
-  if (tc <= 0.0) return col;
+  float t0 = dot(LIP_O - uCamPos.xy, LIP_N) / den;
+  if (t0 <= 0.0) return col;
+  // The face is bent in plan: the ray is met where the bend stands at the place it reaches (found in two steps).
+  float tc = t0;
+  for (int i = 0; i < 2; i++) tc = t0 - lipBend(uCamPos.x + dir.x * tc) / LIP_LEN / den;
   vec3 h = uCamPos + dir * tc;
-  if (h.x < LIP_W) return col;
+  if (h.x < lipWest(h.y)) return col;
   float px = max(tc * uPxAng, 0.05);
-  if (LIP_H < 1.0 || h.z > LIP_H + 22.0 || h.z < -FREEBOARD) return col;
-  // Snow is banked along the lip in drifts of its own height: the cliff's crest is not a ruled line.
-  // (Not where a stream goes over: there the lip is cut down to the stream.)
-  float berm = 0.18 * LIP_H * smoothstep(0.3, 0.8, textureLod(uGrain, vec2(h.x / 2100.0 + 0.07, 0.43), 0.0).g) + 3.0 * textureLod(uGrain, vec2(h.x / 300.0, 0.91), 0.0).g;
+  float rise = LIP_H * 1.5;
+  if (LIP_H < 1.0 || h.z > rise || h.z < -FREEBOARD) return col;
+  // The crest is ragged: snow banked along the lip in drifts of its own height, and blocks of the ice standing
+  // proud between clefts. (Not where a stream goes over: there the lip is cut down to the stream.)
+  float berm = LIP_H * (0.1 * n1(h.x / 210.0 + 2.0) + 0.07 * n1(h.x / 61.0 + 7.0) + 0.035 * n1(h.x / 17.0)) + 2.0;
   for (int i = 0; i < ${TRIBS.length}; i++) {
     float w = uTribW[i];
     if (w > 0.0) berm *= smoothstep(w * 0.5 + 2.0, w * 0.5 + 34.0, abs(h.x - TRIB_M[i].x) * LIP_LEN);
   }
   float top = LIP_H + berm;
-  if (h.z > top + px) return col;
-  float aC = (1.0 - smoothstep(top - px, top + px, h.z)) * smoothstep(0.0, 2.0 * px, h.x - LIP_W);
+  float aC = (1.0 - smoothstep(top - px, top + px, h.z)) * smoothstep(0.0, 2.0 * px, h.x - lipWest(h.y));
   if (h.z < 0.0) aC *= 1.0 - landAt0;
-  if (aC <= 0.0) return col;
   float tall = top + FREEBOARD;
   float f = (top - h.z) / tall;
   float along = h.x * LIP_LEN;
-  vec3 c = cliffIce(f, along, tall, px, LIP_N);
+  // (The way the face looks, in plan: turned by the bend.)
+  float turnB = (lipBend(h.x + 4.0) - lipBend(h.x - 4.0)) / (8.0 * LIP_LEN);
+  vec2 nP = normalize(LIP_N + vec2(1.0, ${(-LIP.m).toFixed(3)}) * turnB / LIP_LEN);
+  vec3 c = aC > 0.0 ? cliffIce(f, along, tall, px, nP) : col;
+  // (A bay holds less of the sky than a buttress's nose, and of a buttress's two flanks one is turned to the brighter half of it.)
+  float bay = smoothstep(-30.0, 46.0, lipBend(h.x));
+  c *= (1.0 - 0.34 * bay) * (1.0 + 0.42 * clamp(turnB * sign(keyDir().x + 1e-4), -0.7, 0.7)) * (0.84 + 0.3 * smoothstep(0.75, 0.0, f) * (1.0 - bay));
 
   // The falls.
   float zs = LIP_H - FREEBOARD;
   vec3 white = mix(vec3(0.95, 0.98, 1.0) * (S.amb * 1.2 + S.key * 0.3), vec3(0.4, 0.56, 0.6) * 0.75 + uAurora * 0.55, uNight);
   vec3 glass = mix(vec3(0.2, 0.56, 0.66) * (S.amb * 1.1 + S.key * 0.2), vec3(0.02, 0.09, 0.1) + uAurora * 0.12, uNight);
   float mist = 0.0;
+  float aAll = aC;
   for (int i = 0; i < ${TRIBS.length}; i++) {
     float w = uTribW[i];
     if (w <= 0.0) continue;
-    float d = (h.x - TRIB_M[i].x) * LIP_LEN;
+    float fi = float(i);
+    // A great fall stands off the ice: the further it has dropped, the further out. The ray meets its sheet in front of the face.
+    float way = clamp((w - 50.0) / 130.0, 0.0, 1.0);
+    vec3 hf = h;
+    float tf = tc;
+    if (way > 0.0) {
+      float off = 0.0;
+      for (int k = 0; k < 2; k++) {
+        tf = tc + off / den;
+        hf = uCamPos + dir * tf;
+        off = way * (5.0 + 40.0 * sqrt(clamp((zs - hf.z) / (zs + FREEBOARD), 0.0, 1.0)));
+      }
+    }
+    float d = (hf.x - TRIB_M[i].x) * LIP_LEN;
     float reach = w * 0.5 + 70.0;
     if (abs(d) > reach) continue;
-    float fi = float(i);
-    if (h.z > zs) {
+    if (hf.z > zs) {
       // The stream's own water in its notch, sliding to the brink.
-      float aN = 1.0 - smoothstep(w * 0.5 - px, w * 0.5 + px, abs(d));
-      float rush = textureLod(uGrain, vec2(d / 240.0 + fi * 0.31, (h.z - zs) / 90.0 + uTime * 0.12 + fi), 0.0).g;
-      c = mix(c, mix(glass, white, smoothstep(0.5, 0.85, rush) * 0.45 + 0.35 * smoothstep(8.0, 0.0, h.z - zs)), aN);
-    } else {
-      float v = (zs - h.z) / (zs + FREEBOARD);
+      float aN = (1.0 - smoothstep(w * 0.5 - px, w * 0.5 + px, abs(d))) * (1.0 - smoothstep(top - px, top + px, hf.z));
+      float rush = textureLod(uGrain, vec2(d / 240.0 + fi * 0.31, (hf.z - zs) / 90.0 + uTime * 0.12 + fi), 0.0).g;
+      c = mix(c, mix(glass, white, smoothstep(0.5, 0.85, rush) * 0.45 + 0.35 * smoothstep(8.0, 0.0, hf.z - zs)), aN);
+      aAll = max(aAll, aN);
+    } else if (hf.z > -FREEBOARD) {
+      float v = (zs - hf.z) / (zs + FREEBOARD);
+      // (Behind a fall that stands off it the ice is in the fall's shade: a dark gap, seen past the sheet's edge and between its strands.)
+      float dC = (h.x - TRIB_M[i].x) * LIP_LEN;
+      c *= 1.0 - 0.66 * way * (1.0 - smoothstep(w * 0.5 - 6.0, w * 0.5 + 14.0 + 44.0 * v, abs(dC))) * smoothstep(zs + 6.0, zs - 16.0, h.z) * step(1e-4, aC);
       // (It quickens as it drops: its strands are drawn longer the further down.)
       float drop = v * (0.55 + 0.45 * v);
       float st1 = textureLod(uGrain, vec2(d / 52.0 + fi * 0.37, drop * 0.3 - uTime * 0.16), 0.0).g;
@@ -1288,18 +1349,25 @@ vec3 confCliff(vec3 col, vec3 dir, float landAt0) {
       float body = clamp(0.5 + w / 150.0, 0.0, 1.0);
       aF *= mix(0.45 + 0.55 * smoothstep(0.3, 0.62, strand), 1.0, body * 0.8) * (0.35 + 0.65 * smoothstep(0.0, 0.07, v));
       vec3 fall = mix(mix(vec3(0.46, 0.7, 0.82), vec3(0.16, 0.3, 0.36), uNight) * (S.amb * 1.1 + S.key * 0.16 + uAurora * 0.1), white, smoothstep(0.34, 0.66, strand) * (0.45 + 0.55 * smoothstep(0.0, 0.25, v)));
+      // (A sheet that stands clear is round: its middle is lit, its two edges turn away into shade.)
+      fall *= 1.0 - 0.28 * way * smoothstep(0.45, 1.0, abs(d) / half_);
       // (The brink: the water bends over it, glassy.)
       fall = mix(glass * 1.3, fall, smoothstep(0.0, 0.1, v));
       c = mix(c, fall, aF);
+      aAll = max(aAll, aF);
     }
-    // Mist where it lands: it stands a little way up the cliff and drifts.
-    float up = (h.z + FREEBOARD) / (16.0 + 0.16 * w);
-    float lat = d / (w * 0.5 + 26.0);
-    mist += exp(-lat * lat) * exp(-up) * (0.5 + 0.004 * w) * (0.7 + 0.5 * textureLod(uGrain, vec2(d / 170.0 + uTime * 0.02, up * 0.2 - uTime * 0.03) + fi * 0.2, 0.0).g);
+    // Mist where it lands: it stands up the cliff, higher under a greater fall, billows and drifts.
+    float up = (hf.z + FREEBOARD) / (18.0 + 0.3 * w);
+    float lat = d / (w * 0.5 + 30.0);
+    float puff = textureLod(uGrain, vec2(d / 170.0 + uTime * 0.02, up * 0.2 - uTime * 0.03) + fi * 0.2, 0.0).g;
+    float m = exp(-lat * lat) * exp(-up * (0.7 + 0.9 * puff)) * (0.5 + 0.009 * w) * (0.7 + 0.5 * puff) * step(-FREEBOARD, hf.z);
+    mist += m;
+    aAll = max(aAll, min(m, 0.85));
   }
+  if (aAll <= 0.0) return col;
   c = mix(c, white * 0.96, clamp(mist, 0.0, 0.85));
   // The same air as the ground it stands on.
-  return mix(col, confAir(c, dir, tc), aC);
+  return mix(col, confAir(c, dir, tc), aAll);
 }
 /**
  * The river along the cliff's foot. Each stream's paler meltwater keeps to
@@ -1330,8 +1398,8 @@ vec3 confRiver(vec3 col, vec2 pw, float footL, float na, float nb, float shade) 
       float fresh = exp(-age / (420.0 + 3.0 * w));
       float wob = 5.0 * sin(pw.x * 0.021 + float(i) * 2.1 + uTime * 0.5) * (1.0 - fresh * 0.5);
       float inB = smoothstep(inner - 1.5, inner + 3.0, out_ + wob) * (1.0 - smoothstep(a1 - 3.0, a1 + 1.5, out_ + wob));
-      milkK += inB * (0.3 + 0.6 * fresh) * (0.7 + 0.3 * cos(float(i) * 3.1416));
-      seam += (1.0 - smoothstep(0.0, 3.2 + 1.5 * footL, abs(out_ + wob - a1))) * (0.45 + 0.55 * fresh) * k;
+      milkK += inB * (0.42 + 0.58 * fresh) * (0.62 + 0.38 * cos(float(i) * 3.1416));
+      seam += (1.0 - smoothstep(0.0, 4.6 + 2.2 * footL, abs(out_ + wob - a1))) * (0.6 + 0.4 * fresh) * k;
       inner = a1;
     }
     // The boil at its foot: a fan of broken water, wider under a wider fall.
@@ -1341,8 +1409,8 @@ vec3 confRiver(vec3 col, vec2 pw, float footL, float na, float nb, float shade) 
   }
   // Streaks, long down the current, in the pale water.
   float streak = 0.55 + 0.45 * smoothstep(0.3, 0.7, textureLod(uDetail, vec2(pw.y / 70.0, (pw.x + uTime * uFlowSpeed * 0.7) / 900.0), lodFor(footL, 70.0, 512.0)).r);
-  col = mix(col, milk, clamp(milkK, 0.0, 1.0) * streak * 0.62 * far);
-  col = mix(col, white, clamp(seam, 0.0, 1.0) * (0.6 + 0.4 * na) * far * (1.0 - 0.5 * shade));
+  col = mix(col, milk, clamp(milkK, 0.0, 1.0) * streak * 0.8 * far);
+  col = mix(col, white, clamp(seam, 0.0, 1.0) * (0.7 + 0.3 * na) * far * (1.0 - 0.4 * shade));
   float churn = smoothstep(0.26, 0.6, mix(na, nb, 0.5) + 0.5 * clamp(boil, 0.0, 1.0) - 0.1);
   col = mix(col, white, clamp(boil, 0.0, 1.0) * churn * 0.95);
   return col;

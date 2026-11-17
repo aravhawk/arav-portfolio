@@ -105,6 +105,7 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
   // phone's path after the hero: its copy sits at the foot, where that
   // path keeps a bank.
   const upright = aspect < 0.9;
+  const squat = 200 * Math.min(1, Math.max(0, (aspect - 0.465) / 0.035));
   const wideFov = upright ? 62 : 50;
   const slabAim: V3 = [SLAB.x, SLAB.y, SLAB.h * 0.5];
   const keys: Key[] = upright
@@ -123,8 +124,9 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         { s: s2 - 0.1, pos: [900, 4900 + DY, 330], aim: [1250, 5900 + DY, 0], fov: 54 },
         { s: s2 + 0.4, pos: [1380, 5700 + Y, 330], aim: [1560, 6300 + Y, 0], fov: 56 },
         // The confluence: streams above, the river across the middle, the bank at the foot.
-        { s: s2 + 1.25, pos: [1700, 5760 + Y, 590], aim: [1730, 7090 + Y, 0], fov: 60 },
-        { s: s3 - 0.6, pos: [1704, 5810 + Y, 578], aim: [1732, 7120 + Y, 0], fov: 60 },
+        // (A squarer upright screen has less height for the bank: it looks down a little more, so the words keep clear of the river.)
+        { s: s2 + 1.25, pos: [1700, 5760 + Y, 590], aim: [1730, 7090 + Y - squat, 0], fov: 60 },
+        { s: s3 - 0.6, pos: [1704, 5810 + Y, 578], aim: [1732, 7120 + Y - squat, 0], fov: 60 },
         { s: s3 + 0.3, pos: [900, 7700 + Y, 380], aim: [1100, 8500 + Y, 0], fov: 58 },
         // The rock pool, looked down into from over its near bank: the plates across the frame, the bank at the foot.
         { s: s3 + 1.15, ...benchPose(aspect, 0) },

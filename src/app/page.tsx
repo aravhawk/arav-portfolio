@@ -138,12 +138,12 @@ export default async function Home() {
               {repos.map((r, i) => (
                 <Callout
                   key={r.repo}
-                  at={[TRIBS[i].head.x, TRIBS[i].head.y, LIP.h]}
+                  at={[TRIBS[i].head.x, TRIBS[i].head.y, LIP.h * 1.85]}
                   href={r.url}
                   label={`${r.repo}: ${r.count} merged pull request${r.count === 1 ? '' : 's'}`}
                   from={OUT + 1.2}
                   to={BENCH - 1.05}
-                  lift={i % 2 ? 78 : 44}
+                  lift={-22}
                 >
                   {r.repo.split('/')[1]}
                 </Callout>
