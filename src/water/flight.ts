@@ -36,6 +36,8 @@ const CELL = [4, 5, 6, 8];
 const SPAN = 2300;
 /** How thick the lake's sheet stands above the water, world units. */
 const ICE_H = 16;
+/** The melt at which the last of the name's blades goes under (see bindIce: they fade from 0.5 to 0.57). */
+const NAME_GONE = 0.555;
 
 /**
  * The ribbon of light at the ending. `at`: where its foot stands in the
@@ -510,6 +512,25 @@ export class FlightEngine extends WaterEngine {
    */
   nameStand: { yf: [number, number]; base: [number, number]; split: number; cap: number; depth: number } | null = null;
 
+  /** The rings the last blades leave, each with its own moment. */
+  private ringQ: { at: number; x: number; y: number }[] = [];
+  private nameRings() {
+    const st = this.nameStand;
+    const r = this.iceRect;
+    if (!st || r.w <= 0) return;
+    const two = st.split > -5e3;
+    const per = two ? 4 : 8;
+    this.ringQ.length = 0;
+    for (let row = 0; row < (two ? 2 : 1); row++) {
+      for (let i = 0; i < per; i++) {
+        // (Across the letters' own width: the raster has room round them.)
+        const x = r.x + r.w * (0.14 + (0.72 * (i + 0.5)) / per);
+        this.ringQ.push({ at: this.time + 0.05 + 0.11 * ((i * 5 + row * 3) % per) + 0.04 * row, x, y: st.yf[row] + st.depth * 0.5 });
+      }
+    }
+    this.ringQ.sort((a, b) => a.at - b.at);
+  }
+
   protected bindIce(prog: Parameters<WaterEngine['bindIce']>[0], ice: Parameters<WaterEngine['bindIce']>[1], sdfUnit: number, snowUnit: number) {
     super.bindIce(prog, ice, sdfUnit, snowUnit);
     // (The cut is a hair wider than the drawn letter: its edge is blended over a pixel, and the blend belongs to the ice.)
@@ -521,6 +542,7 @@ export class FlightEngine extends WaterEngine {
     if (!prog.u.uNameG) return;
     if (!st || !this.iceMeta || ice.rect[2] <= 0) {
       gl.uniform4f(prog.u.uNameG, 0, 0, -1e4, 0);
+      if (prog.u.uNameS) gl.uniform1f(prog.u.uNameS, 0);
       return;
     }
     // The blocks' melt, as the sheet's is: every number a function of the melt alone, so it reverses exactly.
@@ -532,7 +554,8 @@ export class FlightEngine extends WaterEngine {
     const back = -1.4 + half * 0.4 * smooth(0.1, 0.52, m);
     // (They keep most of their depth, and so their colour, until dark water has opened behind them; then they thin fast.)
     const depth = st.depth * (1 - 0.3 * smooth(0.12, 0.4, m) - 0.58 * smooth(0.4, 0.55, m));
-    const sink = 22 * smooth(0.14, 0.46, m) + 0.07 * st.cap * smooth(0.4, 0.57, m);
+    // (They go down steadily, a little with every step of the scroll: a sixth of a capital's height by the end. More, and the foot of the J would be lost.)
+    const sink = 0.16 * st.cap * Math.min(1, Math.max(0, (m - 0.12) / 0.44));
     const left = 1 - smooth(0.5, 0.57, m);
     gl.uniform4f(prog.u.uNameG, st.yf[0], st.yf[1], st.split, 1);
     gl.uniform4f(prog.u.uNameB, st.base[0], st.base[1], st.cap, st.depth);
@@ -548,6 +571,8 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(prog.u.uIceA, (shade ? hole : pond) * (1 - k) + old * k, ice.a[1], ice.a[2], ice.a[3]);
     gl.uniform4f(prog.u.uIceC, ice.c[0], ice.c[1], smooth(0.36, 0.57, m), ice.c[3]);
     if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (1 - k), smooth(0, 0.14, m), smooth(0.12, 0.3, m), smooth(0.41, 0.49, m));
+    // The swept field they stand on is the thinnest ice: it goes to open water from under them outward, and all of it is gone soon after they are.
+    if (prog.u.uNameS) gl.uniform1f(prog.u.uNameS, m < 0.14 ? 0 : 0.7 + 1.36 * Math.min(1, (m - 0.14) / 0.46));
   }
 
   protected simCell() {
@@ -661,6 +686,8 @@ export class FlightEngine extends WaterEngine {
     const m = this.iceTex ? Math.min(1, Math.max(0, melt)) : 0;
     const rate = Math.abs(m - this.melt) / Math.max(dt, 1e-3);
     this.meltRate += (Math.min(rate, 1.1) - this.meltRate) * (1 - Math.exp(-dt * 6));
+    // The last of the letters goes under: a ring leaves where each blade stood.
+    if (this.nameStand && !this.still && this.melt < NAME_GONE && m >= NAME_GONE && this.melt > NAME_GONE - 0.08) this.nameRings();
     this.melt = m;
     const want = this.iceTex && !this.still && m > 0.12 && m < ICE_GONE ? Math.min(1, this.meltRate * 2.4) : 0;
     this.meltAct += (want - this.meltAct) * (1 - Math.exp(-dt * (want > this.meltAct ? 9 : 4.2)));
@@ -702,6 +729,10 @@ export class FlightEngine extends WaterEngine {
       return;
     }
     this.time += dt;
+    while (this.ringQ.length && this.ringQ[0].at <= this.time) {
+      const r = this.ringQ.shift()!;
+      this.splash(r.x, r.y, 24, 0.85);
+    }
     this.simulate(dt, top);
     this.draw(cam, aspect, at);
     this.dirty = false;
