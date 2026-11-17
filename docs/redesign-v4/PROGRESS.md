@@ -556,4 +556,20 @@ effects, as igloo.inc and other award sites have.
   round 6 on were written from memory and had drifted by up to six
   hours. They are now corrected from the commit timestamps (central
   time). From here each entry's time is read from the clock.
+- 2026-11-16 18:42 CT. K9a done, reviewed and pushed (`f23dbbd`, five signed
+  commits): world-anchored callouts on leader lines; station 2, the
+  Upstream confluence of seven streams with the live figure; station 3,
+  Kilo Bench's results on the bed of a clear pool; station 4, Agent
+  Bridge's two lit shards across a still tarn with a crossing pulse;
+  phone paths; legibility passing at four widths in both themes; three
+  perf profiles pass on tier 0; contended still open (6 percent).
+  Kilo's own shortfalls, kept for the polish pass after the journey is
+  whole: the falls are short white bars; plumes merge; two captions off
+  frame on phones; the results picture's own text is small; no stones on
+  the pool's bed; shards cast no shadow; fewer capture rounds than asked;
+  no 2x frames, no motion strips, no WebKit or Firefox captures.
+- 2026-11-16 18:42 CT. K9b started (`.tools/briefs/K9b-stations-5-8.md`):
+  Open models as four columns of ice sized by pulls, cc-switch as a dam
+  with three sluices the switch really opens, TensorPoW as a lattice of
+  ice, RydAR as a canyon the camera banks through.
 
