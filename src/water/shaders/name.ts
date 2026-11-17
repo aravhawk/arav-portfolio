@@ -66,10 +66,12 @@ float nameSd(int i, float x, float z, out vec2 g) {
 /**
  * A ray against one row. Returns how much of the pixel the row covers.
  * tH: where the ray meets it; g, sd, grad: the outline there; front: 1 on a
- * sawn front face; thick: how much ice the ray then crosses.
+ * sawn front face; thick: how much ice the ray then crosses; sBack: the
+ * outline's distance where the ray reaches the row's back (the far side of
+ * the block, as it is seen through the block).
  */
-float nameHit(vec3 ro, vec3 rd, int i, out float tH, out vec2 g, out float sd, out vec2 grad, out float front, out float thick) {
-  tH = 0.0; g = vec2(0.0); sd = 1e3; grad = vec2(0.0, 1.0); front = 0.0; thick = 0.0;
+float nameHit(vec3 ro, vec3 rd, int i, out float tH, out vec2 g, out float sd, out vec2 grad, out float front, out float thick, out float sBack) {
+  tH = 0.0; g = vec2(0.0); sd = 1e3; grad = vec2(0.0, 1.0); front = 0.0; thick = 0.0; sBack = -1e3;
   float yf = i == 0 ? uNameG.x : uNameG.y;
   float y0 = yf + (uNameB.w - uNameM.y) * 0.5;
   vec3 lo = vec3(gNmC.x - 0.5 * uIce.z, y0, -FREEBOARD);
@@ -107,6 +109,7 @@ float nameHit(vec3 ro, vec3 rd, int i, out float tH, out vec2 g, out float sd, o
   float sI = nameSd(i, pI.x, pI.z, gk);
   vec3 pB = ro + rd * tB;
   float sB = nameSd(i, pB.x, pB.z, gk);
+  sBack = sB;
   thick = (tB - tH) * (sB < 0.0 ? 1.0 : clamp(-min(sI, -0.01) / (sB - min(sI, -0.01)), 0.06, 1.0));
   // (An edge that the ray only grazes covers part of the pixel; one it goes in by covers it all.)
   return 1.0 - smoothstep(-aa, aa, min(best, hit ? min(sI, sB) : best));
@@ -120,7 +123,7 @@ vec3 nameLake() {
 }
 
 /** The ice of a block where the eye's ray enters it. p: where; i: which row; the rest as nameHit gave them. */
-vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, float front, float thick) {
+vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, float front, float thick, float sBack) {
   vec3 L = keyDir();
   float px = max(t * uPxAng, 0.02);
   float base = i == 0 ? uNameB.x : uNameB.y;
@@ -139,7 +142,8 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
   vec4 g1 = textureLod(uGrain, q / 52.0 + 0.11, lodFor(px, 52.0, 256.0));
   // A sawn face is flat, with the slow swells melt has left in it; where meltwater runs down it the water ripples it.
   vec2 bump = (g0.gb - 0.5) * 0.12 + (g1.rg - 0.5) * 0.05;
-  float wet = uNameP.y;
+  // (Even whole, the faces the low sun warms sweat a little.)
+  float wet = 0.1 + 0.9 * uNameP.y;
   float lane = textureLod(uGrain, vec2(q.x / 64.0 + 0.2, 0.37 + q.y / 3000.0), 0.0).g;
   float film = wet * smoothstep(0.5, 0.68, lane) * (1.0 - top);
   if (film > 0.0) {
@@ -171,21 +175,30 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
   vec3 litN = S.amb * 6.0 + uAurora * 0.12 + vec3(0.09, 0.06, 0.04) * uNight;
   vec3 lit = mix(litD, litN, uNight);
   float inBy = 0.42 * pow(hK, 3.0) + 0.9 * exp(-max(edge, 0.0) / 2.6) * toSun * front;
-  vec3 deepD = (vec3(0.0015, 0.0105, 0.05) + vec3(0.012, 0.08, 0.18) * inBy) * litD * (front > 0.5 ? 1.0 : mix(0.6, 1.5, toSun));
+  vec3 deepD = (vec3(0.0013, 0.0092, 0.045) + vec3(0.011, 0.072, 0.165) * inBy) * litD * (front > 0.5 ? 1.0 : mix(0.5, 1.7, toSun) * (0.7 + 0.5 * hK));
   // Before dawn nothing lights the lake but the sky and the aurora, and the ice gathers that light as the dark, clear
   // sheet round it cannot: its trapped air holds it, most under the snow of the tops, least at the foot, and where
   // the ice is clear of air the dark lake shows through.
-  float clearN = smoothstep(0.62, 0.4, textureLod(uGrain, q / vec2(520.0, 900.0) + 0.7, 0.0).g * 0.7 + g0.r * 0.3 + 0.22 * hK);
+  float clearN = smoothstep(0.6, 0.36, textureLod(uGrain, q / vec2(1100.0, 1700.0) + 0.7, 0.0).g * 0.85 + g0.r * 0.15 + 0.3 * hK);
   vec3 deepN = mix(vec3(0.44, 0.62, 0.76), vec3(1.9, 1.92, 1.95), pow(hK, 1.2)) * litN * (1.0 - 0.6 * clearN) * (front > 0.5 ? 1.0 : 0.5);
   vec3 col = bey * tr + mix(deepD, deepN, uNight) * (1.0 - tr.g);
   // Strata of trapped air: bands that run through every letter alike, a little out of level, seen at their own depth.
   vec2 par = vec2(dot(ri, tu), dot(ri, tv)) / max(-dot(ri, n), 0.35);
   float heart = dK / (dK + 0.8);
   vec2 qa = q + par * min(thick * 0.5, 30.0);
-  float band = textureLod(uGrain, vec2(qa.x / 760.0 + 0.2, qa.y / 44.0 + qa.x / 1300.0), lodFor(px, 44.0, 256.0)).b;
-  float air = heart * smoothstep(0.5, 0.84, band * 0.72 + g0.r * 0.42);
+  float band = textureLod(uGrain, vec2(qa.x / 1900.0 + 0.2, qa.y / 150.0 + qa.x / 1300.0), 0.0).b;
+  float air = heart * smoothstep(0.46, 0.8, band * 0.8 + g0.r * 0.34);
   vec3 milk = mix(vec3(0.04, 0.16, 0.38) * litD, vec3(1.3, 1.36, 1.4) * litN, uNight);
-  col = mix(col, milk, 0.3 * air);
+  col = mix(col, milk, mix(0.16, 0.3, uNight) * air);
+  // The far side of the block, seen through it: where the eye's ray leaves by an edge before it reaches the back the
+  // ice is thinner and the lake's light comes through, and the back face's own outline shows as a fine bright line
+  // inside the front's. That second outline is what says the block is clear, and solid.
+  if (front > 0.5) {
+    float thin = smoothstep(-0.5, 5.0, sBack) * (1.0 - melt);
+    float back = (1.0 - smoothstep(0.0, 0.9 + px, abs(sBack))) * (1.0 - melt);
+    col += mix(vec3(0.004, 0.026, 0.07) * litD, -col * 0.35, uNight) * thin;
+    col += mix(vec3(0.5, 0.8, 1.0) * (S.key * 0.024 + S.amb * 0.16), vec3(0.9, 1.0, 1.05) * litN * 0.35, uNight) * back;
+  }
   // Fracture planes inside, at three depths: each set runs its own way, in short lengths. A plane is a hairline
   // where it is seen edge on and a veil on one side of that line, where it turns the light back to the eye.
   float near = 1.0 - smoothstep(1.4, 4.5, px);
@@ -206,7 +219,7 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
       veil += (hair * 0.9 + sheet * 0.3) * cut * exp(-fk * 0.45);
     }
     veil *= near * (0.45 + 0.55 * heart);
-    col += mix(vec3(0.72, 0.9, 1.0) * (S.key * 0.045 + S.amb * 0.28), vec3(0.7, 1.0, 0.95) * (litN * 0.6 + uAurora * 0.12), uNight) * veil;
+    col += mix(vec3(0.72, 0.9, 1.0) * (S.key * 0.038 + S.amb * 0.24), vec3(0.7, 1.0, 0.95) * (litN * 0.6 + uAurora * 0.12), uNight) * veil;
     // Single bubbles, strung in the strata: only from close by.
     float bead = smoothstep(0.975, 1.0, textureLod(uGrain, qa / vec2(150.0, 110.0) + 0.43, 0.0).r) * smoothstep(0.45, 0.8, band) * (1.0 - smoothstep(0.35, 0.9, px));
     col += mix(vec3(0.8, 0.93, 1.0) * (S.key * 0.12 + S.amb * 0.5), litN * 0.8, uNight) * bead * heart;
@@ -215,7 +228,7 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
   vec3 rr = reflect(rd, nn);
   vec3 on = rr.z > 0.0 ? beyond(p, rr) : lake;
   // (A side is seen at a glancing angle and would be all mirror: it is rough-sawn, and keeps most of its own colour.)
-  col = mix(col, on, clamp(fres * (0.6 + 0.6 * film) * (front > 0.5 ? 1.0 : 0.3) + 0.05 * film, 0.0, 1.0));
+  col = mix(col, on, clamp(fres * (mix(0.34, 0.6, uNight) + 0.6 * film) * (front > 0.5 ? 1.0 : 0.12) + 0.03 * film * uNameP.y, 0.0, 1.0));
   col += S.band * pow(max(dot(rr, S.sun), 0.0), 200.0) * (0.4 + 1.6 * film) * (1.0 - uNight) * step(0.0, S.sun.z);
   // The edges. On a front the outline is the arris: by day the ones turned to the sun are lit through; before dawn
   // the upper ones only catch the sky, faintly, and nothing outlines a letter.
@@ -224,7 +237,7 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
   col += arC * ar * mix(0.1 + 0.9 * toSun * toSun, 0.7 * smoothstep(0.1, 0.8, gd.y), uNight);
   // Frost: rime on the sawn faces, more of it under the tops and toward the corners, less where meltwater has run.
   // (By day the faces are sawn smooth and dark: the rime is in soft patches. Before dawn it is the fine frost that holds the light.)
-  float rime = smoothstep(0.6, 0.92, g0.g * 0.62 + g1.b * mix(0.06, 0.3, uNight) + 0.3 * exp(-max(edge, 0.0) / 12.0) * smoothstep(0.2, 0.8, gd.y)) * (1.0 - 0.8 * film) * (1.0 - 0.7 * melt);
+  float rime = smoothstep(0.6, 0.92, g0.g * 0.62 + g1.b * mix(0.06, 0.16, uNight) + 0.3 * exp(-max(edge, 0.0) / 12.0) * smoothstep(0.2, 0.8, gd.y)) * (1.0 - 0.8 * film) * (1.0 - 0.7 * melt);
   col = mix(col, mix(vec3(0.3, 0.54, 0.8) * litD, vec3(1.1, 1.14, 1.18) * litN, uNight), rime * mix(0.18, 0.4, uNight) * (1.0 - top));
   // Snow: on the tops and ledges, drifted unevenly, with bare wet ice showing where it has melted through.
   if (top > 0.0) {
@@ -262,7 +275,8 @@ vec3 nameIce(vec3 col, vec3 dir, float tG, float onIce, float tWall) {
     vec2 grad;
     float front;
     float thick;
-    float cov = nameHit(uCamPos, dir, k, tH, g, sd, grad, front, thick);
+    float sBack;
+    float cov = nameHit(uCamPos, dir, k, tH, g, sd, grad, front, thick, sBack);
     if (cov <= 0.0) continue;
     vec3 p = uCamPos + dir * tH;
     // Below the sheet's top a block is seen only through an opening, and only if it stands nearer than the opening's far wall.
@@ -271,9 +285,9 @@ vec3 nameIce(vec3 col, vec3 dir, float tG, float onIce, float tWall) {
       if (p.z < -FREEBOARD + 0.5) cov = 0.0;
     }
     if (cov <= 0.0) continue;
-    vec3 c = nameLook(p, dir, tH, k, g, sd, grad, front, thick);
+    vec3 c = nameLook(p, dir, tH, k, g, sd, grad, front, thick, sBack);
     // (The blocks stand close under the eye and are kept clear of most of the lake's haze: they are the deepest blue in the frame.)
-    col = mix(col, mix(c, inAir(c, dir, tH), 0.1), cov * uNameM.w);
+    col = mix(col, mix(c, inAir(c, dir, tH), 0.04), cov * uNameM.w);
     gNmCov = max(gNmCov, cov * uNameM.w);
   }
   return col;
