@@ -13,7 +13,8 @@
  */
 
 import { onFrame } from '@/lib/frame';
-import { BedPainter, type Rect } from './bed';
+import { emit, pointerSignal } from '@/lib/signals';
+import { type BedData, BedPainter, type Rect } from './bed';
 import { WaterEngine } from './engine';
 import { SCENES, type Anchors } from './scenes';
 import { signedDistance } from './sdf';
@@ -128,6 +129,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
   let margin = 0;
   let docH = 0;
   let built = false;
+  let bed: BedData | null = null;
   let destroyed = false;
   let buildToken = 0;
   let pulses: Rect[] = [];
@@ -229,7 +231,8 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
 
     docH = nextDocH;
     pulses = nextPulses;
-    engine.setBed(painter.assemble(bedSd.sd, r.flow));
+    bed = painter.assemble(bedSd.sd, r.flow);
+    engine.setBed(bed);
     // (These pages have no frozen lake: the name in ice is the home page's, which has its own stage.)
     engine.lake = { y0: -1e6, y1: -1e6 };
     engine.setIce(null);
@@ -276,14 +279,21 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
   mqStill.addEventListener('change', onStill);
 
   // Pointer: a moving fine pointer drags a wake; a press makes one splash.
+  // (Published for whoever follows the picture: where the pointer is, and 30 when the bed under it is water, 0 when it is not.)
+  const wet = (e: PointerEvent) => (bed && (bed.sd[Math.floor((e.clientY + window.scrollY) / bed.div) * bed.w + Math.floor((e.clientX + window.scrollX) / bed.div)] ?? 1) < 0 ? 30 : 0);
   const onMove = (e: PointerEvent) => {
     if (e.pointerType === 'touch') return;
     engine.pointerMove(e.clientX + window.scrollX, e.clientY + window.scrollY);
+    pointerSignal(e.clientX / viewW, e.clientY / Math.max(1, viewH), wet(e));
   };
   const onDown = (e: PointerEvent) => {
     engine.splash(e.clientX + window.scrollX, e.clientY + window.scrollY, e.pointerType === 'touch' ? 24 : 20, 1.5);
+    emit('press', e.clientX / viewW, e.clientY / Math.max(1, viewH), wet(e));
   };
-  const onLeave = () => engine.pointerLeave();
+  const onLeave = () => {
+    engine.pointerLeave();
+    pointerSignal(0.5, 0.5, 0);
+  };
   window.addEventListener('pointermove', onMove, { passive: true });
   window.addEventListener('pointerdown', onDown, { passive: true });
   document.addEventListener('pointerleave', onLeave);
