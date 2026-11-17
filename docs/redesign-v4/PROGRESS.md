@@ -776,3 +776,16 @@ climbing, the name's melt, each station's water), and **critic panel
 9** on `3f0f3f7` (package at `~/.t3/portfolio-redesign-v4/critic/package9/`,
 58 images, same rubric; captures pin the engine's full shading, which
 the frame-rate task must make the real behaviour on an idle machine).
+
+### Critic panel 9: 7.1, 7.0, 7.3 (median 7.1), about 05:50
+
+Up from 6.8; not at the bar. Scores and shared findings are in
+`design-review.md` ("Panel 9"); reviews at
+`~/.t3/portfolio-redesign-v4/critic/review-9a.md`, `-9b.md`, `-9c.md`.
+A third round was started on what the three share, each helper in its
+own area, while the frame-rate task (P1) restructures the shader: the
+words' layer (overlaps in transit, titles crossing scene edges,
+captions), inner pages, the stations' materials (RydAR, Kilo Bench,
+cc-switch first), the melt, the night's snow, the delta and the
+ending's air. A final clean frame-rate measurement follows when
+nothing else is on the GPU.

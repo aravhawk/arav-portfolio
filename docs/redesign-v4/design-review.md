@@ -335,3 +335,44 @@ What all three found, and what was started on each the same hour:
 
 None found a banned thing: no particles round the cursor, no jelly, no
 effect over text, no invented content.
+
+## Panel 9: three fresh critics after the second passes (`3f0f3f7`)
+
+The same 58-image package and rubric, new critics. The captures pin
+the engine's full shading (the shared GPU would otherwise lean it).
+
+| | 9a | 9b | 9c |
+| --- | --- | --- | --- |
+| a. real flowing water, bold and central | 7.0 | 7.0 | 6.5 |
+| b. nothing covers or weakens copy | 7.0 | 7.0 | 7.5 |
+| c. nothing soft or low resolution | 6.5 | 6.5 | 6.5 |
+| d. typography | 7.5 | 7.5 | 7.5 |
+| e. the five-second read | 9.0 | 8.5 | 9.0 |
+| f. the ending against v2's | 7.5 | 8.0 | 7.5 |
+| g. light and dark both first class | 6.5 | 6.5 | 7.5 |
+| h. project pages | 8.0 | 8.0 | 8.0 |
+| i. phone | 7.0 | 6.5 | 7.5 |
+| j. craft against the references | 6.8 | 6.5 | 7.0 |
+| **Overall** | **7.1** | **7.0** | **7.3** |
+
+**Median 7.1** (panel 8: 6.8). Not at the bar. What moved: the ending
+(6.5 to 7.5 or 8.0), project pages (all three at 8.0), softness (5.5 to
+6.5 on the lowest seat), the name no longer the first finding ("legible
+and the right idea", though "opaque and plasticky beside igloo-2").
+
+What the three share now, worst first:
+
+| Finding | Seen by |
+| --- | --- |
+| RydAR is the weakest frame in both themes: smeared walls, flat grey torn shapes behind the heading at night, a murky picture | all three |
+| The melt: a hard-edged green patch round the name at night "like a compositing mask"; the letters erode into "a spindly, badly drawn face" instead of sinking and becoming water | all three |
+| Kilo Bench: boulders with pixelated, stretched textures; the results soft and warped in perspective ("7 .6"); the table cut by the screen edge on phones | all three |
+| cc-switch: the dry channels "TV static", the running chute "more milk than water"; at night "flat-shaded grey polygons" | all three |
+| Night snow: "flat slate blue with brush gouges", no relief | all three |
+| Captions truncated with an ellipsis, two different treatments by theme and by width | all three |
+| TensorPoW: the title runs onto the pool's rim and is out of scale; a brown hard-edged blob at top left at night | all three |
+| Words overlap mid-transition ("18,302" over "four open models"); titles cross scene edges | two |
+| A dead frame one scroll into the page (the melt) | two |
+| The ending: closer, but no haze or sparkle band, flat terraced ranges, a stepped tail on the ribbon, the two themes nearly the same picture | all three |
+| A red noisy smear on the far falls from Infiniview at night | one |
+| Inner pages: small body text against empty bands; the same backdrop behind every page; one post on the blog | all three |
