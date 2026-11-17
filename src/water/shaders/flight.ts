@@ -231,61 +231,79 @@ vec3 airAt(vec2 dxy) {
 bool gDull = false;
 // 0..1: how much of the sky's own detail this pixel sees (1 the sky itself, 0 a mirror's picture of it).
 float gSkyQ = 1.0;
+// The bearing of the ray the night sky is being asked about: worked out once, for the curtains and the stars.
+float gAz = 0.0;
 vec3 aurora(vec3 d) {
   float h = max(d.z, 0.0);
   if (h > 0.985) return vec3(0.0);
-  float az = atan(d.x, d.y);
+  float az = gAz;
   // (A mirror that has been asked to be lean, and the ice, see the curtains without their finest work.)
   float soft = gDull ? 1.0 : gWash;
   vec3 sum = vec3(0.0);
   for (int i = 0; i < 3; i++) {
-    // (Each curtain is only looked for where it can be.)
-    if (i == 0 ? h > 0.44 : (i == 1 ? (h < 0.1 || h > 0.93) : h < 0.3)) continue;
+    // (Each curtain is only looked for where it can be: no more than two of them stand on any line of sight.)
+    if (i == 0 ? h > 0.34 : (i == 1 ? (h < 0.09 || h > 0.75) : h < 0.34)) continue;
+    // (The curtain overhead is the faintest, and a mirror shows it only steeply under the eye, where water and ice
+    // are least a mirror: it is left to the sky itself.)
+    if (i == 2 && (gDull || gSkyQ <= 0.0)) break;
     float k = float(i) * 0.5;
     float a = az * (1.0 - 0.2 * k) + k * 3.8;
     // Its border: a slow fold, a quicker one, and a ripple that runs along it.
     float p1 = a * (1.9 + 0.8 * k) + 0.6 + 2.3 * k + uTime * 0.011;
-    float p2 = a * 5.3 - uTime * 0.017 + 4.0 * k;
-    float p3 = a * 14.0 - uTime * 0.21 + 1.7 * k;
     float amp = 0.03 + 0.05 * k;
-    float hem = (0.064 + 0.14 * k + 0.24 * k * k) + amp * sin(p1) + 0.02 * sin(p2) + 0.006 * (1.0 + k) * sin(p3);
-    float up = h - hem;
-    if (up < -0.02) continue;
+    float s1 = sin(p1);
+    float hem = (0.064 + 0.14 * k + 0.24 * k * k) + amp * s1;
     float tall = 0.085 + 0.2 * k;
+    // (Its rays' tips thin out before the next curtain's border.)
+    float top = i == 0 ? 1.0 - smoothstep(0.22, 0.34, h) : (i == 1 ? 1.0 - smoothstep(0.55, 0.75, h) : 1.0);
+    // Overhead the rays are seen from below, along their length: dimmer, and running together.
+    float gain = (0.34 - 0.12 * k) * (1.0 - 0.7 * smoothstep(0.55, 0.95, h)) * top;
+    float fr = 46.0 - 26.0 * k;
+    if (soft >= 1.0) {
+      // The curtain's broad light alone: its border, its bundles, its colour.
+      float upS = h - hem;
+      if (upS < -0.03) continue;
+      float bunS = n1(a * fr * 0.6 + uTime * 0.03 + 5.0 * k);
+      float tS = max(upS, 0.0) / tall;
+      vec3 tintS = mix(vec3(0.17, 0.95, 0.52), vec3(0.3, 0.3, 0.8), smoothstep(0.15, 1.6, tS));
+      sum += tintS * smoothstep(-0.03, 0.01, upS) * exp(-max(upS, 0.0) / (tall * (0.5 + 0.9 * bunS))) * (0.3 + 0.7 * bunS) * 0.62 * gain;
+      continue;
+    }
+    // (A mirror's picture of it keeps the slow fold and lets the border's small ripples go.)
+    if (gSkyQ > 0.0) hem += 0.02 * sin(a * 5.3 - uTime * 0.017 + 4.0 * k) + 0.006 * (1.0 + k) * sin(a * 14.0 - uTime * 0.21 + 1.7 * k);
+    float up = h - hem;
+    if (up < -0.07) continue;
     // Where it hangs at all: in lengths, with clear sky between them.
     float fold = n1(a * 3.1 + uTime * 0.02 + k * 14.0);
-    float reach = i == 0 ? smoothstep(0.2, 0.62, fold + 0.25 * sin(a * 0.9 + 1.0)) : smoothstep(0.3, 0.72, fold + 0.22 * sin(a * 0.7 + 2.0 + 3.0 * k));
+    float reach = i == 0 ? smoothstep(0.2, 0.62, fold + 0.25 * s1) : smoothstep(0.34, 0.74, fold - 0.22 * s1);
     if (reach <= 0.0) continue;
-    // Its rays: bundles, and the fine upright threads the bundles are made of.
-    float fr = 46.0 - 26.0 * k;
-    float bun = n1(a * fr + fold * 9.0 + uTime * 0.05);
-    float thr = 0.55;
-    if (soft < 1.0) {
-      float f2 = n1(a * fr * 2.9 - uTime * 0.08 + 3.0);
-      float f3 = n1(a * fr * 7.3 + uTime * 0.03 + 11.0);
-      thr = mix((0.3 + 0.7 * f2) * (0.66 + 0.34 * mix(0.5, f3, gSkyQ)), thr, soft);
-    }
+    // Its rays: bundles, and the fine upright threads the bundles are made of. (One read of the baked grain, along a
+    // slanting line so the pattern never comes round: its broad field is the bundles, its fine one the threads.)
+    vec4 rg = textureLod(uGrain, vec2(a * fr * 0.0625 + fold * 0.56 + uTime * 0.003, a * fr * 0.008 + k * 0.37 - uTime * 0.0011), 0.0);
+    float bun = smoothstep(0.4, 0.78, rg.g);
+    float thr = 0.2 + 0.8 * smoothstep(0.1, 0.52, rg.a);
+    // (Only the sky itself shows the finest threads: a mirror's picture of them would shimmer.)
+    thr *= gSkyQ > 0.0 ? 0.7 + 0.3 * rg.r : 0.85;
+    thr = mix(thr, 0.55, soft);
     float ray = (0.1 + 0.9 * bun * bun) * (0.16 + 0.84 * thr * 1.8);
     // (A bright bundle stands taller than a faint one: the curtain's top is its rays' own tips.)
     float len = tall * (0.3 + 1.25 * bun);
     // Edge on at a fold's turn, the light piles up.
-    float pile = 1.0 + 0.45 * min(abs(amp * (1.9 + 0.8 * k) * cos(p1) + 0.106 * cos(p2)) * 9.0, 1.0);
+    float pile = 1.0 + 0.45 * sqrt(max(1.0 - s1 * s1, 0.0));
     // (The border is sharp under a bright bundle and soft under a faint one: it is never one ruled arc.)
     float border = smoothstep(-0.006 - 0.012 * soft - 0.03 * (1.0 + k) * (1.0 - bun), 0.004, up);
     float prof = border * (exp(-max(up, 0.0) / len) + 0.3 * bun * exp(-max(up, 0.0) / (0.02 + 0.02 * k)));
-    // Overhead the rays are seen from below, along their length: dimmer, and running together.
-    float over = smoothstep(0.55, 0.95, h);
     // Green at the border; then teal, violet and, at the tips of the tallest rays, deep red.
     float t = max(up, 0.0) / tall;
     vec3 tint = mix(vec3(0.17, 0.95, 0.52), vec3(0.24, 0.42, 0.9), smoothstep(0.15, 1.05, t));
     tint = mix(tint, vec3(0.62, 0.16, 0.5), smoothstep(0.8, 2.3, t));
     // (Under the brightest of the border, a thin rose fringe.)
-    tint += vec3(0.5, -0.25, 0.1) * (1.0 - smoothstep(-0.007, 0.006, up)) * bun;
-    sum += max(tint, 0.0) * prof * ray * pile * reach * (0.34 - 0.12 * k) * (1.0 - 0.7 * over);
+    if (gSkyQ > 0.0) tint = max(tint + vec3(0.5, -0.25, 0.1) * (1.0 - smoothstep(-0.007, 0.006, up)) * bun, 0.0);
+    sum += tint * prof * ray * pile * reach * gain;
   }
   // Nothing of it toward the dawn.
   float dawn = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
-  sum *= 1.0 - 0.85 * pow(dawn, 3.0) * (1.0 - smoothstep(0.14, 0.4, h));
+  sum *= 1.0 - 0.85 * dawn * dawn * dawn * (1.0 - smoothstep(0.14, 0.4, h));
   // Its light is bounded: however the curtains overlap, it stays under white.
   float m = max(sum.g, max(sum.r, sum.b));
   return sum / sqrt(1.0 + 5.0 * m * m);
@@ -302,6 +320,8 @@ float stars(vec3 d) {
   vec2 g = vec2(atan(d.x, d.y), d.z) * 150.0;
   vec2 c = floor(g);
   float r = hash21(c);
+  // (Most cells hold a star too faint to see: nothing more is worked out for them.)
+  if (r < 0.84) return 0.0;
   vec2 at = c + 0.2 + 0.6 * vec2(hash21(c + 17.3), hash21(c + 41.7));
   float px = max(uPxAng * 150.0, 0.02);
   float dot_ = 1.0 - smoothstep(0.45 * px, 1.25 * px, length(g - at));
@@ -323,18 +343,18 @@ vec3 starSky(vec3 d) {
   vec3 col = vec3(0.0);
   float cloud = 0.5;
   if (band > 0.02) {
-    float along = atan(dot(d, cross(MW_N, MW_U)), dot(d, MW_U));
-    vec4 t = textureLod(uDetail, vec2(along * 0.31 + 0.2, off * 1.15 + 0.6), 1.0);
-    float fine = textureLod(uGrain, vec2(along * 1.9, off * 5.0), 0.0).g;
-    cloud = t.r + 0.35 * (fine - 0.5);
+    // (Laid out along the band and across it; one read gives its clouds and the dust lanes in front of them.)
+    vec2 mu = vec2(dot(d, MW_U) * 0.9 + dot(d, cross(MW_N, MW_U)) * 0.35, off * 1.3);
+    vec4 t = textureLod(uDetail, mu * 0.42 + vec2(0.2, 0.6), 1.0);
+    cloud = t.r;
     // (Its dark lanes are dust in front of it: they lie along its middle.)
-    float lane = smoothstep(0.42, 0.6, textureLod(uDetail, vec2(along * 0.47 + 0.7, off * 2.3 + 0.1), 1.0).r + 0.25 * exp(-off * off / 0.004) - 0.1);
+    float lane = smoothstep(0.5, 0.72, t.g + 0.3 * exp(-off * off / 0.004) - 0.08);
     col += vec3(0.5, 0.58, 0.78) * band * smoothstep(0.3, 0.75, cloud) * (1.0 - 0.75 * lane) * 0.032;
   }
   // (A star is never finer than the eye can find on a dense screen.)
   float px = max(uPxAng * 150.0, 0.14);
   // The bright ones: one to a cell, each with a colour of its own, and a slow twinkle.
-  vec2 g = vec2(atan(d.x, d.y), d.z) * 150.0;
+  vec2 g = vec2(gAz, d.z) * 150.0;
   vec2 c = floor(g);
   float r = hash21(c);
   if (r > 0.93) {
@@ -354,7 +374,8 @@ vec3 starSky(vec3 d) {
     float dot2 = 1.0 - smoothstep(0.4 * px2, 1.1 * px2, length(g2 - c2 - 0.25 - 0.5 * vec2(hash21(c2 + 9.1), hash21(c2 + 23.7))));
     col += vec3(0.78, 0.86, 1.0) * dot2 * (0.025 + 0.22 * fract(r2 * 57.0) * fract(r2 * 57.0));
   }
-  return col * low;
+  // (A star is a point of light, not a white pixel.)
+  return min(col, vec3(0.62)) * low;
 }
 
 vec3 skyColor(vec3 d, float clouds) {
@@ -378,6 +399,7 @@ vec3 skyColor(vec3 d, float clouds) {
 #endif
   if (uNight > 0.0) {
     // (The aurora fades as the first light comes, and the stars thin.)
+    gAz = atan(d.x, d.y);
     vec3 au = uSkyK.y > 0.0 ? aurora(d) * uSkyK.y : vec3(0.0);
     // (Where a station's words stand in the sky, the sky there is quiet.)
     if (gDirect && uCalmK.x > 0.0) {
@@ -1252,7 +1274,8 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     // lie in it softly, broken by the snow and the sheet's own grain. It is
     // a floor, lit from above; the water the melt opens is a depth.
     vec3 snowN = vec3(0.74, 0.8, 0.9) * (S.key * max(dot(n, L), 0.0) + (S.amb * 0.8 + uAurora * 0.035) * (0.62 + 0.38 * n.z)) * (0.94 + 0.12 * g.r);
-    float cloudI = textureLod(uGrain, il / 700.0 + 0.3, lodFor(foot, 700.0, 256.0)).g;
+    // (Air is clouded in it in long drifts of its own, where the snow lies thickest.)
+    float cloudI = 0.5 + 0.7 * big;
     vec3 iceN = vec3(0.009, 0.024, 0.04) * (0.7 + 0.5 * under) + vec3(0.016, 0.036, 0.05) * smoothstep(0.45, 0.8, cloudI) * (1.0 - 0.6 * nearK);
     vec3 cN = mix(iceN, snowN * 0.8, dust * 0.5);
     cN = mix(cN, snowN, drift);
@@ -1266,7 +1289,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     // some of its length than the rest; and beside it the break itself going down into the ice, faintly lit.
     float cwN = max(foot * 0.9, 0.22);
     float thread = (1.0 - smoothstep(0.6 * cwN, 1.5 * cwN, cr.x)) * crK * min(1.0, 1.0 / (foot * 0.9));
-    vec3 crackC = (vec3(0.075, 0.15, 0.165) + uAurora * 0.08) * (0.35 + 0.9 * smoothstep(0.3, 0.7, textureLod(uDetail, il / 900.0 + 0.13, 0.0).r)) * (0.7 + 0.6 * cr.y);
+    vec3 crackC = (vec3(0.075, 0.15, 0.165) + uAurora * 0.08) * (0.35 + 0.9 * smoothstep(0.2, 0.62, g.b)) * (0.7 + 0.6 * cr.y);
     cN += crackC * plane / cw * 0.16 * (1.0 - 0.8 * drift);
     cN = mix(cN, crackC, thread * (1.0 - 0.7 * drift));
     // (The ice round the name is the darkest on the lake: nothing there competes with the light in the letters.)
@@ -2064,11 +2087,11 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     vec3 bedN = vec3(0.26, 0.6, 0.66) * (0.78 + 0.5 * gb.g) * (1.0 + (gs.b - 0.42) * 0.4);
     // (The net is faint: the aurora is a soft light. It is there in the shallows and gone in the deep.)
     float netN = 1.0 + (clamp(netRaw, 0.35, 2.6) - 1.0) * 0.36;
-    vec3 transN = exp(-uAbsorb * path * 0.9);
+    vec3 transN = trans;
     vec3 deepN = vec3(0.0022, 0.0085, 0.0135) * (0.72 + 0.28 * shaft);
     vec3 pool = bedN * lightN * transN * netN * (1.0 - 0.45 * shade) + deepN * (1.0 - 0.6 * transN.g);
     // (The clear pool is a foot deep everywhere and its bed is silt and stones: they are seen.)
-    if (poolK > 0.0) pool = mix(pool, bed * (lightN * 1.05) * (0.9 + 0.25 * (netN - 1.0)), poolK * (1.0 - picK));
+    if (poolK > 0.0) pool = mix(pool, min(bed, vec3(0.8)) * lightN * 0.62, poolK * (1.0 - picK));
 
     water = mix(water, pool, uNight * 0.93);
     // The picture glows softly up through the water.
@@ -2235,7 +2258,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // Elsewhere it falls off as water does: a mirror toward the horizon, and
   // close under the eye dark water you look down into.
   // (Steeply under the eye it is a little less of a mirror: you look down into it.)
-  fres = mix(fres, max(fres * 1.25 + 0.05, mix(0.97, 0.66, smoothstep(0.27, 0.44, cosi)) * sheetK), uNight);
+  fres = mix(fres, max(fres * 1.3 + 0.1, mix(0.97, 0.66, smoothstep(0.27, 0.44, cosi)) * sheetK), uNight);
   // A bank stands over the water at its edge: there the mirror shows the dark bank, not the sky.
   // (Wider in the walled basin, where the project's words stand over the near bank.)
   refl *= 1.0 - mix(0.3, 0.8, gWalled) * uNight * (1.0 - smoothstep(4.0, mix(46.0, 150.0, gWalled), -bw.r)) * (1.0 - sheetK);
