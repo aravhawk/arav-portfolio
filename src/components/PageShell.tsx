@@ -46,6 +46,13 @@ export function BandWords({ head }: { head: HeadProps }) {
   );
 }
 
+/** Each page's snow lies at a place of its own and takes the light at its own angle: no two pages share a backdrop. */
+function groundOf(key: string) {
+  let h = 7;
+  for (const c of key) h = (h * 31 + c.charCodeAt(0)) % 9973;
+  return { '--g-x': `${(h % 97) * 14}px`, '--g-y': `${(h % 61) * 19}px`, '--g-a': `${92 + (h % 23)}deg` } as React.CSSProperties;
+}
+
 /**
  * Inner pages share the home page's world. Each opens on a live frame of it
  * (the page's own station, the delta, the lake, the snowfield) with its
@@ -71,7 +78,7 @@ export async function PageShell({
 }) {
   const m = await getMetrics();
   return (
-    <div className="pg-ground">
+    <div className="pg-ground" style={groundOf(`${scene}${head.title}`)}>
       <main id="main" className="pg" data-scene="page">
         <SceneBand scene={scene} short={short} index={index} {...stationData(m)}>
           <BandWords head={head} />

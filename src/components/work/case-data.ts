@@ -102,11 +102,51 @@ export const BRIDGE_FLOW: { from: Peer; to: Peer; title: string; note: string; a
 export const BRIDGE_LIMITS = ['Exactly two peers and one owner', 'At most 4 KiB of text in a message', 'A 60 s claim lease'];
 
 /** Open models: what each build is, as its Ollama page says. */
-export const MODEL_NOTES: Record<string, { what: string; sizes: string; run: string }> = {
-  'qwen3.5-opus-4.6': { what: 'Qwen 3.5 distilled from Claude Opus 4.6', sizes: '9b 6.5GB, 27b 17GB', run: 'ollama run aravhawk/qwen3.5-opus-4.6' },
-  llama4: { what: 'Meta Llama 4 Scout and Maverick', sizes: '109b 65GB, 400b 243GB', run: 'ollama run aravhawk/llama4' },
-  gemma4: { what: 'Gemma 4 26B, quantised to fit 16GB of VRAM', sizes: '26b 13GB', run: 'ollama run aravhawk/gemma4:26b' },
-  'qwen3.6': { what: '', sizes: '27b 12GB', run: 'ollama run aravhawk/qwen3.6:27b' },
+export const MODEL_NOTES: Record<string, { what: string; facts: [string, string][]; run: string }> = {
+  'qwen3.5-opus-4.6': {
+    what: 'Qwen 3.5 distilled from Claude Opus 4.6, in 9B and 27B reasoning builds. The GGUFs are from Jackrong on HuggingFace.',
+    facts: [
+      ['Builds', '9b, 6.5GB; 27b, 17GB (Q4_K_M)'],
+      ['Context', '256K'],
+      ['Takes', 'Text and images'],
+      ['Can', 'Vision, tools, thinking'],
+      ['Updated', 'April 1, 2026'],
+    ],
+    run: 'ollama run aravhawk/qwen3.5-opus-4.6',
+  },
+  llama4: {
+    what: 'Meta Llama 4 Scout and Maverick, the mixture-of-experts models Meta released on April 5, 2025. This upload is dated six days later.',
+    facts: [
+      ['Builds', 'Scout 109b, 65GB; Maverick 400b, 243GB (Q4_K_M)'],
+      ['Context', '10M (Scout), 1M (Maverick)'],
+      ['Takes', 'Text'],
+      ['Licence', 'Llama 4 Community License Agreement'],
+      ['Updated', 'April 11, 2025'],
+    ],
+    run: 'ollama run aravhawk/llama4',
+  },
+  gemma4: {
+    what: 'Gemma 4 26B with an aggressive 3-bit K-quant applied, so it fits 16GB of VRAM. Its page reports 132 tok/sec on an RTX 5070 Ti with context set to 100,000, and says to expect decent quality loss compared to Q4/Q8 or FP16. The GGUF is credited to Unsloth.',
+    facts: [
+      ['Builds', '26b, 13GB (Q3_K_S)'],
+      ['Context', '256K'],
+      ['Takes', 'Text'],
+      ['Can', 'Tools, thinking'],
+      ['Updated', 'April 14, 2026'],
+    ],
+    run: 'ollama run aravhawk/gemma4:26b',
+  },
+  'qwen3.6': {
+    what: 'The newest of the four. Its page carries no description yet: one 27B build at 3 bits.',
+    facts: [
+      ['Builds', '27b, 12GB (Q3_K_S)'],
+      ['Context', '256K'],
+      ['Takes', 'Text'],
+      ['Can', 'Tools, thinking'],
+      ['Updated', 'April 25, 2026'],
+    ],
+    run: 'ollama run aravhawk/qwen3.6:27b',
+  },
 };
 
 /** cc-switch: its real commands (README), and the provider templates it ships. */

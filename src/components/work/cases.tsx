@@ -4,6 +4,7 @@ import { LiveNumber } from '@/components/LiveNumber';
 import type { Project, ProjectMedia } from '@/content/projects';
 import { formatPostDate } from '@/lib/dates';
 import { formatAsOf, formatCount, type Metric, type SiteMetrics } from '@/lib/metrics';
+import { SHEET_COLS, SHEET_SRC } from '@/water/world';
 import { HALF_SIZES, Note, Outs, Plate, Sec, Spec } from './blocks';
 import {
   BRIDGE_FLOW,
@@ -138,6 +139,10 @@ function Diff({ size }: { size: string }) {
 
 function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
   const max = Math.max(...m.mergedPrs.byRepo.map((r) => r.count), 1);
+  // The record, grouped: the repositories in the order of their counts, each one's changes newest first as read.
+  const order = m.mergedPrs.byRepo.map((r) => r.repo);
+  const repos = [...order, ...m.mergedPrs.ledger.map((e) => e.repo).filter((r) => !order.includes(r))].filter((r, i, all) => all.indexOf(r) === i);
+  const groups = repos.map((repo) => ({ repo, name: repo.split('/')[1], rows: m.mergedPrs.ledger.filter((e) => e.repo === repo) })).filter((g) => g.rows.length);
   return (
     <>
       <Sec className="up-figs" label="Counted live">
@@ -173,7 +178,26 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
           ))}
         </div>
       </Sec>
-      <Sec className="sec-bars" title="By repository" id="p-repos">
+      <Sec className="sec-changes" title="In T3 Code: eight of them, change by change" id="p-t3">
+        <ol className="changes">
+          {T3_PRS.map((x) => (
+            <li key={x.n} className="change">
+              <a className="change-n" href={`https://github.com/pingdotgg/t3code/pull/${x.n}`} target="_blank" rel="noopener noreferrer" aria-label={`Pull request ${x.n} in T3 Code`}>
+                #{x.n}
+              </a>
+              <div className="change-main">
+                <h3 className="change-title">{x.title}</h3>
+                <p className="body">{x.what}</p>
+              </div>
+              <p className="change-meta">
+                <span>{formatPostDate(x.merged, 'short')}</span>
+                <Diff size={x.size} />
+              </p>
+            </li>
+          ))}
+        </ol>
+      </Sec>
+      <Sec className="sec-bars sec-rest" title="The rest, by repository" id="p-repos">
         <ol className="bars">
           {m.mergedPrs.byRepo.map((r) => {
             const [owner, name] = r.repo.split('/');
@@ -194,27 +218,8 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
           })}
         </ol>
       </Sec>
-      <Sec className="sec-changes" title="In T3 Code: eight of them, change by change" id="p-t3">
-        <ol className="changes">
-          {T3_PRS.map((x) => (
-            <li key={x.n} className="change">
-              <a className="change-n" href={`https://github.com/pingdotgg/t3code/pull/${x.n}`} target="_blank" rel="noopener noreferrer" aria-label={`Pull request ${x.n} in T3 Code`}>
-                #{x.n}
-              </a>
-              <div className="change-main">
-                <h3 className="change-title">{x.title}</h3>
-                <p className="body">{x.what}</p>
-              </div>
-              <p className="change-meta">
-                <span>{formatPostDate(x.merged, 'short')}</span>
-                <Diff size={x.size} />
-              </p>
-            </li>
-          ))}
-        </ol>
-      </Sec>
       <Sec className="sec-ledger" title="Every merged pull request" id="p-ledger">
-        <div className="table-scroll">
+        <div className="table-scroll ledger-all">
           <table className="ledger">
             <thead>
               <tr className="label">
@@ -223,19 +228,21 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
                 <th scope="col">Merged</th>
               </tr>
             </thead>
-            <tbody>
-              {m.mergedPrs.ledger.map((e) => (
-                <tr key={e.url}>
-                  <td>{e.repo.split('/')[1]}</td>
-                  <td>
-                    <a href={e.url} target="_blank" rel="noopener noreferrer">
-                      {e.title}
-                    </a>
-                  </td>
-                  <td>{formatPostDate(e.mergedAt, 'short')}</td>
-                </tr>
-              ))}
-            </tbody>
+            {groups.map((g) => (
+              <tbody key={g.repo}>
+                {g.rows.map((e, k) => (
+                  <tr key={e.url}>
+                    <td>{k === 0 ? `${g.name} (${g.rows.length})` : <span className="sr-only">{g.name}</span>}</td>
+                    <td>
+                      <a href={e.url} target="_blank" rel="noopener noreferrer">
+                        {e.title}
+                      </a>
+                    </td>
+                    <td>{formatPostDate(e.mergedAt, 'short')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            ))}
           </table>
         </div>
       </Sec>
@@ -258,7 +265,14 @@ function KiloBench({ p }: { p: Project }) {
         </div>
       </Sec>
       <Sec className="kb-board" label="Results">
-        <Plate media={pic(p, 'kilo-bench-board.webp')} priority caption="Results inside Kilo Code: the leaderboard and the radar. From the project’s Devpost gallery." />
+        <figure className="board">
+          <div className="board-rows" role="img" aria-label="The leaderboard of one run: anthropic/claude-sonnet-4.6 scored 7.6, anthropic/claude-opus-4.6 scored 7.4, openai/gpt-5.2-codex scored 6.3, each with its cost, time and tokens.">
+            {SHEET_COLS.map(([x, w]) => (
+              <span key={x} className="board-col" style={{ '--x': x, '--w': w, '--y': SHEET_SRC.y, '--h': SHEET_SRC.rows } as React.CSSProperties} />
+            ))}
+          </div>
+          <figcaption className="cap">The leaderboard of one run inside Kilo Code, cut from the capture in the project’s Devpost gallery.</figcaption>
+        </figure>
       </Sec>
       <Sec className="kb-acts" label="How it works">
         <ol className="acts">
@@ -455,23 +469,34 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
           {m.ollama.models.map((x) => {
             const note = MODEL_NOTES[x.name];
             return (
-              <li key={x.name} className="model-row">
-                <h3 className="model-title">
-                  <a href={x.url} target="_blank" rel="noopener noreferrer">
-                    {x.name} <Arrow out />
-                  </a>
-                </h3>
-                <p className="body">
-                  {note?.what ? `${note.what}. ` : ''}
-                  {note?.sizes ?? ''}
-                </p>
-                <code className="mono model-run">
-                  <span className="term-p" aria-hidden="true">
-                    ${' '}
-                  </span>
-                  {note?.run ?? `ollama run aravhawk/${x.name}`}
-                </code>
-                <span className="model-pulls">{formatCount(x.pulls)}</span>
+              <li key={x.name} className="model">
+                <div className="model-head">
+                  <h3 className="model-title">
+                    <a href={x.url} target="_blank" rel="noopener noreferrer">
+                      {x.name} <Arrow out />
+                    </a>
+                  </h3>
+                  <p className="model-pulls">{formatCount(x.pulls)} pulls</p>
+                  <code className="mono model-run">
+                    <span className="term-p" aria-hidden="true">
+                      ${' '}
+                    </span>
+                    {note?.run ?? `ollama run aravhawk/${x.name}`}
+                  </code>
+                </div>
+                <div className="model-main">
+                  {note?.what ? <p className="body">{note.what}</p> : null}
+                  {note ? (
+                    <dl className="spec">
+                      {note.facts.map(([k, v]) => (
+                        <div key={k} className="spec-row">
+                          <dt>{k}</dt>
+                          <dd>{v}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : null}
+                </div>
               </li>
             );
           })}

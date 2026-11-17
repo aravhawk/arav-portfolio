@@ -9,17 +9,20 @@
    Three layers with three different periods, so the pattern never lines up
    with itself twice on a page: the drifts (opaque), a broad swell of shade
    and light over them, and the wind crust with its glints, drawn at two
-   texels to the pixel. A fourth, the size of the page, is the light itself:
-   brighter toward the side it comes from. */
+   texels to the pixel. Two more, the size of the page, are the light
+   itself: brighter toward the side it comes from, and changing down the
+   page as the day does (by day toward a low warm afternoon and the blue
+   shade after it; before dawn through the deep of the night toward the
+   first warmth at the foot). */
 .pg-ground {
   /* Small labels stand on a textured ground: the third ink is a shade stronger here than on the home page's glass. */
   --ink-3: #3a4349;
   --ink-dim: #6a7379;
-  --pg-body: clamp(1.0625rem, 0.42vw + 0.86rem, 1.25rem);
-  --pg-lead: clamp(1.25rem, 0.9vw + 0.95rem, 1.75rem);
+  --pg-body: clamp(1.0625rem, 0.46vw + 0.86rem, 1.5rem);
+  --pg-lead: clamp(1.25rem, 0.9vw + 0.95rem, 2rem);
   --pg-say: clamp(1.75rem, 2.5vw + 0.9rem, 3.4rem);
   --pg-num: clamp(3.4rem, 7.2vw + 0.6rem, 8.4rem);
-  --pg-gap: clamp(72px, 12vh, 150px);
+  --pg-gap: clamp(56px, 8vh, 104px);
   --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 40px 70px -44px rgba(16, 38, 58, 0.55), 0 12px 24px -18px rgba(16, 38, 58, 0.35);
   --panel: rgba(255, 255, 255, 0.5);
   --panel-edge: rgba(255, 255, 255, 0.9);
@@ -34,22 +37,26 @@
   background-image:
     url('/media/ground/glint-day.webp'),
     url('/media/ground/grain-day.webp'),
-    linear-gradient(101deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 44%, rgba(92, 124, 160, 0.2) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0) 22%, rgba(255, 222, 184, 0.16) 58%, rgba(74, 98, 140, 0.2) 100%),
+    linear-gradient(var(--g-a, 101deg), rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 44%, rgba(92, 124, 160, 0.2) 100%),
     url('/media/ground/drifts-b-day.svg'),
     url('/media/ground/drifts-a-day.svg');
   background-size:
     509px 509px,
     192px 192px,
     100% 100%,
+    100% 100%,
     1130px 1490px,
     1560px 1180px;
+  /* (Each page's drifts lie at a place of their own, so no two pages stand on the same snow.) */
   background-position:
     0 0,
     0 0,
     0 0,
-    -260px 340px,
-    0 0;
-  background-repeat: repeat, repeat, no-repeat, repeat, repeat;
+    0 0,
+    calc(-260px - var(--g-x, 0px)) calc(340px + var(--g-y, 0px)),
+    var(--g-x, 0px) var(--g-y, 0px);
+  background-repeat: repeat, repeat, no-repeat, no-repeat, repeat, repeat;
 }
 :root[data-theme='dark'] .pg-ground {
   --ink-3: #c1c9ce;
@@ -66,7 +73,8 @@
   background-image:
     url('/media/ground/glint-night.webp'),
     url('/media/ground/grain-night.webp'),
-    linear-gradient(101deg, rgba(150, 178, 214, 0.1) 0%, rgba(150, 178, 214, 0) 40%, rgba(2, 5, 10, 0.34) 100%),
+    linear-gradient(180deg, rgba(2, 5, 10, 0) 0%, rgba(2, 5, 10, 0.2) 46%, rgba(2, 5, 10, 0.06) 78%, rgba(236, 160, 110, 0.09) 100%),
+    linear-gradient(var(--g-a, 101deg), rgba(150, 178, 214, 0.1) 0%, rgba(150, 178, 214, 0) 40%, rgba(2, 5, 10, 0.34) 100%),
     url('/media/ground/drifts-b-night.svg'),
     url('/media/ground/drifts-a-night.svg');
 }
@@ -85,7 +93,7 @@
   height: max(100svh, 560px);
 }
 .band-index {
-  height: clamp(470px, 70svh, 60rem);
+  height: clamp(400px, 54svh, 46rem);
 }
 /* The frame ends by going over into the snow the page stands on. */
 .band-view {
@@ -234,7 +242,7 @@
    thing comes from is said in a sentence (.cap), and a section that needs a
    name has a heading (.sec-h). Never under 12px. */
 .pg-ground .label {
-  font-size: clamp(0.75rem, 0.1vw + 0.72rem, 0.8125rem);
+  font-size: clamp(0.8125rem, 0.3vw + 0.66rem, 1.0625rem);
   letter-spacing: 0.06em;
 }
 /* At display sizes the tracking is open enough that no pair of letters touches. */
@@ -262,7 +270,7 @@
 .cap {
   margin-top: 14px;
   max-width: 64ch;
-  font-size: clamp(0.875rem, 0.15vw + 0.84rem, 0.9375rem);
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
   line-height: 1.4;
   color: var(--ink-3);
 }
@@ -287,7 +295,9 @@
 .sec-h {
   margin-bottom: clamp(22px, 2.8vw, 46px);
   padding-top: clamp(18px, 2vw, 30px);
-  background: var(--rule);
+  background:
+    var(--rule),
+    linear-gradient(180deg, color-mix(in srgb, var(--groove) 42%, transparent), transparent) 0 2px / 100% clamp(28px, 4vw, 64px) no-repeat;
   font-family: var(--font-display);
   font-size: clamp(1.625rem, 1.5vw + 1.1rem, 2.75rem);
   font-weight: 700;
@@ -372,19 +382,19 @@
 }
 .spec-row {
   display: grid;
-  grid-template-columns: minmax(6rem, 9.5rem) minmax(0, 1fr);
+  grid-template-columns: minmax(6rem, 11rem) minmax(0, 1fr);
   column-gap: var(--s-4);
   align-items: baseline;
   padding: 13px 0 14px;
   background: var(--rule);
 }
 .spec dt {
-  font-size: 0.9375rem;
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
   line-height: 1.35;
   color: var(--ink-3);
 }
 .spec dd {
-  font-size: clamp(1.0625rem, 0.3vw + 1rem, 1.25rem);
+  font-size: clamp(1.0625rem, 0.4vw + 0.95rem, 1.5rem);
   font-weight: 540;
   line-height: 1.3;
   letter-spacing: -0.012em;
@@ -765,7 +775,7 @@
   grid-template-columns: minmax(0, 22rem) minmax(0, 1fr) 4rem;
   align-items: center;
   gap: var(--s-5);
-  padding: 10px 0;
+  padding: 4px 0;
   border-top: 1px solid var(--line-2);
 }
 /* The owner stands small over the repository's name; neither breaks inside a word. */
@@ -777,7 +787,7 @@
   white-space: nowrap;
 }
 .bar-owner {
-  font-size: 0.875rem;
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.125rem);
   line-height: 1.3;
   color: var(--ink-3);
 }
@@ -789,25 +799,26 @@
   line-height: 1.2;
   letter-spacing: -0.016em;
 }
-/* A channel cut in the snow, and the water in it. */
+/* A hairline, and on it a flat bar as long as the count. Only the leading repository's is in the water's colour. */
 .bar-track {
-  height: clamp(16px, 1.6vw, 26px);
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--ink) 7%, transparent);
-  box-shadow: inset 0 1px 2px rgba(10, 30, 50, 0.22);
+  height: 1px;
+  background: var(--line);
 }
 .bar-fill {
   display: block;
-  width: max(calc(var(--w) * 100%), clamp(16px, 1.6vw, 26px));
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 46%), linear-gradient(90deg, var(--bar-2), var(--bar));
+  width: max(calc(var(--w) * 100%), 3px);
+  height: 7px;
+  margin-top: -3px;
+  background: color-mix(in srgb, var(--ink) 46%, transparent);
+}
+.bar-row:first-child .bar-fill {
+  background: var(--bar);
 }
 .bar-n {
-  font-family: var(--font-display);
-  font-size: clamp(1.5rem, 1.2vw + 1rem, 2.4rem);
-  font-weight: 700;
-  letter-spacing: -0.022em;
+  font-family: var(--font-mono);
+  font-size: clamp(1.0625rem, 0.5vw + 0.9rem, 1.5rem);
+  font-weight: 520;
+  letter-spacing: 0;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -823,7 +834,7 @@
   grid-template-columns: clamp(4.6rem, 9vw, 9rem) minmax(0, 1fr) 9rem;
   gap: var(--s-5);
   align-items: baseline;
-  padding: clamp(18px, 2vw, 28px) 0;
+  padding: clamp(16px, 1.7vw, 26px) 0;
   border-top: 1px solid var(--line);
 }
 .change-n {
@@ -837,9 +848,9 @@
 }
 .change-title {
   font-family: var(--font-display);
-  font-size: clamp(1.25rem, 0.9vw + 1rem, 1.875rem);
-  font-weight: 660;
-  line-height: 1.12;
+  font-size: clamp(1.375rem, 1.3vw + 1rem, 2.5rem);
+  font-weight: 680;
+  line-height: 1.08;
   letter-spacing: -0.026em;
 }
 .change-main .body {
@@ -851,7 +862,7 @@
   display: grid;
   justify-items: end;
   gap: 6px;
-  font-size: 1rem;
+  font-size: clamp(1rem, 0.3vw + 0.78rem, 1.1875rem);
   font-variant-numeric: tabular-nums;
   color: var(--ink-2);
   white-space: nowrap;
@@ -863,7 +874,7 @@
 }
 .diff-n {
   font-family: var(--font-mono);
-  font-size: 0.875rem;
+  font-size: clamp(0.9375rem, 0.25vw + 0.72rem, 1.0625rem);
 }
 .diff-cells {
   display: inline-flex;
@@ -883,7 +894,20 @@
 .ledger {
   width: 100%;
   border-collapse: collapse;
-  font-size: clamp(0.9375rem, 0.3vw + 0.86rem, 1.0625rem);
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.125rem);
+}
+/* The record, whole: grouped by repository, a repository's name once, at the head of its group. */
+.ledger tbody + tbody tr:first-child td {
+  border-top-color: var(--line);
+}
+.ledger-all {
+  max-width: 76rem;
+}
+.sec-rest .bars {
+  max-width: 64rem;
+}
+.sec-rest .sec-h {
+  font-size: clamp(1.375rem, 0.9vw + 1.05rem, 1.875rem);
 }
 .ledger th {
   text-align: left;
@@ -891,7 +915,7 @@
   font-weight: inherit;
 }
 .ledger td {
-  padding: 14px 12px 14px 0;
+  padding: 9px 12px 9px 0;
   border-top: 1px solid var(--line-2);
   vertical-align: baseline;
   color: var(--ink-2);
@@ -975,13 +999,34 @@
   flex-wrap: wrap;
   gap: 0.08em 0.5em;
   font-family: var(--font-display);
-  font-size: clamp(2.2rem, 4.6vw + 0.5rem, 6rem);
+  font-size: clamp(1.75rem, 2.6vw + 0.6rem, 3.6rem);
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.06;
   letter-spacing: -0.016em;
 }
-.modes li:nth-child(even) {
-  color: var(--ink-3);
+/* The leaderboard's own rows, cut from the capture column by column and set side by side, so they are read at
+   the page's scale. The capture is dark in both themes: it is mounted. */
+.board {
+  margin: 0;
+}
+.board-rows {
+  display: flex;
+  gap: clamp(8px, 1.6vw, 28px);
+  max-width: 68rem;
+  padding: clamp(14px, 2vw, 32px) clamp(16px, 2.4vw, 40px);
+  border-radius: clamp(10px, 1.1vw, 18px);
+  background: #0d0d0d;
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px var(--line);
+}
+.board-col {
+  flex: var(--w) 1 0;
+  aspect-ratio: var(--w) / var(--h);
+  background-image: url('/media/kilo-bench-results-2324.webp');
+  background-repeat: no-repeat;
+  background-size: calc(100% * 2000 / var(--w)) calc(100% * 1088 / var(--h));
+  background-position: calc(100% * var(--x) / (2000 - var(--w))) calc(100% * var(--y) / (1088 - var(--h)));
 }
 /* Every mode, against the four things a run is judged on. */
 .matrix {
@@ -1055,7 +1100,7 @@
   display: block;
   margin-bottom: 14px;
   font-family: var(--font-text);
-  font-size: clamp(0.875rem, 0.15vw + 0.84rem, 0.9375rem);
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
   font-weight: 420;
   letter-spacing: 0;
   color: var(--ink-3);
@@ -1232,7 +1277,7 @@
   display: grid;
   grid-template-columns: repeat(var(--n), minmax(0, 1fr));
   gap: clamp(10px, 1.8vw, 30px);
-  height: clamp(300px, 50vh, 560px);
+  height: clamp(260px, 40vh, 460px);
 }
 .col {
   display: grid;
@@ -1240,35 +1285,26 @@
   min-width: 0;
   position: relative;
 }
+/* A flat column, as tall as its pulls; only the tallest is in the water's colour. */
 .col-bar {
   align-self: end;
   height: max(8px, calc(var(--h) * (100% - 3.4rem)));
-  border-radius: 10px 10px 2px 2px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 22%, rgba(255, 255, 255, 0) 80%, rgba(6, 40, 56, 0.22)),
-    linear-gradient(180deg, #eef9fd 0, #a9d8e8 26px, #63aac2 46%, #2c7c98 100%);
-  box-shadow:
-    inset 0 1px 0 #fff,
-    0 26px 30px -24px rgba(12, 60, 84, 0.7);
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+  box-shadow: 0 1px 0 var(--ink);
 }
-:root[data-theme='dark'] .col-bar {
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 22%, rgba(255, 255, 255, 0) 80%, rgba(0, 0, 0, 0.3)),
-    linear-gradient(180deg, #d6f6fa 0, #86d3df 22px, #3d8ea3 44%, #164a5c 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 26px 30px -22px rgba(0, 0, 0, 0.8);
+.col:first-child .col-bar {
+  background: var(--bar);
 }
 /* The count stands on its column. */
 .col-n {
   position: absolute;
   left: 0;
-  bottom: calc(max(8px, var(--h) * (100% - 3.4rem - 44px)) + 44px + 16px);
-  font-family: var(--font-display);
-  font-size: clamp(1.25rem, 1.6vw + 0.7rem, 2.6rem);
-  font-weight: 700;
+  bottom: calc(max(8px, var(--h) * (100% - 3.4rem - 44px)) + 44px + 12px);
+  font-family: var(--font-mono);
+  font-size: clamp(1rem, 0.9vw + 0.7rem, 1.75rem);
+  font-weight: 520;
   line-height: 1;
-  letter-spacing: -0.022em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 /* (A model's name breaks at its hyphens only.) */
@@ -1281,20 +1317,38 @@
   line-height: 1.2;
   letter-spacing: -0.012em;
 }
-.model-row {
+/* Each build: its name and its pulls, what it is, its facts, and the line that runs it. */
+.model {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 4fr) minmax(0, 4fr) 6.5rem;
-  gap: var(--s-5);
-  align-items: baseline;
-  padding: clamp(18px, 2vw, 28px) 0;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-4);
+  align-items: start;
+  padding: clamp(22px, 2.4vw, 38px) 0;
   border-top: 1px solid var(--line);
+}
+.model-head {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  justify-content: start;
+  justify-self: start;
+}
+.model-main {
+  display: grid;
+  gap: clamp(14px, 1.4vw, 22px);
+  min-width: 0;
+}
+.model-main .body {
+  max-width: 56ch;
+  color: var(--ink);
 }
 .model-title {
   font-family: var(--font-display);
-  font-size: clamp(1.375rem, 1vw + 1rem, 2rem);
-  font-weight: 680;
+  font-size: clamp(1.625rem, 1.9vw + 1rem, 3.25rem);
+  font-weight: 700;
   letter-spacing: -0.022em;
-  line-height: 1.1;
+  line-height: 1.04;
 }
 .model-title a {
   display: inline-flex;
@@ -1309,18 +1363,18 @@
 }
 .model-run {
   justify-self: start;
-  font-size: clamp(0.8125rem, 0.25vw + 0.76rem, 0.9375rem);
+  font-size: clamp(0.9375rem, 0.3vw + 0.72rem, 1.125rem);
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 .model-run .term-p {
   color: var(--bar);
 }
 .model-pulls {
-  font-family: var(--font-display);
-  font-size: clamp(1.375rem, 1vw + 1rem, 2rem);
-  font-weight: 700;
-  letter-spacing: -0.022em;
-  text-align: right;
+  font-family: var(--font-mono);
+  font-size: clamp(1rem, 0.4vw + 0.86rem, 1.3125rem);
+  font-weight: 500;
+  color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1971,7 +2025,7 @@
   color: var(--ink);
 }
 .post-lead {
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
   column-gap: clamp(32px, 6vw, 120px);
   row-gap: var(--s-6);
   align-items: start;
@@ -2007,7 +2061,7 @@
   color: var(--ink);
 }
 .post-open {
-  max-width: 46ch;
+  max-width: 58ch;
   font-size: var(--pg-body);
   line-height: 1.56;
   color: var(--ink-2);
@@ -2052,8 +2106,9 @@
 /* A post: what it is filed under in the margin, the text in a reading measure. */
 .article {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr) minmax(0, 2fr);
-  column-gap: var(--s-6);
+  /* The measure stands at the middle of the page; what the post is filed under stands in the margin beside it. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 46rem) minmax(0, 1fr);
+  column-gap: clamp(24px, 3vw, 64px);
   padding-top: clamp(12px, 2vh, 28px);
 }
 .article-rail {
@@ -2065,7 +2120,8 @@
 .tags {
   display: grid;
   gap: 4px;
-  font-size: 1rem;
+  justify-items: end;
+  font-size: clamp(1rem, 0.3vw + 0.78rem, 1.1875rem);
   font-weight: 520;
   line-height: 1.4;
   color: var(--ink-2);
@@ -2087,9 +2143,10 @@
   margin-top: var(--s-7);
 }
 .prose {
-  max-width: 34em;
-  font-size: var(--pg-body);
-  line-height: 1.62;
+  /* About 66 characters to the line. */
+  max-width: 33em;
+  font-size: clamp(1.125rem, 0.5vw + 0.87rem, 1.5rem);
+  line-height: 1.6;
   color: var(--ink-2);
   font-weight: 420;
   hanging-punctuation: first;
@@ -2247,19 +2304,8 @@
 /* ---------- narrow ---------- */
 
 @media (max-width: 1100px) {
-  .model-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .model-row .body,
-  .model-run {
-    grid-column: 1 / -1;
-  }
-  .model-pulls {
-    grid-column: 2;
-    grid-row: 1;
-  }
   .article {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 8fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 40rem);
   }
   /* The diagram keeps its three lifelines; what the README says of them goes under it. */
   .seq {
@@ -2319,6 +2365,7 @@
   .checks,
   .act,
   .sec-chart,
+  .model,
   .ry-phone,
   .ry-count,
   .prov-row,
@@ -2361,6 +2408,11 @@
   .bar-track {
     grid-column: 1;
     grid-row: 2;
+    margin-top: 9px;
+  }
+  /* On a phone the leaderboard keeps its first two columns (the models and their scores), so its rows stay large. */
+  .board-col:nth-child(n + 3) {
+    display: none;
   }
   .bar-n {
     grid-row: 1 / span 2;
@@ -2508,6 +2560,7 @@
     padding: 0 0 var(--s-5);
   }
   .tags {
+    justify-items: start;
     display: flex;
     flex-wrap: wrap;
     gap: 2px 18px;
