@@ -25,25 +25,31 @@
   --panel-edge: rgba(255, 255, 255, 0.9);
   --bar: #0c5567;
   --bar-2: #6fb3c4;
-  --veil: rgba(238, 242, 244, 0.86);
+  --veil: rgba(232, 237, 241, 0.86);
+  /* A groove cut in the snow: its far wall in shade, its near lip in light. */
+  --groove: rgba(36, 58, 84, 0.2);
+  --groove-lip: rgba(255, 255, 255, 0.85);
   position: relative;
-  background-color: #e6eaed;
+  background-color: #e3e8ec;
   background-image:
-    linear-gradient(104deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 38%, rgba(128, 156, 184, 0.16) 100%),
-    url('/media/ground/crust-day.webp'),
-    url('/media/ground/swell-day.webp'),
-    url('/media/ground/snow-day.webp');
+    url('/media/ground/glint-day.webp'),
+    url('/media/ground/grain-day.webp'),
+    linear-gradient(101deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 44%, rgba(92, 124, 160, 0.2) 100%),
+    url('/media/ground/drifts-b-day.svg'),
+    url('/media/ground/drifts-a-day.svg');
   background-size:
+    509px 509px,
+    192px 192px,
     100% 100%,
-    256px 256px,
-    1730px 1730px,
-    1200px 1200px;
+    1130px 1490px,
+    1560px 1180px;
   background-position:
     0 0,
     0 0,
-    -340px 120px,
+    0 0,
+    -260px 340px,
     0 0;
-  background-repeat: no-repeat, repeat, repeat, repeat;
+  background-repeat: repeat, repeat, no-repeat, repeat, repeat;
 }
 :root[data-theme='dark'] .pg-ground {
   --ink-3: #b6bfc4;
@@ -54,12 +60,15 @@
   --bar: #7fd6e2;
   --bar-2: #2f6f80;
   --veil: rgba(18, 24, 32, 0.84);
-  background-color: #222c38;
+  --groove: rgba(0, 0, 0, 0.5);
+  --groove-lip: rgba(190, 212, 238, 0.13);
+  background-color: #1a222d;
   background-image:
-    linear-gradient(104deg, rgba(236, 170, 120, 0.1) 0%, rgba(236, 170, 120, 0) 34%, rgba(6, 10, 16, 0.3) 100%),
-    url('/media/ground/crust-night.webp'),
-    url('/media/ground/swell-night.webp'),
-    url('/media/ground/snow-night.webp');
+    url('/media/ground/glint-night.webp'),
+    url('/media/ground/grain-night.webp'),
+    linear-gradient(101deg, rgba(150, 178, 214, 0.1) 0%, rgba(150, 178, 214, 0) 40%, rgba(2, 5, 10, 0.34) 100%),
+    url('/media/ground/drifts-b-night.svg'),
+    url('/media/ground/drifts-a-night.svg');
 }
 
 /* ---------- the scene band ---------- */
