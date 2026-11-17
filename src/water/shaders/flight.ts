@@ -1261,7 +1261,10 @@ float gSea = 0.0;
 vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float e = uSea.y;
   float lee = (1.0 - smoothstep(uSea.z - 0.16, uSea.z + 0.14, vUv.x)) * e;
-  lee = max(lee, step(0.001, uSea.w) * (1.0 - smoothstep(uSea.w - 0.01, uSea.w + 0.13, vUv.y)) * e);
+  float leeFoot = step(0.001, uSea.w) * (1.0 - smoothstep(uSea.w - 0.01, uSea.w + 0.13, vUv.y)) * e;
+  // (On a narrow screen the words run the width of the frame and stand at its foot: the line of light comes down to them and stops.)
+  float leeRay = uSea.w > 0.001 ? leeFoot : lee;
+  lee = max(lee, leeFoot);
   vec2 q = pw / SEA_S;
   float dist = length(pw - uCamPos.xy) / SEA_S;
   // (A ripple finer than a pixel is let go before it can shimmer.)
@@ -1350,7 +1353,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     float tip = exp(-pow((dip - head * 0.9) / max(head * 0.12, 1e-3), 2.0)) * (1.0 - smoothstep(0.9, 1.0, uRay.z));
     vec3 rayC = mix(vec3(1.0, 0.9, 0.78), vec3(1.0, 0.8, 0.46), uNight);
     // (It stops short of the words: in their lee the water keeps no light.)
-    col += rayC * (core * 2.4 + halo) * shown * uRay.w * (1.0 + 2.0 * tip) * (1.0 - lee) * (1.0 - lee);
+    col += rayC * (core * 2.4 + halo) * shown * uRay.w * (1.0 + 2.0 * tip) * (1.0 - leeRay) * (1.0 - leeRay);
   }
   gLee = lee;
   return col;
