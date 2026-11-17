@@ -144,27 +144,78 @@
   }
 }
 
-/* Inner pages: a plain footer on dry land, beside the stream. */
+/* Inner pages: one composed row on the snow. His name at the left with the
+   small print under it, the ways to reach him in the middle at the size of
+   links you are meant to use, the ways round the site at the right. */
 .foot {
-  display: grid;
-  gap: var(--s-3);
-  padding-top: clamp(56px, 9vh, 110px);
-  padding-bottom: max(28px, env(safe-area-inset-bottom));
+  position: relative;
   color: var(--ink);
 }
+.foot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 6fr) minmax(0, 3fr);
+  align-items: center;
+  column-gap: var(--s-6);
+  padding-top: clamp(26px, 3vw, 44px);
+  padding-bottom: max(clamp(26px, 3vw, 44px), env(safe-area-inset-bottom));
+}
+.foot-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--gutter);
+  right: var(--gutter);
+  height: 1px;
+  background: var(--ink);
+}
+.foot-brand {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+.foot-mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--font-display);
+  font-weight: var(--display-wght);
+  font-size: clamp(1.5rem, 1.5vw + 1rem, 2.5rem);
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+.foot-note {
+  color: var(--ink-3);
+}
 .foot .ending-links {
-  max-width: 62%;
+  margin-top: 0;
+  justify-content: center;
+  gap: 0 clamp(18px, 2.6vw, 44px);
+}
+.foot .end-link {
+  font-size: clamp(1.125rem, 1vw + 0.8rem, 1.75rem);
 }
 .foot-meta {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
-  gap: 0 28px;
-  max-width: 62%;
+  gap: 0 clamp(16px, 1.8vw, 28px);
   color: var(--ink-2);
 }
-.foot .ending-note {
-  color: var(--ink-2);
+.foot-meta a,
+.foot-meta .end-haptics {
+  color: inherit;
+}
+@media (max-width: 1100px) {
+  .foot-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--s-4);
+  }
+  .foot .ending-links {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
 }
 
 /* Narrow screens: the same picture, the words still in the near water. */
@@ -175,9 +226,13 @@
   .ending-foot {
     max-width: 68vw;
   }
-  .foot .ending-links,
+  .foot-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .foot .ending-links {
+    grid-row: auto;
+  }
   .foot-meta {
-    max-width: none;
-    padding-right: 72px;
+    justify-content: flex-start;
   }
 }

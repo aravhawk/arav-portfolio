@@ -97,20 +97,28 @@ export function Contact() {
   );
 }
 
-/** Inner pages end quietly: the same contact row, on dry land beside the stream. */
+/**
+ * Inner pages end on one composed row, on the same snow as the page: his
+ * name and when the numbers were read, the ways to reach him, the ways
+ * round the site.
+ */
 export function Footer({ note }: Props) {
   return (
-    <footer className="foot wrap" aria-label="Contact">
-      <Contact />
-      <div className="foot-meta label">
-        <span>
-          <Link href="/">Home</Link>
+    <footer className="foot" aria-label="Contact">
+      <div className="foot-row wrap">
+        <div className="foot-brand">
+          <Link className="foot-mark" href="/" aria-label="Arav Jain, home">
+            Arav Jain
+          </Link>
+          {note ? <p className="label foot-note">{note}</p> : null}
+        </div>
+        <Contact />
+        <nav className="foot-meta label" aria-label="Site">
           <Link href="/work">Work</Link>
           <Link href="/blog">Writing</Link>
           <a href="/feed.xml">RSS</a>
           <HapticsSetting />
-        </span>
-        {note ? <span className="ending-note">{note}</span> : null}
+        </nav>
       </div>
     </footer>
   );
