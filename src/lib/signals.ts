@@ -34,8 +34,9 @@ export const signals = {
   day: 0,
   /** true once the camera has come to rest over the sea */
   rest: false,
-  /** the picture's own running time in seconds: what its pulses and laps are counted from */
+  /** the picture's own running time in seconds: what its pulses and laps are counted from; and the frame time (ms) of the frame that drew it */
   clock: 0,
+  clockAt: 0,
   /** how near the columns, the dam, the lattice and the canyon are, 0..1 each */
   st: [0, 0, 0, 0] as ArrayLike<number>,
   /** how far open each sluice is, and how far the surge has run down each */
@@ -51,6 +52,8 @@ export const signals = {
   moved: 0,
   /** the page's scroll in px, on every route */
   scrollY: 0,
+  /** how wide each stream runs at the confluence, once the flight knows; null before */
+  tribs: null as ArrayLike<number> | null,
 };
 
 export type SignalListener = (type: string, a: number, b: number, c: number, at: number) => void;
@@ -60,6 +63,17 @@ let hear: SignalListener | null = null;
 /** One listener at a time: the sound, once it has been turned on. */
 export function listen(fn: SignalListener | null) {
   hear = fn;
+}
+
+let turn: ((at: number) => void) | null = null;
+
+/**
+ * The follower's turn in the flight's frame. It is called as soon as the
+ * frame's state is known and before the picture is drawn, so what follows
+ * the picture is never held up by the picture's own work.
+ */
+export function onFlightFrame(fn: ((at: number) => void) | null) {
+  turn = fn;
 }
 
 /** A moment, with up to three numbers that say where or which. */
@@ -76,6 +90,7 @@ export function flightSignal(at: number, s: number, cam: SignalCam, aspect: numb
   signals.melt = melt;
   signals.day = day;
   signals.rest = rest;
+  if (turn) turn(at);
 }
 
 /** What the picture itself is doing this frame. */
@@ -86,6 +101,7 @@ export function pictureSignal(clock: number, st: ArrayLike<number>, gate: ArrayL
   signals.surge = surge;
   signals.ray = ray;
   signals.lift = lift;
+  signals.clockAt = signals.at;
 }
 
 /** The pointer: where it is in the frame, and how far away the water under it is (0: not over water). */
