@@ -122,20 +122,19 @@ export default async function Home() {
   const stops = stillStops();
   return (
     <>
+      {/* ---------- the rail: where in the flight this is, and a way to any part of it (before the page's content, so the skip link passes it) ---------- */}
+      <nav className="fl-rail" aria-label="Sections of this page">
+        {RAIL.map((name, i) => (
+          <a key={name} href="#main" aria-label={name} data-from={+(starts[i] - (i ? 0.25 : 0)).toFixed(2)} data-at={+stops[i].toFixed(2)}>
+            <span aria-hidden="true" />
+          </a>
+        ))}
+      </nav>
       <main id="main" className="fl">
         <FlightStage slab={INFINIVIEW_HOME.src} sheet={BENCH_P.media[0].kind === 'image' ? BENCH_P.media[0].src : ''} tribs={repos.map((r) => r.count).join(',')}
           cols={colH.map((h) => h.toFixed(1)).join(',')}
           face={rydar.kind === 'image' ? rydar.src : ''}
         />
-
-        {/* ---------- the rail: where in the flight this is, and a way to any part of it ---------- */}
-        <nav className="fl-rail" aria-label="Sections of this page">
-          {RAIL.map((name, i) => (
-            <a key={name} href="#main" aria-label={name} data-from={+(starts[i] - (i ? 0.25 : 0)).toFixed(2)} data-at={+stops[i].toFixed(2)}>
-              <span aria-hidden="true" />
-            </a>
-          ))}
-        </nav>
 
         {/* ---------- the frozen lake ---------- */}
         <section className="fl-sec fl-hero" data-fl style={len(SECTIONS.hero)} aria-labelledby="name">
