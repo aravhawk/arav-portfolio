@@ -145,7 +145,7 @@ export default async function Home() {
                 <span data-ice-line>Arav</span> <span data-ice-line>Jain</span>
               </h1>
             </div>
-            <div className="fl-words fl-hero-words" {...win(-1, 0.5)} data-on>
+            <div className="fl-words fl-hero-words" {...win(-1, 0.25)} data-on>
               <p className="statement fl-role">AI and developer tooling builder.</p>
               <p className="lead fl-intro">I co-founded Infiniflop Labs and build Infiniview: agents that attack your app to prove what breaks.</p>
             </div>

@@ -6,9 +6,10 @@
  * label that would overlap one already placed is lifted above it) and a
  * callout fades when its point leaves the frame or its stretch of scroll.
  *
- * On a narrow screen a station shows its first three captions on their
- * points, stepped so that no two leaders cross, and sets the rest as one
- * line of captions over its words.
+ * On a wide screen a station with many captions sets them as a fan: one row
+ * over the points, in the points' order. On a narrow screen a station shows
+ * its first three captions on their points, stepped so that no leader runs
+ * behind a caption, and sets the rest as one line of captions over its words.
  */
 
 import { type Basis, projectPoint, type V3 } from './camera';
@@ -193,6 +194,33 @@ export function makeCallouts(): Callouts {
         c.line.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(-1.5708rad) scaleX(${Math.max(0, y - fy - 5).toFixed(1)})`;
         c.label.style.transform = `translate3d(${lxs[i].toFixed(1)}px,${ly.toFixed(1)}px,0)`;
       }
+      return;
+    }
+    if (live.length > 4 && !live.some(({ c }) => (wide && c.atWide ? c.liftWide : c.lift) < 0)) {
+      // A fan: many captions stand in one row over their points, in the points' own order, each as near
+      // over its point as its neighbours allow. Every leader runs up to its own caption and the captions
+      // share a line, so no leader crosses another or runs behind a caption.
+      const n = live.length;
+      const gap = 10;
+      const h = live[0].c.h;
+      const ly = Math.max(66, Math.min(...live.map((l) => l.y)) - 56 - h);
+      const xs = live.map(({ c, x }) => x - c.w / 2);
+      for (let i = 1; i < n; i++) xs[i] = Math.max(xs[i], xs[i - 1] + live[i - 1].c.w + gap);
+      // (Pushed apart, the row has drifted right of its points: it is set back over them.)
+      const drift = xs.reduce((sum, v, i) => sum + v - (live[i].x - live[i].c.w / 2), 0) / n;
+      for (let i = 0; i < n; i++) xs[i] -= drift;
+      xs[n - 1] = Math.min(xs[n - 1], viewW - edge - live[n - 1].c.w);
+      for (let i = n - 2; i >= 0; i--) xs[i] = Math.min(xs[i], xs[i + 1] - gap - live[i].c.w);
+      xs[0] = Math.max(xs[0], 14);
+      for (let i = 1; i < n; i++) xs[i] = Math.max(xs[i], xs[i - 1] + live[i - 1].c.w + gap);
+      live.forEach(({ c, x, y }, i) => {
+        const fx = Math.min(xs[i] + c.w - 8, Math.max(xs[i] + 8, x));
+        const fy = ly + h + 3;
+        const len = Math.hypot(fx - x, fy - y);
+        c.ring.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
+        c.line.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${Math.atan2(fy - y, fx - x).toFixed(4)}rad) scaleX(${Math.max(0, len - 5).toFixed(1)})`;
+        c.label.style.transform = `translate3d(${xs[i].toFixed(1)}px,${ly.toFixed(1)}px,0)`;
+      });
       return;
     }
     for (const { c, x, y } of live) {

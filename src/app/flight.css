@@ -679,7 +679,7 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     grid-template-rows: auto auto auto;
     justify-content: center;
     align-content: start;
-    gap: 0 clamp(34px, 3.3vw, 64px);
+    gap: 0 clamp(22px, 2.2vw, 44px);
     padding-top: clamp(74px, 9vh, 104px);
     padding-bottom: 0;
   }
@@ -689,7 +689,7 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     display: grid;
     grid-template-columns: subgrid;
     grid-template-rows: subgrid;
-    gap: 0;
+    gap: inherit;
   }
   html[data-flight='on'] .fl-models-words .fl-fig {
     grid-column: 1;
