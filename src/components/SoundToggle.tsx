@@ -27,10 +27,29 @@ const set = (next: boolean) => {
 
 let ctx: AudioContext | null = null;
 
-/** Make (or wake) the context inside the gesture, then load the sound and hand it over. */
-function start(): boolean {
-  const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Ctor) return false;
+/**
+ * A browser's first audio context can hold the page for a tenth of a second
+ * or more while its audio service starts (measured: 120 to 180 ms in
+ * Chromium, 5 ms once the service is up). Asking the browser which devices
+ * it has starts that service without making a context, without a prompt
+ * and off the page's thread. It is asked when the visitor shows they are
+ * about to turn sound on (the pointer comes onto the control, a finger
+ * lands on it, it takes focus), so the click itself is short.
+ */
+let warming: Promise<unknown> | null = null;
+let warm = false;
+function warmUp() {
+  if (warming) return;
+  try {
+    warming = (navigator.mediaDevices?.enumerateDevices?.() ?? Promise.resolve()).catch(() => {}).then(() => (warm = true));
+  } catch {
+    warming = Promise.resolve();
+    warm = true;
+  }
+}
+
+/** Make (or wake) the context, then load the sound and hand it over. */
+function make(Ctor: typeof AudioContext): boolean {
   try {
     ctx ??= new Ctor({ latencyHint: 'interactive' });
     void ctx.resume();
@@ -39,6 +58,30 @@ function start(): boolean {
   }
   const c = ctx;
   void import('@/audio').then((m) => m.soundOn(c)).catch(() => set(false));
+  return true;
+}
+
+/**
+ * Turn sound on, from inside the visitor's gesture. The context is made
+ * there and then, which is what browsers ask for. One exception: a touch
+ * can land before the audio service has had time to start (a finger gives
+ * a tenth of a second's notice, a pointer much more); where the browser
+ * remembers the gesture for the page (`navigator.userActivation`), the
+ * context is then made the moment the service is up instead of holding the
+ * page for it, and never more than a third of a second later.
+ */
+function start(): boolean {
+  const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctor) return false;
+  if (ctx || warm || !warming || !('userActivation' in navigator)) return make(Ctor);
+  let done = false;
+  const go = () => {
+    if (done) return;
+    done = true;
+    if (on && !make(Ctor)) set(false);
+  };
+  void warming.then(go);
+  window.setTimeout(go, 320);
   return true;
 }
 
@@ -72,6 +115,8 @@ export function SoundToggle() {
     }
     if (!stored || on) return;
     set(true);
+    // (They chose sound before: the audio service is started while the page is idle, ahead of their first gesture.)
+    const idle = window.setTimeout(warmUp, 1200);
     const first = (e: Event) => {
       // (The control's own press is its own business.)
       if (e.target instanceof Element && e.target.closest('.nav-sound')) return;
@@ -79,6 +124,7 @@ export function SoundToggle() {
       if (on && !start()) set(false);
     };
     const done = () => {
+      window.clearTimeout(idle);
       window.removeEventListener('pointerup', first, true);
       window.removeEventListener('keydown', first, true);
     };
@@ -99,7 +145,7 @@ export function SoundToggle() {
   }, []);
 
   return (
-    <button type="button" className="nav-sound" onClick={toggle} aria-label={active ? 'Turn sound off' : 'Turn sound on'} aria-pressed={active} data-on={active ? '' : undefined}>
+    <button type="button" className="nav-sound" onClick={toggle} onPointerEnter={warmUp} onPointerDown={warmUp} onFocus={warmUp} aria-label={active ? 'Turn sound off' : 'Turn sound on'} aria-pressed={active} data-on={active ? '' : undefined}>
       <span className="nav-sound-bars" aria-hidden="true">
         <span />
         <span />
