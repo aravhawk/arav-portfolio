@@ -28,6 +28,7 @@ uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet 
 uniform vec4 uNameG;       // the standing letters. x: the upright plane the far line's faces stand in (world y), y: the near line's (the same when there is one line), z: the height in the raster that parts the two lines (far below it when there is one), w: 1 when the letters stand on the sheet as blocks (0: they are cut through it)
 uniform vec4 uNameB;       // x: the far line's baseline, y: the near line's, in the raster's true units up from its middle, z: the capitals' height, w: a block's depth front to back while it is whole
 uniform vec4 uNameM;       // the blocks' melt. x: how far every face has melted back px, y: the depth left, z: how far they have sunk, w: 0..1 how much of them is left to see
+uniform float uNameS;      // how far the swept field the letters stand on has gone to open water: 1 more than the field's own measure of it (0: not at all)
 uniform sampler2D uIceSdf; // signed distance to the letters px (negative inside), _, gradient
 uniform sampler2D uDetail;
 uniform sampler2D uSnow;   // three draws of one smooth field, in half floats: about -0.7..0.7
@@ -85,6 +86,44 @@ float nameFoot(vec2 u) {
     d = min(d, di);
   }
   return d;
+}
+
+/**
+ * Where a place on the lake stands in the first camera's picture of the
+ * name. x: across it, -1 and 1 at the letters' two sides; y: up it, -1 at
+ * the letters' feet and 1 at their tops.
+ */
+vec2 nameSeat(vec2 u) {
+  float dyc = u.y - uIceP.x;
+  float zc = max(dyc * uIceP.z + uIceP.y * uIceP.w, 1.0);
+  float dy0 = uIce.y + uIce.w * 0.5 - uIceP.x;
+  float z0 = dy0 * uIceP.z + uIceP.y * uIceP.w;
+  float kk = uIceP.y / (z0 * z0);
+  float tv = (dyc * uIceP.w - uIceP.y * uIceP.z) / zc - (dy0 * uIceP.w - uIceP.y * uIceP.z) / z0;
+  return vec2((u.x - uIce.x - uIce.z * 0.5) * z0 / zc / max(uIceBox.z, 1.0), (tv - (uIceBox.y - uIce.w * 0.5) * kk) / max(uIceBox.w * kk, 1e-5));
+}
+
+/**
+ * The stretch of the lake the name stands on: the wind has swept it clear
+ * of snow, so it is bare black ice, and it is the thinnest ice on the lake.
+ * Broad, wider than the name, it runs from behind the letters toward the
+ * eye and stops short of the first frame's words. Returns how far out a
+ * place is: 0 at the field's heart, 1 at its edge, more beyond.
+ * il: the place in the sheet's own frame.
+ */
+float nameSwept(vec2 u) {
+  vec2 s = nameSeat(u);
+  // (Two lines stand taller in the picture than one: the field is measured in the name's own heights, and keeps the same reach.)
+  bool two = uNameG.z > -5e3;
+  float up = two ? 1.5 : 2.55;
+  float dn = two ? 1.42 : 2.3;
+  float y = s.y - 0.1;
+  vec2 e = vec2(s.x / (two ? 2.1 : 1.9), y / (y > 0.0 ? up : dn));
+  // (Squarer than a round: its long sides run with the wind.)
+  vec2 e2 = e * e;
+  float d = sqrt(sqrt(e2.x * e2.x + e2.y * e2.y) * 0.4 + 0.6 * (e2.x + e2.y));
+  // (No ruled outline: it bulges and narrows as the wind has left it.)
+  return d * (0.96 + 0.16 * textureLod(uSnow, (u - uIce.xy) / vec2(4300.0, 2900.0) + 0.27, 0.0).r) + 0.08 * textureLod(uSnow, (u - uIce.xy) / vec2(1900.0, 800.0) + 0.6, 0.0).g;
 }
 
 /** Distance to the one rounded pool the letters run together into. */
@@ -288,6 +327,21 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
       lead *= 1.0 - uIceC.y;
     }
     f = smax(f, lead - cr.x, kS);
+  }
+  if (uNameG.w > 0.5 && uNameS > 0.0) {
+    // The swept field the letters stand on is the thinnest ice on the lake, and it goes first: from under their
+    // feet outward, further in some places than in others, and furthest along the fractures, so the water the
+    // letters come to stand in has bays and points and runs out into the leads round it.
+    float dS = nameSwept(u);
+    if (dS < 1.7) {
+      float un1 = textureLod(uSnow, il / vec2(1300.0, 700.0) + 0.41, 0.0).r;
+      float un2 = textureLod(uSnow, il / vec2(520.0, 300.0) + 0.17, 0.0).g;
+      // (How far from the row the letters stand in: the water reaches the far ice last.)
+      float dyR = max(max(min(uNameG.x, uNameG.y) - u.y, u.y - max(uNameG.x, uNameG.y) - uNameB.w), 0.0);
+      float rowD = length(vec2(max(abs(u.x - uIce.x - uIce.z * 0.5) - uIceBox.z, 0.0), dyR));
+      float wS = 0.55 * dS * (1.0 + 0.5 * un1) + 0.22 * un2 + 0.65 * clamp(rowD / 600.0, 0.0, 1.3) - 0.22 * exp(-cr.x / 46.0);
+      f = smax(f, (uNameS - 1.0 - wS) * 420.0, 14.0);
+    }
   }
   if (uIceC.y > 0.0 && uIceP.y <= 0.0) {
     // What is left is floes: whole rounded islands, one to a cell of a
