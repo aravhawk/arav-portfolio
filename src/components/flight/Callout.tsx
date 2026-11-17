@@ -12,6 +12,7 @@ export function Callout({
   to,
   lift = 56,
   side = 1,
+  wide,
   children,
 }: {
   /** the point in the world: x, y, z */
@@ -22,8 +23,10 @@ export function Callout({
   /** the stretch of scroll, in screens, over which it shows */
   from: number;
   to: number;
-  /** how far above its point the label sits, px */
+  /** how far above its point the label sits, px (negative: that far below it, centred under the point) */
   lift?: number;
+  /** on a wide frame, another point and lift: where the frame's composition wants the caption */
+  wide?: { at: [number, number, number]; lift: number };
   /** 1: the label runs to the right of its point, -1: to the left */
   side?: 1 | -1;
   children: React.ReactNode;
@@ -36,7 +39,7 @@ export function Callout({
     <span className="fl-call-label mono">{children}</span>
   );
   return (
-    <div className="fl-call" data-call={at.join(',')} data-call-from={from} data-call-to={to} data-call-lift={lift} data-call-side={side}>
+    <div className="fl-call" data-call={at.join(',')} data-call-from={from} data-call-to={to} data-call-lift={lift} data-call-side={side} data-call-wide={wide ? wide.at.join(',') : undefined} data-call-wide-lift={wide ? wide.lift : undefined}>
       <span className="fl-call-ring" aria-hidden="true" />
       <span className="fl-call-line" aria-hidden="true" />
       {text}
