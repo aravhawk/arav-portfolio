@@ -710,11 +710,15 @@
   gap: var(--s-5);
   min-width: 0;
 }
+/* The radar and the question beside it; where there is no room for both, the question goes under. */
 .trio-under {
   display: grid;
-  grid-template-columns: minmax(0, 31.25rem) minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
   gap: clamp(24px, 3.4vw, 56px);
   align-items: center;
+}
+.trio-under .plate {
+  max-width: 31.25rem;
 }
 .chips-row {
   display: flex;
