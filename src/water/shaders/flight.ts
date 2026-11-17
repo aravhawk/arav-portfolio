@@ -872,7 +872,8 @@ float sparkle(vec2 p, float foot, vec3 dir) {
     vec2 g = p / cell;
     vec2 id = floor(g);
     float r = hash21(id + 31.7 * (l0 + float(i)));
-    if (r < 0.9) continue;
+    // (Before dawn only a few are turned to the little light there is.)
+    if (r < mix(0.9, 0.972, uNight)) continue;
     vec2 at = id + 0.25 + 0.5 * vec2(hash21(id + 3.7), hash21(id + 9.1));
     // (How far off its middle, in pixels of the screen: it is a round point however low the eye.)
     vec2 dw = (g - at) * cell;
