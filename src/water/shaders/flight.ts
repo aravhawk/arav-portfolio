@@ -2065,18 +2065,28 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   float sd = max(dot(rf, S.sun), 0.0);
   col += S.band * (pow(sd, 240.0) * 1.6 + pow(sd, 40.0) * 0.12) * (1.0 - shade) * (1.0 - uNight) * (1.0 - gDeep);
 #ifdef SEA
-  // Near the sea the light is low and ahead: the channels catch it, a path
-  // of glints on the ripple faces under the sun's bearing.
+  // The delta, late in the day. The sun is low and ahead, so each bar lays a long shade on the water behind it and
+  // the channels away from the light are deep teal; only where a channel crosses the sun's bearing does it burn.
+  float dlt = pw.y > ${(DELTA.apex.y - 260).toFixed(1)} ? smoothstep(${(DELTA.apex.y - 260).toFixed(1)}, ${(DELTA.y + 120).toFixed(1)}, pw.y) * (1.0 - uNight) : 0.0;
+  float longShade = shade;
+  if (dlt > 0.0) {
+    // (Two looks toward the sun: a bank a long way off still shades this water.)
+    if (open < 1.0) longShade = max(shade, max(smoothstep(-6.0, 6.0, textureLod(uBedA, bedUv(pw + LXY * 64.0), 0.0).r), 0.75 * smoothstep(-6.0, 6.0, textureLod(uBedA, bedUv(pw + LXY * 150.0), 0.0).r)));
+    col = mix(col, col * vec3(0.16, 0.4, 0.5) + vec3(0.0, 0.008, 0.016), dlt * (0.72 + 0.26 * longShade));
+  }
   if (uSea.x > 0.0 && S.sun.z > 0.0) {
     float daS = atan(dir.x, dir.y) - atan(S.sun.x, S.sun.y);
-    float pathS = exp(-daS * daS / 0.1);
+    // (By day the path is narrow: contrast, not more light everywhere, is what makes it blaze.)
+    float pathS = exp(-daS * daS / mix(0.03, 0.1, uNight));
     if (pathS > 0.01) {
       // Every ripple face turned to the sun throws it back whole: the braids blaze where they cross its bearing,
       // in broad flashing faces with a fine sparkle over them that comes and goes.
-      float face = smoothstep(0.5, 0.78, mix(dw2.r, df.r, 0.45));
-      face = mix(face, 0.34, smoothstep(2.0, 9.0, footL));
+      // (By day they are fewer and far brighter, with dark water between them: a wash of light would turn the channels to sand.)
+      float face = smoothstep(mix(0.55, 0.5, uNight), mix(0.8, 0.78, uNight), mix(dw2.r, df.r, 0.45));
+      face = mix(face, mix(0.2, 0.34, uNight), smoothstep(2.0, 9.0, footL));
       float spark = smoothstep(0.7, 0.92, n2(pw / 9.0 + vec2(uTime * 1.1, -uTime * 0.8))) * (1.0 - smoothstep(1.2, 4.0, footL));
-      col += S.band * pathS * (0.16 + 5.5 * face * face * face + 4.0 * spark * face) * (0.35 + 0.65 * fres) * uSea.x * (1.0 - shade) * mix(1.0, 0.45, uNight);
+      vec3 gold = mix(S.band, vec3(2.4, 1.7, 1.0), 0.5 * (1.0 - uNight));
+      col += gold * pathS * (mix(0.05, 0.16, uNight) + mix(16.0, 5.5, uNight) * face * face * face + mix(8.0, 4.0, uNight) * spark * face) * (0.35 + 0.65 * fres) * uSea.x * (1.0 - longShade) * mix(1.0, 0.45, uNight);
     }
   }
 #endif
@@ -2274,7 +2284,9 @@ float floeAt(vec2 p) {
   l = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * l;
   float big = fract(hq.x * 37.0);
   float sz = 12.0 + 42.0 * big * big;
-  return max(abs(l.x) + abs(l.y) * 0.5, max(abs(l.y) * 1.25, abs(l.x * 0.8 - l.y * 0.6))) - sz;
+  // (Four straight sides at angles of its own: a broken piece, no two alike.)
+  float c1 = fract(hq.y * 13.0), c2 = fract(hq.x * 29.0);
+  return max(max(abs(l.x) * (0.8 + 0.5 * c1) + abs(l.y) * 0.42, abs(l.y) * (1.0 + 0.6 * c2)), max(l.x * 0.9 - l.y * (0.3 + 0.6 * c2), -l.x * 0.7 + l.y * (0.2 + 0.7 * c1))) - sz;
 }
 // The lee at this pixel: the shade it lays on the water is put on after the air.
 float gLee = 0.0;
@@ -2439,7 +2451,8 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   vec3 body = mix(deep * (0.5 + 0.5 * max(S.sun.z * 3.0, 0.3)), vec3(0.01, 0.07, 0.11) * (S.amb.b * 1.6 + 0.12), (1.0 - gDusk) * (1.0 - uNight));
   // (By day the sea is a rougher mirror than at the still ends of the day: more of its own deep colour shows.)
   float dayK = (1.0 - gDusk) * (1.0 - uNight);
-  float mir = clamp(fres + 0.05, 0.0, 1.0) * (1.0 - 0.5 * dayK) * (1.0 - 0.12 * lee * still);
+  // (Late in the day it is a deep body with the pale sky only glancing on it: the sun's path is the one bright thing.)
+  float mir = clamp(fres + 0.05, 0.0, 1.0) * (1.0 - 0.68 * dayK) * (1.0 - 0.12 * lee * still);
   vec3 col = mix(body, refl, mir);
   float inv = inversesqrt(max(dot(dir.xy, dir.xy), 1e-6));
   vec2 dn = dir.xy * inv;
@@ -2459,7 +2472,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     // at the horizon.
     float day = (1.0 - uNight) * up * (1.0 - still);
     if (day > 0.0) {
-      float wide = mix(0.028, 0.11, nearK) * mix(1.5, 1.0, gDusk);
+      float wide = mix(0.028, mix(0.085, 0.11, gDusk), nearK) * mix(1.12, 1.0, gDusk);
       float path = exp(-da * da / (wide * wide));
       if (path > 0.003) {
         vec2 gq = q * vec2(30.0, 15.0);
@@ -2472,8 +2485,8 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
         glint = mix(glint, 0.3, smoothstep(0.35, 1.1, px * 15.0));
         // The sun's reflected bloom is broken by the same facets, so it is not a patch. (It is taken away by as much
         // as the path is there: taken whole up to the path's edge, it left a seam down the water at that edge.)
-        col = max(col - sunBloom(sd) * mir * 0.3 * (1.0 - glint) * day * smoothstep(0.003, 0.12, path), 0.0);
-        col += vec3(1.0, 0.88, 0.7) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee) * mix(9.0, 1.0, gDusk);
+        col = max(col - sunBloom(sd) * mir * mix(0.85, 0.3, gDusk) * (1.0 - glint) * day * smoothstep(0.003, 0.12, path), 0.0);
+        col += mix(vec3(1.0, 0.76, 0.44), vec3(1.0, 0.88, 0.7), gDusk) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee) * mix(20.0, 1.0, gDusk);
       }
     }
   }
@@ -2558,6 +2571,22 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   }
   gLee = lee;
   return col;
+}
+#endif
+
+#ifdef SEA
+/**
+ * The delta's bars late in the day. A bar is a low dome of snow: the low sun finds the rim turned to it, warm, and
+ * the rim turned away lies in the bar's own blue shade. (sd: how far inside the shore; ba: the way the land rises.)
+ */
+vec3 deltaBar(vec3 col, float y, float sd, vec2 ba) {
+  float k = smoothstep(${(DELTA.apex.y - 200).toFixed(1)}, ${(DELTA.y - 60).toFixed(1)}, y) * (1.0 - uNight) * (1.0 - gDusk);
+  if (k <= 0.0) return col;
+  float toSun = dot(-ba, normalize(keyDir().xy));
+  float lit = smoothstep(0.05, 0.75, toSun) * (1.0 - smoothstep(3.0, 44.0, sd));
+  float lee = smoothstep(0.05, 0.75, -toSun) * (1.0 - smoothstep(8.0, 96.0, sd));
+  col = mix(col, col * vec3(0.56, 0.68, 0.9), 0.75 * lee * k);
+  return col + S.key * vec3(1.0, 0.84, 0.62) * 0.17 * lit * k;
 }
 #endif
 
@@ -2910,6 +2939,9 @@ void main() {
     if (aLand > 0.0) col = (landColor(p, sd0, b0.ba, foot, dir, slabShade) + slabLight * mix(0.5, 1.1, gRock)) * aLand;
     // (The snowfield climbs away from the low sun: its slopes stand in the sky's blue shade, their crests in the light.)
     if (gFieldG != 0.0) col *= mix(vec3(1.0), mix(vec3(0.74, 0.83, 0.96), vec3(1.06, 1.04, 1.0), smoothstep(0.1, -0.05, gFieldG)), (1.0 - uNight) * smoothstep(0.0, 0.03, abs(gFieldG)));
+#ifdef SEA
+    if (aLand > 0.0 && p.y > ${(DELTA.apex.y - 200).toFixed(1)} && sd0 < 100.0) col = deltaBar(col, p.y, sd0, b0.ba) * 1.0;
+#endif
     // The island is ice-bound: a shelf of old blue ice stands round its shore, glazed, and before dawn it holds
     // the sky's light and the block's, so the island is never a dark shape on bright water.
     if (aLand > 0.0 && gRock > 0.0) {
@@ -2962,6 +2994,8 @@ void main() {
           gLee *= seaK * (1.0 - aWall) * (1.0 - aLand);
           gSea = seaK * (1.0 - aWall) * (1.0 - aLand);
         }
+        // (By day the shallows along the coast stand in the same clear air as the deep beside them.)
+        gSea = max(gSea, smoothstep(${(DELTA.sea - 300).toFixed(1)}, ${(DELTA.sea + 300).toFixed(1)}, pw.y) * (1.0 - gDusk) * (1.0 - uNight) * (1.0 - aWall) * (1.0 - aLand));
         cut += wc * (1.0 - aWall);
 #else
         cut += (waterColor(pw, bw, dir, foot, footL, iceShade, slabOn) + slabLight * 0.26) * (1.0 - aWall);
@@ -2995,8 +3029,9 @@ void main() {
 #ifdef SEA
     // (Over the open sea at the end of the day the air is clearer: the water keeps its depth out to the mist on the horizon.)
     // (And where the camera comes to rest the far water is a mirror: almost none of the air lies on it, so the ranges stand in it whole.)
+    // (Late in the day, before the blue hour, it is clearest of all: a deep sea under the low sun, not a pale band.)
     float stillM = uSea.y * gDusk * gSea;
-    col = mix(col, air, fog * (1.0 - clearK) * (1.0 - gSea * mix(mix(0.4, 0.55, gDusk), 0.94, uSea.y * gDusk)));
+    col = mix(col, air, fog * (1.0 - clearK) * (1.0 - gSea * mix(mix(0.82, 0.55, gDusk), 0.94, uSea.y * gDusk)));
 #else
     col = mix(col, air, fog * (1.0 - clearK));
 #endif
