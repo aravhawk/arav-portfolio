@@ -15,17 +15,22 @@
  *    spectrogram of each scene are written, so a person can listen and
  *    look.
  *
- * 2. Sync (--sync <base>). On the running site, with sound turned on by a
- *    real click, it causes each moment (a press on water, the switch, the
- *    melt's first crack, the shards' pulse, the lattice, the dawn) and
- *    reads the conductor's own trace: when the cause happened, when its
- *    sound was asked for, and the audio time it starts at. It also listens
- *    to the effects bus and finds each sound's real onset in the stream.
+ * 2. Sync (--sync <base> [--label name] [--load]). On the running site,
+ *    with sound turned on by a real click, it causes each moment and reads
+ *    the conductor's own trace. Moments on the picture's own clock (the
+ *    shards' pulse, the lattice, the gates, the surge, the drips, the dawn's
+ *    line of light) are set ahead: for each, the time it is heard (the
+ *    audio time it starts at, through the device's latency as the output
+ *    timestamps give it) against the time of the frame that shows it.
+ *    Moments a visitor causes (a press, the switch, the ice breaking under
+ *    a scroll) are asked for at once: the cause against the start on the
+ *    audio clock. It also listens to the effects' bus and finds each sound's
+ *    real onset in the stream. --load runs a second renderer on the GPU.
  *
  * Playwright is not a dependency of this repo. Point NODE_PATH at an
  * install that has it:
  *
- *   NODE_PATH=.tools/node_modules node scripts/audio-check.mjs [--out .tools/out/w5/renders] [--only hero-rest,dawn]
+ *   NODE_PATH=.tools/node_modules node scripts/audio-check.mjs [--out .tools/out/w8/renders] [--only hero-rest,dawn] [--solo bed|world|fx|ui]
  *   NODE_PATH=.tools/node_modules node scripts/audio-check.mjs --sync http://localhost:3155
  */
 import { createRequire } from 'node:module';
@@ -211,6 +216,55 @@ export function clicks(x, sr) {
   return { count, maxJump, at };
 }
 
+/**
+ * A loop a listener could find shows as the sound's fine texture coming
+ * round again. This takes the level of the band the water and the air live
+ * in (1.5 to 7 kHz) every 10 ms, removes its slow drift (anything a second
+ * or longer: a scroll, a swell), and looks for a lag between 0.4 and 14 s at
+ * which that texture matches itself. Random water gives a few hundredths; a
+ * looped buffer gives a clear peak at its length.
+ */
+export function loopOf(x, sr) {
+  const N = 1024;
+  const hop = 480;
+  const env = [];
+  const b0 = Math.round((1500 * N) / sr);
+  const b1 = Math.round((7000 * N) / sr);
+  stft(x, N, hop, (p) => {
+    let e = 0;
+    for (let i = b0; i < b1; i++) e += p[i];
+    env.push(Math.log(e + 1e-12));
+  });
+  const n = env.length;
+  const per = sr / hop;
+  if (n < per * 3) return { r: 0, lag: 0 };
+  // Take off the slow part: a running mean a second wide.
+  const half = Math.round(per / 2);
+  const pre = new Float64Array(n + 1);
+  for (let i = 0; i < n; i++) pre[i + 1] = pre[i] + env[i];
+  const d = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = Math.max(0, i - half);
+    const b = Math.min(n, i + half + 1);
+    d[i] = env[i] - (pre[b] - pre[a]) / (b - a);
+  }
+  let best = { r: 0, lag: 0 };
+  const maxLag = Math.min(Math.round(14 * per), Math.floor(n / 2));
+  for (let lag = Math.round(0.4 * per); lag < maxLag; lag++) {
+    let ab = 0;
+    let aa = 0;
+    let bb = 0;
+    for (let i = 0; i + lag < n; i++) {
+      ab += d[i] * d[i + lag];
+      aa += d[i] * d[i];
+      bb += d[i + lag] * d[i + lag];
+    }
+    const r = aa && bb ? ab / Math.sqrt(aa * bb) : 0;
+    if (r > best.r) best = { r, lag: lag / per };
+  }
+  return best;
+}
+
 /** RMS in dBFS of a stretch of a render, seconds. */
 export function rmsOf(chs, sr, t0, t1) {
   const a = Math.max(0, Math.round(t0 * sr));
@@ -243,14 +297,17 @@ export function analyze(all, sr, from = 0) {
   let tot = 0;
   let cen = 0;
   let hi = 0;
+  let mid = 0;
   stft(mono, N, N / 2, (p) => {
     for (let i = 1; i < p.length; i++) {
       const f = (i * sr) / N;
       tot += p[i];
       cen += p[i] * f;
       if (f >= 6000) hi += p[i];
+      if (f >= 300 && f <= 4000) mid += p[i];
     }
   });
+  const lp = loopOf(mono, sr);
   let lr = 0;
   let ll = 0;
   let rr = 0;
@@ -269,6 +326,10 @@ export function analyze(all, sr, from = 0) {
     crestDb: +(db(peak) - db(rms)).toFixed(1),
     centroidHz: tot ? Math.round(cen / tot) : 0,
     above6k: tot ? +(hi / tot).toFixed(4) : 0,
+    mid: tot ? +(mid / tot).toFixed(3) : 0,
+    midDb: +db(Math.sqrt((mid / Math.max(1, tot)) * (sq / (n * chs.length)))).toFixed(1),
+    loop: +lp.r.toFixed(2),
+    loopAt: +lp.lag.toFixed(2),
     dc: +(dc / (all[0].length * all.length)).toExponential(1),
     clicks: ck.reduce((s, c) => s + c.count, 0),
     clickAt: ck.flatMap((c) => c.at).slice(0, 6),
@@ -434,6 +495,45 @@ function scenes(K) {
     silence: { seconds: 14, scroll: [[0, stop[1]]], power: [[1, 1, 2], [8, 0, 0.5]], silent: [[0, 0.98], [10.5, 14]] },
     // The whole flight at a reading pace, and the ending held.
     flight: { seconds: 86, scroll: [[0, 0], [3, 0], [3 + K.END_AT / 0.45, K.END_AT]], transients: true },
+
+    // Each station's water, alone (the world's bus only): arrive and hold.
+    'water-lake-melted': { seconds: 20, scroll: [[0, 1.9], [3, say - 0.1]], solo: 'world' },
+    'water-basin': { ...station(2), seconds: 22, solo: 'world', transients: true },
+    'water-confluence': { ...station(3), seconds: 20, solo: 'world' },
+    'water-pool': { ...station(4), seconds: 20, solo: 'world' },
+    // (The pulse leaves a shard every three and a half seconds, with a real splash at its foot.)
+    'water-tarn': { ...station(5), seconds: 20, solo: 'world', transients: true, period: [3.5] },
+    'water-columns': { ...station(6), seconds: 20, solo: 'world', transients: true },
+    'water-sluice': { ...station(7), seconds: 20, solo: 'world', events: [[6, 'switch', 1], [11, 'switch', 2], [15.5, 'switch', 0]], transients: true },
+    'water-lattice': { ...station(8), seconds: 22, solo: 'world', transients: true, period: [9] },
+    'water-canyon': { seconds: 20, scroll: [[0, canyon + 0.6], [3, canyon + 0.6], [14, stop[9]]], solo: 'world', clock0: 2.2 },
+    'water-delta': { ...station(10), seconds: 20, solo: 'world' },
+    'water-sea': { seconds: 40, scroll: [[0, K.END_AT]], solo: 'world', clock0: 9 },
+    // The ice: at rest (its groans), and the first frames of the melt (the break, then the cracks that follow).
+    'ice-rest': { seconds: 50, scroll: [[0, 0]], solo: 'fx', transients: true },
+    'ice-first': { seconds: 14, scroll: [[0, 0], [3, 0], [9, 0.75]], transients: true },
+    'ice-first-alone': { seconds: 14, scroll: [[0, 0], [3, 0], [9, 0.75]], solo: 'fx', transients: true },
+    'ice-floes': { seconds: 14, scroll: [[0, 1.2], [3, 1.2], [10, 1.95]], solo: 'fx', transients: true },
+    // The piece alone (the bed's bus only): the theme at the hero, through the flight, and at the arrival.
+    'theme-hero': { seconds: 30, scroll: [[0, 0]], solo: 'bed', transients: true },
+    'theme-hero-night': { seconds: 30, scroll: [[0, 0]], night: [[0, 1]], solo: 'bed', transients: true },
+    'theme-flight': { seconds: 150, scroll: [[0, 0], [3, 0], [3 + K.END_AT / 0.22, K.END_AT]], solo: 'bed', transients: true },
+    'theme-arrival': { seconds: 30, scroll: [[0, K.END_AT - 2.2], [3, K.END_AT - 2.2], [12, K.END_AT]], transients: true },
+    'theme-arrival-alone': { seconds: 30, scroll: [[0, K.END_AT - 2.2], [3, K.END_AT - 2.2], [12, K.END_AT]], solo: 'bed', transients: true },
+    // The three rooms, on the same sounds (the effects' bus only): three presses on water in each place.
+    'room-open': { seconds: 14, scroll: [[0, stop[2]]], solo: 'fx', events: [[4, 'press', 0.5, 0.86, 16], [6.5, 'press', 0.4, 0.74, 30], [9, 'press', 0.62, 0.66, 50]], transients: true },
+    'room-canyon': { seconds: 14, scroll: [[0, stop[9]]], solo: 'fx', events: [[4, 'press', 0.5, 0.86, 16], [6.5, 'press', 0.4, 0.74, 30], [9, 'press', 0.62, 0.66, 50]], transients: true, clock0: 2.2 },
+    'room-still': { seconds: 14, scroll: [[0, stop[5]]], solo: 'fx', events: [[4, 'press', 0.5, 0.86, 16], [6.5, 'press', 0.4, 0.74, 30], [9, 'press', 0.62, 0.66, 50]], transients: true, clock0: 3.6 },
+    // The aurora's own voice: the hero before dawn, the bed's bus only, against the same by day.
+    'aurora': { seconds: 40, scroll: [[0, 0]], night: [[0, 1]], solo: 'bed', transients: true },
+    // The phone's tier.
+    'lean-hero': { seconds: 26, scroll: [[0, 0]], lean: true, transients: true },
+    'lean-melt': { seconds: 18, scroll: [[0, 0], [3, 0], [11, 2.0]], lean: true, transients: true },
+    'lean-confluence': { ...station(3), lean: true },
+    'lean-dawn': { seconds: 28, scroll: [[0, K.END_AT - 2.6], [3, K.END_AT - 2.6], [10, K.END_AT]], lean: true, transients: true },
+    'lean-flight': { seconds: 86, scroll: [[0, 0], [3, 0], [3 + K.END_AT / 0.45, K.END_AT]], lean: true, transients: true },
+    // The picture's clock disturbed: three long frames at the tarn and the lattice. What was set ahead is taken back, nothing clicks.
+    'stalled': { seconds: 24, scroll: [[0, stop[5]], [10, stop[5]], [12, stop[8]]], stalls: [[5.9, 300], [8.4, 120], [17.9, 250]], transients: true, clock0: 2.2, disturbedMin: 3 },
   };
 }
 
@@ -456,10 +556,10 @@ function loadPlaywright() {
 /** Serve the repo's own TypeScript to the page, transpiled as it is asked for. */
 async function serveSource(page) {
   const ts = require('typescript');
-  await page.route('http://audio.check/**', (route) => {
+  await page.route('https://audio.check/**', (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === '/') {
-      return route.fulfill({ contentType: 'text/html', body: '<!doctype html><script type="importmap">{"imports":{"@/":"http://audio.check/src/"}}</script><body></body>' });
+      return route.fulfill({ contentType: 'text/html', body: '<!doctype html><script type="importmap">{"imports":{"@/":"https://audio.check/src/"}}</script><body></body>' });
     }
     const base = join(root, path);
     const file = [base, `${base}.ts`, `${base}.tsx`, join(base, 'index.ts')].find((f) => existsSync(f) && !f.endsWith('/'));
@@ -467,12 +567,12 @@ async function serveSource(page) {
     const js = ts.transpileModule(readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }, fileName: file }).outputText;
     return route.fulfill({ contentType: 'text/javascript', body: js });
   });
-  await page.goto('http://audio.check/');
+  await page.goto('https://audio.check/');
 }
 
 async function renders() {
   const { chromium } = loadPlaywright();
-  const out = resolve(arg('out', '.tools/out/w5/renders'));
+  const out = resolve(arg('out', '.tools/out/w8/renders'));
   mkdirSync(out, { recursive: true });
   const only = arg('only', '');
   const browser = await chromium.launch({ headless: true });
@@ -481,7 +581,7 @@ async function renders() {
   page.on('console', (m) => (m.type() === 'error' ? console.error('console:', m.text()) : null));
   await serveSource(page);
   const K = await page.evaluate(async () => {
-    const c = await import('http://audio.check/src/water/camera');
+    const c = await import('https://audio.check/src/water/camera');
     return { stops: c.stillStops(), starts: c.sectionStarts(), END_AT: c.END_AT, SETTLE_AT: c.SETTLE_AT };
   });
   const all = scenes(K);
@@ -489,15 +589,16 @@ async function renders() {
   const rows = [];
   let failed = 0;
   for (const name of names) {
-    const { transients, silent, ...spec } = all[name];
+    const { transients, silent, disturbedMin, period, ...spec } = all[name];
     // (--solo bed|world|fx|ui: hear one bus alone, to set its level.)
     if (arg('solo', '')) spec.solo = arg('solo', '');
     const t0 = Date.now();
     const meta = await page.evaluate(async (s) => {
-      const { renderScene } = await import('http://audio.check/src/audio/render');
+      const { renderScene } = await import('https://audio.check/src/audio/render');
       const r = await renderScene(s);
       window.__r = r;
-      return { sr: r.sampleRate, n: r.channels[0].length, chords: r.chords, trace: r.trace, series: r.series };
+      const th = await import('https://audio.check/src/audio/theory');
+      return { sr: r.sampleRate, n: r.channels[0].length, chords: r.chords, trace: r.trace, series: r.series, water: r.water, disturbed: r.disturbed, phrases: r.phrases.map((p) => ({ ...p, derived: th.derives(p.notes) })) };
     }, spec);
     // The samples come across in pieces: a long scene is tens of megabytes.
     const chs = [];
@@ -528,6 +629,13 @@ async function renders() {
     if (m.maxJump > 0.25) problems.push(`jump ${m.maxJump}`);
     if (!transients && m.clicks > 0) problems.push(`${m.clicks} clicks at ${m.clickAt.join(', ')} s`);
     if (m.above6k > 0.12) problems.push(`harsh: ${(m.above6k * 100).toFixed(1)}% above 6 kHz`);
+    if (!meta.water) problems.push('the water model did not run');
+    // (Where the world is heard alone, nothing may come round again. With the bed in, the bells' own beat is a period and is not a loop.)
+    // (And where the picture itself does something on a period, the splash that goes with it comes round on that period: that is the picture's, and is said.)
+    const own = (period ?? []).some((p) => Math.abs(m.loopAt / p - Math.round(m.loopAt / p)) * p < 0.12 && m.loopAt > p / 2);
+    if (spec.solo === 'world' && m.loop > 0.3 && !own) problems.push(`a loop: the texture comes round at ${m.loopAt} s (r ${m.loop})`);
+    if (meta.phrases.some((p) => !p.derived)) problems.push(`a bell phrase that is not the theme: ${JSON.stringify(meta.phrases.find((p) => !p.derived))}`);
+    if (disturbedMin && meta.disturbed < disturbedMin) problems.push(`the clock was disturbed ${disturbedMin} times and noticed ${meta.disturbed}`);
     const quiet = (silent ?? []).map(([a, b]) => +rmsOf(chs, meta.sr, a, b).toFixed(1));
     quiet.forEach((q, i) => {
       if (q > -80) problems.push(`not silent ${silent[i][0]} to ${silent[i][1]} s: ${q} dBFS`);
@@ -535,33 +643,61 @@ async function renders() {
     if (problems.length) failed++;
     writeFileSync(join(out, `${name}.wav`), wav(chs, meta.sr));
     writeFileSync(join(out, `${name}.png`), spectrogram(chs, meta.sr));
-    writeFileSync(join(out, `${name}.json`), JSON.stringify({ spec, metrics: m, quiet, chords: meta.chords, trace: meta.trace, series: meta.series }));
+    writeFileSync(join(out, `${name}.json`), JSON.stringify({ spec, metrics: m, quiet, chords: meta.chords, phrases: meta.phrases, trace: meta.trace, series: meta.series, disturbed: meta.disturbed }));
     rows.push({ name, ...m, quiet, problems });
-    console.log(`${problems.length ? 'FAIL' : 'ok  '} ${name.padEnd(22)} ${String(m.seconds).padStart(5)} s  peak ${String(m.peakDb).padStart(7)}  true ${String(m.truePeakDb).padStart(7)}  rms ${String(m.rmsDb).padStart(6)}  ${String(m.lufs).padStart(6)} LUFS  crest ${String(m.crestDb).padStart(5)}  centroid ${String(m.centroidHz).padStart(5)} Hz  >6k ${(m.above6k * 100).toFixed(2).padStart(5)}%  dc ${m.dc}  clicks ${m.clicks}${transients ? '*' : ''}  jump ${m.maxJump}  corr ${m.corr}${quiet.length ? `  silence ${quiet.join(', ')} dBFS` : ''}  (${((Date.now() - t0) / 1000).toFixed(1)} s)${problems.length ? `\n     ${problems.join('; ')}` : ''}`);
+    console.log(`${problems.length ? 'FAIL' : 'ok  '} ${name.padEnd(22)} ${String(m.seconds).padStart(5)} s  peak ${String(m.peakDb).padStart(7)}  true ${String(m.truePeakDb).padStart(7)}  rms ${String(m.rmsDb).padStart(6)}  ${String(m.lufs).padStart(6)} LUFS  crest ${String(m.crestDb).padStart(5)}  centroid ${String(m.centroidHz).padStart(5)} Hz  >6k ${(m.above6k * 100).toFixed(2).padStart(5)}%  300-4k ${(m.mid * 100).toFixed(0).padStart(3)}% ${String(m.midDb).padStart(6)} dB  loop ${m.loop}@${m.loopAt}  dc ${m.dc}  clicks ${m.clicks}${transients ? '*' : ''}  jump ${m.maxJump}  corr ${m.corr}${quiet.length ? `  silence ${quiet.join(', ')} dBFS` : ''}  (${((Date.now() - t0) / 1000).toFixed(1)} s)${problems.length ? `\n     ${problems.join('; ')}` : ''}`);
   }
   await browser.close();
-  const head = '| scene | seconds | peak dBFS | true peak | RMS | LUFS | crest dB | centroid Hz | above 6 kHz | DC | clicks | largest jump | L/R corr | silence dBFS | result |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |';
-  const body = rows.map((r) => `| ${r.name} | ${r.seconds} | ${r.peakDb} | ${r.truePeakDb} | ${r.rmsDb} | ${r.lufs} | ${r.crestDb} | ${r.centroidHz} | ${(r.above6k * 100).toFixed(2)}% | ${r.dc} | ${r.clicks}${all[r.name].transients ? '*' : ''} | ${r.maxJump} | ${r.corr} | ${r.quiet.join(', ') || ''} | ${r.problems.length ? r.problems.join('; ') : 'ok'} |`);
-  writeFileSync(join(out, 'table.md'), `${head}\n${body.join('\n')}\n\n\\* scenes with intended transients (cracks, drops, plucks, ticks): the click detector counts their onsets; the largest jump is the guard there.\n`);
+  const head = '| scene | seconds | peak dBFS | true peak | RMS | LUFS | crest dB | centroid Hz | above 6 kHz | 300 Hz to 4 kHz (share, level dBFS) | loop (r at s) | DC | clicks | largest jump | L/R corr | silence dBFS | result |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |';
+  const body = rows.map((r) => `| ${r.name} | ${r.seconds} | ${r.peakDb} | ${r.truePeakDb} | ${r.rmsDb} | ${r.lufs} | ${r.crestDb} | ${r.centroidHz} | ${(r.above6k * 100).toFixed(2)}% | ${(r.mid * 100).toFixed(0)}%, ${r.midDb} | ${r.loop} at ${r.loopAt} | ${r.dc} | ${r.clicks}${all[r.name].transients ? '*' : ''} | ${r.maxJump} | ${r.corr} | ${r.quiet.join(', ') || ''} | ${r.problems.length ? r.problems.join('; ') : 'ok'} |`);
+  writeFileSync(join(out, arg('table', 'table.md')), `${head}\n${body.join('\n')}\n\n\\* scenes with intended transients (cracks, drops, plucks, ticks): the click detector counts their onsets; the largest jump is the guard there.\n`);
   console.log(`\n${rows.length} scenes, ${failed} failed. WAVs, spectrograms and table.md in ${out}`);
   process.exit(failed ? 1 : 0);
 }
 
 /* ---------- sync ---------- */
 
+/** What the picture does by its own clock: its sounds are set ahead for the frame that shows them. */
+const AHEAD = ['pulse', 'landing', 'lattice', 'lap', 'drip', 'gate-up', 'gate-down', 'ring', 'surge', 'ray'];
+/** What a visitor causes, in a handler or by scrolling: asked for at once. */
+const AT_ONCE = ['press', 'switch', 'tap', 'hover', 'crack', 'join', 'slap', 'dawn', 'melt'];
+
 async function sync(base) {
   const { chromium } = loadPlaywright();
-  const out = resolve(arg('out', '.tools/out/w5'));
+  const out = resolve(arg('out', '.tools/out/w8'));
+  const label = arg('label', 'run');
+  const load = process.argv.includes('--load');
   mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  // A second renderer, loading the GPU: another tab's flight, scrolled up and down the whole time.
+  let other = null;
+  if (load) {
+    other = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await other.goto(base + '/', { waitUntil: 'load' });
+    await other.waitForFunction(() => document.documentElement.dataset.flight === 'on', null, { timeout: 60000 });
+    await other.evaluate(() => {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      const t0 = performance.now();
+      const go = () => {
+        const p = ((performance.now() - t0) / 30000) % 2;
+        window.scrollTo(0, max * (p < 1 ? p : 2 - p));
+        requestAnimationFrame(go);
+      };
+      requestAnimationFrame(go);
+    });
+  }
+  const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => (m.type() === 'error' ? errors.push(m.text()) : null));
   await page.goto(base + '/', { waitUntil: 'load' });
   await page.waitForFunction(() => document.documentElement.dataset.flight === 'on', null, { timeout: 60000 });
+  await page.bringToFront();
   await page.waitForTimeout(1500);
   const before = await page.evaluate(() => !!window.__sound);
+  await page.hover('.nav-sound');
+  await page.waitForTimeout(300);
   await page.click('.nav-sound');
   await page.waitForFunction(() => window.__sound && window.__sound.ctx.state === 'running', null, { timeout: 20000 });
   await page.waitForTimeout(2500);
@@ -594,11 +730,11 @@ async function sync(base) {
     sound.g.fx.connect(tap);
     sound.g.ui.connect(tap);
     tap.connect(mute).connect(ctx.destination);
-    // The two clocks, read together every frame.
+    // The two clocks, read together every frame, and each frame's length.
     const pairs = (window.__pairs = []);
-    const loop = () => {
-      const o = ctx.getOutputTimestamp();
-      if (pairs.length < 100000) pairs.push([performance.now(), ctx.currentTime, o.contextTime, o.performanceTime]);
+    const loop = (now) => {
+      const o = ctx.getOutputTimestamp ? ctx.getOutputTimestamp() : { contextTime: 0, performanceTime: 0 };
+      if (pairs.length < 200000) pairs.push([performance.now(), ctx.currentTime, o.contextTime || 0, o.performanceTime || 0, now]);
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
@@ -616,10 +752,7 @@ async function sync(base) {
     return found.length ? found[Math.floor(found.length / 2)] : NaN;
   });
   const unit = await page.evaluate(() => window.__flight.state().unit);
-  const K = await page.evaluate(() => {
-    const secs = Array.from(document.querySelectorAll('[data-fl]')).map((el) => el.offsetTop);
-    return { secs, max: document.documentElement.scrollHeight - innerHeight };
-  });
+  const K = await page.evaluate(() => ({ max: document.documentElement.scrollHeight - innerHeight }));
   const to = async (screens, ms = 900) => {
     await page.evaluate((y) => window.scrollTo(0, y), Math.round(screens * unit));
     await page.waitForTimeout(ms);
@@ -647,12 +780,12 @@ async function sync(base) {
   // The shards: hold at the tarn for two of the pulse's rounds.
   await to(stops[5] + 1.2, 16500);
   // The columns' drips.
-  await to(stops[6] + 1.2, 4000);
+  await to(stops[6] + 1.2, 5000);
   // The switch.
   await to(stops[7] + 1.2, 2500);
   for (const i of [1, 2, 0]) {
     await page.locator('.switch-opt').nth(i).click();
-    await page.waitForTimeout(1600);
+    await page.waitForTimeout(1900);
   }
   // The lattice: a lap and a half.
   await to(stops[8] + 1.15, 14000);
@@ -660,16 +793,35 @@ async function sync(base) {
   await to(stops[11] - 0.6, 1500);
   await glide(stops[11] - 0.6, K.max / unit, 3);
   await page.waitForTimeout(6000);
-  const data = await page.evaluate(() => ({ trace: window.__sound.sound.trace, blocks: window.__blocks, pairs: window.__pairs, base: window.__sound.ctx.baseLatency, outLat: window.__sound.ctx.outputLatency, sr: window.__sound.ctx.sampleRate }));
+  const data = await page.evaluate(() => ({ trace: window.__sound.sound.trace, blocks: window.__blocks, pairs: window.__pairs, base: window.__sound.ctx.baseLatency, outLat: window.__sound.ctx.outputLatency, sr: window.__sound.ctx.sampleRate, disturbed: window.__sound.sound.disturbed, lag: window.__sound.map.lag, tier: window.__sound.tier, lead: window.__sound.lead() }));
   await browser.close();
 
-  // For each moment: cause to the request for its sound (both on the page's clock), and the real onset in the stream against the start that was asked for.
-  const perfOf = (ct) => {
-    // The frame whose reading of the audio clock is nearest: the context's time `ct` is that frame's present plus the difference.
-    let best = data.pairs[0];
-    for (const p of data.pairs) if (Math.abs(p[1] - ct) < Math.abs(best[1] - ct)) best = p;
-    return best[0] + (ct - best[1]) * 1000;
+  // The two clocks, measured here from the page's own readings (not taken from the sound's map): near each
+  // moment, the render head is the upper edge of the readings of the audio clock, and what is heard is what the
+  // output timestamps say (or the head less the reported latency where they say nothing).
+  const offsets = (perf) => {
+    let head = -Infinity;
+    const ears = [];
+    let lo = 0;
+    let hi = data.pairs.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (data.pairs[mid][0] < perf - 1000) lo = mid + 1;
+      else hi = mid;
+    }
+    for (let i = lo; i < data.pairs.length && data.pairs[i][0] < perf + 1000; i++) {
+      const p = data.pairs[i];
+      head = Math.max(head, p[1] - p[0] / 1000);
+      if (p[3] > 0 && p[2] > 0) ears.push(p[2] - p[3] / 1000);
+    }
+    ears.sort((a, b) => a - b);
+    const ear = ears.length ? ears[ears.length >> 1] : head - (data.base + data.outLat);
+    return { head, ear };
   };
+  const frames = data.pairs.map((p, i) => (i ? p[4] - data.pairs[i - 1][4] : 16.7)).filter((d) => d > 0 && d < 500);
+  frames.sort((a, b) => a - b);
+  const frameMs = frames[frames.length >> 1];
+  const long = frames.filter((d) => d > frameMs * 1.5).length;
   const onsetOf = (audio) => {
     // The first rise in the stream at or after the start that was asked for, with the listening node's own delay taken off.
     for (const b of data.blocks) {
@@ -681,33 +833,84 @@ async function sync(base) {
     return NaN;
   };
   const by = {};
-  for (const e of data.trace) (by[e.type] ||= []).push(e);
+  let taken = 0;
+  let unseen = 0;
+  for (const e of data.trace) {
+    if (e.type.endsWith(':taken-back')) {
+      taken++;
+      continue;
+    }
+    if (e.cause === null || Number.isNaN(e.cause)) {
+      unseen++;
+      continue;
+    }
+    (by[e.type] ||= []).push(e);
+  }
   const stat = (a) => {
     const s = a.filter((x) => Number.isFinite(x)).sort((x, y) => x - y);
     return s.length ? { n: s.length, min: s[0], med: s[Math.floor(s.length / 2)], max: s[s.length - 1] } : { n: 0, min: NaN, med: NaN, max: NaN };
   };
   const f = (x) => (Number.isFinite(x) ? x.toFixed(1) : 'n/a');
-  const lines = ['| moment | count | cause to request, ms (min / median / max) | cause to start on the audio clock, ms (min / median / max) | start asked for to onset found in the stream, ms (median / max) | within a frame (17 ms) |', '| --- | --- | --- | --- | --- | --- |'];
+  const three = (s) => `${f(s.min)} / ${f(s.med)} / ${f(s.max)}`;
+  const one = Math.max(17, frameMs + 0.4);
   let bad = 0;
-  for (const type of ['press', 'switch', 'gate-up', 'gate-down', 'crack', 'pulse', 'landing', 'lattice', 'drip', 'dawn', 'ray', 'melt', 'tap', 'hover']) {
+  // A frame that began late (more than a frame and a half after the one before it) shows its moments late: the
+  // picture missed a beat. Those moments are counted apart, with how late their frame was.
+  const stamps = data.pairs.map((p) => p[4]);
+  // (From when the moment was set to the frame that showed it: the longest any frame in between took.)
+  const gapBefore = (at, since) => {
+    let lo = 0;
+    let hi = stamps.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (stamps[mid] < at - 0.01) lo = mid + 1;
+      else hi = mid;
+    }
+    let worst = frameMs;
+    for (let i = lo; i > 0 && stamps[i] > since - 1; i--) worst = Math.max(worst, stamps[i] - stamps[i - 1]);
+    return worst;
+  };
+  const rowsA = ['| moment | count | set ahead by, ms (min / median / max) | while frames kept time: heard after its frame begins, ms (min / median / max) | of those, inside the frame | where a frame came late between its being set and shown: count, and the sound ahead of its frame by (ms, most) | start leaves the graph, ms before its frame begins (median) | start asked for to onset found in the stream, ms (median / max) |', '| --- | --- | --- | --- | --- | --- | --- | --- |'];
+  const summary = {};
+  for (const type of AHEAD) {
     const ev = by[type];
     if (!ev) {
-      lines.push(`| ${type} | 0 | | | | not caused |`);
-      bad++;
+      rowsA.push(`| ${type} | 0 | | | not caused | | | |`);
       continue;
     }
-    const req = stat(ev.map((e) => e.made - e.cause));
-    const start = stat(ev.map((e) => perfOf(e.audio) - e.cause));
+    const rows = ev.map((e) => ({ heard: (e.audio - offsets(e.made).ear) * 1000 - e.cause, left: (e.audio - offsets(e.made).head) * 1000 - e.cause, gap: gapBefore(e.cause, e.made) }));
+    const steady = rows.filter((r) => r.gap <= frameMs * 1.5).map((r) => r.heard);
+    const lateRows = rows.filter((r) => r.gap > frameMs * 1.5);
+    const lead = stat(ev.map((e) => e.cause - e.made));
     const on = stat(ev.map((e) => (onsetOf(e.audio) - e.audio) * 1000));
-    const late = ev.filter((e) => perfOf(e.audio) - e.cause > 17).length;
-    if (late) bad++;
-    lines.push(`| ${type} | ${ev.length} | ${f(req.min)} / ${f(req.med)} / ${f(req.max)} | ${f(start.min)} / ${f(start.med)} / ${f(start.max)} | ${f(on.med)} / ${f(on.max)} (${on.n} found) | ${late ? `${ev.length - late} of ${ev.length}` : 'all'} |`);
+    const outside = steady.filter((h) => h < -0.5 || h > frameMs + 0.5).length;
+    // (A late frame: the sound may be ahead of it by as much as the frame was late, and no more.)
+    const wrong = lateRows.filter((r) => r.heard > frameMs + 0.5 || r.heard < -(r.gap - frameMs) - 0.5 * frameMs - 0.5).length;
+    if (outside || wrong) bad++;
+    summary[type] = { n: ev.length, steady: steady.length, outside, late: lateRows.length, wrong, min: Math.min(...rows.map((r) => r.heard)), max: Math.max(...rows.map((r) => r.heard)) };
+    rowsA.push(`| ${type} | ${ev.length} | ${three(lead)} | ${three(stat(steady))} | ${outside ? `${steady.length - outside} of ${steady.length}` : `all ${steady.length}`} | ${lateRows.length ? `${lateRows.length}, ${f(-Math.min(...lateRows.map((r) => r.heard)))} (frame late by up to ${f(Math.max(...lateRows.map((r) => r.gap)) - frameMs)})` : 'none'} | ${f(-stat(rows.map((r) => r.left)).med)} | ${f(on.med)} / ${f(on.max)} (${on.n} found) |`);
   }
-  const lead = stat(data.pairs.filter((p) => p[3] > 0).map((p) => (p[1] - p[2]) * 1000));
-  const note = `\nThe listening node's own delay, measured with ticks asked for at known times and taken off the last column: ${(tapDelay * 1000).toFixed(2)} ms. An onset is found where the effects bus first rises clear of the 21 ms before it, so a moment that begins under another sound, or swells in slowly, is not found.\nAudio context: ${data.sr} Hz, base latency ${(data.base * 1000).toFixed(1)} ms, output latency ${(data.outLat * 1000).toFixed(1)} ms; the audio clock runs ${f(lead.med)} ms (median) ahead of what the output device is playing. Sound loaded before the click: ${before}. Console errors: ${errors.length}.\n`;
-  writeFileSync(join(out, 'sync.md'), lines.join('\n') + '\n' + note);
-  writeFileSync(join(out, 'sync.json'), JSON.stringify({ trace: data.trace, base: data.base, outLat: data.outLat, errors }));
-  console.log(lines.join('\n') + '\n' + note);
+  const rowsB = ['| moment | count | cause to request, ms (min / median / max) | cause to start on the audio clock, ms (min / median / max) | start asked for to onset found in the stream, ms (median / max) | starts within one frame of its cause |', '| --- | --- | --- | --- | --- | --- |'];
+  for (const type of AT_ONCE) {
+    const ev = by[type];
+    if (!ev) {
+      rowsB.push(`| ${type} | 0 | | | | not caused |`);
+      continue;
+    }
+    const start = ev.map((e) => (e.audio - offsets(e.made).head) * 1000 - e.cause);
+    const req = stat(ev.map((e) => e.made - e.cause));
+    const on = stat(ev.map((e) => (onsetOf(e.audio) - e.audio) * 1000));
+    const late = start.filter((x) => x > one).length;
+    if (late) bad++;
+    summary[type] = { n: ev.length, late, min: Math.min(...start), max: Math.max(...start) };
+    rowsB.push(`| ${type} | ${ev.length} | ${three(req)} | ${three(stat(start))} | ${f(on.med)} / ${f(on.max)} (${on.n} found) | ${late ? `${ev.length - late} of ${ev.length}` : 'all'} |`);
+  }
+  const lagNow = stat(data.pairs.filter((p) => p[3] > 0).map((p) => (p[1] - p[2]) * 1000));
+  const note = `\nFrames: median ${f(frameMs)} ms; ${long} of ${frames.length} were longer than one and a half times that (longest ${f(frames[frames.length - 1])} ms). A second renderer loading the GPU: ${load ? 'yes' : 'no'}.\nThe picture's clock was found disturbed ${data.disturbed} times; ${taken} moments set ahead were taken back; ${unseen} were set and their frame never came (the page was moved on).\nThe listening node's own delay, measured with ticks asked for at known times and taken off the onset columns: ${(tapDelay * 1000).toFixed(2)} ms. An onset is found where the effects' bus first rises clear of the 21 ms before it, so a moment that begins under another sound, or swells in slowly, is not found.\nAudio context: ${data.sr} Hz, base latency ${(data.base * 1000).toFixed(1)} ms, output latency ${(data.outLat * 1000).toFixed(1)} ms; the audio clock as the page reads it runs ${f(lagNow.med)} ms (median) ahead of what the device is playing; the sound's own map has it at ${f(data.lag * 1000)} ms. The hop to the audio thread, as measured at the end: the lead for moments asked for at once was ${f(data.lead * 1000)} ms. Tier: ${data.tier.lean ? 'lean' : 'full'}. Sound loaded before the click: ${before}. Console errors: ${errors.length}.\n`;
+  const text = `### ${label}\n\nSet ahead on the picture's clock:\n\n${rowsA.join('\n')}\n\nAsked for at once:\n\n${rowsB.join('\n')}\n${note}`;
+  writeFileSync(join(out, `sync-${label}.md`), text);
+  writeFileSync(join(out, `sync-${label}.json`), JSON.stringify({ summary, frameMs, long, frames: frames.length, disturbed: data.disturbed, taken, unseen, trace: data.trace, base: data.base, outLat: data.outLat, errors }));
+  console.log(text);
   if (errors.length) console.log(errors.slice(0, 10).join('\n'));
   process.exit(bad ? 1 : 0);
 }

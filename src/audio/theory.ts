@@ -6,6 +6,11 @@
  * relative major, reached at the dawn. Every tuned effect on the site is
  * drawn from D major's pentatonic (D E F sharp A B), which sits inside every
  * chord below, so nothing an interaction plays can be out of key.
+ *
+ * And one theme: five notes (MOTIF), stated plainly once by the bells over
+ * the frozen lake, where it ends on B minor's third and hangs, and whole and
+ * harmonised at the dawn, where the same five notes end on D major's tonic
+ * and rest. Between the two every movement's material is made from it.
  */
 
 /** A seeded generator, so a render of the same scene is the same sound. */
@@ -91,6 +96,88 @@ export const CHORDS = {
   Fsm7: chord('F#m7', FS, A, E, CS, FS),
 } satisfies Record<string, Chord>;
 
+/** A pulse of the piece, in seconds. Chords are held, and bells fall, on this grid. */
+export const BEAT = 1.15;
+
+/**
+ * The theme. F sharp, A, B, E, D: up a step, up a step, down a fourth, down
+ * a step (steps of the pentatonic ladder). Over B it is the fifth, the
+ * seventh, the root, the fourth and the minor third: a question. In D it is
+ * the third, the fifth, the sixth, the second and the tonic: the answer.
+ */
+export const MOTIF = [78, 81, 83, 76, 74];
+/** When each of its notes falls, in beats. */
+export const MOTIF_BEATS = [0, 1, 2, 3.5, 5];
+
+const LADDER = ladder(0, 127);
+/** A pentatonic note's place on the ladder (the nearest rung for a note off it). */
+export const rung = (midi: number) => LADDER.indexOf(snap(midi));
+/** The note `steps` rungs of the ladder above a pentatonic note. */
+export const climb = (midi: number, steps: number) => LADDER[Math.min(LADDER.length - 1, Math.max(0, rung(midi) + steps))];
+
+/** The theme as rungs from its first note: 0, 1, 2, -1, -2. */
+export const MOTIF_STEPS = MOTIF.map((m) => rung(m) - rung(MOTIF[0]));
+
+/** One way of saying the theme. */
+export interface Variation {
+  /** as it is, upside down, or backwards */
+  form: 'plain' | 'invert' | 'retro';
+  /** all five notes, its first three, or its last three */
+  part?: 'whole' | 'head' | 'tail';
+  /** 2: every note twice as long (augmented) */
+  stretch?: number;
+  /** moved this many rungs of the ladder (a sequence) */
+  shift?: number;
+}
+
+/** A variation as rungs from the theme's own first note, and the beat each note falls on (the first on 0). */
+export function vary(v: Variation): { steps: number[]; beats: number[] } {
+  let steps = MOTIF_STEPS.slice();
+  let gaps = MOTIF_BEATS.slice(1).map((b, i) => b - MOTIF_BEATS[i]);
+  if (v.form === 'invert') steps = steps.map((x) => -x);
+  if (v.form === 'retro') {
+    steps.reverse();
+    gaps.reverse();
+  }
+  if (v.part === 'head') {
+    steps = steps.slice(0, 3);
+    gaps = gaps.slice(0, 2);
+  } else if (v.part === 'tail') {
+    steps = steps.slice(2);
+    gaps = gaps.slice(2);
+  }
+  const beats = [0];
+  for (const g of gaps) beats.push(beats[beats.length - 1] + g * (v.stretch ?? 1));
+  return { steps: steps.map((x) => x + (v.shift ?? 0)), beats };
+}
+
+/**
+ * The notes of a variation. `anchor` is where the theme's own first note (F
+ * sharp) stands for this statement; the whole statement is moved by octaves
+ * until it lies inside `lo`..`hi`, if it can.
+ */
+export function motifNotes(v: Variation, anchor: number, lo = 0, hi = 127): number[] {
+  const { steps } = vary(v);
+  let notes = steps.map((x) => climb(anchor, x));
+  for (let n = 0; n < 4 && Math.min(...notes) < lo; n++) notes = notes.map((m) => m + 12);
+  for (let n = 0; n < 4 && Math.max(...notes) > hi; n++) notes = notes.map((m) => m - 12);
+  return notes;
+}
+
+/** Whether a run of notes is the theme, or a stretch of it (two notes or more), in any of its forms, at any height. */
+export function derives(notes: number[]): boolean {
+  if (notes.length < 2) return false;
+  const gaps = notes.slice(1).map((m, i) => rung(m) - rung(notes[i]));
+  // (A note off the ladder is not the theme.)
+  if (notes.some((m) => snap(m) !== m)) return false;
+  for (const form of ['plain', 'invert', 'retro'] as const) {
+    const s = vary({ form }).steps;
+    const g = s.slice(1).map((x, i) => x - s[i]);
+    for (let at = 0; at + gaps.length <= g.length; at++) if (gaps.every((x, i) => x === g[at + i])) return true;
+  }
+  return false;
+}
+
 export interface Movement {
   name: string;
   /** the cycle of chords by day and before dawn */
@@ -102,7 +189,7 @@ export interface Movement {
   hi: number;
   /** 0..1: how much of the bass is there */
   bass: number;
-  /** seconds a chord is held */
+  /** seconds a chord is held (kept to whole beats) */
   hold: number;
   /** 0..1: how often the bell line speaks, and the range it keeps to */
   bells: number;
@@ -110,9 +197,17 @@ export interface Movement {
   bellHi: number;
   /** 0..1: the pad's level in this movement */
   level: number;
+  /** how this movement says the theme: once on entering, then these in turn */
+  first: Variation | null;
+  then: Variation[];
 }
 
 const C = CHORDS;
+const P: Variation = { form: 'plain' };
+const head = (form: Variation['form'] = 'plain', more: Partial<Variation> = {}): Variation => ({ form, part: 'head', ...more });
+const tail = (form: Variation['form'] = 'plain', more: Partial<Variation> = {}): Variation => ({ form, part: 'tail', ...more });
+/** The canyon's chords stand on the theme itself, one note to a chord: F sharp, A, B, E, D in the bass. */
+const UNDER = [C.Fsm7, C.A7sus, C.Bm9, C.Em9, C.GoverD];
 
 /**
  * The piece, as the flight passes through it. Each movement is a short
@@ -120,27 +215,29 @@ const C = CHORDS;
  * that keep each chord whole (see `voiceLead`), common notes are held.
  */
 export const MOVEMENTS: Movement[] = [
-  // 0 The frozen lake: three high voices, open fifths, no bass.
-  { name: 'ice', day: [C.Bq, C.Gmaj7, C.Bq, C.Fq], night: [C.Bq, C.Fq, C.Bq, C.Gmaj7], voices: 3, lo: 59, hi: 85, bass: 0, hold: 11, bells: 0.22, bellLo: 83, bellHi: 98, level: 0.7 },
-  // 1 The melt: a fourth voice and the bass come in with the water.
-  { name: 'melt', day: [C.Bm9, C.Gmaj9, C.DoverFs, C.A7sus], night: [C.Bm9, C.Gmaj9, C.Bm7overFs, C.A7sus], voices: 4, lo: 54, hi: 83, bass: 0.55, hold: 8.5, bells: 0.5, bellLo: 78, bellHi: 95, level: 0.85 },
-  // 2 The river, down to the pool: the piece opens out and moves.
-  { name: 'river', day: [C.Gmaj9, C.DoverFs, C.Em9, C.A7sus, C.Dadd9, C.Bm7, C.Gmaj9, C.A6], night: [C.Gmaj9, C.Bm7overFs, C.Em9, C.A7sus, C.Dsus2, C.Bm7, C.Gmaj9, C.A7sus], voices: 4, lo: 52, hi: 81, bass: 0.85, hold: 7.5, bells: 0.62, bellLo: 74, bellHi: 93, level: 1 },
-  // 3 The tarn: almost nothing. One open chord, held; the shards speak.
-  { name: 'tarn', day: [C.Dsus2, C.Dsus2], night: [C.Dsus2, C.Dsus2], voices: 3, lo: 57, hi: 78, bass: 0.25, hold: 14, bells: 0, bellLo: 74, bellHi: 90, level: 0.34 },
-  // 4 The columns, the dam, the lattice: the fullest writing, in D.
-  { name: 'works', day: [C.Dmaj9, C.Bm7, C.Gmaj7, C.A6, C.Fsm7, C.Gmaj9, C.Em9, C.A7sus], night: [C.Dsus2, C.Bm9, C.Gmaj7, C.A7sus, C.Fsm7, C.Gmaj9, C.Em9, C.A7sus], voices: 4, lo: 50, hi: 81, bass: 1, hold: 7.5, bells: 0.55, bellLo: 74, bellHi: 93, level: 1 },
-  // 5 The canyon: the minor side of the key, lower, closed in.
-  { name: 'canyon', day: [C.Bm9, C.Gmaj7, C.Em9, C.Fsm7], night: [C.Bm9, C.Gmaj7, C.Em9, C.Fsm7], voices: 4, lo: 47, hi: 74, bass: 1, hold: 9, bells: 0.28, bellLo: 69, bellHi: 86, level: 0.9 },
-  // 6 The delta and the run out to sea: toward the dominant, and waiting on it.
-  { name: 'delta', day: [C.Gmaj9, C.A6, C.Fsm7, C.Bm7, C.Em9, C.A7sus], night: [C.Gmaj9, C.A7sus, C.Fsm7, C.Bm7, C.Em9, C.A7sus], voices: 4, lo: 52, hi: 83, bass: 0.9, hold: 8, bells: 0.5, bellLo: 76, bellHi: 95, level: 1 },
+  // 0 The frozen lake: three high voices, open fifths, no bass. The theme, plainly, once.
+  { name: 'ice', day: [C.Bq, C.Gmaj7, C.Bq, C.Fq], night: [C.Bq, C.Fq, C.Bq, C.Gmaj7], voices: 3, lo: 59, hi: 85, bass: 0, hold: 11.5, bells: 0.22, bellLo: 83, bellHi: 98, level: 0.7, first: P, then: [head(), tail()] },
+  // 1 The melt: a fourth voice and the bass come in with the water. The theme upside down: it falls where it rose, and ends on B.
+  { name: 'melt', day: [C.Bm9, C.Gmaj9, C.DoverFs, C.A7sus], night: [C.Bm9, C.Gmaj9, C.Bm7overFs, C.A7sus], voices: 4, lo: 54, hi: 83, bass: 0.55, hold: 9.2, bells: 0.5, bellLo: 78, bellHi: 97, level: 0.85, first: { form: 'invert' }, then: [head('invert'), tail('invert')] },
+  // 2 The river, down to the pool: the piece opens out and moves. The theme in the middle of the bells, then passed back and forth in halves.
+  { name: 'river', day: [C.Gmaj9, C.DoverFs, C.Em9, C.A7sus, C.Dadd9, C.Bm7, C.Gmaj9, C.A6], night: [C.Gmaj9, C.Bm7overFs, C.Em9, C.A7sus, C.Dsus2, C.Bm7, C.Gmaj9, C.A7sus], voices: 4, lo: 52, hi: 81, bass: 0.85, hold: 8.05, bells: 0.62, bellLo: 74, bellHi: 93, level: 1, first: P, then: [head(), tail(), head('plain', { shift: 1 }), tail()] },
+  // 3 The tarn: almost nothing. One open chord, held; the two shards share the theme between them.
+  { name: 'tarn', day: [C.Dsus2, C.Dsus2], night: [C.Dsus2, C.Dsus2], voices: 3, lo: 57, hi: 78, bass: 0.25, hold: 13.8, bells: 0, bellLo: 74, bellHi: 90, level: 0.34, first: null, then: [] },
+  // 4 The columns, the dam, the lattice: the fullest writing, in D. The theme backwards (the lattice's rows begin on its notes).
+  { name: 'works', day: [C.Dmaj9, C.Bm7, C.Gmaj7, C.A6, C.Fsm7, C.Gmaj9, C.Em9, C.A7sus], night: [C.Dsus2, C.Bm9, C.Gmaj7, C.A7sus, C.Fsm7, C.Gmaj9, C.Em9, C.A7sus], voices: 4, lo: 50, hi: 81, bass: 1, hold: 8.05, bells: 0.55, bellLo: 74, bellHi: 93, level: 1, first: { form: 'retro' }, then: [head('retro'), tail('retro'), head()] },
+  // 5 The canyon: the minor side of the key, lower, closed in. The theme is in the bass, a note to a chord; the bells only begin it, slowly.
+  { name: 'canyon', day: UNDER, night: UNDER, voices: 4, lo: 47, hi: 74, bass: 1, hold: 9.2, bells: 0.28, bellLo: 69, bellHi: 86, level: 0.9, first: head('plain', { stretch: 2 }), then: [tail('plain', { stretch: 2 }), head('plain', { stretch: 2 })] },
+  // 6 The delta: the theme in sequence, each saying a step lower than the last.
+  { name: 'delta', day: [C.Gmaj9, C.A6, C.Fsm7, C.Bm7, C.Em9, C.A7sus], night: [C.Gmaj9, C.A7sus, C.Fsm7, C.Bm7, C.Em9, C.A7sus], voices: 4, lo: 52, hi: 83, bass: 0.9, hold: 8.05, bells: 0.5, bellLo: 76, bellHi: 95, level: 1, first: P, then: [{ form: 'plain', shift: -1 }, { form: 'plain', shift: -2 }, head()] },
   // 7 The sea at rest: the arrival, D major, rocking between the tonic and the chord a fourth above it.
-  { name: 'rest', day: [C.Dhome, C.GoverD, C.D69, C.GoverD], night: [C.Dhome, C.GoverD, C.Dhome, C.Bm7], voices: 4, lo: 50, hi: 86, bass: 1, hold: 12, bells: 0.4, bellLo: 78, bellHi: 98, level: 0.95 },
-  // 8 Away from the flight (the inner pages): the river's first four chords, quietly.
-  { name: 'page', day: [C.Gmaj9, C.DoverFs, C.Em9, C.A7sus], night: [C.Gmaj9, C.Bm7overFs, C.Em9, C.A7sus], voices: 3, lo: 55, hi: 79, bass: 0.5, hold: 10, bells: 0.3, bellLo: 76, bellHi: 91, level: 0.6 },
+  { name: 'rest', day: [C.Dhome, C.GoverD, C.D69, C.GoverD], night: [C.Dhome, C.GoverD, C.Dhome, C.Bm7], voices: 4, lo: 50, hi: 86, bass: 1, hold: 12.65, bells: 0.4, bellLo: 74, bellHi: 98, level: 0.95, first: tail(), then: [{ form: 'plain', stretch: 2 }, head(), tail()] },
+  // 8 Away from the flight (the inner pages): the river's first four chords, quietly, and the theme in halves.
+  { name: 'page', day: [C.Gmaj9, C.DoverFs, C.Em9, C.A7sus], night: [C.Gmaj9, C.Bm7overFs, C.Em9, C.A7sus], voices: 3, lo: 55, hi: 79, bass: 0.5, hold: 10.35, bells: 0.3, bellLo: 76, bellHi: 91, level: 0.6, first: head(), then: [tail(), head()] },
+  // 9 The run out to sea: the dominant, held, with the theme begun and not finished, until the dawn resolves it.
+  { name: 'approach', day: [C.A7sus, C.A6], night: [C.A7sus, C.A7sus], voices: 4, lo: 52, hi: 83, bass: 1, hold: 13.8, bells: 0.5, bellLo: 76, bellHi: 95, level: 1, first: head(), then: [head('plain', { shift: 1 }), head()] },
 ];
 
-export const MOVE = { ice: 0, melt: 1, river: 2, tarn: 3, works: 4, canyon: 5, delta: 6, rest: 7, page: 8 } as const;
+export const MOVE = { ice: 0, melt: 1, river: 2, tarn: 3, works: 4, canyon: 5, delta: 6, rest: 7, page: 8, approach: 9 } as const;
 
 /**
  * The next chord's voicing: each voice goes to the nearest note that keeps
@@ -228,90 +325,52 @@ export interface BellNote {
   vel: number;
 }
 
-/** Contours in pentatonic steps. A question rises and ends off the root; an answer comes back down to rest. */
-const ASK = [
-  [0, 1, 2],
-  [0, 2, 1, 3],
-  [0, -1, 1, 2],
-  [0, 1, 3],
-  [0, 2, 3, 2, 4],
-];
-const TELL = [
-  [2, 1, 0],
-  [3, 1, 2, 0],
-  [1, 2, 0],
-  [2, 0, -1, 0],
-  [4, 2, 3, 1, 0],
-];
-/** When each note of a phrase falls, in beats, by how many notes it has. */
-const RHYTHM: Record<number, number[][]> = {
-  3: [
-    [0, 1, 2.5],
-    [0, 1.5, 2],
-    [0, 0.5, 2],
-  ],
-  4: [
-    [0, 1, 1.5, 3],
-    [0, 0.5, 1.5, 2.5],
-    [0, 1, 2, 3.5],
-  ],
-  5: [
-    [0, 0.5, 1, 2, 3.5],
-    [0, 1, 1.5, 2.5, 3],
-  ],
-};
+/**
+ * One phrase of the bell line: a saying of the theme. Before dawn it stands
+ * two rungs of the ladder lower (about a fourth), still the same shape.
+ * @param anchor where the theme's first note stands: 78 is its own place
+ */
+export function motifPhrase(v: Variation, lo: number, hi: number, night: number, beat = BEAT, anchor = 78): BellNote[] {
+  const shifted: Variation = { ...v, shift: (v.shift ?? 0) - (night ? 2 : 0) };
+  const notes = motifNotes(shifted, anchor, lo, hi);
+  const { beats } = vary(v);
+  // The line leans on its first note and comes to rest on its last.
+  return notes.map((midi, i) => ({ at: beats[i] * beat, midi, vel: i === 0 ? 0.85 : i === notes.length - 1 ? 0.95 : 0.7 }));
+}
+
+/** How long a variation takes to say, in beats, from its first note to its last. */
+export const motifBeats = (v: Variation) => vary(v).beats[vary(v).beats.length - 1];
+
+/** The lattice: sixteen cubes, four to a row. Each row begins on the theme's next note (F sharp, A, B, E) and climbs the ladder from it. */
+const LATTICE_ROWS = [66, 69, 71, 64];
+export function latticeNote(row: number, along: number): number {
+  return climb(LATTICE_ROWS[Math.min(3, Math.max(0, row))], along);
+}
+/** The lap's own first sound, the ring where the thread enters the pool: the theme's last note, D. */
+export const LATTICE_START = 62;
 
 /**
- * One phrase of the bell line. Phrases come in pairs: a question, then its
- * answer starting where the question stopped. The last note of each is a
- * note of the chord under it.
+ * The two shards share the theme: round by round the first calls with one
+ * of its notes and the second answers with the next. F sharp and A; B and
+ * E; then D, answered by itself an octave down. Three rounds say it whole.
  */
-export function bellPhrase(rng: Rng, c: Chord, lo: number, hi: number, last: number, answer: boolean, beat: number): BellNote[] {
-  const rungs = ladder(lo, hi);
-  if (rungs.length < 4) return [];
-  const shapes = answer ? TELL : ASK;
-  const shape = shapes[Math.floor(rng() * shapes.length)];
-  const rh = RHYTHM[shape.length][Math.floor(rng() * RHYTHM[shape.length].length)];
-  // Begin near where the last phrase ended (an answer exactly there), kept inside the range.
-  let start = 0;
-  let d = 99;
-  const want = answer ? last : last + (rng() < 0.5 ? -3 : 4);
-  rungs.forEach((m, i) => {
-    if (Math.abs(m - want) < d) {
-      d = Math.abs(m - want);
-      start = i;
-    }
-  });
-  const top = Math.max(...shape);
-  const bottom = Math.min(...shape);
-  start = Math.min(rungs.length - 1 - top + shape[0], Math.max(shape[0] - bottom, start));
-  const notes = shape.map((st, i) => ({ at: rh[i] * beat, midi: rungs[Math.min(rungs.length - 1, Math.max(0, start + st - shape[0]))], vel: 0.55 + 0.45 * rng() }));
-  // The last note comes to rest on a note of the chord: an answer on its root or fifth, a question on its colour.
-  const end = notes[notes.length - 1];
-  const rest = answer ? [c.bass, c.tones[c.tones.length - 1], c.tones[0]] : [c.tones[0], c.tones[1], c.tones[2] ?? c.tones[0]];
-  let bestM = end.midi;
-  let bestD = 99;
-  for (let m = end.midi - 4; m <= end.midi + 4; m++) {
-    if (m < lo || m > hi || !rest.includes(((m % 12) + 12) % 12)) continue;
-    const dist = Math.abs(m - end.midi) + (m === notes[notes.length - 2].midi ? 3 : 0);
-    if (dist < bestD) {
-      bestD = dist;
-      bestM = m;
-    }
-  }
-  end.midi = bestM;
-  end.vel = Math.min(1, end.vel + 0.1);
-  return notes;
-}
+export const SHARD_ROUNDS = [
+  [MOTIF[0], MOTIF[1]],
+  [MOTIF[2], MOTIF[3]],
+  [MOTIF[4], MOTIF[4] - 12],
+];
+export const shardNote = (round: number, which: number) => SHARD_ROUNDS[((round % 3) + 3) % 3][which & 1];
 
-/** The lattice: sixteen cubes, four to a row. Each row climbs the pentatonic ladder, and each row starts a step above the last. */
-export function latticeNote(row: number, along: number): number {
-  const rungs = ladder(62, 96);
-  return rungs[Math.min(rungs.length - 1, row + along)];
-}
-
-/** The two shards: a call, and its answer a minor third below (D major's fifth, then its third). */
-export const SHARD_NOTES = [81, 78];
-
-/** The arrival: D major opening upward as the line of light runs in. */
-export const ARRIVAL = [62, 69, 74, 78, 81, 86];
+/**
+ * The arrival: the theme whole, each note harmonised below (I, I, IV, V, I),
+ * as the line of light runs in. `ARRIVAL_AT` is how far the light has come
+ * when each chord sounds: the theme's own rhythm, laid along the light's run.
+ */
+export const ARRIVAL = [
+  [78, 74, 69],
+  [81, 78, 74],
+  [83, 79, 74],
+  [76, 73, 69],
+  [74, 69, 66, 62],
+];
+export const ARRIVAL_AT = MOTIF_BEATS.map((b) => b / MOTIF_BEATS[MOTIF_BEATS.length - 1]);

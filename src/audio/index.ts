@@ -2,38 +2,44 @@
  * Sound on the page. This module, and everything it imports, is loaded the
  * first time the visitor turns sound on, and never before.
  *
- * It joins the site's one frame loop after the picture (order 30: the
- * flight draws at 10, the page's own frame runs at 20), reads what the
- * picture published for this frame, and steers the sound to it at the
- * audio clock's present. Moments are handed over the instant they are
- * published, inside the handler or the frame that caused them.
+ * On the home page it takes its turn inside the flight's frame, as soon as
+ * that frame's state is known and before the picture is drawn, so a long
+ * draw never holds a sound back; on other pages it has a turn of its own
+ * in the one frame loop. Each turn it reads what the picture published,
+ * steers the sound to it, and sets ahead whatever the picture's own clock
+ * will do in the next quarter of a second (see sound.ts and clock.ts).
+ * Moments a visitor causes are handed over the instant they are published.
  */
 
 import { onFrame } from '@/lib/frame';
-import { listen, signals } from '@/lib/signals';
-import { buildGraph } from './graph';
+import { listen, onFlightFrame, signals } from '@/lib/signals';
+import { ClockMap } from './clock';
+import { FULL, LEAN, type Tier, buildGraph } from './graph';
 import { type Env, SceneReader } from './scene';
 import { Sound } from './sound';
 import { makeRng } from './theory';
+import { waterKernel } from './water';
 
 declare global {
   interface Window {
-    /** For the checks: the context, the conductor and what the picture last published. */
-    __sound?: { ctx: AudioContext; sound: Sound; signals: typeof signals };
+    /** For the checks: the context, the conductor, the clocks' map, the tier and how it was chosen, and what the picture last published. */
+    __sound?: { ctx: AudioContext; sound: Sound; map: ClockMap; tier: Tier; cost: Cost; signals: typeof signals; lead: () => number };
   }
 }
 
 /**
- * A moment's sound is asked for a little ahead of the audio clock as the
- * page reads it, so it starts on the sample it was asked for with its
- * attack whole, not at the next render quantum with its first milliseconds
- * gone. Inside the frame loop the clock reads about a quantum (128
- * samples) behind; inside an input handler it reads further behind
- * (measured: about 7 ms), so a press is asked for further ahead and
- * starts no later for it.
+ * How far past the render head a sound asked for at once is set, so it
+ * starts on the sample it was asked for with its attack whole. The head is
+ * read from the clocks' map, not from one reading of the context's clock
+ * (which may be a device buffer stale), so this need only cover the hop to
+ * the audio thread. That hop is measured, twice a second: the water's
+ * worklet is sent a word and sends it back with the audio thread's own time
+ * (on a quiet machine about 3 ms; on a loaded one 10 or more). The lead is
+ * the longest hop of the last few seconds and a little over, kept between
+ * these two.
  */
-const LEAD_FRAME = 0.004;
-const LEAD_INPUT = 0.012;
+const LEAD_MIN = 0.004;
+const LEAD_MAX = 0.016;
 
 /** What counts as a control: its hover and its press are heard. */
 const CONTROL = 'a[href], button, [role="radio"], [role="button"], summary, select, input';
@@ -43,21 +49,125 @@ interface Running {
   sound: Sound;
 }
 
+export interface Cost {
+  /** ms this device took to make a fifth of a second of busy water in the page's own thread */
+  water: number;
+  /** ms it took to render a second of a small graph of oscillators, filters and a room, off the page's thread */
+  graph: number;
+  /** a phone: a coarse pointer and a small screen */
+  phone: boolean;
+  /** asked for by name (the checks do) */
+  forced: string | null;
+}
+
+/** Measure what sound will cost here, before any of it is built. Two short renders; neither holds a frame. */
+async function measure(): Promise<Cost> {
+  let forced: string | null = null;
+  try {
+    forced = new URLSearchParams(location.search).get('soundtier') ?? localStorage.getItem('sound-tier');
+  } catch {
+    /* no storage: measured */
+  }
+  const phone = window.matchMedia('(pointer: coarse)').matches && Math.min(window.innerWidth, window.innerHeight) < 600;
+  // The water model itself, as the worklet will run it: a stream and a fall, a fifth of a second of them.
+  const k = waterKernel()(48000, 72, 7, 20);
+  k.set(0, [1, 220, 400, 5200, 0.7, 1, 0, 0.7, 0.3, 250, 3200]);
+  k.set(1, [1, 430, 240, 4600, 0.95, 1, 0, 0.25, 0.85, 300, 4200]);
+  const L = new Float32Array(128);
+  const R = new Float32Array(128);
+  const t0 = performance.now();
+  for (let i = 0; i < 75; i++) k.render(L, R, 128);
+  const water = performance.now() - t0;
+  await new Promise<void>((r) => setTimeout(r, 0));
+  // And a second of ordinary nodes.
+  let graph = 0;
+  try {
+    const off = new OfflineAudioContext(2, 48000, 48000);
+    const room = off.createConvolver();
+    const imp = off.createBuffer(2, 24000, 48000);
+    for (let c = 0; c < 2; c++) {
+      const d = imp.getChannelData(c);
+      for (let i = 0; i < d.length; i += 7) d[i] = ((i * 2654435761) % 1000) / 1e6;
+    }
+    room.buffer = imp;
+    room.connect(off.destination);
+    for (let i = 0; i < 24; i++) {
+      const o = off.createOscillator();
+      o.frequency.value = 110 * (i + 1);
+      const f = off.createBiquadFilter();
+      f.frequency.value = 2000;
+      const g = off.createGain();
+      g.gain.value = 0.01;
+      o.connect(f).connect(g).connect(room);
+      o.start();
+    }
+    const t1 = performance.now();
+    await off.startRendering();
+    graph = performance.now() - t1;
+  } catch {
+    graph = 0;
+  }
+  return { water: +water.toFixed(2), graph: +graph.toFixed(1), phone, forced };
+}
+
+/**
+ * The lean tier is for a device that would otherwise be working hard:
+ * a phone that is not a fast one, or anything slow. (A fast desktop makes
+ * the fifth of a second of water in about a millisecond and the second of
+ * nodes in a few.)
+ */
+export function tierFor(c: Cost): Tier {
+  if (c.forced === 'lean') return LEAN;
+  if (c.forced === 'full') return FULL;
+  const slow = c.water > 9 || c.graph > 90;
+  const modest = c.water > 3 || c.graph > 35;
+  return slow || (c.phone && modest) ? LEAN : FULL;
+}
+
 let run: Running | null = null;
 let building: Promise<Running | null> | null = null;
 let wanted = false;
 let sleep = 0;
 
 async function build(ctx: AudioContext): Promise<Running | null> {
-  const graph = await buildGraph(ctx, makeRng(20261117));
+  const cost = await measure();
+  const tier = tierFor(cost);
+  const graph = await buildGraph(ctx, makeRng(20261117), tier);
   const sound = new Sound(graph, (Date.now() & 0xffff) + 1);
+  const map = new ClockMap();
   const html = document.documentElement;
   const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
   const env: Env = { night: html.dataset.theme === 'dark' ? 1 : 0, calm: mq.matches, viewW: window.innerWidth, viewH: window.innerHeight };
   const reader = new SceneReader();
   const live = () => wanted && ctx.state === 'running';
 
-  mq.addEventListener('change', () => (env.calm = mq.matches));
+  // The two clocks, read together: every frame and at every moment.
+  const stamp = typeof ctx.getOutputTimestamp === 'function';
+  let lead = 0.008;
+  const read = () => {
+    const perf = performance.now();
+    map.feed({ perf, audio: ctx.currentTime, out: stamp ? ctx.getOutputTimestamp() : null, latency: (ctx.baseLatency || 0) + (ctx.outputLatency || 0) });
+    // (Nothing is asked for before the render head, wherever one reading of the clock puts it.)
+    return Math.max(ctx.currentTime, map.headAt(perf)) + lead;
+  };
+  // The hop to the audio thread, measured.
+  const hops: number[] = [];
+  let asked = 0;
+  const hop = () => {
+    if (!graph.water.live || !live() || !map.ready) return;
+    const sent = map.headAt(performance.now());
+    void graph.water.flush().then((got) => {
+      if (!Number.isFinite(got)) return;
+      hops.push(Math.max(0, got - sent));
+      if (hops.length > 10) hops.shift();
+      lead = Math.min(LEAD_MAX, Math.max(LEAD_MIN, Math.max(...hops) + 0.003));
+    });
+  };
+
+  mq.addEventListener('change', () => {
+    env.calm = mq.matches;
+    sound.cancelAhead(read());
+  });
   window.addEventListener('themechange', () => (env.night = html.dataset.theme === 'dark' ? 1 : 0));
   window.addEventListener(
     'resize',
@@ -68,20 +178,24 @@ async function build(ctx: AudioContext): Promise<Running | null> {
     { passive: true },
   );
 
-  // The frame: after the picture has drawn and published.
-  let inFrame = false;
-  onFrame(() => (inFrame = true), -1000);
-  onFrame((now) => {
-    if (!live()) return;
-    sound.frameAt = now;
-    sound.frame(reader.read(signals, now, env), ctx.currentTime, LEAD_FRAME);
-  }, 30);
-  onFrame(() => (inFrame = false), 1000);
-  const soon = () => ctx.currentTime + (inFrame ? LEAD_FRAME : LEAD_INPUT);
+  // The frame. Over the flight the sound's turn comes before the picture's draw; elsewhere it has its own.
+  let ranAt = -1;
+  const turn = (now: number) => {
+    if (!live() || ranAt === now) return;
+    ranAt = now;
+    if (now - asked > 500) {
+      asked = now;
+      hop();
+    }
+    const at = read();
+    sound.frame(reader.read(signals, now, env), { now: at, frameAt: now, map });
+  };
+  onFlightFrame(turn);
+  onFrame(turn, 30);
 
   // Moments, the instant they are published: by the picture inside its frame, or by a handler.
   listen((type, a, b, c, at) => {
-    if (live()) sound.fire(type, a, b, c, soon(), at);
+    if (live()) sound.fire(type, a, b, c, read(), at);
   });
 
   // Links and controls: a hover is heard once as the pointer comes onto one, a press as it lands.
@@ -94,14 +208,14 @@ async function build(ctx: AudioContext): Promise<Running | null> {
       const el = control(e);
       if (el === over) return;
       over = el;
-      if (el && live()) sound.fire('hover', e.clientX / env.viewW, 0, 0, soon(), performance.now());
+      if (el && live()) sound.fire('hover', e.clientX / env.viewW, 0, 0, read(), performance.now());
     },
     { capture: true, passive: true },
   );
   document.addEventListener(
     'pointerdown',
     (e) => {
-      if (control(e) && live()) sound.fire('tap', e.clientX / env.viewW, 0, 0, soon(), performance.now());
+      if (control(e) && live()) sound.fire('tap', e.clientX / env.viewW, 0, 0, read(), performance.now());
     },
     { capture: true, passive: true },
   );
@@ -112,19 +226,21 @@ async function build(ctx: AudioContext): Promise<Running | null> {
       const el = e.detail === 0 ? control(e) : null;
       if (!el || !live()) return;
       const r = el.getBoundingClientRect();
-      sound.fire('tap', (r.left + r.width / 2) / env.viewW, 0, 0, soon(), performance.now());
+      sound.fire('tap', (r.left + r.width / 2) / env.viewW, 0, 0, read(), performance.now());
     },
     { capture: true, passive: true },
   );
 
-  // A hidden tab is silent: the mix fades, then the context rests.
+  // A hidden tab is silent: what was set ahead is taken back, the mix fades, then the context rests.
   document.addEventListener('visibilitychange', () => {
     if (!wanted) return;
-    if (document.hidden) rest(1);
-    else wake(1.2);
+    if (document.hidden) {
+      sound.cancelAhead(ctx.currentTime);
+      rest(1);
+    } else wake(1.2);
   });
 
-  window.__sound = { ctx, sound, signals };
+  window.__sound = { ctx, sound, map, tier, cost, signals, lead: () => lead };
   return { ctx, sound };
 }
 

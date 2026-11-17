@@ -5,17 +5,19 @@
  *
  * A scene is a script of what the visitor does: where the scroll is over
  * time, where the pointer goes, what is pressed, when the theme turns.
- * From that this file plays the picture's part exactly as the flight does
- * (the real camera path, the melt, the day, the stations, the gates' and
- * the dawn's own clocks) and publishes it, sixty times a second, to the
- * conductor.
+ * From that this file plays the picture's part in the picture's own order
+ * (the real camera path, the melt and the day; then the gates, the surge,
+ * the drips and the dawn by the flight's own rules, from moments.ts) and
+ * publishes it, sixty times a second, to the conductor.
  */
 
 import { MELT, SETTLE_AT, basisOf, dayAt, flightKeys, poseAt, stillScroll } from '@/water/camera';
-import { CANYON, COLS, DAM, LATTICE } from '@/water/world';
-import { buildGraph } from './graph';
+import { dawnLight, nextDrip, stationsNear, stepGates } from '@/water/moments';
+import { ClockMap } from './clock';
+import { FULL, LEAN, buildGraph } from './graph';
 import type { Mix } from './mapping';
-import { type Scene, SceneReader, type SignalsLike, smooth } from './scene';
+import { type Scene, SceneReader, type SignalsLike } from './scene';
+import { type Phrase } from './score';
 import { Sound, type SoundEvent } from './sound';
 import { makeRng } from './theory';
 
@@ -41,15 +43,23 @@ export interface SceneSpec {
   aspect?: number;
   /** the picture's clock at the start */
   clock0?: number;
+  /** the phone's tier */
+  lean?: boolean;
+  /** a frame this long, in ms, at each of these seconds: the picture's clock is disturbed there */
+  stalls?: [number, number][];
 }
 
 export interface Rendered {
   sampleRate: number;
   channels: Float32Array[];
   chords: { t: number; move: string; chord: string; notes: number[] }[];
+  phrases: Phrase[];
   trace: SoundEvent[];
   /** the scene and the mix, four times a second */
-  series: { t: number; scene: Partial<Scene>; mix: Mix }[];
+  series: { t: number; scene: Partial<Scene>; mix: Partial<Mix>; water: number[] }[];
+  /** whether the water model ran, and how often what was set ahead was taken back */
+  water: boolean;
+  disturbed: number;
 }
 
 const at = (keys: number[][], t: number, col = 1): number => {
@@ -70,8 +80,8 @@ const step = (keys: number[][], t: number): number => {
 
 export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<Rendered> {
   const ctx = new OfflineAudioContext(2, Math.round(spec.seconds * sampleRate), sampleRate);
-  const graph = await buildGraph(ctx, makeRng(20261117));
-  if (spec.solo) for (const [name, node] of Object.entries(graph.buses)) if (name !== spec.solo) node.disconnect();
+  const graph = await buildGraph(ctx, makeRng(20261117), spec.lean ? LEAN : FULL);
+  if (spec.solo) for (const [name, nodes] of Object.entries(graph.buses)) if (name !== spec.solo) nodes.forEach((n) => n.disconnect());
   const sound = new Sound(graph, spec.seed ?? 7);
   sound.trace = [];
   const reader = new SceneReader();
@@ -83,26 +93,39 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
   const night = spec.night ?? [[0, 0]];
   const power = spec.power ?? [[0, 1, 2]];
   const events = (spec.events ?? []).slice().sort((a, b) => a[0] - b[0]);
+  const stalls = (spec.stalls ?? []).slice().sort((a, b) => a[0] - b[0]);
   const calm = !!spec.calm;
-  const near = (pos: number[], x: number, y: number, a: number, b: number) => 1 - smooth(a, b, Math.hypot(pos[0] - x, pos[1] - y));
+  // The page's clock begins a second before the audio's, and the two then run together: no device, no latency.
+  const map = ClockMap.fixed(1000);
 
-  const sig: SignalsLike = { at: 0, s: 0, cam: null, aspect, melt: 0, day: 0, rest: false, clock: spec.clock0 ?? 0, st: [0, 0, 0, 0], gate: [1, 0, 0], surge: [0, 0, 0], ray: 0, lift: 0, px: 0.5, py: 0.5, far: 0, moved: -1e9, scrollY: 0 };
+  const sig: SignalsLike = { at: 0, s: 0, cam: null, aspect, melt: 0, day: 0, rest: false, clock: spec.clock0 ?? 0, clockAt: 0, st: [0, 0, 0, 0], gate: [1, 0, 0], surge: [0, 0, 0], ray: 0, lift: 0, px: 0.5, py: 0.5, far: 0, moved: -1e9, scrollY: 0, tribs: null };
   const gate = [1, 0, 0];
   const surge = [0, 0, 0];
+  const colH = [1, 0.75, 0.2, 0.065];
+  let clock = spec.clock0 ?? 0;
   let open = 0;
   let s = scroll[0][1];
   let dawnT = -1;
   let melted = false;
+  let drip: { at: number; i: number } | null = null;
   let dripAt = 0;
   let ev = 0;
   let pw = 0;
+  let st = 0;
+  let last = -1;
   const series: Rendered['series'] = [];
   const fps = 60;
   const frames = Math.floor(spec.seconds * fps);
   for (let i = 0; i < frames; i++) {
+    // (A stalled frame: the page did nothing for a while, and this frame is that much longer.)
+    while (st < stalls.length && i / fps >= stalls[st][0]) {
+      i += Math.round((stalls[st][1] / 1000) * fps);
+      st++;
+    }
     const t = i / fps;
     const now = 1000 + (i * 1000) / fps;
-    const dt = 1 / fps;
+    const dt = last < 0 ? 1 / fps : (now - last) / 1000;
+    last = now;
     while (pw < power.length && t >= power[pw][0]) {
       sound.setOn(power[pw][1] > 0, t, power[pw][2]);
       pw++;
@@ -111,57 +134,21 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
     const target = at(scroll, t);
     s += (target - s) * (1 - Math.exp(-dt / 0.136));
     if (Math.abs(target - s) < 1e-5) s = target;
+    let rest = false;
+    let melt = 0;
     if (home) {
+      // The flight's frame, first half: where the camera is, published before the draw.
       const sNow = calm ? stillScroll(s) : s;
       const pose = poseAt(keys, sNow);
       if (calm) pose.roll = 0;
-      const cam = basisOf(pose);
-      const melt = (sNow - MELT.from) / (MELT.to - MELT.from);
-      const rest = sNow >= SETTLE_AT - 0.02;
-      if (!calm) sig.clock += dt;
-      // The stations' nearness, the gates and the surge, the drips and the dawn: each as the flight runs it.
-      const p = cam.pos;
-      const st = [near(p, 1340, COLS.y, 1750, 2350), near(p, 1300, DAM.y, 2300, 2900), near(p, LATTICE.x, LATTICE.y, 2300, 2900), near(p, 1700, (CANYON.y0 + CANYON.y1) / 2, 3700, 4600)];
-      for (let k = 0; k < 3; k++) {
-        const on = k === open;
-        gate[k] = calm ? (on ? 1 : 0) : Math.min(1, Math.max(0, gate[k] + (on ? dt / 0.45 : -dt / 0.6)));
-        if (!on) surge[k] = 0;
-        else if (calm) surge[k] = 1;
-        else if (surge[k] < 1) surge[k] = Math.min(1, surge[k] + dt / 1.15);
-      }
-      if (st[0] > 0.5 && !calm && sig.clock > dripAt) {
-        dripAt = sig.clock + 0.22 + 0.3 * rng();
-        const h = [1, 0.75, 0.2, 0.065];
-        let pick = rng() * (h[0] + h[1] + h[2] + h[3]);
-        let c = 0;
-        while (c < 3 && pick > h[c]) pick -= h[c++];
-        sound.fire('drip', c, h[c], 0, t, now);
-      }
-      if (calm) {
-        sig.lift = sig.ray = rest ? 1 : 0;
-      } else {
-        if (rest && dawnT < 0) {
-          dawnT = t;
-          sound.fire('dawn', 0, 0, 0, t, now);
-        }
-        if (dawnT >= 0) {
-          sig.lift = smooth(0, 2.6, t - dawnT);
-          sig.ray = smooth(0.7, 2.9, t - dawnT);
-        }
-      }
-      if (melt >= 1 && !melted) {
-        melted = true;
-        sound.fire('melt', 1, 0, 0, t, now);
-      } else if (melt < 0.9 && melted) melted = false;
+      melt = (sNow - MELT.from) / (MELT.to - MELT.from);
+      rest = sNow >= SETTLE_AT - 0.02;
       sig.at = now;
       sig.s = sNow;
-      sig.cam = cam;
+      sig.cam = basisOf(pose);
       sig.melt = melt;
       sig.day = dayAt(sNow);
       sig.rest = rest;
-      sig.st = st;
-      sig.gate = gate;
-      sig.surge = surge;
     } else {
       sig.scrollY = s * 900;
     }
@@ -176,22 +163,63 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
         t,
       );
     }
+    // What a visitor did since the last frame, in its handlers.
     while (ev < events.length && t >= events[ev][0]) {
       const [, type, a = 0, b = 0, c = 0] = events[ev++];
       if (type === 'switch') open = Math.round(a);
       sound.fire(type, a, b, c, t, now);
     }
-    sound.frameAt = now;
+    // The sound's turn.
     const scene = reader.read(sig, now, { night: step(night, t), calm, viewW: 1440, viewH: 900 });
-    const mix = sound.frame(scene, t);
-    if (i % 15 === 0) {
-      const { cam: _cam, gate: _g, surge: _s, ...rest } = scene;
+    const mix = sound.frame(scene, { now: t, frameAt: now, map });
+    if (home && sig.cam) {
+      // The flight's frame, second half: the picture's own clockwork, in the order the flight runs it.
+      if (melt >= 1 && !melted) {
+        melted = true;
+        sound.fire('melt', 1, 0, 0, t, now);
+      } else if (melt < 0.9 && melted) melted = false;
+      if (calm) {
+        sig.lift = sig.ray = rest ? 1 : 0;
+      } else {
+        if (rest && dawnT < 0) {
+          dawnT = clock;
+          sound.fire('dawn', 0, 0, 0, t, now);
+        }
+        clock += Math.min(dt, 1 / 20);
+        if (dawnT >= 0) ({ lift: sig.lift, ray: sig.ray } = dawnLight(clock - dawnT));
+      }
+      const near = stationsNear(sig.cam.pos);
+      stepGates(gate, surge, open, Math.min(0.05, dt), calm);
+      sig.clock = clock;
+      sig.clockAt = now;
+      sig.st = near;
+      sig.gate = gate;
+      sig.surge = surge;
+      if (near[0] > 0.5 && !calm) {
+        if (!drip) {
+          drip = nextDrip(Math.max(clock, dripAt), colH, rng);
+          sound.fire('drip', drip.i, colH[drip.i], drip.at, t, now);
+        }
+        if (clock >= drip.at) {
+          dripAt = clock;
+          drip = null;
+        }
+      } else drip = null;
+    }
+    if (Math.floor(t * 4) !== Math.floor((t - dt) * 4) || i === 0) {
+      const { cam: _cam, gate: _g, surge: _s, falls: _f, arms: _a, ...rest0 } = scene;
       void _cam;
       void _g;
       void _s;
-      series.push({ t: +t.toFixed(2), scene: rest, mix });
+      void _f;
+      void _a;
+      const { water, shimmer: _sh, ...mix0 } = mix;
+      void _sh;
+      series.push({ t: +t.toFixed(2), scene: rest0, mix: mix0, water: water.map((v) => +v[0].toFixed(3)) });
     }
   }
+  // (Everything the water was told has reached the audio thread before the render begins.)
+  await graph.water.flush();
   const buf = await ctx.startRendering();
-  return { sampleRate, channels: [buf.getChannelData(0), buf.getChannelData(1)], chords: sound.score.history, trace: sound.trace ?? [], series };
+  return { sampleRate, channels: [buf.getChannelData(0), buf.getChannelData(1)], chords: sound.score.history, phrases: sound.score.phrases, trace: sound.trace ?? [], series, water: graph.water.live, disturbed: sound.disturbed };
 }
