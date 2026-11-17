@@ -267,3 +267,71 @@ the bed, keeps water out from under every word by construction, and holds
 clever diagram" to a frozen lake that breaks up into a stream. It did not
 become a scene you fly through, and the scores say so.
 
+
+## Rounds 10 and 11: the flight (after critics 5, 6 and 7)
+
+The owner's answer to "where it ended" was a new bar: the critics'
+median at 9.5 with none under 9. The fifth review's last paragraph
+named what separated the build from the references, so the design
+changed kind. The home page became **one glacial world seen through a
+perspective camera that scroll flies**: a frozen lake with the name, the
+sheet breaking up, a meltwater river, eight project stations (each one
+large subject made of ice and water, each with its own water
+behaviour), a delta, a dawn sea, with time of day passing along the
+way. The relief engine stays under the inner pages' history only; the
+old home page, its ending canvas and its shader are gone.
+
+| Critic | Build judged | Overall | Its heaviest findings |
+| --- | --- | --- | --- |
+| 6 | the flight's prototype: lake, statement, one station, the old ending | 6.0 | the name reads as extruded lettering; empty frames between; inner pages "a different world" |
+| 7 | after the film finish, the hero's water, the first object | 6.7 | the name squashed during the descent; "a stock floating monitor"; hexagon lines and regular cracks; saw-toothed shorelines; inner pages "white paper with a gel tube" |
+
+What changed after critic 7 (rounds K8c to K9c, then the parallel wave
+W1 to W6, in `PROGRESS.md`): the camera holds the hero's view until the
+name's ice has gone; the first object became a block of glacier ice
+with the product frozen in it; seven more stations; callouts; the
+delta; the ending as the flight's last frame with one light event; the
+flight became `/`; every inner page opens on a live frame of the same
+world and continues as a case study led by real media; sharing cards
+photographed from the real picture; sound.
+
+## Panel 8: three critics on the whole eight-station build (`106d403`)
+
+Three fresh critics, captures only (58 images: the home page at 24
+scroll positions at 1440 and 390 in both themes, 13 full frames a theme
+at 2x, phone frames, every inner page top to bottom), the same rubric,
+proofs given. Sound not judged.
+
+| | 8a | 8b | 8c |
+| --- | --- | --- | --- |
+| a. real flowing water, bold and central | 6.5 | 7.0 | 7.5 |
+| b. nothing covers or weakens copy | 6.5 | 7.5 | 7.5 |
+| c. nothing soft or low resolution | 5.5 | 6.5 | 6.0 |
+| d. typography | 7.5 | 7.5 | 7.0 |
+| e. the five-second read | 8.5 | 9.0 | 9.0 |
+| f. the ending against v2's | 6.5 | 7.5 | 6.5 |
+| g. light and dark both first class | 6.5 | 7.0 | 6.0 |
+| h. project pages | 7.5 | 8.0 | 7.5 |
+| i. phone | 7.0 | 7.0 | 7.0 |
+| j. craft against the references | 5.5 | 6.8 | 6.5 |
+| **Overall** | **6.6** | **7.2** | **6.8** |
+
+**Median 6.8** (the last single review was 6.7). Not at the bar.
+
+What all three found, and what was started on each the same hour:
+
+| Finding (all three) | Answer under way |
+| --- | --- |
+| At the melt's stop the name reads "Arav Jah": the letters fuse | W7 (the melt, the name as a pool of meltwater) and W14 (the name as standing letters of glacier ice that thin evenly and never deform); one of the two is kept |
+| The name reads as "bevelled 3D text from a title generator", not ice | the same two; all three asked for real ice letters |
+| Half or more of the page's scroll carries no words; the nav is gone after the first screen | W12: each station's words held through its whole stretch, a wordless progress rail, the nav back on any upward scroll, varied layouts |
+| The snow, the largest surface in every frame, is "smeared", "airbrushed", "out of focus"; stray white strokes; patches like holes | not yet assigned: it shares the shaders with the running passes |
+| The dark theme is the lesser one: the aurora "a blown mint band", ice as "teal crates with neon edges", the river "glowing paint" | not yet assigned, for the same reason |
+| Pictures set in the ice are mushy (Infiniview) or washed out (RydAR) | not yet assigned |
+| The ending "lost v2's signature: no ribbon of light, no mirror, a generic sunrise" | W13: the river's light rises from the sea as v2's ribbon; a still mirror sea; v2's deep colour; no scrim |
+| Kilo Bench: "a flat dark rectangle in a blob-shaped pond", 9 px text | W9 (stations 1 to 4, second pass) |
+| Primitive props: prisms, sixteen identical cubes, two-pyramid shards | W9 and W10 (second passes) |
+| Inner pages' ground "looks like an upscaled JPEG"; one skeleton eight times; numbered steps, stat rows, pills | W11 |
+
+None found a banned thing: no particles round the cursor, no jelly, no
+effect over text, no invented content.

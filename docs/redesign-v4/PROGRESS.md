@@ -726,3 +726,17 @@ same rubric a to j, proofs required) is judging `106d403`: package at
 page in 24 positions at 1440 and 390 in both themes, 13 full frames a
 theme at 2x, phone frames, every inner page top to bottom, three
 project pages' first screens). Sound is not judged this round.
+
+### Critic panel 8: 6.6, 7.2, 6.8 (median 6.8), about 02:20
+
+Scores and the shared findings are in `design-review.md` ("Panel 8").
+The reviews are at `~/.t3/portfolio-redesign-v4/critic/review-8a.md`,
+`-8b.md`, `-8c.md`. Not at the bar. Started the same hour, each from
+the merged head and each in its own area: **W11** inner pages pass 2
+(the ground; one skeleton eight times), **W12** the home page's words
+(held through every station, a progress rail, the nav, layouts, type),
+**W13** the ending (v2's ribbon of light and its mirror), **W14** the
+name as standing letters of glacier ice (an alternative to W7's pool
+of meltwater; one of the two is kept). Still to assign once the
+running passes on the shaders land: the snow's sharpness, the dark
+theme, the pictures set in ice. Then the frame-rate task, alone.
