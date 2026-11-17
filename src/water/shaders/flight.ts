@@ -2693,6 +2693,8 @@ void main() {
     float aLand = smoothstep(-aa, aa, sd0);
     col = vec3(0.0);
     if (aLand > 0.0) col = (landColor(p, sd0, b0.ba, foot, dir, slabShade) + slabLight * mix(0.5, 1.1, gRock)) * aLand;
+    // (The snowfield climbs away from the low sun: its slopes stand in the sky's blue shade, their crests in the light.)
+    if (gFieldG != 0.0) col *= mix(vec3(1.0), mix(vec3(0.74, 0.83, 0.96), vec3(1.06, 1.04, 1.0), smoothstep(0.1, -0.05, gFieldG)), (1.0 - uNight) * smoothstep(0.0, 0.03, abs(gFieldG)));
     // The island is ice-bound: a shelf of old blue ice stands round its shore, glazed, and before dawn it holds
     // the sky's light and the block's, so the island is never a dark shape on bright water.
     if (aLand > 0.0 && gRock > 0.0) {
