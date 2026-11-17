@@ -1040,27 +1040,11 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     pic.src = root.dataset.sheet;
   }
 
-  // The switch: the chosen option's sluice opens at once (the gates and the surge are drawn),
-  // and the bed is carved again behind it, off the frame path, so the water itself follows.
+  // The switch: the chosen option's sluice opens at once (the gates, the surge and each channel's water are drawn).
+  // Nothing is carved again: every channel's bed already runs, so a change costs no frame.
   const fork = document.querySelector<HTMLElement>('.fl-fork');
-  let recarve = 0;
-  let carving = false;
   const onGate = () => {
-    const g = Math.min(2, Math.max(0, Number(fork?.dataset.active) || 0));
-    if (g === engine.gate) return;
-    engine.gate = g;
-    window.clearTimeout(recarve);
-    const go = async () => {
-      if (destroyed) return;
-      if (carving) {
-        recarve = window.setTimeout(go, 200);
-        return;
-      }
-      carving = true;
-      await buildBed();
-      carving = false;
-    };
-    recarve = window.setTimeout(go, 700);
+    engine.gate = Math.min(2, Math.max(0, Number(fork?.dataset.active) || 0));
   };
   const forkWatch = new MutationObserver(onGate);
   if (fork) forkWatch.observe(fork, { attributes: true, attributeFilter: ['data-active'] });
@@ -1150,7 +1134,6 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       off();
       ro.disconnect();
       forkWatch.disconnect();
-      window.clearTimeout(recarve);
       window.clearTimeout(boxTimer);
       window.clearTimeout(warm);
       solver.dispose();
