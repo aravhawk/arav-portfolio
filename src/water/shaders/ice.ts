@@ -142,7 +142,9 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // (Seen from the ground: once the sheet is plates no crack is left to
   // draw or to open, and a lean frame lets the hairlines go before the melt
   // needs them. Then the cells are not looked for at all.)
-  bool cracks = uIceP.y <= 0.0 || (uIceC.y < 1.0 && !(uIceLean >= 2.0 && uIceA.y <= 0.0));
+  // (Seen from the ground the fractures are the whole of the break-up: the
+  // plates the sheet becomes are the pieces between them, to the last one.)
+  bool cracks = uIceP.y <= 0.0 || !(uIceLean >= 2.0 && uIceA.y <= 0.0);
   if (cracks) {
   vec2 wob = textureLod(uSnow, il / (cellA * 5.0), 0.0).rg * cellA * 0.12;
   // (Seen from the ground the sheet breaks as lake ice does: the field the
@@ -213,9 +215,25 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     // water between the floes is open.
     float un = clamp(0.5 + 0.8 * textureLod(uSnow, il / (cellA * 1.4) + 0.31, 0.0).b, 0.0, 1.0);
     float clearOf = smoothstep(8.0, 130.0, lsd);
-    f = smax(f, cellA * uIceA.y * (0.45 + 1.1 * un) * clearOf * (1.0 - uIceC.y) - cr.x, kS);
+    float lead = cellA * uIceA.y * (0.45 + 1.1 * un) * clearOf;
+    if (uIceP.y > 0.0) {
+      // Seen from the ground the sheet goes as lake ice goes. The leads
+      // along its fractures keep widening, so the pieces between them come
+      // apart as angular plates of whatever size and shape the fractures
+      // left; each melts back from its edges at its own rate, so some are
+      // gone while their neighbours still ride, and the last few are the
+      // largest. (They gather toward the outlet with the sheet's frame.)
+      float g = smoothstep(0.5, 0.9, uIceA.z);
+      lead += cellA * (g * g * (0.16 + 0.8 * cr.y * cr.y) + 1.5 * smoothstep(0.8, 0.9, uIceA.z) * smoothstep(0.8, 0.9, uIceA.z));
+      // (A melting edge is not ruled.)
+      lead += (textureLod(uDetail, il / 150.0 + 0.6, 0.0).r - 0.5) * 16.0 * g;
+      kS *= 0.35;
+    } else {
+      lead *= 1.0 - uIceC.y;
+    }
+    f = smax(f, lead - cr.x, kS);
   }
-  if (uIceC.y > 0.0) {
+  if (uIceC.y > 0.0 && uIceP.y <= 0.0) {
     // What is left is floes: whole rounded islands, one to a cell of a
     // lattice laid out for this lake, each measured from its own middle.
     vec2 asp = vec2(1.0, uIceL.x);

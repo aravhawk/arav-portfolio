@@ -774,6 +774,8 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     // (Before dawn a hairline is a faint thread: nothing on the dark ice is bright but the name.)
     col = mix(col, uIceCol * mix(1.04, 0.2, uNight), hair * mix(0.55, 0.3, uNight));
   }
+  // (Once the sheet is plates each rides at its own small tilt: it takes the light a little differently from its neighbours.)
+  col *= 1.0 + (cr.y - 0.5) * 0.16 * smoothstep(0.45, 0.6, uIceA.z);
   // A pressure crack: a hairline of shadow, refrozen white either side.
   float cw = max(1.0, foot * 0.9);
   // (The cracks go as the sheet becomes plates, and a lean frame lets them go while they are only hairlines.)
@@ -1214,7 +1216,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       float glint = spark * 5.0 + face * face * 0.22;
       // (A glint finer than a pixel is its even mean.)
       glint = mix(glint, 0.12, smoothstep(2.0, 6.0, footL));
-      col += S.band * path * glint * mix(1.0, 0.7, nearK) * gDeep;
+      // (It is the name's own: once the sheet is plates the sun's true path on the open lake takes over.)
+      col += S.band * path * glint * mix(1.0, 0.7, nearK) * gDeep * sheetK * sheetK;
     }
   }
   // A few plates of ice lie afloat in the name's water, turning slowly:
