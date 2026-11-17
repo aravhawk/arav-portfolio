@@ -11,7 +11,7 @@
 
 import { onFrame } from '@/lib/frame';
 import { haptic } from '@/lib/haptics';
-import { emit, flightSignal, pictureSignal, pointerSignal } from '@/lib/signals';
+import { emit, flightSignal, pictureSignal, pointerSignal, signals } from '@/lib/signals';
 import { BedPainter } from './bed';
 import { makeCallouts } from './callouts';
 import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
@@ -363,6 +363,7 @@ export class FlightEngine extends WaterEngine {
   private gateNow = new Float32Array([1, 0, 0]);
   private surge = new Float32Array(3);
   private dripAt = 0;
+  private drip: { at: number; i: number } | null = null;
   private gateT = 0;
   private latLap = -1;
   /** The sluices follow the chosen gate: one lifts, the others drop, and a surge runs down the opened channel. */
@@ -605,16 +606,23 @@ export class FlightEngine extends WaterEngine {
     gl.uniform3fv(r.u.uGate, this.gateNow);
     gl.uniform3fv(r.u.uSurge, this.surge);
     pictureSignal(this.time, st, this.gateNow, this.surge, this.ray, this.lift);
-    if (st[0] > 0.5 && !this.still && this.time > this.dripAt) {
+    if (st[0] > 0.5 && !this.still) {
       // Meltwater drips from the columns into the shallows: real rings, most from the tallest.
-      const { at, i } = nextDrip(this.time, this.colH, Math.random);
-      this.dripAt = at;
-      const a = Math.random() * Math.PI * 2;
-      // (Each column is as wide as it is tall, in proportion: the drop lands at its own foot.)
-      const r = COLS.r * (this.colH[i] / COLS.hMax) * 1.15;
-      this.splash(COLS.xs[i] + Math.cos(a) * r, COLS.y + 26 * Math.sin(i * 2.3) + Math.sin(a) * r, 12 + 8 * Math.random(), 0.5);
-      emit('drip', i, this.colH[i] / COLS.hMax);
-    }
+      // (Each is chosen ahead of its time and published then, so its sound can be set for the frame that shows it.)
+      if (!this.drip) {
+        this.drip = nextDrip(Math.max(this.time, this.dripAt), this.colH, Math.random);
+        emit('drip', this.drip.i, this.colH[this.drip.i] / COLS.hMax, this.drip.at);
+      }
+      if (this.time >= this.drip.at) {
+        const i = this.drip.i;
+        this.dripAt = this.time;
+        this.drip = null;
+        const a = Math.random() * Math.PI * 2;
+        // (Each column is as wide as it is tall, in proportion: the drop lands at its own foot.)
+        const r = COLS.r * (this.colH[i] / COLS.hMax) * 1.15;
+        this.splash(COLS.xs[i] + Math.cos(a) * r, COLS.y + 26 * Math.sin(i * 2.3) + Math.sin(a) * r, 12 + 8 * Math.random(), 0.5);
+      }
+    } else this.drip = null;
     if (st[2] > 0.5 && !this.still) {
       // The light sets out with a real ring where the thread enters the pool.
       const lap = Math.floor(this.time / LAP);
@@ -949,6 +957,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     engine.setBed(bed);
     engine.shoalY = SHOAL_Y;
     (tribCounts.length ? tribCounts : [9, 5, 3, 2, 1, 1, 1]).slice(0, TRIBS.length).forEach((n, i) => (engine.tribW[i] = tribWidth(n)));
+    signals.tribs = engine.tribW;
     engine.lake = { y0: LAKE.y0, y1: LAKE.y1 };
     engine.meltPath = { x: OUTLET.x, y: OUTLET.y, reach: 900, w: OUTLET.w };
     return true;
@@ -1111,9 +1120,10 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const melt = (s - MELT.from) / (MELT.to - MELT.from);
     dayNow = dayAt(s);
     const rest = s >= SETTLE_AT - 0.02;
+    // (Published before the draw: whoever follows the picture takes its turn ahead of the picture's own work.)
+    flightSignal(now, s, cam, aspect, melt, dayNow, rest);
     callouts.frame(cam, aspect, viewW, viewH, s);
     engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight });
-    flightSignal(now, s, cam, aspect, melt, dayNow, rest);
   }, 10);
 
   return {
