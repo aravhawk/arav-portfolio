@@ -249,7 +249,7 @@ vec3 aurora(vec3 d) {
     float k = float(i) * 0.5;
     float a = az * (1.0 - 0.2 * k) + k * 3.8;
     // Its border: a slow fold, a quicker one, and a ripple that runs along it.
-    float p1 = a * (1.9 + 0.8 * k) + 0.6 + 2.3 * k + uTime * 0.011;
+    float p1 = a * (1.9 + 0.8 * k) + 0.6 + 2.3 * k + uTime * 0.028;
     float amp = 0.03 + 0.05 * k;
     float s1 = sin(p1);
     float hem = (0.064 + 0.14 * k + 0.24 * k * k) + amp * s1;
@@ -270,7 +270,7 @@ vec3 aurora(vec3 d) {
       continue;
     }
     // (A mirror's picture of it keeps the slow fold and lets the border's small ripples go.)
-    if (gSkyQ > 0.0) hem += 0.02 * sin(a * 5.3 - uTime * 0.017 + 4.0 * k) + 0.006 * (1.0 + k) * sin(a * 14.0 - uTime * 0.21 + 1.7 * k);
+    if (gSkyQ > 0.0) hem += 0.02 * sin(a * 5.3 - uTime * 0.05 + 4.0 * k) + 0.008 * (1.0 + k) * sin(a * 14.0 - uTime * 0.5 + 1.7 * k);
     float up = h - hem;
     if (up < -0.07) continue;
     // Where it hangs at all: in lengths, with clear sky between them.
@@ -279,7 +279,7 @@ vec3 aurora(vec3 d) {
     if (reach <= 0.0) continue;
     // Its rays: bundles, and the fine upright threads the bundles are made of. (One read of the baked grain, along a
     // slanting line so the pattern never comes round: its broad field is the bundles, its fine one the threads.)
-    vec4 rg = textureLod(uGrain, vec2(a * fr * 0.0625 + fold * 0.56 + uTime * 0.003, a * fr * 0.008 + k * 0.37 - uTime * 0.0011), 0.0);
+    vec4 rg = textureLod(uGrain, vec2(a * fr * 0.0625 + fold * 0.56 + uTime * 0.007, a * fr * 0.008 + k * 0.37 - uTime * 0.0026), 0.0);
     float bun = smoothstep(0.4, 0.78, rg.g);
     float thr = 0.2 + 0.8 * smoothstep(0.1, 0.52, rg.a);
     // (Only the sky itself shows the finest threads: a mirror's picture of them would shimmer.)
@@ -1161,7 +1161,9 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   less -= 0.11 * (1.0 - smoothstep(60.0, 520.0, nameD)) * (1.0 - uLake.z) * (1.0 - uNight);
   gSnowFine = 1.0 - uNight * smoothstep(1.2, 7.0, foot / pow(max(-dir.z, 0.02), 0.75));
   float lvl = snowAt(wl, big) - less;
-  float ew = 0.006;
+  // (A lean frame does not measure how soft each drift's edge should be. Before dawn a hard-edged drift on dark ice
+  // is a ripple on a sea: there its edges are all taken soft.)
+  float ew = 0.006 + 0.03 * uNight * gL2;
   float lvlT = lvl;
   if (uQuality > 0.5 && gL2 < 1.0) {
     lvlT = snowAt(RW * (il + LXY * 3.0), big) - less;
@@ -1273,7 +1275,9 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     // and over the bare ice a hard sheen: the curtains and the first light
     // lie in it softly, broken by the snow and the sheet's own grain. It is
     // a floor, lit from above; the water the melt opens is a depth.
-    vec3 snowN = vec3(0.74, 0.8, 0.9) * (S.key * max(dot(n, L), 0.0) + (S.amb * 0.8 + uAurora * 0.035) * (0.62 + 0.38 * n.z)) * (0.94 + 0.12 * g.r);
+    // (Its snow lies nearly level: lit across its full relief by the low first light it banded like a swell.)
+    vec3 nN = normalize(vec3(-rel * 0.2, 1.0));
+    vec3 snowN = vec3(0.74, 0.8, 0.9) * (S.key * max(dot(nN, L), 0.0) + (S.amb * 0.8 + uAurora * 0.035) * (0.62 + 0.38 * nN.z)) * (0.94 + 0.12 * g.r);
     // (Air is clouded in it in long drifts of its own, where the snow lies thickest.)
     float cloudI = 0.5 + 0.7 * big;
     vec3 iceN = vec3(0.011, 0.028, 0.046) * (0.7 + 0.5 * under) + vec3(0.016, 0.036, 0.05) * smoothstep(0.45, 0.8, cloudI) * (1.0 - 0.6 * nearK);
@@ -1287,7 +1291,8 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     cN *= 1.0 + (cr.y - 0.5) * 0.16 * smoothstep(0.45, 0.6, uIceA.z);
     // The sheen. (Under the eye, where the first frame's words stand, the ice keeps to itself.)
     float sheen = min(fres * 1.7 + 0.04, 0.8) * gloss * (0.72 + 0.28 * smoothstep(0.35, 0.7, cloudI)) * (1.0 - 0.75 * nearK);
-    cN += mir * sheen;
+    // (A lean frame's mirror holds only the air's own colour, which is paler than the sky it stands for: less of it is laid on.)
+    cN += mir * sheen * (1.0 - 0.6 * gL2);
     // A fracture: a thread of the sky's light, never wider than a hair however near the eye, brighter along
     // some of its length than the rest; and beside it the break itself going down into the ice, faintly lit.
     float cwN = max(foot * 0.9, 0.22);
