@@ -27,12 +27,11 @@ export const DY = 4000;
 export const EXT = 5300;
 /** How much river the four last stations add after the tarn. */
 export const EXT2 = 8000;
-/** What lies past those stations is this much further on. */
-const DO = DY + EXT + EXT2;
 /** Where the last four stations' reach begins: the foot of the tarn. */
 export const T2 = 11400 + DY;
 
-export const WORLD = { w: 2600, h: 8400 + DO };
+/** The world ends in open sea: its last rows are water from side to side, and past them the bed repeats, so the sea has no far shore. */
+export const WORLD = { w: 2600, h: T2 + 9900 };
 
 /** The lake's north and south shores. */
 // (It is wider than the world: past the world's sides the bed repeats its
@@ -90,8 +89,17 @@ export const SLAB = {
   turn: 0.16,
 };
 
-/** Where the river has become open water. */
-export const SHOAL_Y = 6650 + DO;
+/**
+ * The delta. Out of the glacier the river turns toward the light, slows, and
+ * braids out into the sea: distributaries that part round bars of snow and
+ * meet again. West of it a broad bank runs on to a cape; that bank is where
+ * the words stand.
+ */
+export const DELTA = { apex: pt(1560, T2 + 7760), y: T2 + 8150, sea: T2 + 8900 };
+/** Where the river has become shallows over bars. */
+export const SHOAL_Y = DELTA.y;
+/** Where the camera comes to rest over the sea. */
+export const REST = pt(2250, T2 + 10350);
 
 /**
  * Station 2, the confluence. The river turns and runs west across the view;
@@ -257,25 +265,7 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
 
   paintLater(b, gate);
 
-  // The run-out: the river leaves the last station and opens into wide water.
-  b.channel([pt(1300, 5560 + DO + 500), pt(1300, 5900 + DO + 300), pt(1300, 6300 + DO), pt(1300, 6700 + DO), pt(1300, 7150 + DO)], { width: [320, 340, 520, 1300, 3400] });
-  b.pool({ x: -400, y: 7000 + DO, w: WORLD.w + 800, h: WORLD.h - 7000 - DO + 400 }, 0);
-  // The open water's shore is a run of bays and points, never a ruled line.
-  for (const [x, dy, r] of [
-    [-120, 40, 300],
-    [260, -70, 250],
-    [640, 30, 230],
-    [930, -110, 260],
-    [1700, -120, 270],
-    [2010, 20, 240],
-    [2380, -60, 260],
-    [2740, 50, 300],
-  ]) {
-    b.disc(pt(x, 7000 + DO + r * 0.45 + dy), r);
-  }
-  for (const t of [0.2, 0.5, 0.8]) {
-    b.channel([pt(WORLD.w * t, 6900 + DO), pt(WORLD.w * t, WORLD.h)], { width: WORLD.w * 0.42, speed: 0.6, flowOnly: true, straight: true });
-  }
+  paintDelta(b);
   b.shoal = SHOAL_Y;
 }
 
@@ -307,11 +297,80 @@ function paintLater(b: BedPainter, gate: number) {
   b.channel(CANYON_LINE, { width: CANYON.w, straight: true });
   // (The outside of the second bend is cut square: a flat wall faces the water that comes at it.)
   b.pool({ x: 1800, y: T2 + 6220 - CANYON.w / 2, w: 220 + CANYON.w / 2, h: 300 }, 16);
-  b.channel([pt(2020, T2 + 7100), pt(1960, T2 + 7450), pt(1560, T2 + 7780), pt(1300, T2 + EXT2 - 20)], { width: [CANYON.w, 240, 300, 320] });
+  b.channel([pt(2020, T2 + 7100), pt(1990, T2 + 7330), pt(1800, T2 + 7560), DELTA.apex], { width: [CANYON.w, 220, 270, 300], speed: 0.7 });
   // Fast water on the outside of each bend.
   for (const c of BENDS) {
     const out = c.turn < 0 ? pt(c.x - 0.75 * CANYON.r, c.y + 0.75 * CANYON.r) : pt(c.x + 0.75 * CANYON.r, c.y - 0.75 * CANYON.r);
     b.agitate(out, 150, 0.8);
+  }
+}
+
+/** The delta's channels and the sea they run out into. */
+function paintDelta(b: BedPainter) {
+  const Y = T2;
+  const A = DELTA.apex;
+  // The sea: everything north of a coast that runs from the western cape round the delta's front to the east.
+  const coast: [number, number][] = [
+    [-900, 9760],
+    [300, 9700],
+    [820, 9600],
+    [1120, 9420],
+    [1300, 9180],
+    [1470, 9020],
+    [1700, 8990],
+    [1900, 8900],
+    [2080, 8760],
+    [2240, 8600],
+    [2400, 8470],
+    [2560, 8370],
+    [2800, 8300],
+    [3400, 8260],
+  ];
+  const sea = new Path2D();
+  sea.moveTo(-900, WORLD.h + 600);
+  for (const [x, y] of coast) sea.lineTo(x, Y + y);
+  sea.lineTo(3400, WORLD.h + 600);
+  sea.closePath();
+  b.fill(sea);
+  // Bays along it, so the coast is never a ruled line.
+  for (const [x, y, r] of [
+    [60, 9700, 210],
+    [600, 9640, 170],
+    [1010, 9500, 140],
+    [1620, 9000, 120],
+    [2010, 8830, 110],
+    [2330, 8530, 100],
+    [2700, 8330, 120],
+  ]) {
+    b.disc(pt(x, Y + y), r);
+  }
+  // Distributaries: each a slow, shallow channel; they part and meet, and the bars between them stay dry.
+  const run = (pts: [number, number][], width: number[], speed = 0.5) =>
+    b.channel(
+      pts.map(([x, y]) => pt(x, Y + y)),
+      { width, speed },
+    );
+  const a: [number, number] = [A.x, A.y - Y];
+  // West arm: north along the bank, to the cape's inner bay.
+  run([a, [1470, 8020], [1400, 8330], [1450, 8650], [1520, 8900], [1560, 9080]], [230, 150, 120, 130, 170, 260]);
+  // Middle arm.
+  run([a, [1640, 8030], [1720, 8300], [1770, 8580], [1860, 8800], [1930, 8960]], [230, 130, 110, 120, 160, 250]);
+  // East arm: toward the light.
+  run([a, [1760, 7930], [1980, 8090], [2200, 8220], [2420, 8350], [2600, 8420]], [230, 140, 120, 130, 170, 260]);
+  // Braids between them.
+  run([[1410, 8300], [1540, 8440], [1690, 8520], [1770, 8600]], [70, 80, 80, 90], 0.4);
+  run([[1700, 8240], [1860, 8340], [2020, 8490], [2150, 8640], [2230, 8720]], [80, 90, 100, 120, 200], 0.45);
+  run([[1950, 8070], [1960, 8240], [2030, 8400], [2040, 8500]], [70, 70, 80, 90], 0.4);
+  run([[1445, 8620], [1580, 8760], [1700, 8900], [1760, 9000]], [60, 70, 90, 160], 0.4);
+  run([[2190, 8215], [2260, 8380], [2330, 8520]], [70, 80, 150], 0.4);
+  run([[1765, 8560], [1930, 8640], [2060, 8770]], [70, 80, 150], 0.4);
+  // The sea's own slow set, outward from the mouths.
+  for (const [x0, y0, x1, y1] of [
+    [1560, 9050, 1700, 9900],
+    [1930, 8950, 2200, 9900],
+    [2420, 8500, 2600, 9900],
+  ]) {
+    b.channel([pt(x0, Y + y0), pt(x1, Y + y1)], { width: 700, speed: 0.22, flowOnly: true, straight: true });
   }
 }
 

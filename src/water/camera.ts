@@ -7,7 +7,7 @@
  * so a held frame still drifts.
  */
 
-import { BENDS, CANYON, DY, EXT, EXT2, FACE, NAME, type NameLayout, SLAB, T2 } from './world';
+import { BENDS, CANYON, DY, FACE, NAME, type NameLayout, REST, SLAB, T2 } from './world';
 
 export type V3 = [number, number, number];
 
@@ -26,9 +26,14 @@ export interface Key extends Pose {
 }
 
 /** How long each section of the page is, in screens. */
-export const SECTIONS = { hero: 2.4, say: 2.2, infiniview: 2.6, upstream: 2.8, bench: 2.6, bridge: 2.8, models: 2.8, fork: 2.8, lattice: 2.6, canyon: 3.6, runout: 2.0 };
-/** The whole flight's length in screens. The last screen of it is the hand-over to the ending. */
-export const FLIGHT_SCREENS = SECTIONS.hero + SECTIONS.say + SECTIONS.infiniview + SECTIONS.upstream + SECTIONS.bench + SECTIONS.bridge + SECTIONS.models + SECTIONS.fork + SECTIONS.lattice + SECTIONS.canyon + SECTIONS.runout;
+export const SECTIONS = { hero: 2.4, say: 2.2, infiniview: 2.6, upstream: 2.8, bench: 2.6, bridge: 2.8, models: 2.8, fork: 2.8, lattice: 2.6, canyon: 3.6, delta: 2.6, sea: 2.3 };
+/** The whole flight's length in screens. The page scrolls one screen less than this: the last screen is the ending, at rest. */
+export const FLIGHT_SCREENS = Object.values(SECTIONS).reduce((a, b) => a + b, 0);
+/** Where the scroll ends, and where the camera has come to rest over the sea (a little before it, so the last of the scroll is the ending held). */
+export const END_AT = FLIGHT_SCREENS - 1;
+export const SETTLE_AT = END_AT - 0.3;
+/** Where the sun rises at the end of the flight when nothing has measured the ranges: bearing from +y toward +x, radians. */
+export const SUN_END_AZ = 0.62;
 /** Scroll (in screens) over which the lake's ice melts. */
 export const MELT = { from: 0.1, to: 2.0 };
 /** Until here the first camera only drifts: the name is still letters. */
@@ -77,7 +82,7 @@ export function heroDesign(aspect: number): Hero {
 }
 
 /** The key poses for a screen of this shape. */
-export function flightKeys(aspect: number): Key[] {
+export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
   const h = SECTIONS.hero;
   const s1 = h + SECTIONS.say;
   const s2 = s1 + SECTIONS.infiniview;
@@ -87,7 +92,8 @@ export function flightKeys(aspect: number): Key[] {
   const s6 = s5 + SECTIONS.models;
   const s7 = s6 + SECTIONS.fork;
   const s8 = s7 + SECTIONS.lattice;
-  const end = FLIGHT_SCREENS - 1;
+  const s9 = s8 + SECTIONS.canyon;
+  const s10 = s9 + SECTIONS.delta;
   const Y = DY;
 
   // The poster, held (with a slow push) until the letters have run together.
@@ -128,7 +134,7 @@ export function flightKeys(aspect: number): Key[] {
         { s: s5 - 0.6, pos: [1896, 9340 + Y, 490], aim: [1740, 9900 + Y, 0], fov: 58 },
         { s: s5 + 0.3, pos: [1300, T2 - 250, 400], aim: [1300, T2 + 600, 0], fov: 56 },
         ...laterKeys(true, s5, s6, s7, s8),
-        { s: end, pos: [1300, 7300 + DY + EXT + EXT2, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)) + DY + EXT + EXT2, 0], fov: 40 },
+        ...seaKeys(aspect, sunAz, s9, s10),
       ]
     : [
         { s: 0, ...hero },
@@ -160,8 +166,7 @@ export function flightKeys(aspect: number): Key[] {
         { s: s5 - 0.6, pos: [1135, 9950 + Y, 242], aim: [1405, 10975 + Y, 130], fov: 46 },
         { s: s5 + 0.3, pos: [1300, T2 - 300, 300], aim: [1300, T2 + 600, 0], fov: 44 },
         ...laterKeys(false, s5, s6, s7, s8),
-        // Open water seen from above: the ending's first frame.
-        { s: end, pos: [1300, 7300 + DY + EXT + EXT2, 1100], aim: [1300, 7300 + 1100 / Math.tan(rad(57)) + DY + EXT + EXT2, 0], fov: 36 },
+        ...seaKeys(aspect, sunAz, s9, s10),
       ];
   return keys;
 }
@@ -184,7 +189,6 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s8 - 0.6, pos: [646, T + 3228, 750], aim: [1272, T + 4480, 0], fov: 58 },
         { s: s8 + 0.3, pos: [1300, T + 4900, 230], aim: [1300, T + 5700, 70], fov: 60 },
         ...canyonKeys(s8, 66),
-        { s: s8 + 3.85, pos: [1700, T + 7620, 400], aim: [1400, T + 8300, 0], fov: 54 },
       ]
     : [
         { s: s5 + 1.2, pos: [760, T + 60, 250], aim: [1310, T + 1080, 70], fov: 42 },
@@ -199,8 +203,113 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s8 - 0.6, pos: [462, T + 3718, 412], aim: [1203, T + 4510, 20], fov: 42 },
         { s: s8 + 0.3, pos: [1300, T + 4960, 170], aim: [1300, T + 5700, 70], fov: 48 },
         ...canyonKeys(s8, 50),
-        { s: s8 + 3.85, pos: [1700, T + 7620, 330], aim: [1400, T + 8400, 0], fov: 42 },
       ];
+}
+
+/** The ending's lens, and where its horizon and its sun stand in the frame (the old ending's composition). */
+export function endLens(aspect: number) {
+  const narrow = aspect < 0.8;
+  const fov = 36;
+  const th = Math.tan(rad(fov / 2));
+  return {
+    fov,
+    /** the horizon, in v from -1 (foot) to 1 (top) */
+    horizon: narrow ? 0.3 : 0.24,
+    /** how far right of the frame's middle the sun stands, radians */
+    sunOff: Math.atan((narrow ? 0.7 : 0.46) * aspect * th),
+    pitch: Math.atan((narrow ? 0.3 : 0.24) * th),
+  };
+}
+
+/**
+ * Out of the canyon, over the delta, and out to sea. The delta is held from
+ * over its west bank, looking across the channels toward the light; then
+ * the camera goes on, low, and comes to rest on the ending's frame: the
+ * horizon above the middle and the sun off to the right, wherever in the
+ * world the sun has been found to rise.
+ */
+function seaKeys(aspect: number, sunAz: number, s9: number, s10: number): Key[] {
+  const T = T2;
+  const upright = aspect < 0.9;
+  const L = endLens(aspect);
+  const head = sunAz - L.sunOff;
+  const fx = Math.sin(head);
+  const fy = Math.cos(head);
+  const z = 60;
+  const far = 4000;
+  const rest: Pose = { pos: [REST.x, REST.y, z], aim: [REST.x + fx * far, REST.y + fy * far, z - far * Math.tan(L.pitch)], fov: L.fov };
+  // (The last of the scroll is the same frame, a breath nearer.)
+  const held: Pose = { pos: [REST.x + fx * 14, REST.y + fy * 14, z], aim: [rest.aim[0] + fx * 14, rest.aim[1] + fy * 14, rest.aim[2]], fov: L.fov };
+  // The run in: along the last heading, coming down.
+  const back = (d: number, h: number, fov: number, drop: number): Pose => ({
+    pos: [REST.x - fx * d, REST.y - fy * d, h],
+    aim: [REST.x - fx * d + fx * 1600, REST.y - fy * d + fy * 1600, h - drop],
+    fov,
+  });
+  return upright
+    ? [
+        // Out of the glacier and up over the west bank.
+        { s: s9 + 0.25, pos: [1900, T + 7300, 260], aim: [1800, T + 8200, 0], fov: 60 },
+        // The delta: the channels above the middle, the bank at the foot.
+        { s: s9 + 1.1, pos: [1180, T + 7240, 620], aim: [1640, T + 8560, 0], fov: 60 },
+        { s: s10 - 0.55, pos: [1190, T + 7275, 610], aim: [1646, T + 8580, 0], fov: 60 },
+        { s: s10 + 0.35, ...back(1750, 250, 52, 330) },
+        { s: s10 + 0.95, ...back(620, 105, 42, 90) },
+        { s: SETTLE_AT, ...rest },
+        { s: END_AT, ...held },
+      ]
+    : [
+        { s: s9 + 0.25, pos: [1960, T + 7330, 210], aim: [1800, T + 8200, 0], fov: 48 },
+        // The delta from over its west bank: the bank at lower left, the channels to the right, the light beyond them.
+        { s: s9 + 1.1, pos: [1100, T + 7450, 400], aim: [1500, T + 8750, 0], fov: 46 },
+        { s: s10 - 0.55, pos: [1112, T + 7480, 393], aim: [1508, T + 8772, 0], fov: 46 },
+        { s: s10 + 0.35, ...back(1750, 230, 42, 250) },
+        { s: s10 + 0.95, ...back(620, 100, 38, 78) },
+        { s: SETTLE_AT, ...rest },
+        { s: END_AT, ...held },
+      ];
+}
+
+/**
+ * How far the day has come round, 0..1, at a scroll position. The flight
+ * begins in the morning (or, in the dark theme, in the polar night) and
+ * ends at the ending's light. It moves a little all the way down, most of
+ * it inside the canyon and over the sea, where no words depend on it.
+ */
+export function dayAt(s: number): number {
+  const h = SECTIONS.hero;
+  const s9 = FLIGHT_SCREENS - SECTIONS.sea - SECTIONS.delta;
+  const s8 = s9 - SECTIONS.canyon;
+  const keys: [number, number][] = [
+    [0, 0],
+    [h, 0],
+    [s8 + 0.6, 0.1],
+    [s9 + 0.1, 0.44],
+    [s9 + 1.1, 0.55],
+    [s9 + SECTIONS.delta - 0.55, 0.6],
+    [SETTLE_AT - 0.25, 1],
+    [END_AT, 1],
+  ];
+  if (s <= 0) return 0;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const [a, va] = keys[i];
+    const [b, vb] = keys[i + 1];
+    if (s <= b) {
+      // Slopes: the mean of the two sides, flat at a level stretch, so it eases through every key.
+      const slope = (k: number) => {
+        if (k === 0 || k === keys.length - 1) return 0;
+        const d0 = (keys[k][1] - keys[k - 1][1]) / (keys[k][0] - keys[k - 1][0]);
+        const d1 = (keys[k + 1][1] - keys[k][1]) / (keys[k + 1][0] - keys[k][0]);
+        return d0 * d1 <= 0 ? 0 : (2 * d0 * d1) / (d0 + d1);
+      };
+      const span = b - a;
+      const t = (s - a) / span;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      return (2 * t3 - 3 * t2 + 1) * va + (t3 - 2 * t2 + t) * span * slope(i) + (-2 * t3 + 3 * t2) * vb + (t3 - t2) * span * slope(i + 1);
+    }
+  }
+  return 1;
 }
 
 /** A place on the canyon's middle line, d along it from the glacier's front. */
@@ -261,8 +370,8 @@ export function sectionStarts(): number[] {
 
 /** The scroll position of each section's composed frame, for a still (reduced motion) flight. */
 export function stillStops(): number[] {
-  const [, say, view, up, bench, bridge, models, fork, lattice, canyon] = sectionStarts();
-  return [0, say + 0.7, view + 1.0, up + 1.25, bench + 1.15, bridge + 1.2, models + 1.2, fork + 1.2, lattice + 1.15, canyon + 2.2, FLIGHT_SCREENS - 1];
+  const [, say, view, up, bench, bridge, models, fork, lattice, canyon, delta] = sectionStarts();
+  return [0, say + 0.7, view + 1.0, up + 1.25, bench + 1.15, bridge + 1.2, models + 1.2, fork + 1.2, lattice + 1.15, canyon + 2.2, delta + 1.1, END_AT];
 }
 
 /** Which composed frame a scroll position shows when nothing may glide. */

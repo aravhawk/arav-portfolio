@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Arrow, Slab } from '@/components/bits';
-import { Ending } from '@/components/ending/Ending';
+import { Contact, HapticsSetting } from '@/components/ending/Ending';
 import { Callout } from '@/components/flight/Callout';
 import { ProfileSwitch } from '@/components/home/ProfileSwitch';
 import { FlightStage } from '@/components/FlightStage';
 import { LiveNumber } from '@/components/LiveNumber';
-import { PROJECTS, type ProjectMedia } from '@/content/projects';
+import { INTERESTS, PROJECTS, type ProjectMedia } from '@/content/projects';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
-import { SECTIONS } from '@/water/camera';
+import { SECTIONS, SETTLE_AT } from '@/water/camera';
 import { COLS, TRIBS, colHeights } from '@/water/world';
 import '../home.css';
 import './flight.css';
@@ -47,7 +47,8 @@ const MODELS = BRIDGE + SECTIONS.bridge;
 const FORK = MODELS + SECTIONS.models;
 const LATTICE = FORK + SECTIONS.fork;
 const CANYON = LATTICE + SECTIONS.lattice;
-const END = CANYON + SECTIONS.canyon;
+const DELTA = CANYON + SECTIONS.canyon;
+const SEA = DELTA + SECTIONS.delta;
 
 const len = (screens: number, last = false) => ({ '--len': last ? screens : screens + 1 }) as React.CSSProperties;
 
@@ -298,12 +299,45 @@ export default async function Flight() {
           </div>
         </section>
 
-        {/* ---------- the run-out: open water, then the ending ---------- */}
-        <section className="fl-sec fl-out" data-fl style={len(SECTIONS.runout, true)} aria-hidden="true">
-          <div className="fl-pin" />
+        {/* ---------- the delta: what he is into ---------- */}
+        <section className="fl-sec fl-delta" data-fl style={len(SECTIONS.delta)} aria-labelledby="into">
+          <div className="fl-pin">
+            <div className="fl-words fl-into-words" data-fl-from={DELTA + 0.95} data-fl-to={SEA - 0.5}>
+              <p className="label fl-label" id="into">
+                Into
+              </p>
+              <ul className="into-list title fl-into-list">
+                {INTERESTS.map((x) => (
+                  <li key={x}>{x}</li>
+                ))}
+              </ul>
+              <p className="lead fl-into-next">Next: a company, a research paper, and code in tools you open daily.</p>
+              <Link className="btn fl-into-btn" href="/work">
+                All work <Arrow />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- the sea: the ending, the last frame of the same flight ---------- */}
+        <section className="fl-sec fl-sea ending" data-fl style={len(SECTIONS.sea, true)} aria-label="Contact">
+          <div className="fl-pin">
+            <div className="fl-words fl-end-words" data-fl-from={SETTLE_AT - 0.04} data-fl-to={1e6}>
+              <div className="fl-end-block">
+                <h2 className="ending-head">
+                  <span className="ending-line">It&apos;s still early.</span>
+                </h2>
+                <p className="label ending-kicker">Selected for OpenAI DevDay 2026</p>
+                <Contact />
+              </div>
+              <div className="ending-foot label fl-end-foot">
+                <a href="/feed.xml">RSS</a>
+                <HapticsSetting />
+              </div>
+            </div>
+          </div>
         </section>
       </main>
-      <Ending />
     </>
   );
 }

@@ -239,9 +239,6 @@ html[data-flight='off'] .fl .fl-still {
   padding: clamp(28px, 6vw, 90px);
   border-radius: 28px;
 }
-html[data-flight='off'] .fl-out {
-  display: none;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .fl-words > *,
@@ -402,4 +399,154 @@ html[data-flight='off'] .fl-call-line {
 html[data-flight='off'] .fl-up-words,
 html[data-flight='off'] .fl-view-words {
   display: flex;
+}
+
+/* ---------- the delta: what he is into ---------- */
+
+/* The block stands on the west bank, lower left; the channels keep the right. */
+.fl-into-words {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--s-4);
+  padding-bottom: max(clamp(28px, 7vh, 84px), env(safe-area-inset-bottom));
+}
+.fl .fl-into-list {
+  max-width: min(12.2em, 44vw);
+  font-size: clamp(1.9rem, 2.8vw + 0.4rem, 3.5rem);
+  color: var(--ink);
+}
+/* Every other one a tone quieter, as the list has always been set; over a picture the quiet tone is the second ink. */
+.fl-into-list li:nth-child(even) {
+  color: var(--ink-2);
+}
+.fl-into-next {
+  max-width: 30ch;
+  color: var(--ink);
+}
+.fl-words[data-on] > :nth-child(4) {
+  transition-delay: 210ms;
+}
+
+/* ---------- the sea: the ending ---------- */
+
+/* The old ending's composition, in the flight's own last frame: the words at
+   lower left over the calm, dark water the picture keeps for them; light in
+   both themes. */
+.fl-sea {
+  z-index: 2;
+}
+.fl-end-words {
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding-bottom: max(26px, env(safe-area-inset-bottom));
+  color: var(--end-ink);
+}
+.fl-end-block {
+  display: grid;
+  gap: clamp(10px, 1.4vw, 20px);
+  justify-items: start;
+  max-width: min(50vw, 800px);
+  margin-bottom: clamp(28px, 6.5vh, 80px);
+}
+/* The foot: one hairline the width of the links, and under it the feed and the haptics switch as one line. */
+.fl-end-foot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0 26px;
+  min-width: min(26rem, 100%);
+  max-width: min(50vw, 800px);
+  padding-top: 4px;
+  color: var(--end-ink);
+}
+.fl-end-foot::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: var(--end-line);
+}
+.fl-end-foot a,
+.fl-end-foot .end-haptics {
+  color: var(--end-ink);
+}
+/* The entrance: the headline wipes in, the rest follows. It leaves fast. */
+.fl-words.fl-end-words > * {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+.fl-end-words .ending-line {
+  clip-path: inset(-10% 100% -10% 0);
+  transition: clip-path 180ms var(--ease-out);
+}
+.fl-end-words[data-on] .ending-line {
+  clip-path: inset(-10% -6% -10% 0);
+  transition: clip-path 900ms var(--ease-in-out);
+}
+.fl-end-words .ending-kicker,
+.fl-end-words .ending-links,
+.fl-end-words .fl-end-foot {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 180ms var(--ease-out);
+}
+.fl-end-words[data-on] .ending-kicker,
+.fl-end-words[data-on] .ending-links,
+.fl-end-words[data-on] .fl-end-foot {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 700ms var(--ease-out) 420ms,
+    transform 700ms var(--ease-out) 420ms;
+}
+.fl-end-words[data-on] .fl-end-foot {
+  transition-delay: 560ms;
+}
+.fl-end-words:not([data-on]) * {
+  pointer-events: none;
+}
+
+@media (max-width: 719px) {
+  .fl-end-block {
+    max-width: 68vw;
+    margin-bottom: clamp(16px, 3.4vh, 34px);
+  }
+  .fl-end-foot {
+    max-width: none;
+    min-width: 68vw;
+  }
+  .fl-into-list {
+    max-width: none;
+    font-size: clamp(1.6rem, 7.6vw, 2.4rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fl-end-words .ending-line,
+  .fl-end-words .ending-kicker,
+  .fl-end-words .ending-links,
+  .fl-end-words .fl-end-foot {
+    clip-path: none;
+    transform: none;
+    transition: opacity 200ms linear;
+  }
+  .fl-end-words:not([data-on]) .ending-line {
+    opacity: 0;
+  }
+}
+html[data-flight='off'] .fl-end-words .ending-line,
+html:not([data-flight]) .fl-end-words .ending-line {
+  clip-path: none;
+}
+html[data-flight='off'] .fl-end-words .ending-kicker,
+html[data-flight='off'] .fl-end-words .ending-links,
+html[data-flight='off'] .fl-end-words .fl-end-foot {
+  opacity: 1;
+  transform: none;
 }

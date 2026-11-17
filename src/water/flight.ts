@@ -13,14 +13,15 @@ import { onFrame } from '@/lib/frame';
 import { haptic } from '@/lib/haptics';
 import { BedPainter } from './bed';
 import { makeCallouts } from './callouts';
-import { type Basis, FLIGHT_SCREENS, MELT, SECTIONS, basisOf, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
+import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
+import { skyAt } from './sky';
 import { makeSolver } from './stage';
-import { CANYON, COLS, DAM, LAKE, LATTICE, OUTLET, SHARDS, SHOAL_Y, SLAB, SLUICES, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
+import { CANYON, COLS, DAM, DELTA, LAKE, LATTICE, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -33,6 +34,24 @@ const CELL = [4, 5, 6, 8];
 const SPAN = 2300;
 /** How thick the lake's sheet stands above the water, world units. */
 const ICE_H = 11;
+
+/** The light event at the ending happens once in a visit: after it, the sun stays up and the line of light holds. */
+let dawned = false;
+
+/** What the page tells the picture each frame, beyond the camera. */
+export interface FlightMoment {
+  /** 0..1, how far the lake's ice has melted */
+  melt: number;
+  /** 0..1, how far the day has come round */
+  day: number;
+  /** 0..1, how far the camera has settled on the ending */
+  settle: number;
+  /** true once it has come to rest there */
+  rest: boolean;
+  /** where the ending's words end, in u, and (narrow screens) how high they reach, in v from the foot; 0 when unused */
+  calm: number;
+  near: number;
+}
 
 export class FlightEngine extends WaterEngine {
   private slabTex: WebGLTexture | null = null;
@@ -135,8 +154,88 @@ export class FlightEngine extends WaterEngine {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    this.findSunrise(w);
     freeTarget(gl, country);
     freeTarget(gl, raw);
+  }
+
+  /** Where the sun stands at the end of the flight, and how high the ranges are there. */
+  sunAz = SUN_END_AZ;
+  ridge = 0.03;
+
+  /**
+   * The ranges are cut from noise the device works out for itself, so their
+   * skyline is read back once: the sun rises in the lowest saddle within a
+   * few degrees of where the picture wants it, and it is known how high the
+   * crest there stands, so its edge can be made to clear it.
+   */
+  private findSunrise(w: number) {
+    const gl = this.gl;
+    const col = (az: number) => Math.round((az / (2 * PANO.az) + 0.5) * w);
+    const x0 = col(SUN_END_AZ - 0.2);
+    const x1 = col(SUN_END_AZ + 0.2);
+    const n = x1 - x0 + 1;
+    const px = new Uint8Array(n * PANO.h * 4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.pano.fbo);
+    gl.readPixels(x0, 0, n, PANO.h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // The skyline: the highest row in each column that is not open sky.
+    const sky = new Float32Array(n);
+    for (let x = 0; x < n; x++) {
+      let top = 0;
+      for (let y = PANO.h - 1; y >= 0; y--) {
+        if (px[(y * n + x) * 4 + 3] < 235) {
+          top = y + 1;
+          break;
+        }
+      }
+      sky[x] = (top / PANO.h) * PANO.el;
+    }
+    const perRad = w / (2 * PANO.az);
+    const gap = Math.round(0.045 * perRad);
+    const disc = Math.round(0.014 * perRad);
+    let best = Infinity;
+    let at = Math.round(n / 2);
+    for (let x = gap; x < n - gap; x++) {
+      let hi = 0;
+      for (let k = -gap; k <= gap; k++) hi = Math.max(hi, sky[x + k] * (Math.abs(k) <= disc ? 1 : 0.7));
+      // (A saddle nearer the wanted bearing wins over one a hair lower far from it.)
+      const az = ((x0 + x) / w - 0.5) * 2 * PANO.az;
+      const cost = hi + 0.03 * Math.abs(az - SUN_END_AZ);
+      if (cost < best) {
+        best = cost;
+        at = x;
+      }
+    }
+    let crest = 0;
+    for (let k = -disc; k <= disc; k++) crest = Math.max(crest, sky[at + k]);
+    this.sunAz = ((x0 + at) / w - 0.5) * 2 * PANO.az;
+    this.ridge = Math.min(0.075, Math.max(0.012, crest));
+  }
+
+  /** The light event: the sun's last lift and the line of light, each 0..1, run once by the clock when the camera first comes to rest. */
+  private lift = dawned ? 1 : 0;
+  private ray = dawned ? 1 : 0;
+  private dawnT = -1;
+  /** Called once, when the sun's edge first clears the ranges. */
+  onDawn: (() => void) | null = null;
+  private runDawn(rest: boolean) {
+    if (this.still) {
+      // Nothing moves by the clock: at the ending the light is simply there.
+      this.lift = this.ray = rest || dawned ? 1 : 0;
+      if (rest) dawned = true;
+      return;
+    }
+    if (rest && this.dawnT < 0 && !dawned) {
+      this.dawnT = this.time;
+      dawned = true;
+      this.onDawn?.();
+    }
+    if (this.dawnT < 0) return;
+    const t = this.time - this.dawnT;
+    this.lift = smooth(0, 2.6, t);
+    this.ray = smooth(0.7, 2.9, t);
+    if (t < 3.2) this.dirty = true;
   }
 
   /**
@@ -370,10 +469,10 @@ export class FlightEngine extends WaterEngine {
    * One frame.
    * @param cam the camera
    * @param aspect the canvas's width over its height
-   * @param melt 0..1, how far the lake's ice has melted (a function of scroll)
-   * @param end 0..1, the last move over open water
+   * @param at where the page is: the melt, the time of day, the settle on the ending
    */
-  frame(now: number, cam: Basis, aspect: number, melt: number, end: number) {
+  frame(now: number, cam: Basis, aspect: number, at: FlightMoment) {
+    const melt = at.melt;
     const gl = this.gl;
     if (!this.ready || !this.bedA || !this.bedB || !this.wave || gl.isContextLost()) return;
 
@@ -406,7 +505,7 @@ export class FlightEngine extends WaterEngine {
       this.onMelt?.(false);
     }
 
-    const key = `${cam.pos.join(',')}|${cam.f.join(',')}|${cam.tan}|${m}`;
+    const key = `${cam.pos.join(',')}|${cam.f.join(',')}|${cam.tan}|${m}|${at.settle}|${at.calm}|${at.near}`;
     if (key !== this.camKey) {
       this.camKey = key;
       this.dirty = true;
@@ -415,7 +514,9 @@ export class FlightEngine extends WaterEngine {
     // The simulation's window follows where the camera looks: from a little
     // behind the foot of the frame to well beyond its middle.
     const near = groundUnder(cam, 0.5, 0.9, aspect) ?? { x: cam.pos[0], y: cam.pos[1], t: 0 };
-    const top = Math.min(WORLD.h - SPAN * 0.5, Math.max(-SPAN * 0.5, near.y - SPAN * 0.14));
+    // (Past the world's last row the bed repeats, which is open sea: the window follows the camera out over it.)
+    const top = Math.min(REST.y + SPAN * 0.5, Math.max(-SPAN * 0.5, near.y - SPAN * 0.14));
+    this.runDawn(at.rest);
 
     if (this.still) {
       if (!this.dirty) return;
@@ -423,19 +524,19 @@ export class FlightEngine extends WaterEngine {
         const dx = this.simCell();
         this.simTop = Math.floor(top / dx) * dx - dx;
       }
-      this.draw(cam, aspect, end);
+      this.draw(cam, aspect, at);
       // (A still frame has no frame before it to glow from: it is drawn twice.)
-      this.draw(cam, aspect, end);
+      this.draw(cam, aspect, at);
       this.dirty = false;
       return;
     }
     this.time += dt;
     this.simulate(dt, top);
-    this.draw(cam, aspect, end);
+    this.draw(cam, aspect, at);
     this.dirty = false;
   }
 
-  private draw(cam: Basis, aspect: number, end: number) {
+  private draw(cam: Basis, aspect: number, at: FlightMoment) {
     const gl = this.gl;
     const r = this.p.flight;
     const tier = TIERS[this.tier];
@@ -495,7 +596,22 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uNight, night);
     gl.uniform1f(r.u.uWorldW, WORLD.w);
     gl.uniform1f(r.u.uShoal, this.shoalY);
-    gl.uniform1f(r.u.uEnd, end);
+    // The light: the hour's keys, worked out here once a frame.
+    const sky = skyAt(night, at.day, this.lift, this.sunAz, this.ridge);
+    gl.uniform3fv(r.u.uSkyZen, sky.zen);
+    gl.uniform3fv(r.u.uSkyMid, sky.mid);
+    gl.uniform3fv(r.u.uSkyHor, sky.hor);
+    gl.uniform3fv(r.u.uSkyBand, sky.band);
+    gl.uniform3fv(r.u.uSunDir, sky.sun);
+    gl.uniform3fv(r.u.uKeyCol, sky.key);
+    gl.uniform3fv(r.u.uKeyDir, sky.keyDir);
+    gl.uniform3fv(r.u.uAmbCol, sky.amb);
+    gl.uniform4f(r.u.uSkyK, sky.haze, sky.aurora, sky.dusk, sky.under);
+    // The open sea is only worked out when the camera is near enough to see it.
+    const toSea = Math.hypot(cam.pos[0] - 1900, cam.pos[1] - DELTA.sea);
+    const seaOn = cam.pos[1] > DELTA.sea ? 1 : 1 - smooth(4300, 5600, toSea);
+    gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
+    gl.uniform4f(r.u.uRay, REST.x, REST.y, this.ray, seaOn > 0 ? this.ray * (0.55 + 0.45 * this.lift) : 0);
     this.bindIce(r, ice, 7, 9);
     gl.uniform1f(r.u.uIceH, ICE_H);
     gl.uniform1f(r.u.uIceOn, this.iceTex && this.melt < 0.999 ? 1 : 0);
@@ -635,7 +751,7 @@ export interface FlightHandle {
   engine: FlightEngine;
   rebuild(): void;
   /** The camera's scroll position in screens and where it is, for the checks. */
-  state(): { s: number; pos: V3; unit: number };
+  state(): { s: number; pos: V3; unit: number; day: number };
 }
 
 /**
@@ -692,6 +808,13 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   words.forEach((w) => (w.on = null));
 
   const callouts = makeCallouts();
+  const endBlock = document.querySelector<HTMLElement>('.fl-end-block');
+  const endPin = endBlock?.closest<HTMLElement>('.fl-pin') ?? null;
+  let calm = 0.6;
+  let nearV = 0;
+  let dayNow = 0;
+  // One light tick, once, when the camera settles and the sun's edge clears the ranges.
+  engine.onDawn = () => haptic('light');
 
   let meltFelt = false;
   engine.onMelt = (done) => {
@@ -708,11 +831,16 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     canvas.style.height = `${viewH}px`;
     engine.resize(viewW, viewH, 0, window.devicePixelRatio || 1);
     aspect = viewW / viewH;
-    keys = flightKeys(aspect);
+    keys = flightKeys(aspect, engine.sunAz);
     const first = sections[0];
     // (Each section but the last is one screen longer than its stretch of scroll, so its words can stay pinned to the end of it.)
     unit = first ? first.offsetHeight / (SECTIONS.hero + 1) : viewH;
     callouts.measure();
+    // The ending's words keep to the left (on a narrow screen, to the foot): the water there is kept calm for them.
+    const b = endBlock?.getBoundingClientRect();
+    const narrow = viewW < 720;
+    calm = b && b.width > 0 ? Math.min(0.9, b.right / viewW + 0.03) : 0.6;
+    nearV = narrow && b && b.height > 0 ? Math.min(0.6, 1 - (b.top - (endPin?.getBoundingClientRect().top ?? 0)) / viewH + 0.02) : 0;
   }
 
   /** The bed is the same for every screen; it is carved once. */
@@ -895,11 +1023,6 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
         w.el.toggleAttribute('data-on', on);
       }
     }
-    // Under the ending's picture there is nothing of the flight to see.
-    if (raw > FLIGHT_SCREENS + 0.25) {
-      callouts.frame(cam, aspect, viewW, viewH, -1);
-      return;
-    }
     // Nothing may glide when motion is reduced: each section shows its
     // composed frame.
     const s = mqStill.matches ? stillScroll(raw) : raw;
@@ -909,15 +1032,16 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     if (mqStill.matches) pose.roll = 0;
     cam = basisOf(pose);
     const melt = (s - MELT.from) / (MELT.to - MELT.from);
-    const end = smooth(FLIGHT_SCREENS - 1.7, FLIGHT_SCREENS - 1, s);
+    dayNow = dayAt(s);
+    const rest = s >= SETTLE_AT - 0.02;
     callouts.frame(cam, aspect, viewW, viewH, raw);
-    engine.frame(now, cam, aspect, melt, end);
+    engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV });
   }, 10);
 
   return {
     engine,
     rebuild: onResize,
-    state: () => ({ s: sNow, pos: cam.pos, unit }),
+    state: () => ({ s: sNow, pos: cam.pos, unit, day: dayNow }),
     destroy() {
       destroyed = true;
       off();

@@ -67,7 +67,7 @@ const subscribeHaptics = (cb: () => void) => {
 const readHaptics = (): HapticsState => (hapticsAvailable() ? (hapticsEnabled() ? 'on' : 'off') : 'hidden');
 const readHapticsServer = (): HapticsState => 'hidden';
 
-function HapticsSetting() {
+export function HapticsSetting() {
   const state = useSyncExternalStore(subscribeHaptics, readHaptics, readHapticsServer);
   if (state === 'hidden') return null;
   const toggle = () => {
@@ -84,7 +84,7 @@ function HapticsSetting() {
   );
 }
 
-function Contact() {
+export function Contact() {
   return (
     <ul className="ending-links">
       <li>
