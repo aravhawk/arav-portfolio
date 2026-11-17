@@ -740,3 +740,39 @@ name as standing letters of glacier ice (an alternative to W7's pool
 of meltwater; one of the two is kept). Still to assign once the
 running passes on the shaders land: the snow's sharpness, the dark
 theme, the pictures set in ice. Then the frame-rate task, alone.
+
+### Second passes integrated; panel 9 under way (2026-11-17, about 02:30 to 05:35)
+
+Everything panel 8 found was answered by a helper and merged the same
+way as the first wave (cherry-picked, re-signed, conflicts resolved by
+hand, gates re-run, the merged build looked at, pushed).
+
+| helper | what landed |
+| --- | --- |
+| W7 hero pass 2 | the lake's far mirror of the ranges, plates through the melt, the outlet without square shallows (its pond version of the name was then replaced) |
+| W9 stations 1 to 4, pass 2 | Kilo Bench as a rock pool with a horizon, boulders and the results as readable plates (digits 15 to 24 px at 1440); a rough-hewn block; a bent cliff with falls that have volume; darker shards |
+| W8 sound pass 2 | clocked moments scheduled ahead on the audio clock; a live bubble model for water; ice that sings; a returning five-note theme; three rooms; a phone tier; inner pages sound under the pointer |
+| W11 inner pages pass 2 | eight project pages with eight structures; a ground of drawn wind ridges, grain and glints; clean pictures; the archive reordered; the blog index as its newest post in full |
+| W14 then W17 the name | **the name stands on the lake as letters of pale glacier ice on a swept field of black lake ice, mirrored in it**; through the melt it reads "Arav Jain" or nothing at every position in both themes. (Decision: standing ice over W7's pond, which smeared mid-melt; all three critics and the owner's own words asked for ice. The name is held to the large-text contrast of 3 to 1 against the ice round it; it measures 4.25 to 5.79 except by day at 320 wide and at 2560 x 900, 2.92 and 2.52, where the hero's copy stands under the letters' feet.) |
+| W13 the ending | v2's signature back as this site's own: the river's line of light runs out across a mirror-still sea and rises as a ribbon out of the frame; deep blue and gold; no scrim; RSS in the contact row |
+| W10 stations 5 to 8, pass 2 | seracs for the four models; one dam with three cuts, a dark pond and dry beds; sixteen melted cubes askew; a crevasse opening the canyon's first reach, the app in rimed ice; a late-day delta |
+| W15 snow and air | wind-cut drifts and sastrugi with cast shade at three sizes, sparkle fixed to the ground; banks with an ice shelf; finer ranges; no ghost stations in the haze |
+| W12 words, nav, type | every station named for its whole stretch (22 of 24 strip positions carry copy; it was 6); a wordless rail of ticks; the nav back at rest and on any upward scroll; varied layouts; phone captions at 11 px or more; display tracking opened. The home page is at exactly 200 visible words |
+| W16 night | aurora as tall drifting curtains that never clip; night water dark with mirrors; blue-grey snow with first light growing along the flight; the rust rings and the tarn's dimming found and removed |
+| W18 pictures and night ice | real larger sources, mip-mapped: Infiniview's own sharing card in the block (1.72 source px per device px at 1440 at 2x), RydAR's page (about 1.4), Kilo Bench's results at 2324 px (0.26 to 0.36: the largest real source); one night ice on all eight subjects |
+
+Also: the 44 scene stills and the 11 card pictures were retaken from
+this picture and the cards' alt text rewritten (`3f0f3f7`).
+
+State at `3f0f3f7`: lint and typecheck clean, 293 tests, production
+build, 200 visible words, 0 dashes, 0 console errors.
+
+Running: **P1** (frame rate, alone on the GPU: a compiled shader
+variant per stretch of the flight; nothing has been measured cleanly
+since the picture was rebuilt, and every helper reports its cost as
+unproven), **W19** (the sound brought into line with the picture as it
+now is: the arrival recomposed for the line running out and the ribbon
+climbing, the name's melt, each station's water), and **critic panel
+9** on `3f0f3f7` (package at `~/.t3/portfolio-redesign-v4/critic/package9/`,
+58 images, same rubric; captures pin the engine's full shading, which
+the frame-rate task must make the real behaviour on an idle machine).
