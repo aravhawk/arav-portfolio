@@ -133,6 +133,8 @@ float gCutA = 0.0;
 float gPond = 0.0;
 // 0..1: how near the name this place on the lake is.
 float gNameK = 0.0;
+// 0..1: this ice is the far lake's bare, mirroring ice, by day.
+float gFarMir = 0.0;
 float walledAt(float y) { return smoothstep(${STEP.y0.toFixed(1)}, ${STEP.y1.toFixed(1)}, y) * (1.0 - smoothstep(${STEP.out0.toFixed(1)}, ${STEP.out1.toFixed(1)}, y)); }
 
 const float PANO_AZ = ${PANO.az.toFixed(4)};
@@ -968,11 +970,40 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   // (Ice is a poorer mirror than water, and before dawn that difference is what draws the name.)
   gDull = true;
   vec3 mir = airAt(rf.xy);
-  if (gL2 < 1.0) mir = mix(skyAll(normalize(rf), 0.0), mir, gL2);
-  col = mix(col, mir, fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.5 * farK * (1.0 - uNight)) * (1.0 - 0.74 * uNight));
+  // Toward the far shore, by day, the swept ice holds a soft, broken mirror
+  // of what stands over it: the ranges hang down into it from the shore,
+  // paler than they are, and the snow lying on the ice breaks the picture
+  // up. This is what says ice and not snow. (The near lake, where the first
+  // frame's words stand, has none of it.)
+  float farDay = farK * (1.0 - uNight);
+  if (gL2 < 1.0) {
+    vec3 rn = normalize(rf);
+    vec3 far = vec3(0.0);
+    if (farDay > 0.0) {
+      // (The ranges stand a long way behind the far shore, and a true mirror
+      // seen from this high would hold only the sky over them: so this one is
+      // leaned, as the eye expects of a lake under mountains, until their
+      // foot lies at the shore and they hang down from it toward the eye.)
+      float dep = asin(clamp(-dir.z, 0.0, 1.0)) - atan(uCamPos.z, max(uLake.y - 260.0 - uCamPos.y, 1.0));
+      float elF = clamp(dep * 0.95 + rel.y * 0.05 + (g.b - 0.5) * 0.006, 0.0015, 0.6);
+      vec3 rl = vec3(normalize(rf.xy + 1e-6) * cos(elF), sin(elF));
+      far = withRidges(skyColor(rl, 0.0), rl, 0.6) * vec3(0.84, 0.92, 1.0);
+    }
+    mir = mix(mix(skyAll(rn, 0.0), far, farDay), mir, gL2);
+  }
+  float mirK = fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.5 * farK * (1.0 - uNight)) * (1.0 - 0.74 * uNight);
+  mirK = mix(mirK, min(fres * 1.25, 0.94) * gloss * (0.75 + 0.25 * wet), farDay);
+  col = mix(col, mir, mirK);
+  if (farDay > 0.0) {
+    // The sun's column: under the sun the ice gives its light back in a long broken streak that comes down the lake toward the eye.
+    float daz = atan(rf.x, rf.y) - atan(S.sun.x, S.sun.y);
+    float colm = exp(-daz * daz / 0.0022) * (0.35 + 0.65 * smoothstep(0.3, 0.7, g.g)) * (0.5 + 0.5 * smoothstep(0.35, 0.65, big + 0.5));
+    col += S.band * colm * gloss * farDay * 0.42 * step(0.0, S.sun.z);
+  }
+  gFarMir = farDay * gloss;
   gDull = false;
   // (Before dawn the ice round the name is the darkest on the lake: nothing there competes with the light in the letters.)
-  col *= 1.0 - 0.7 * uNight * (1.0 - smoothstep(40.0, 700.0, nameD));
+  col *= 1.0 - 0.7 * uNight * (1.0 - smoothstep(40.0, 1500.0, nameD));
   // The lip of a cut: a hair of snow, then the edge itself.
   float edge = 1.0 - smoothstep(0.0, 2.2 * cw, -f0);
   col *= 1.0 + 0.07 * edge * (1.0 - gPond);
@@ -2382,7 +2413,8 @@ void main() {
       // and the thickness stands round that opening too.)
       if (uIceN.y > 0.0) {
         gPond = uIceN.y * (1.0 - smoothstep(40.0 + uIceN.z, 130.0 + uIceN.z, gIceBoxD));
-        gNameK = uIceN.y * (1.0 - smoothstep(20.0, 520.0, gIceBoxD));
+        gNameK = uIceN.y * (1.0 - smoothstep(0.0, 1500.0, gIceBoxD));
+        gNameK *= gNameK;
         gFree *= 1.0 - gPond;
       }
       float iceH = uIceH * (1.0 - gPond);
@@ -2510,6 +2542,8 @@ void main() {
     float fog = 1.0 - exp(-t * 0.00021 * S.haze * thin);
     // (Before dawn the air over the name is clear: the ice round a mirror of the sky is the darkest on the lake.)
     fog *= 1.0 - 0.8 * uNight * gNameK * max(aIce, gPond);
+    // (And by day the cold air over the far lake's bare ice is clear enough to leave its mirror something to show.)
+    fog *= 1.0 - 0.45 * gFarMir * aIce;
     vec3 air = airAt(dir.xy);
     // (Before dawn the ground's haze is the cold air, warmed only toward the light.)
     air = mix(air, mix(S.hor, air, 0.45), uNight);
