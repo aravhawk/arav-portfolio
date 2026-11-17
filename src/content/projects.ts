@@ -16,6 +16,8 @@ export interface ProjectMedia {
   w: number;
   h: number;
   poster?: string;
+  /** Layout hint: the capture's own ground. A light one is mounted, and dimmed on the dark theme. */
+  tone?: 'light' | 'dark';
 }
 
 export interface Project {
@@ -77,10 +79,10 @@ export const PROJECTS: Project[] = [
     media: [
       {
         kind: 'image',
-        src: '/media/infiniview-finding.webp',
-        alt: 'An Infiniview finding: SQL injection in an admin search filter, marked critical with a verified exploit and tabs for proof, attack path, code and fix.',
-        w: 2200,
-        h: 1375,
+        src: '/media/infiniview-attack-path.webp',
+        alt: 'An Infiniview finding with its attack path open: four numbered steps from an authenticated admin search to a UNION payload, beside the list of what every finding ships with.',
+        w: 2640,
+        h: 860,
       },
       {
         kind: 'image',
@@ -112,10 +114,10 @@ export const PROJECTS: Project[] = [
       },
       {
         kind: 'image',
-        src: '/media/infiniview-arsenal.webp',
-        alt: 'The arsenal section of the Infiniview site: Every layer, covered, with counts of review agents, scanners and runtime attack agents.',
+        src: '/media/infiniview-layers.webp',
+        alt: 'The arsenal section of the Infiniview site: Every layer, covered, above the counts of parallel code review agents and static scanners.',
         w: 2400,
-        h: 1500,
+        h: 1143,
       },
     ],
   },
@@ -191,24 +193,10 @@ export const PROJECTS: Project[] = [
       },
       {
         kind: 'image',
-        src: '/media/kilo-bench-generation.webp',
-        alt: 'Kilo Bench generating coding challenges from the open workspace.',
-        w: 2000,
-        h: 1251,
-      },
-      {
-        kind: 'image',
-        src: '/media/kilo-bench-leaderboard.webp',
-        alt: 'The Kilo Bench leaderboard: three models ranked by score, with cost, time and tokens for each.',
+        src: '/media/kilo-bench-board.webp',
+        alt: 'Kilo Bench results inside Kilo Code: three models benchmarked, the leaderboard with score, cost, time and tokens for each, and the performance radar under it.',
         w: 2324,
-        h: 350,
-      },
-      {
-        kind: 'image',
-        src: '/media/kilo-bench-radar.webp',
-        alt: 'The Kilo Bench performance radar: three models compared on quality, relevance, speed and cost.',
-        w: 1000,
-        h: 500,
+        h: 1056,
       },
       {
         kind: 'image',
@@ -398,20 +386,31 @@ export const PROJECTS: Project[] = [
         alt: 'The RydAR map at rydar.org: Arkansas covered in clusters of mapped curves, with a panel to pick a county and road surface.',
         w: 2400,
         h: 1500,
+        tone: 'light',
       },
       {
         kind: 'image',
-        src: '/media/rydar-how.webp',
-        alt: 'The RydAR page What goes into a curve warning: road data, suggested speed and timing.',
-        w: 2400,
-        h: 1500,
+        src: '/media/rydar-how-page.webp',
+        alt: 'The RydAR page What goes into a curve warning: road data, suggested speed and timing, and the formula for the speed.',
+        w: 1600,
+        h: 1755,
+        tone: 'light',
       },
       {
         kind: 'image',
-        src: '/media/rydar-phone.webp',
+        src: '/media/rydar-app-page.webp',
+        alt: 'The RydAR for iPhone page: A heads-up for the next bend, with spoken warnings, curves built in, driver mode and teen driver mode.',
+        w: 1600,
+        h: 1504,
+        tone: 'light',
+      },
+      {
+        kind: 'image',
+        src: '/media/rydar-phone-map.webp',
         alt: 'The RydAR map on a phone: county clusters across Arkansas above the link to the iPhone app.',
         w: 780,
-        h: 1688,
+        h: 1490,
+        tone: 'light',
       },
     ],
   },
