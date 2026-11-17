@@ -222,6 +222,8 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
       veil += (hair * 0.9 + sheet * 0.3) * cut * exp(-fk * 0.45);
     }
     veil *= near * (0.45 + 0.55 * heart);
+    // (Before dawn what the planes hold is the aurora's light, and it comes and goes with the curtain.)
+    veil *= mix(1.0, 0.7 + 0.6 * n1(uTime * 0.4 + g.x / 260.0), uNight);
     col += mix(vec3(0.72, 0.9, 1.0) * (S.key * 0.038 + S.amb * 0.24), vec3(0.7, 1.0, 0.95) * (litN * 0.6 + uAurora * 0.12), uNight) * veil;
     // Single bubbles, strung in the strata: only from close by.
     float bead = smoothstep(0.975, 1.0, textureLod(uGrain, qa / vec2(150.0, 110.0) + 0.43, 0.0).r) * smoothstep(0.45, 0.8, band) * (1.0 - smoothstep(0.35, 0.9, px));
@@ -319,7 +321,12 @@ vec3 nameGround(vec3 col, vec2 p, vec3 dir, float foot, float onIce) {
   float aaF = max(foot * 1.6, 1.2);
   float pond = 1.0 - smoothstep(uNameP.x - aaF, uNameP.x + aaF, fd + wob);
   // (The waves the pointer and the melt make in it.)
-  vec2 slope = pond > 0.0 ? textureLod(uWave, simUv(p), 0.0).zw * 0.6 : vec2(0.0);
+  vec2 slope = vec2(0.0);
+  if (pond > 0.0) {
+    slope = textureLod(uWave, simUv(p), 0.0).zw * 0.6;
+    // (And its own: the air moves it a little, always.)
+    slope += (textureLod(uGrain, p / 96.0 + vec2(0.011, 0.007) * uTime, 0.0).gb - 0.5) * 0.05 + (textureLod(uGrain, p / 41.0 - vec2(0.017, 0.009) * uTime + 0.4, 0.0).gb - 0.5) * 0.03;
+  }
   float shade = 0.0;
   float mir = 0.0;
   vec2 g;
@@ -343,10 +350,14 @@ vec3 nameGround(vec3 col, vec2 p, vec3 dir, float foot, float onIce) {
   }
   // Meltwater on ice: the snow under it is gone, the ice shows dark and blue through it, and the sky lies on it.
   vec3 wetC = mix(vec3(0.13, 0.4, 0.56) * (S.amb * 1.2 + S.key * 0.1), vec3(0.2, 0.34, 0.42) * S.amb * 1.5, uNight);
-  vec3 skyC = mix(S.hor * 0.9, S.mid * 0.8 + uAurora * 0.03, uNight);
+  vec3 skyC = mix(S.hor * 0.9, S.mid * 0.8 + uAurora * 0.1, uNight);
   float cosi = clamp(-dir.z, 0.0, 1.0);
   float fr = 0.03 + 0.97 * pow(1.0 - cosi, 5.0);
   vec3 water = mix(wetC, skyC, clamp(fr * 1.6 + length(slope) * 0.6, 0.0, 0.8));
+  // (Each ripple's face turned to the light is brighter, the one turned away darker.)
+  water *= 1.0 + clamp(dot(slope, vec2(-L.x, -L.y)) * 9.0, -0.3, 0.6);
+  // (Before dawn a ripple's face catches the aurora.)
+  water += uAurora * 0.5 * clamp(length(slope) * 5.0 - 0.12, 0.0, 0.6);
   col = mix(col, water, pond * 0.82 * onIce);
   // (A block's shade is blue: the light that reaches the snow there has come through ice.)
   col *= 1.0 - shade * vec3(0.4, 0.3, 0.17) * (1.0 - uNight) * onIce * (1.0 - 0.5 * pond);
