@@ -113,6 +113,8 @@ vec2 nameSeat(vec2 u) {
  */
 float nameSwept(vec2 u) {
   vec2 s = nameSeat(u);
+  // (Most of the lake is nowhere near it: that is settled before anything is read.)
+  if (abs(s.x) > 4.0 || s.y > 5.4 || s.y < -4.8) return 9.0;
   // (Two lines stand taller in the picture than one: the field is measured in the name's own heights, and keeps the same reach.)
   bool two = uNameG.z > -5e3;
   float up = two ? 1.5 : 2.55;
