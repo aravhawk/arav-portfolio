@@ -1005,44 +1005,75 @@ float slotOut(vec3 ro, vec3 rd, out float how) {
   return max(tF, 0.0);
 }
 // The app, in the ice of the hall's east wall. It is not hung on the wall: it lies a hand inside clear ice, with no
-// frame. Its middle is seen clean; toward its edges the ice is rougher and bends it away to nothing; fractures cross
-// it and set its pieces a hair apart; before dawn it is lit from within and lights the ice round it.
+// frame. It is seen clean, at its own contrast, from edge to edge of its words; only round its rim does rime close in
+// over it and the rougher ice there bend it away, so it has no outline of its own. Before dawn it is a screen alight
+// in the ice: dimmed to the night and taken into the ice's blue, lighting the rime round it and the water under it.
+// gFaceK: how much of the pixel last asked is the picture itself (the air between the walls is not laid over it).
+float gFaceK = 0.0;
+// Where a place on the wall is in the picture (0..1 across, 0..1 up). The page's own top edge is its ground colour:
+// it runs on a little way above and beside what was captured, under the rime.
+vec2 faceUv(vec3 p, vec3 rd) {
+  vec2 q = vec2(${f(FACE.y + FACE.w / 2)} - p.y, p.z - ${f(FACE.z)}) / vec2(${f(FACE.w)}, ${f(FACE.h)});
+  q += rd.yz / max(rd.x, 0.3) * vec2(-9.0 / ${f(FACE.w)}, 9.0 / ${f(FACE.h)});
+  return vec2(0.5 + (q.x - 0.5) * 1.07, q.y * 1.07);
+}
 vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
   vec2 q = vec2(${f(FACE.y + FACE.w / 2)} - p.y, p.z - ${f(FACE.z)}) / vec2(${f(FACE.w)}, ${f(FACE.h)});
   if (n.x > -0.5 || p.x < ${f(FACE.x - 60)} || any(lessThan(q, vec2(-0.3))) || any(greaterThan(q, vec2(1.3)))) return col;
   vec2 e = min(q, 1.0 - q) * vec2(${f(FACE.w)}, ${f(FACE.h)});
   float edge = min(e.x, e.y);
   float dist = length(p - uCamPos);
-  float lod = max(0.0, log2(dist * uPxAng * 1280.0 / ${f(FACE.w)}));
   vec4 gi = textureLod(uGrain, p.yz / 84.0 + 0.4, 1.0);
   vec4 gj = textureLod(uGrain, p.yz / 330.0 + 0.1, 0.0);
   // The ice over it is clear in a patch of no particular shape: round that patch it is white with rime and trapped
-  // air, which closes in over the picture's edges, so the picture has no outline of its own.
-  float fe = edge + 26.0 * (gj.g - 0.5) + 9.0 * (gi.r - 0.5);
-  float clear = smoothstep(1.0, 15.0, fe);
-  float rough = 1.0 - smoothstep(4.0, 26.0, fe);
+  // air, which closes in over the picture's rim (never over its words), so the picture has no outline of its own.
+  float fe = edge + 11.0 * (gj.g - 0.5) + 5.0 * (gi.r - 0.5);
+  float clear = smoothstep(2.0, 9.0, fe);
+  float rough = 1.0 - smoothstep(3.0, 13.0, fe);
   vec3 fr3 = gMirror > 0.5 ? vec3(1.0, 0.5, 0.5) : fracture(q * vec2(2.9, 1.9) + 3.0);
-  vec2 qi = q + rd.yz / max(rd.x, 0.3) * vec2(-9.0 / ${f(FACE.w)}, 9.0 / ${f(FACE.h)}) + (fr3.yz - 0.5) * 0.0016 + (gi.rg - 0.5) * (0.0012 + 0.02 * rough);
-  vec2 ei = min(qi, 1.0 - qi) * vec2(${f(FACE.w)}, ${f(FACE.h)});
+  vec2 uv = faceUv(p, rd);
+  // (Only in the rough ice at its rim is it bent.)
+  vec2 qi = uv + (gi.rg - 0.5) * 0.03 * rough;
+  vec2 ei = min(q, 1.0 - q) * vec2(${f(FACE.w)}, ${f(FACE.h)});
   float aPic = smoothstep(-1.0, 5.0, min(ei.x, ei.y)) * clear;
-  vec3 img = pow(textureLod(uSlabTex, vec2(qi.x, 1.0 - qi.y), lod + 1.5 * rough).rgb, vec3(2.2));
+  vec3 img;
+  if (gMirror > 0.5) {
+    // (Its image in the moving water is its light, not its words.)
+    img = pow(textureLod(uSlabTex, vec2(qi.x, 1.0 - qi.y), 5.0).rgb, vec3(2.2));
+  } else {
+    // (Where the two rays beside this one meet the wall: how far the picture moves under one device pixel.)
+    vec3 d1 = normalize(rd + uCamR * uPxAng);
+    vec3 d2 = normalize(rd + uCamU * uPxAng);
+    vec3 ro = p - rd * dist;
+    vec2 u1 = faceUv(ro + d1 * ((p.x - ro.x) / max(d1.x, 1e-3)), d1) - uv;
+    vec2 u2 = faceUv(ro + d2 * ((p.x - ro.x) / max(d2.x, 1e-3)), d2) - uv;
+    // (In the rough rim it is read coarser: frost blurs what it covers.)
+    float soft = 1.0 + 5.0 * rough;
+    img = pow(picRead(uSlabTex, vec2(qi.x, 1.0 - qi.y), u1 * vec2(1.0, -1.0) * soft, u2 * vec2(1.0, -1.0) * soft), vec3(2.2));
+  }
   vec3 glow = pow(textureLod(uSlabTex, vec2(0.5), 7.0).rgb, vec3(2.2));
-  // (By day the day lights it through the ice; before dawn it is its own light.)
-  vec3 lit = img * mix(S.amb * 1.05 + S.key * 0.2, vec3(0.5), uNight);
-  // The ice it is seen through: its blue lies over the picture, more of it toward the edges.
-  lit = mix(lit, lit * vec3(0.78, 0.93, 1.0) + iceBody(0.5) * mix(S.amb * 0.1, glow * 0.05, uNight), 0.3 + 0.5 * rough);
-  float crack = (1.0 - smoothstep(0.0, 0.004 + 1.5 * dist * uPxAng / ${f(FACE.w)}, fr3.x)) * (0.35 + 0.65 * step(0.5, fr3.z));
-  lit += vec3(0.82, 0.94, 1.0) * mix(S.amb * 0.42 + S.key * 0.05, glow * 0.16 + uAurora * 0.1, uNight) * crack;
+  // (By day the day lights it through the ice, and it keeps its own blacks and whites. Before dawn it is its own
+  // light: a screen turned low, the ice's blue in it, brightest at its middle where the least ice lies over it.)
+  vec3 screen = vec3(0.075, 0.125, 0.19) * (0.72 + 0.28 * smoothstep(0.0, 70.0, edge));
+  vec3 lit = img * mix(S.amb * 1.05 + S.key * 0.2, screen, uNight);
+  // The ice it is seen through: a breath of its blue lies over the picture, and more of it only toward the rim.
+  lit = mix(lit, lit * vec3(0.78, 0.93, 1.0) + iceBody(0.5) * mix(S.amb * 0.1, glow * screen * 0.4, uNight), 0.12 + 0.6 * rough);
+  // (Hairline fractures cross the wall; over the picture's words they are all but lost.)
+  float crack = (1.0 - smoothstep(0.0, 0.004 + 1.5 * dist * uPxAng / ${f(FACE.w)}, fr3.x)) * (0.35 + 0.65 * step(0.5, fr3.z)) * (0.07 + 0.93 * rough);
+  lit += vec3(0.82, 0.94, 1.0) * mix(S.amb * 0.42 + S.key * 0.05, glow * screen * 1.4 + uAurora * 0.04, uNight) * crack;
   // The rime round it: white by day; before dawn it holds the picture's own light, brightest at the clear patch's rim.
   float rime = (1.0 - clear) * smoothstep(-64.0, -2.0, edge + 20.0 * (gj.r - 0.5)) * (0.86 + 0.14 * gi.b);
   float nearPic = exp(-max(-edge, 0.0) / 44.0);
-  vec3 frost = mix(vec3(0.72, 0.85, 0.93) * (S.amb * 1.25 + S.key * 0.1), vec3(0.2, 0.36, 0.6) * S.amb * 3.0 + glow * vec3(0.55, 0.85, 1.0) * 0.3 * nearPic, uNight);
+  vec3 frost = mix(vec3(0.72, 0.85, 0.93) * (S.amb * 1.25 + S.key * 0.1), vec3(0.2, 0.36, 0.6) * S.amb * 3.0 + glow * screen * vec3(0.8, 1.0, 1.15) * 1.5 * nearPic, uNight);
   col = mix(col, frost, rime * 0.8 * pic);
+  // (Its light in the ice beyond the rime: a cold glow that falls away into the wall.)
+  col += glow * screen * vec3(0.5, 0.85, 1.2) * 0.5 * exp(-max(-edge, 0.0) / 30.0) * (1.0 - aPic) * uNight * pic * (0.6 + 0.4 * gj.b);
   col = mix(col, lit, aPic * pic);
-  // The wall's own wet face lies over it all: a little of the sky on the ice.
+  gFaceK = aPic * pic;
+  // The wall's own wet face lies over it all: a little of the sky on the ice (least over the picture, seen square on).
   vec3 nn = normalize(n + vec3(0.0, gi.b - 0.5, gi.a - 0.5) * 0.05);
   float fr = 0.03 + 0.97 * pow(1.0 - max(dot(-rd, nn), 0.0), 5.0);
-  return mix(col, beyond(p, reflect(rd, nn)), fr * 0.3);
+  return mix(col, beyond(p, reflect(rd, nn)), fr * mix(0.3, 0.1, aPic));
 }
 // The glacier's top. Its front is an ice cliff with a ragged foot; behind it the surface rolls, and is crevassed across the flow.
 float glacierTop(vec2 p) {
@@ -1200,8 +1231,12 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
   if (t > gDepth || (t < 0.0 && tw > gDepth)) return col;
   if (t >= 0.0) {
     gDepth = t;
-    vec3 c = inAir(glacierColor(uCamPos, dir, t, wall, 1.0), dir, t);
-    c = mix(c, mistC, (1.0 - exp(-t / 2600.0)) * inK * (1.0 - 0.8 * faceNear(uCamPos + dir * t)));
+    gFaceK = 0.0;
+    vec3 c0 = glacierColor(uCamPos, dir, t, wall, 1.0);
+    // (The picture is a few steps off through clear cold air: by day almost none of the valley's haze lies over it.)
+    float veil = 1.0 - 0.85 * gFaceK;
+    vec3 c = mix(c0, inAir(c0, dir, t), veil);
+    c = mix(c, mistC, (1.0 - exp(-t / 2600.0)) * inK * (1.0 - 0.8 * faceNear(uCamPos + dir * t)) * veil);
     return mix(col, c, gSt.w);
   }
   if (tw < 0.0) return col;

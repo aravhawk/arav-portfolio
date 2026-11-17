@@ -69,6 +69,26 @@ export interface FlightMoment {
   boxLight: boolean;
 }
 
+/**
+ * The scene's own cut of each picture. A page shows a picture whole, at
+ * the page's width; the scene shows it a few hundred pixels wide inside
+ * ice or under water, where small type would be a few pixels tall. So the
+ * scene is given the same real material cut for that size, each from its
+ * public source at the source's own resolution (nothing is redrawn):
+ *  - the block: Infiniview's own card (infiniview.dev/opengraph-image.jpg,
+ *    1200 x 630), its headline and its mark and nothing smaller;
+ *  - the pool: the results at the size they were published (2324 x 1264;
+ *    the page's copy is the same picture at 2000);
+ *  - the hall: the top of rydar.org/iphone-app, cut to the page's column
+ *    (1680 x 1050 of the 2880 x 1800 capture).
+ */
+const SCENE_PICS: Record<string, string> = {
+  '/media/infiniview-hero.webp': '/media/infiniview-card.jpg',
+  '/media/kilo-bench-results.webp': '/media/kilo-bench-results-2324.webp',
+  '/media/rydar-app.webp': '/media/rydar-app-hero.webp',
+};
+export const scenePicture = (src: string) => SCENE_PICS[src] ?? src;
+
 export class FlightEngine extends WaterEngine {
   private slabTex: WebGLTexture | null = null;
   private slabTint: V3 = [0.2, 0.2, 0.2];
@@ -547,11 +567,18 @@ export class FlightEngine extends WaterEngine {
     this.ptrRadius = Math.min(70, Math.max(12, units));
   }
 
-  /** The picture that lies on the pool's bed. */
-  setSheet(img: HTMLImageElement) {
+  /**
+   * A picture's texture. Its whole chain of smaller copies is made, it is
+   * read between two of them, and along the tilt of a face seen at an angle
+   * it is read as many times as the device allows (up to sixteen): small
+   * type on a leaning face stays type. The shading pass says how large the
+   * picture is on screen (see picRead), so the right copy is always the one
+   * read.
+   */
+  private pictureTex(img: HTMLImageElement): WebGLTexture {
     const gl = this.gl;
-    if (this.sheetTex) gl.deleteTexture(this.sheetTex);
     const tex = gl.createTexture()!;
+    // (Making a texture binds it: on a unit the scene does not use.)
     gl.activeTexture(gl.TEXTURE15);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
@@ -562,44 +589,34 @@ export class FlightEngine extends WaterEngine {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    this.sheetTex = tex;
+    const ext = gl.getExtension('EXT_texture_filter_anisotropic');
+    if (ext) {
+      const max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number;
+      gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(16, max));
+    }
+    return tex;
+  }
+
+  /** The picture that lies on the pool's bed. */
+  setSheet(img: HTMLImageElement) {
+    if (this.sheetTex) this.gl.deleteTexture(this.sheetTex);
+    this.sheetTex = this.pictureTex(img);
+    this.dirty = true;
   }
 
   /** The app's picture, seen in the canyon's polished wall. (It takes the slab's unit: the two are never in one frame.) */
   private faceTex: WebGLTexture | null = null;
   private faceOn = false;
   setFace(img: HTMLImageElement) {
-    const gl = this.gl;
-    if (this.faceTex) gl.deleteTexture(this.faceTex);
-    const tex = gl.createTexture()!;
-    gl.activeTexture(gl.TEXTURE15);
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    this.faceTex = tex;
+    if (this.faceTex) this.gl.deleteTexture(this.faceTex);
+    this.faceTex = this.pictureTex(img);
+    this.dirty = true;
   }
 
   /** The product picture the slab carries. */
   setSlab(img: HTMLImageElement) {
-    const gl = this.gl;
-    if (this.slabTex) gl.deleteTexture(this.slabTex);
-    const tex = gl.createTexture()!;
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    this.slabTex = tex;
+    if (this.slabTex) this.gl.deleteTexture(this.slabTex);
+    this.slabTex = this.pictureTex(img);
     // The light it throws is its own mean colour.
     try {
       const c = document.createElement('canvas');
@@ -1288,14 +1305,14 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   img.onload = () => {
     if (!destroyed) engine.setSlab(img);
   };
-  img.src = root.dataset.slab || '/media/infiniview-hero.webp';
+  img.src = scenePicture(root.dataset.slab || '/media/infiniview-hero.webp');
   if (root.dataset.face) {
     const pic = new Image();
     pic.decoding = 'async';
     pic.onload = () => {
       if (!destroyed) engine.setFace(pic);
     };
-    pic.src = root.dataset.face;
+    pic.src = scenePicture(root.dataset.face);
   }
   if (root.dataset.sheet) {
     const pic = new Image();
@@ -1303,7 +1320,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     pic.onload = () => {
       if (!destroyed) engine.setSheet(pic);
     };
-    pic.src = root.dataset.sheet;
+    pic.src = scenePicture(root.dataset.sheet);
   }
 
   // The switch: the chosen option's sluice opens at once (the gates, the surge and each channel's water are drawn).

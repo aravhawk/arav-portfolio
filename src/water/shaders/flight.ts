@@ -503,6 +503,68 @@ vec3 skyAll(vec3 d, float clouds) { return withRidges(skyColor(d, clouds), d, cl
 
 
 
+/* ---------- the pictures ---------- */
+
+/**
+ * A real picture set in ice or lying under water, read so that its type
+ * stays type at every size.
+ * uv: where in it. dx, dy: how far uv moves for one device pixel to the
+ * right and one up (worked out from the eye's own rays, so a face seen at
+ * an angle is known to be long and thin under each pixel).
+ *
+ * Smaller than it was made (a device pixel spans more than one of its own):
+ * its chain of smaller copies is read along the tilt, as many times as the
+ * device allows, a little finer than the plain rule would choose, so small
+ * letters keep their counters and do not swim.
+ *
+ * Larger than it was made: its own pixels are joined by a smooth curve
+ * through four of them each way (not the straight line that leaves every
+ * edge a ramp several pixels wide), and where two of its tones meet (the
+ * edge of a letter) the meeting is drawn as narrow as a device pixel
+ * allows. Nothing is added: an edge is put where the picture's own pixels
+ * say it is, and flat tone and soft gradients are left exactly as they are.
+ */
+vec3 picRead(sampler2D tex, vec2 uv, vec2 dx, vec2 dy) {
+  vec2 size = vec2(textureSize(tex, 0));
+  float px = max(length(dx * size), length(dy * size));
+  if (px >= 1.0) return textureGrad(tex, uv, dx * 0.72, dy * 0.72).rgb;
+  vec2 sp = uv * size;
+  vec2 tc = floor(sp - 0.5) + 0.5;
+  vec2 f = sp - tc;
+  vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+  vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+  vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+  vec2 w3 = f * f * (-0.5 + 0.5 * f);
+  vec2 w12 = w1 + w2;
+  vec2 t0 = (tc - 1.0) / size;
+  vec2 t3 = (tc + 2.0) / size;
+  vec2 t12 = (tc + w2 / w12) / size;
+  vec3 c = textureLod(tex, vec2(t0.x, t0.y), 0.0).rgb * (w0.x * w0.y) + textureLod(tex, vec2(t12.x, t0.y), 0.0).rgb * (w12.x * w0.y) + textureLod(tex, vec2(t3.x, t0.y), 0.0).rgb * (w3.x * w0.y)
+    + textureLod(tex, vec2(t0.x, t12.y), 0.0).rgb * (w0.x * w12.y) + textureLod(tex, vec2(t12.x, t12.y), 0.0).rgb * (w12.x * w12.y) + textureLod(tex, vec2(t3.x, t12.y), 0.0).rgb * (w3.x * w12.y)
+    + textureLod(tex, vec2(t0.x, t3.y), 0.0).rgb * (w0.x * w3.y) + textureLod(tex, vec2(t12.x, t3.y), 0.0).rgb * (w12.x * w3.y) + textureLod(tex, vec2(t3.x, t3.y), 0.0).rgb * (w3.x * w3.y);
+  // What lies one of its own pixels to each side of this place: the darkest and the lightest of them (and of this
+  // place itself) are the two tones that meet here. (Read between its pixels, so they change smoothly from place to place.)
+  vec2 o = 1.0 / size;
+  vec3 a = textureLod(tex, uv + vec2(o.x, 0.0), 0.0).rgb;
+  vec3 b = textureLod(tex, uv - vec2(o.x, 0.0), 0.0).rgb;
+  vec3 d = textureLod(tex, uv + vec2(0.0, o.y), 0.0).rgb;
+  vec3 e = textureLod(tex, uv - vec2(0.0, o.y), 0.0).rgb;
+  const vec3 LW = vec3(0.3, 0.59, 0.11);
+  vec4 l = vec4(dot(a, LW), dot(b, LW), dot(d, LW), dot(e, LW));
+  float lc = dot(c, LW);
+  float lo = min(min(min(l.x, l.y), min(l.z, l.w)), lc);
+  float hi = max(max(max(l.x, l.y), max(l.z, l.w)), lc);
+  vec3 cLo = lc == lo ? c : (l.x == lo ? a : (l.y == lo ? b : (l.z == lo ? d : e)));
+  vec3 cHi = lc == hi ? c : (l.x == hi ? a : (l.y == hi ? b : (l.z == hi ? d : e)));
+  float t = clamp((lc - lo) / max(hi - lo, 1e-4), 0.0, 1.0);
+  // (The meeting is about one of the picture's pixels wide as the curve draws it: it is narrowed to a device pixel and a bit.)
+  float k = clamp(0.65 * px, 0.08, 0.5);
+  float st = clamp((t - 0.5) / (2.0 * k) + 0.5, 0.0, 1.0);
+  st = st * st * (3.0 - 2.0 * st);
+  float gate = smoothstep(0.07, 0.22, hi - lo) * (1.0 - smoothstep(0.6, 1.0, px));
+  return mix(clamp(c, 0.0, 1.0), mix(cLo, cHi, st), gate);
+}
+
 /* ---------- the slab ---------- */
 
 float lodFor(float foot, float scale, float n);
@@ -760,20 +822,40 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
   float aCov = 1.0;
   if (front) {
     // The polished front. The picture lies a little way in: it shifts
-    // against the face as the eye moves, and bends only near the edges.
+    // against the face as the eye moves. It is seen clean through a hand of
+    // clear ice: nothing bends it but the last hair of its own edge.
     const float MX = 30.0;
     float iw = uSlabSize.x - 2.0 * MX;
-    float ih = iw * ${(1376 / 2200).toFixed(4)};
+    vec2 ts = vec2(textureSize(uSlabTex, 0));
+    float ih = iw * ts.y / ts.x;
     vec2 io = vec2(MX, uSlabSize.y - 86.0 - ih);
     vec2 pq = q + across * 16.0;
     vec2 e0 = min(pq - io, io + vec2(iw, ih) - pq);
-    float nearE = 1.0 - smoothstep(0.0, 20.0, min(e0.x, e0.y));
-    pq += (gr.gb - 0.5) * 8.0 * nearE;
+    float nearE = 1.0 - smoothstep(0.0, 4.0, min(e0.x, e0.y));
+    pq += (gr.gb - 0.5) * 3.0 * nearE;
     vec2 iuv = (pq - io) / vec2(iw, ih);
     float inImg = smoothstep(0.0, 2.5, min(e0.x, e0.y));
-    float lod = log2(max(foot * 2200.0 / iw, 1.0));
-    vec3 img = pow(textureLod(uSlabTex, vec2(iuv.x, 1.0 - iuv.y), lod).rgb, vec3(2.2));
-    vec3 seen = img * mix(vec3(0.86, 0.94, 0.98), vec3(0.95, 1.05, 1.08), uNight) + img * img * 0.3 * uNight + vec3(0.012, 0.03, 0.04) * (1.0 - uNight);
+    vec3 img;
+    if (gSlabSoft > 0.5) {
+      // (Its image in moving water is light, not letters: the water keeps the picture's colours and breaks its words.)
+      img = pow(textureLod(uSlabTex, vec2(iuv.x, 1.0 - iuv.y), 4.6).rgb, vec3(2.2));
+    } else {
+      // (Where the two rays beside this one meet the face: how far the picture moves under one device pixel.)
+      vec3 ca = hl - dl * t;
+      vec3 d1 = normalize(rd + uCamR * uPxAng);
+      vec3 d2 = normalize(rd + uCamU * uPxAng);
+      d1 = vec3(dot(d1.xy, uSlabDir.zw), -dot(d1.xy, uSlabDir.xy), d1.z);
+      d2 = vec3(dot(d2.xy, uSlabDir.zw), -dot(d2.xy, uSlabDir.xy), d2.z);
+      float den = SLF[0].w - dot(ca, nl);
+      vec3 h1 = ca + d1 * (den / dot(d1, nl));
+      vec3 h2 = ca + d2 * (den / dot(d2, nl));
+      vec2 u1 = (vec2(h1.x + uSlabSize.x * 0.5, h1.z) + vec2(d1.x, d1.z) / max(-dot(d1, nl), 0.25) / 1.31 * 16.0 - io) / vec2(iw, ih);
+      vec2 u2 = (vec2(h2.x + uSlabSize.x * 0.5, h2.z) + vec2(d2.x, d2.z) / max(-dot(d2, nl), 0.25) / 1.31 * 16.0 - io) / vec2(iw, ih);
+      vec2 u0 = (q + across * 16.0 - io) / vec2(iw, ih);
+      img = pow(picRead(uSlabTex, vec2(iuv.x, 1.0 - iuv.y), (u1 - u0) * vec2(1.0, -1.0), (u2 - u0) * vec2(1.0, -1.0)), vec3(2.2));
+    }
+    // (By day it keeps its own blacks and whites: only a breath of the ice's blue lies over it. Before dawn it is a screen lit from behind.)
+    vec3 seen = img * mix(vec3(0.9, 0.96, 0.99), vec3(0.95, 1.05, 1.08), uNight) + img * img * 0.3 * uNight + vec3(0.003, 0.008, 0.011) * (1.0 - uNight);
     // (The first veil of air and a hairline or two lie in front of it, faintly: it is in the ice, not on it.)
     seen += mix(vec3(0.75, 0.9, 1.0) * S.amb * 0.5, uAurora * 0.12, uNight) * in_.y * 0.1;
     // (Its edge is a break in the ice: a bright line of refracted light round it, and a thin shade outside that.)
@@ -789,7 +871,7 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
     // Polished, but not flat: the sky lies on it at a glancing angle, and in the slow swells melt has left in the face.
     vec2 bump = (gr2.gb - 0.5) * 0.16 * (1.0 - inImg * 0.8);
     float cosB = clamp(dot(-rd, normalize(n + vec3(uSlabDir.zw * bump.x, bump.y))), 0.0, 1.0);
-    col += S.hor * (0.02 + 0.5 * pow(1.0 - cosi, 5.0) + 0.9 * pow(1.0 - cosB, 4.0) * (1.0 - inImg)) * mix(1.0, 0.4, uNight);
+    col += S.hor * (mix(0.02, 0.005, inImg) + 0.5 * pow(1.0 - cosi, 5.0) + 0.9 * pow(1.0 - cosB, 4.0) * (1.0 - inImg)) * mix(1.0, 0.4, uNight);
   } else if (!top) {
     // The broken faces: the ice parted here. A frosted skin, fluted where melt has run down it, scalloped in
     // shallow shells where it split, with windows of clear ice between.
@@ -1699,13 +1781,9 @@ vec4 sheetPic(vec2 pb, float footL) {
   if (x < 0.0) return vec4(0.0);
   float px = max(footL, 1e-3) / SH_UPP;
   vec2 uv = vec2(x, ${SHEET_SRC.y.toFixed(1)} + (SH_O.y + SH_HALF - pb.y) / SH_UPP) / vec2(${SHEET_SRC.w.toFixed(1)}, ${SHEET_SRC.h.toFixed(1)});
-  vec3 pic = textureLod(uSheetTex, uv, clamp(log2(px), 0.0, 6.0)).rgb;
-  // (Seen larger than it was drawn, its letters keep their edge: what is round each point is taken a little out of it.)
-  if (px < 0.8) {
-    vec2 e = vec2(0.9 / ${SHEET_SRC.w.toFixed(1)}, 0.9 / ${SHEET_SRC.h.toFixed(1)});
-    vec3 soft = (textureLod(uSheetTex, uv + vec2(e.x, 0.0), 0.0).rgb + textureLod(uSheetTex, uv - vec2(e.x, 0.0), 0.0).rgb + textureLod(uSheetTex, uv + vec2(0.0, e.y), 0.0).rgb + textureLod(uSheetTex, uv - vec2(0.0, e.y), 0.0).rgb) * 0.25;
-    pic = clamp(pic + (pic - soft) * 1.1 * (1.0 - px / 0.8), 0.0, 1.0);
-  }
+  // (How far the picture moves under one device pixel: the ground's own measure of a pixel, in the picture's.)
+  vec2 perU = vec2(1.0 / (SH_UPP * ${SHEET_SRC.w.toFixed(1)}), -1.0 / (SH_UPP * ${SHEET_SRC.h.toFixed(1)}));
+  vec3 pic = picRead(uSheetTex, uv, gGx * perU, gGy * perU);
   return vec4(pic * pic, smoothstep(0.0, 1.0 + px, seam));
 }
 /** The mean colour of the picture: the light it gives off before dawn. */
