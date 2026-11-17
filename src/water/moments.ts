@@ -32,9 +32,9 @@ export function stepGates(gate: { [i: number]: number }, surge: { [i: number]: n
 }
 
 /** The light event at the ending, `t` seconds after the camera comes to rest: the sun's last lift and the line of light, 0..1 each. */
-// (The line of light comes in over the first two thirds of `ray`; the pillar rises over the last.)
-export const DAWN = { lift: [0, 2.6], ray: [0.7, 4.4], over: 4.7 } as const;
-export const dawnLight = (t: number) => ({ lift: smooth(DAWN.lift[0], DAWN.lift[1], t), ray: smooth(DAWN.ray[0], DAWN.ray[1], t) });
+// (The line of light runs out over the first two thirds of `ray`; the ribbon of light climbs, `rise`, from where it ends.)
+export const DAWN = { lift: [0, 2.6], ray: [0.7, 4.4], rise: [2.7, 4.9], over: 5.2 } as const;
+export const dawnLight = (t: number) => ({ lift: smooth(DAWN.lift[0], DAWN.lift[1], t), ray: smooth(DAWN.ray[0], DAWN.ray[1], t), rise: smooth(DAWN.rise[0], DAWN.rise[1], t) });
 
 /** How much of each later station's subject is there to see from a camera position: the columns, the dam, the lattice, the canyon. */
 export function stationsNear(pos: ArrayLike<number>): [number, number, number, number] {

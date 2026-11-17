@@ -14,7 +14,7 @@ import { haptic } from '@/lib/haptics';
 import { emit, flightSignal, pictureSignal, pointerSignal, signals } from '@/lib/signals';
 import { BedPainter } from './bed';
 import { makeCallouts } from './callouts';
-import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
+import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Pending, type Program, type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
 import { DAWN, GATE, LAP, PULSE, dawnLight, nextDrip, stationsNear, stepGates } from './moments';
@@ -36,6 +36,15 @@ const CELL = [4, 5, 6, 8];
 const SPAN = 2300;
 /** How thick the lake's sheet stands above the water, world units. */
 const ICE_H = 16;
+
+/**
+ * The ribbon of light at the ending. `at`: where its foot stands in the
+ * frame, as a share of half the frame's width right of its middle (the sun
+ * stands at 0.46, or 0.7 on an upright screen). `lean`: how far it leans
+ * toward the sun as it climbs. `e0` and `reach` are the shading pass's own
+ * (RIB_E0, RIB_REACH).
+ */
+const RIBBON = { at: (aspect: number) => (aspect < 0.8 ? 0.16 : 0.2), lean: 0.5, e0: 0.1, reach: 0.13 };
 
 /** The light event at the ending happens once in a visit: after it, the sun stays up and the line of light holds. */
 let dawned = false;
@@ -247,16 +256,23 @@ export class FlightEngine extends WaterEngine {
   /** How far the sky has come to the ending's, as last drawn. */
   private dusk = 0;
 
-  /** The light event: the sun's last lift and the line of light, each 0..1, run once by the clock when the camera first comes to rest. */
+  /**
+   * The light event: the sun's last lift, the line of light and the ribbon's
+   * rise, each 0..1, run once by the clock when the camera first comes to
+   * rest. The line runs out across the water; where it meets the far shore
+   * it leaves the water and climbs, about two seconds from the sea to the
+   * top of the frame.
+   */
   private lift = dawned ? 1 : 0;
   private ray = dawned ? 1 : 0;
+  private rise = dawned ? 1 : 0;
   private dawnT = -1;
   /** Called once, when the sun's edge first clears the ranges. */
   onDawn: (() => void) | null = null;
   private runDawn(rest: boolean) {
     if (this.still) {
       // Nothing moves by the clock: at the ending the light is simply there.
-      this.lift = this.ray = rest || dawned ? 1 : 0;
+      this.lift = this.ray = this.rise = rest || dawned ? 1 : 0;
       if (rest) dawned = true;
       return;
     }
@@ -267,8 +283,47 @@ export class FlightEngine extends WaterEngine {
     }
     if (this.dawnT < 0) return;
     const t = this.time - this.dawnT;
-    ({ lift: this.lift, ray: this.ray } = dawnLight(t));
+    // (The line of light runs out over the first two thirds of `ray`; the ribbon climbs from where it ends.)
+    ({ lift: this.lift, ray: this.ray, rise: this.rise } = dawnLight(t));
     if (t < DAWN.over) this.dirty = true;
+  }
+
+  /**
+   * The ribbon of light: where its foot stands, how far it has come, and the
+   * strip of the frame it can be in (the pass looks for it nowhere else).
+   * Its foot is on the far waterline, right of the frame's middle and left
+   * of the sun; it leans toward the sun as it climbs.
+   */
+  private setRibbon(r: Program, cam: Basis, aspect: number, seaOn: number) {
+    const gl = this.gl;
+    const L = endLens(aspect);
+    const th = Math.tan((L.fov * Math.PI) / 360);
+    const az = this.sunAz - L.sunOff + Math.atan(RIBBON.at(aspect) * aspect * th);
+    const fx = Math.sin(az);
+    const fy = Math.cos(az);
+    const on = seaOn > 0 && this.ray > 0 ? seaOn * Math.min(1, this.ray * 8) : 0;
+    let u0 = 1;
+    let u1 = 0;
+    if (on > 0) {
+      // Points along it and along its image in the water, as the camera sees them now.
+      for (let i = -6; i <= 6; i++) {
+        const e = (i / 6) * 0.72;
+        const q = Math.abs(e) / RIBBON.e0;
+        const a = az + Math.asin(Math.min(0.9, RIBBON.lean * RIBBON.e0 * (Math.sqrt(1 + q * q) - 1)));
+        const d: V3 = [Math.sin(a), Math.cos(a), e];
+        const z = d[0] * cam.f[0] + d[1] * cam.f[1] + d[2] * cam.f[2];
+        if (z < 0.2) continue;
+        const u = 0.5 + (d[0] * cam.r[0] + d[1] * cam.r[1] + d[2] * cam.r[2]) / (z * cam.tan * aspect) / 2;
+        u0 = Math.min(u0, u);
+        u1 = Math.max(u1, u);
+      }
+      // (Room for its glow and dust, and for what the ripples do to its image.)
+      const room = (RIBBON.reach + 0.05) / (2 * cam.tan * aspect);
+      u0 -= room;
+      u1 += room;
+    }
+    gl.uniform4f(r.u.uRay, this.ray, this.rise, on, RIBBON.lean);
+    gl.uniform4f(r.u.uRib, fx, fy, u0, u1);
   }
 
   /**
@@ -686,7 +741,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
     gl.uniform4fv(r.u.uCalmBox, at.box);
     gl.uniform2f(r.u.uCalmK, at.boxK, at.boxLight ? 1 : 0);
-    gl.uniform4f(r.u.uRay, REST.x, REST.y, this.ray, seaOn > 0 ? this.ray * (0.55 + 0.45 * this.lift) : 0);
+    this.setRibbon(r, cam, aspect, seaOn);
     this.bindIce(r, ice, 7, 9);
     gl.uniform1f(r.u.uIceH, ICE_H);
     gl.uniform1f(r.u.uIceOn, this.iceTex && this.melt < 0.999 ? 1 : 0);

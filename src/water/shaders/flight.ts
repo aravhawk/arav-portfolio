@@ -83,7 +83,8 @@ uniform vec4 uSkyK;        // x: haze, y: how much aurora is left, z: 0..1 how f
 uniform vec4 uSea;         // x: 1 when the open sea is near enough to be seen, y: 0..1 the camera has settled on the ending, z: u left of which the water is kept calm for the words, w: v under which it is (narrow screens), or 0
 uniform vec4 uCalmBox;     // where the words now showing stand, in vUv: x0, y0, x1, y1
 uniform vec2 uCalmK;       // x: 0..1 how much the picture is calmed for them, y: 1 when they are light in both themes (the ending)
-uniform vec4 uRay;         // the line of light at the ending. xy: where it comes ashore (the camera's rest), z: 0..1 how far it has run, w: its strength
+uniform vec4 uRay;         // the ribbon of light at the ending. x: 0..1 how far its line has run out across the water, y: 0..1 how far it has risen from it, z: its strength (0: not there), w: how far it leans as it climbs, and which way
+uniform vec4 uRib;         // xy: the bearing its foot stands on (a unit vector on the ground), zw: the strip of the frame it can be in (u from, u to)
 
 uniform sampler2D uBedA;
 uniform sampler2D uBedB;
@@ -195,7 +196,8 @@ vec3 sunBloom(float sd) {
   float b = a * a; b *= b; b *= b;
   float c = b * b; c *= c; c *= c;
   float e = c * c; e *= e;
-  return S.band * (a * 0.07 + b * 0.22 + c * 0.5 + e * 0.5);
+  // (Under the light ending's deep blue the widest of it is held back: gold laid thinly over blue is lavender.)
+  return S.band * (a * 0.07 * (1.0 - 0.7 * gDusk * (1.0 - uNight)) + b * 0.22 + c * 0.5 + e * 0.5);
 }
 
 /** The colour of the air at the horizon toward a bearing: what distance fades to. */
@@ -252,6 +254,8 @@ vec3 aurora(vec3 d) {
 bool gDirect = false;
 // 0 where a mirror shows the sun as broken glitter instead of a smooth glow (the water in the name).
 float gSunK = 1.0;
+// 0 where a mirror gives back the sun's glow but not its hard disc (the still sea at the ending: there is one sun).
+float gDiscK = 1.0;
 /** Stars: one to a cell of the sky, a pixel or two wide, lost in the haze low down. */
 float stars(vec3 d) {
   vec2 g = vec2(atan(d.x, d.y), d.z) * 150.0;
@@ -265,7 +269,8 @@ float stars(vec3 d) {
 
 vec3 skyColor(vec3 d, float clouds) {
   float h = max(d.z, 0.0);
-  vec3 col = mix(S.hor, S.mid, smoothstep(0.0, mix(0.24, 0.17, max(uNight, gDusk)), h));
+  // (Under the light ending's low sun the gold climbs further before it gives way to the blue: a long even fall, not a band.)
+  vec3 col = mix(S.hor, S.mid, smoothstep(0.0, mix(0.24, mix(0.17, 0.225, gDusk * (1.0 - uNight)), max(uNight, gDusk)), h));
   col = mix(col, S.zen, smoothstep(0.07, 0.62, h));
   float az = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
   // Warmth pools on the sun's side of the horizon; it is not a stripe.
@@ -277,25 +282,7 @@ vec3 skyColor(vec3 d, float clouds) {
 #ifdef SEA
   // (At the ending the sun is a clean limb standing on the crest: a small hard disc, and the glow round it is the bloom's.)
   float disc = mix(smoothstep(0.9996, 0.99999, sd) * 2.4 + smoothstep(0.9999, 1.0, sd) * 1.6, smoothstep(0.999838, 0.999888, sd) * 5.0, gDusk);
-  col += vec3(1.0, 0.9, 0.7) * disc * (1.0 - uNight * (1.0 - gDusk)) * gSunK;
-  // The pillar. In air this cold the light of a sun on the horizon stands up over it in a thin column; it rises once
-  // the line of light has come in across the water, and holds: with the line it is one stroke through the sun.
-  if (uRay.w > 0.0 && gDusk > 0.0) {
-    float rise = smoothstep(0.6, 1.0, uRay.z);
-    vec2 dn = normalize(d.xy + 1e-6);
-    vec2 sn = normalize(S.sun.xy);
-    float de = d.z - S.sun.z;
-    if (rise > 0.0 && dot(dn, sn) > 0.9 && de > -0.03) {
-      float da = dn.x * sn.y - dn.y * sn.x;
-      // (It ends inside the frame, thinning into the sky: it is a column of light, not a beam that leaves the picture.)
-      float top = 0.2 * rise;
-      float wid = 0.0075 + 0.034 * max(de, 0.0);
-      float prof = smoothstep(-0.02, 0.006, de) * exp(-max(de, 0.0) / 0.16) * (1.0 - smoothstep(top * 0.3, top, de));
-      float shim = 0.86 + 0.14 * n1(de * 90.0 - uTime * 0.35);
-      vec3 pc = mix(S.band, vec3(1.7, 1.5, 1.25), 0.55);
-      col += pc * (exp(-da * da / (wid * wid)) * 0.42 + exp(-da * da / (wid * wid * 30.0)) * 0.09) * prof * shim * gDusk * uRay.w * gSunK;
-    }
-  }
+  col += vec3(1.0, 0.9, 0.7) * disc * (1.0 - uNight * (1.0 - gDusk)) * gSunK * gDiscK;
 #else
   col += vec3(1.0, 0.9, 0.7) * (smoothstep(0.9996, 0.99999, sd) * 2.4 + smoothstep(0.9999, 1.0, sd) * 1.6) * (1.0 - uNight * (1.0 - gDusk)) * gSunK;
 #endif
@@ -361,12 +348,19 @@ vec3 withRidges(vec3 col, vec3 d, float soft) {
         // range further off deeper in the lit air.
         float off = acos(clamp(sunAz, 0.0, 1.0));
         float found = smoothstep(0.02, 0.3, m.r) * 0.55 + 0.45 * m.g * m.b;
-        vec3 shade = S.zen * 0.22 + S.mid * 0.06;
-        vec3 sunlit = S.mid * 0.34 + S.hor * 0.2 + S.band * 0.07 * exp(-off * 1.6);
+        // (A crest is where a little higher is a good deal further off: the next range, or the sky. The low light
+        // behind the ranges catches every one of them.)
+        // (One blunt look a little higher: the light lies on a crest and falls away down the slope under it, more on
+        // the ground that faces up, so it is a lit top and never a drawn line.)
+        float crest = smoothstep(0.0, 0.42, textureLod(uPano, uv + vec2(0.0, 0.055), lod + 3.0).a - m.a);
+        vec3 shade = S.zen * 0.14 + S.mid * 0.03 + S.hor * 0.008;
+        vec3 sunlit = S.mid * 0.1 + S.hor * 0.06 + S.band * 0.03 * exp(-off * 1.6);
         vec3 low = mix(shade, sunlit, found);
-        low += S.band * 0.1 * exp(-off * 3.0) * cover * (1.0 - cover) * 4.0;
+        low += S.band * (0.02 + 0.2 * exp(-off * 2.2)) * crest * crest * (0.25 + 0.75 * m.g * m.g);
         rock = mix(rock, low, gDusk);
-        airK = mix(airK, clamp(0.1 + far * 0.62 * S.haze, 0.0, 0.9), gDusk);
+        // (They are darker than the sky behind them: only the furthest stand deep in the lit air.)
+        airK = mix(airK, clamp(0.02 + far * 0.3 * S.haze, 0.0, 0.6), gDusk);
+        airR = mix(airR, S.hor * 0.5 + S.band * 0.07 * pow(sunAz, 4.0), gDusk);
       }
 #endif
       rock = mix(rock, airR, airK);
@@ -2249,13 +2243,6 @@ float seaAt(vec2 pw, float sd) {
   return uSea.x * step(${(DELTA.y - 250).toFixed(1)}, pw.y) * smoothstep(70.0, 310.0, -sd);
 }
 
-/**
- * The sea toward the light (the old ending's water, in this world). Ripples
- * that close up with distance, the sky and the ranges mirrored in them, a
- * dark body under the eye, the sun's path as glitter, and on the side the
- * words stand a lee: calmer water, a little shaded, with no glitter in it.
- * t: how far along the ray the water is. footL: a pixel's length on it.
- */
 /** The sea's swell: four octaves, or the two broad ones when the governor has asked for its leanest frame. */
 float seaH(vec2 p) {
   float a = 0.5, s = 0.0;
@@ -2290,16 +2277,117 @@ float floeAt(vec2 p) {
 float gLee = 0.0;
 // How much of this pixel is open sea.
 float gSea = 0.0;
+
+/* ---------- the ribbon of light ---------- */
+
+/**
+ * Fine points of light, one to a cell, each coming and going in its own
+ * time. p: a place, in cells. rad: a point's radius, in cells (never under a
+ * pixel's, so a point is soft at any resolution).
+ */
+float motes(vec2 p, vec2 rad, float seed) {
+  vec2 c = floor(p);
+  vec2 h = hash2(c + seed);
+  float life = fract(h.x * 61.7 + h.y * 17.3);
+  vec2 dd = (fract(p) - (0.3 + 0.4 * h)) / rad;
+  float tw = max(sin(uTime * (0.7 + 2.0 * life) + life * 50.0), 0.0);
+  return exp(-dot(dd, dd)) * life * life * tw * tw;
+}
+
+// Half the width of the ribbon's solid core, and how far from it any of its light reaches (radians, near enough).
+const float RIB_W = 0.0027;
+const float RIB_REACH = 0.13;
+// The height (as a tangent) over which it turns from upright to its lean.
+const float RIB_E0 = 0.1;
+// The ribbon's own frame for the direction last asked: how high along it (the tangent of the height above the horizon), and how far off its centre line to the right.
+vec2 gRib = vec2(0.0);
+/**
+ * The ribbon of light. The river's light leaves the water where the sea
+ * meets the far shore and climbs: upright at its foot, leaning over as it
+ * rises, up and out of the top of the frame. It is a shape in the sky, so a
+ * mirror shows it too: asked with the mirror's direction it is its own
+ * image on the water, which is the line of light the river ran out along.
+ * Returns how far a direction is from its centre line (under 0: to its left).
+ */
+float ribbonAt(vec3 d) {
+  float inv = inversesqrt(max(dot(d.xy, d.xy), 1e-6));
+  vec2 dn = d.xy * inv;
+  if (dot(dn, uRib.xy) < 0.8) return 1e3;
+  float x = dn.x * uRib.y - dn.y * uRib.x;
+  float e = abs(d.z) * inv;
+  float q = e / RIB_E0;
+  float root = sqrt(1.0 + q * q);
+  float off = x - uRay.w * RIB_E0 * (root - 1.0);
+  float slope = uRay.w * q / root;
+  gRib = vec2(e, off);
+  return off * inversesqrt(1.0 + slope * slope);
+}
+/** Its light at a distance from its centre line. x: the solid core, y: the glow round it. fat: how much wider it is (a mirror in moving water). */
+vec2 ribbonLight(float dist, float fat) {
+  // (Several pixels of solid light, a little heavier where it leaves the water; its edge is never harder than a pixel.)
+  float w = RIB_W * mix(1.22, 0.86, smoothstep(0.0, 0.3, gRib.x)) + fat;
+  float aa = max(0.42 * w, 0.9 * uPxAng);
+  float a = abs(dist);
+  float core = 1.0 - smoothstep(w - aa, w + aa, a);
+  // (Its glow runs out to nothing well inside the strip it is drawn in.)
+  float win = 1.0 - smoothstep(0.04, RIB_REACH, a);
+  return vec2(core, (exp(-a / (w * 3.0)) * 0.3 + exp(-a / (w * 12.0)) * 0.075) * win);
+}
+/** The ribbon in the sky, as the eye sees it: the core, the glow, and the fine dust that drifts off it. */
+vec3 ribbonSky(vec3 d) {
+  float dist = ribbonAt(d);
+  if (abs(dist) > RIB_REACH) return vec3(0.0);
+  float e = gRib.x;
+  float rise = uRay.y;
+  // It is drawn from the water upward: its head climbs, and is the brightest of it while it does.
+  float head = 0.012 + 0.33 * rise + 4.0 * smoothstep(0.92, 1.0, rise);
+  float shown = (1.0 - smoothstep(head - 0.035, head, e)) * (1.0 - smoothstep(0.75, 1.2, e)) * smoothstep(0.0, 0.04, rise);
+  if (shown <= 0.0) return vec3(0.0);
+  vec2 l = ribbonLight(dist, 0.0);
+  float tip = exp(-pow((e - head) / 0.024, 2.0)) * (1.0 - smoothstep(0.85, 1.0, rise));
+  // (A slow shimmer runs up it.)
+  float shim = 0.8 + 0.2 * n1(e * 44.0 - uTime * 0.6) + 0.12 * (n1(e * 9.0 - uTime * 0.17) - 0.5);
+  // (Brightest where it leaves the water.)
+  float foot = exp(-e / 0.03);
+  float light = l.x * (4.4 * shim + 4.0 * foot + 5.0 * tip) + l.y * (1.0 + 2.2 * foot + 2.5 * tip);
+  light += exp(-(e * e + gRib.y * gRib.y) / 0.0003) * 1.2;
+  // The dust: fine points that leave the ribbon to either side and thin away, each coming and going.
+  float a = abs(gRib.y);
+  float dustK = exp(-a / 0.017) * (1.0 - smoothstep(0.05, 0.08, a)) * (0.55 + 0.45 * shim);
+  if (dustK > 0.004) {
+    float side = gRib.y < 0.0 ? 17.0 : 0.0;
+    float px = uPxAng;
+    float r0 = max(0.0006, 0.85 * px);
+    float r1 = max(0.001, 0.85 * px);
+    float r2 = max(0.0015, 0.85 * px);
+    float dust = (motes(vec2(e, a) / 0.0028 - uTime * vec2(0.16, 0.1), vec2(r0 / 0.0028), 3.0 + side) + motes(vec2(e, a) / 0.0028 - uTime * vec2(0.11, 0.14) + 0.5, vec2(r0 / 0.0028), 47.0 + side)) * 2.2 * (0.0006 * 0.0006) / (r0 * r0)
+      + motes(vec2(e, a) / 0.0058 - uTime * vec2(0.1, 0.07) + 0.37, vec2(r1 / 0.0058), 9.0 + side) * 2.6 * (0.001 * 0.001) / (r1 * r1)
+      + motes(vec2(e, a) / 0.013 - uTime * vec2(0.06, 0.045) + 0.71, vec2(r2 / 0.013), 21.0 + side) * 1.5 * exp(-a / 0.03) / max(exp(-a / 0.017), 1e-3);
+    light += dust * dustK * (1.0 + 1.5 * foot + 2.0 * tip);
+  }
+  return mix(vec3(1.0, 0.975, 0.94), vec3(1.0, 0.9, 0.7), 0.55 * foot) * (light * shown * uRay.z);
+}
+
+/**
+ * The sea toward the light (the old ending's water, in this world). Ripples
+ * that close up with distance, the sky and the ranges mirrored in them, a
+ * dark body under the eye, the sun's path as glitter, and on the side the
+ * words stand a lee: calmer water with no glitter in it. Where the camera
+ * comes to rest the sea is still: a clean mirror out by the far shore, a
+ * band of glitter along that shore, ripples only near the eye.
+ * t: how far along the ray the water is. footL: a pixel's length on it.
+ */
 vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float e = uSea.y;
   // The lee has no edge and no corner: it is deepest under the words and thins away from them in every direction,
   // to nothing at the horizon, so it is never seen as a shape. (uSea.w below zero: how high the words stand, on a wide screen.)
   float topV = uSea.w < -0.001 ? -uSea.w : 0.42;
   float lee = (1.0 - smoothstep(0.0, 1.0, length(max((vUv - vec2(uSea.z - 0.06, topV - 0.04)) / vec2(0.3, max(0.6 - topV, 0.1)), 0.0)))) * e;
-  float leeFoot = step(0.001, uSea.w) * (1.0 - smoothstep(uSea.w - 0.01, uSea.w + 0.13, vUv.y)) * e;
   // (On a narrow screen the words run the width of the frame and stand at its foot: the line of light comes down to them and stops.)
-  float leeRay = uSea.w > 0.001 ? leeFoot : lee;
+  float leeFoot = step(0.001, uSea.w) * (1.0 - smoothstep(uSea.w - 0.01, uSea.w + 0.13, vUv.y)) * e;
   lee = max(lee, leeFoot);
+  // How still the sea is: the ending's own water, as the camera settles on it.
+  float still = e * gDusk;
   vec2 q = pw / SEA_S;
   float dist = length(pw - uCamPos.xy) / SEA_S;
   // (A ripple finer than a pixel is let go before it can shimmer.)
@@ -2307,6 +2395,8 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float fine = 1.0 - smoothstep(0.05, 0.16, px);
   float broad = 1.0 - smoothstep(0.16, 0.5, px);
   float calm = (1.0 / (1.0 + dist * 0.07)) * (1.0 - 0.55 * lee);
+  // (At rest there are ripples only near the eye, and they are gentle: further out the water is glass.)
+  calm *= mix(1.0, 0.8 * exp(-dist * dist / 42.0), still);
   float tt = uTime * 0.32;
   vec2 qa = q * 1.7 + vec2(tt, 0.3 * tt);
   float f0 = seaH(qa);
@@ -2321,7 +2411,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   g *= 1.25 * calm;
   // (A touch on the water is the simulation's: its rings cross the sea too.)
   vec2 suv = simUv(pw);
-  if (suv.y > 0.0 && suv.y < 1.0 && suv.x > 0.0 && suv.x < 1.0) g -= textureLod(uWave, suv, 0.0).ba * 7.0 * smoothstep(0.0, 0.03, suv.y) * (1.0 - smoothstep(0.97, 1.0, suv.y));
+  if (suv.y > 0.0 && suv.y < 1.0 && suv.x > 0.0 && suv.x < 1.0) g -= textureLod(uWave, suv, 0.0).ba * 7.0 * smoothstep(0.0, 0.03, suv.y) * (1.0 - smoothstep(0.97, 1.0, suv.y)) * smoothstep(0.0, 0.03, suv.x) * (1.0 - smoothstep(0.97, 1.0, suv.x));
   vec3 n = normalize(vec3(g, 1.0));
   vec3 r = reflect(dir, n);
   // (By day a sea is darker than the sky it meets: its waves turn the mirror up, past the pale air at the horizon to the blue above it.)
@@ -2329,7 +2419,12 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   r = normalize(r);
   float cosi = clamp(dot(-dir, n), 0.0, 1.0);
   float fres = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
-  vec3 refl = withRidges(skyColor(r, 0.0), r, 1.0);
+  // (Still water gives the ranges back as sharp as they stand, and the sun as a soft light under them: its path is the glitter's to draw.)
+  gSunK = 1.0 - 0.6 * still;
+  gDiscK = 1.0 - still;
+  vec3 refl = withRidges(skyColor(r, 0.0), r, 1.0 - still);
+  gSunK = 1.0;
+  gDiscK = 1.0;
   // Seen from above the water shows its depth; at a glancing angle, the sky.
   // (Before dawn the sea's own body is dark and without colour of its own: no green in it.)
   vec3 deep = mix(vec3(0.004, 0.026, 0.078), vec3(0.008, 0.012, 0.026), uNight);
@@ -2338,62 +2433,97 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float dayK = (1.0 - gDusk) * (1.0 - uNight);
   float mir = clamp(fres + 0.05, 0.0, 1.0) * (1.0 - 0.5 * dayK);
   vec3 col = mix(body, refl, mir);
-  // Sun glitter: a broken streak toward the sun.
-  float sd = max(dot(r, S.sun), 0.0);
-  float s90 = pow(sd, 90.0);
-  float s900 = pow(sd, 900.0);
+  float inv = inversesqrt(max(dot(dir.xy, dir.xy), 1e-6));
+  vec2 dn = dir.xy * inv;
+  // (How far under the horizon the eye's ray dips, as a tangent.)
+  float em = -dir.z * inv;
   float up = smoothstep(-0.02, 0.012, S.sun.z);
-  col += vec3(1.0, 0.86, 0.62) * (s900 * 14.0 + s90 * mix(0.42, 0.55, uNight)) * mix(0.8, 1.0, uNight) * (1.0 - lee) * up * mix(0.6, 1.0, gDusk);
-  // By day the broad lobe is held back and the light is carried by a path
-  // of separate glints: wide and sparse near the eye, narrowing to a thread
-  // at the horizon.
   float da = atan(dir.x, dir.y) - atan(S.sun.x, S.sun.y);
   float nearK = 1.0 / (1.0 + dist * 0.03);
-  float day = (1.0 - uNight) * up;
-  if (day > 0.0) {
-    float wide = mix(0.028, 0.11, nearK) * mix(1.5, 1.0, gDusk);
-    float path = exp(-da * da / (wide * wide));
-    if (path > 0.003) {
-      vec2 gq = q * vec2(30.0, 15.0);
-      float sp = 0.6 * n2(gq + vec2(tt * 2.0, -tt * 3.0)) + 0.4 * n2(gq * 2.6 - vec2(tt * 3.0, tt));
-      float lo = mix(0.5, 0.68, nearK);
-      // Each glint has a soft shoulder: a spark on a ripple, not a cut-out.
-      float glint = smoothstep(lo - 0.16, lo + 0.26, sp);
-      glint *= glint;
-      // Far off a glint is finer than a pixel: there the path is its even mean.
-      glint = mix(glint, 0.3, smoothstep(0.35, 1.1, px * 15.0));
-      // The sun's reflected bloom is broken by the same facets, so it is not a patch.
-      col = max(col - sunBloom(sd) * mir * 0.3 * (1.0 - glint) * day, 0.0);
-      col += vec3(1.0, 0.88, 0.7) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee) * mix(9.0, 1.0, gDusk);
+  if (still < 1.0) {
+    // Under way, the sea moves: sun glitter as a broken streak toward the sun.
+    float sd = max(dot(r, S.sun), 0.0);
+    float s90 = pow(sd, 90.0);
+    float s900 = pow(sd, 900.0);
+    col += vec3(1.0, 0.86, 0.62) * (s900 * 14.0 + s90 * mix(0.42, 0.55, uNight)) * mix(0.8, 1.0, uNight) * (1.0 - lee) * up * mix(0.6, 1.0, gDusk) * (1.0 - still);
+    // By day the broad lobe is held back and the light is carried by a path
+    // of separate glints: wide and sparse near the eye, narrowing to a thread
+    // at the horizon.
+    float day = (1.0 - uNight) * up * (1.0 - still);
+    if (day > 0.0) {
+      float wide = mix(0.028, 0.11, nearK) * mix(1.5, 1.0, gDusk);
+      float path = exp(-da * da / (wide * wide));
+      if (path > 0.003) {
+        vec2 gq = q * vec2(30.0, 15.0);
+        float sp = 0.6 * n2(gq + vec2(tt * 2.0, -tt * 3.0)) + 0.4 * n2(gq * 2.6 - vec2(tt * 3.0, tt));
+        float lo = mix(0.5, 0.68, nearK);
+        // Each glint has a soft shoulder: a spark on a ripple, not a cut-out.
+        float glint = smoothstep(lo - 0.16, lo + 0.26, sp);
+        glint *= glint;
+        // Far off a glint is finer than a pixel: there the path is its even mean.
+        glint = mix(glint, 0.3, smoothstep(0.35, 1.1, px * 15.0));
+        // The sun's reflected bloom is broken by the same facets, so it is not a patch.
+        col = max(col - sunBloom(sd) * mir * 0.3 * (1.0 - glint) * day, 0.0);
+        col += vec3(1.0, 0.88, 0.7) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee) * mix(9.0, 1.0, gDusk);
+      }
     }
   }
-  // The line of light: when the sun's edge clears the ranges, one clean
-  // line runs from its foot across the water to the eye, along the way
-  // the river came out, and holds.
-  if (uRay.w > 0.0) {
-    vec2 u = normalize(S.sun.xy);
-    vec2 rel = pw - uRay.xy;
-    float along = dot(rel, u);
-    float across = dot(rel, vec2(u.y, -u.x));
-    // (The river's own wander, easing out toward the sun.)
-    // (Under the eye it runs true; further out it keeps a little of the river's wander.)
-    float line = across - (11.0 * sin(along / 340.0 + 2.6) + 3.5 * sin(along / 127.0 + 0.4)) * exp(-max(along, 0.0) / 2400.0) * smoothstep(120.0, 1100.0, along) - g.x * 2.0;
-    // It is a line, not a band: a few pixels wide under the eye, a hair at the horizon. (On a narrow screen a pixel is small: it is drawn wider there.)
-    float wpx = max(t * uPxAng, 1e-3) * (uSea.w > 0.001 ? 2.1 : 1.0);
-    float w = wpx * mix(1.25, 2.6, exp(-max(along, 0.0) / 520.0));
-    // It runs in from the horizon: its head is where the eye's ray dips to. (It has come in before the pillar rises.)
-    float dip = uCamPos.z / max(along, 1.0);
-    float run = smoothstep(0.0, 0.66, uRay.z);
-    float head = run * 0.62;
-    float shown = (1.0 - smoothstep(head * 0.82, head, dip)) * step(1.0, along);
-    float core = exp(-line * line / (w * w));
-    float halo = exp(-line * line / (w * w * 40.0)) * 0.14 + exp(-abs(line) / (w * 14.0)) * 0.06;
-    float tip = exp(-pow((dip - head * 0.9) / max(head * 0.12, 1e-3), 2.0)) * (1.0 - smoothstep(0.9, 1.0, run));
-    vec3 rayC = mix(vec3(1.0, 0.9, 0.78), vec3(1.0, 0.8, 0.46), uNight);
-    // (It stops short of the words: in their lee the water keeps no light.)
-    // (It is light lying on water: the ripples it crosses carry it, brighter on the faces turned to it.)
-    float carry = 0.62 + 0.38 * smoothstep(-0.25, 0.25, g.y * 3.0) ;
-    col += rayC * (core * 2.3 * carry + halo * 1.6) * shown * uRay.w * (1.0 + 2.0 * tip) * (1.0 - leeRay) * (1.0 - leeRay);
+  if (still > 0.0) {
+    // At rest the light lies on the water in three ways, all of them fine points that come and go.
+    // The sun's path: a thread under the sun at the far shore, opening toward the eye, never a patch.
+    float xs = sin(da);
+    float wS = 0.006 + 0.15 * em;
+    float pathS = exp(-xs * xs / (wS * wS)) * step(0.0, cos(da)) * up * (1.0 - lee);
+    // The ribbon's image, when it stands: its own glitter lies round it.
+    float pathR = 0.0;
+    float lineK = 0.0;
+    vec3 line = vec3(0.0);
+    if (uRay.z > 0.0 && vUv.x > uRib.z && vUv.x < uRib.w) {
+      // (The mirror is the water's, ripples and all, but it is the river's light: it keeps to its line, carried a little by each ripple it crosses.)
+      vec3 rm = normalize(mix(vec3(dir.xy, -dir.z), r, 0.12));
+      float dR = ribbonAt(rm);
+      if (abs(dR) < RIB_REACH) {
+        float eR = gRib.x;
+        // The line runs out across the water from under the eye to where the ribbon will stand.
+        float run = smoothstep(0.0, 0.62, uRay.x);
+        float headM = mix(0.66, -0.05, run);
+        float shownM = smoothstep(headM, headM + 0.045, eR) * (1.0 - leeFoot) * (1.0 - leeFoot);
+        float tipM = exp(-pow((eR - headM - 0.02) / 0.03, 2.0)) * (1.0 - smoothstep(0.9, 1.0, run));
+        // (A mirror in moving water is a little wider the nearer the eye.)
+        vec2 l = ribbonLight(dR, 0.0045 * smoothstep(0.03, 0.4, eR));
+        float shim = 0.8 + 0.2 * n1(eR * 44.0 - uTime * 0.6);
+        float foot = exp(-eR / 0.03);
+        // (Light lying on water: the faces turned to it carry it, the others a little less.)
+        float carry = 0.7 + 0.3 * smoothstep(-0.02, 0.02, g.y);
+        lineK = (l.x * (3.4 * shim * carry + 4.0 * foot + 5.0 * tipM) + l.y * (0.8 + 2.2 * foot + 2.5 * tipM)) * shownM;
+        lineK += exp(-(eR * eR + gRib.y * gRib.y) / 0.0003) * 1.2 * smoothstep(0.0, 0.3, uRay.y) * shownM;
+        line = mix(vec3(1.0, 0.975, 0.94), vec3(1.0, 0.9, 0.7), 0.55 * exp(-eR / 0.03)) * lineK * uRay.z;
+        pathR = exp(-abs(gRib.y) / (0.004 + 0.05 * eR)) * shownM * uRay.z * (1.0 - smoothstep(0.03, 0.06, abs(gRib.y)));
+      }
+    }
+    // The far shore: a band of glitter along the waterline, brightest under the light.
+    float shore = exp(-em / 0.0075) * (0.22 + 0.78 * exp(-xs * xs / 0.05));
+    float env = max(max(pathS, pathR), shore);
+    if (env > 0.004) {
+      float pa = uPxAng;
+      float r0 = max(0.0006, 0.85 * pa);
+      float r1 = max(0.001, 0.85 * pa);
+      vec2 sp = vec2(xs, em);
+      // (Near the eye a glint rides a ripple: it is brighter on the faces turned to the light.)
+      float face = mix(1.0, smoothstep(-0.012, 0.03, g.y - abs(g.x) * 0.3) * 1.5, smoothstep(0.02, 0.2, em));
+      // (A glint on water is a short level dash, not a dot: each is a few times as long as it is tall.)
+      float fineG = motes(sp / vec2(0.0085, 0.003) + vec2(0.0, uTime * 0.012), vec2(3.0 * r0 / 0.0085, r0 / 0.003), 5.0) * (0.0006 * 0.0006) / (r0 * r0)
+        + motes(sp / vec2(0.0085, 0.003) + vec2(0.5, 0.5 - uTime * 0.01), vec2(3.0 * r0 / 0.0085, r0 / 0.003), 31.0) * (0.0006 * 0.0006) / (r0 * r0);
+      float bigG = motes(sp / vec2(0.026, 0.0068) + vec2(0.3, uTime * 0.008), vec2(4.5 * r1 / 0.026, r1 / 0.0068), 13.0) * (0.001 * 0.001) / (r1 * r1);
+      // (Far off the points are finer than a pixel and run together: there the path is their even light.)
+      float glint = fineG * mix(5.0, 3.0, smoothstep(0.0, 0.25, em)) + bigG * 4.5 * smoothstep(0.03, 0.22, em) * face;
+      vec3 warm = mix(vec3(1.0, 0.9, 0.74), vec3(1.0, 0.82, 0.5), uNight);
+      col += warm * S.band * 0.55 * (glint + 0.05 * exp(-em / 0.02)) * max(pathS, shore) * mix(1.0, 0.8, uNight) * still;
+      col += vec3(1.0, 0.97, 0.92) * (glint * 0.8) * pathR * still;
+    }
+    // (A soft even light under the sun, so the path has a body between its points.)
+    col += S.band * pathS * (0.05 + 0.1 * exp(-em / 0.05)) * still;
+    col += line * still;
   }
   // Drift ice on the way out: each plate a hand of ice above the water, snow on its top, a blue wall on the side
   // the eye sees, and the pale skirt of the ice under water round it.
@@ -2854,17 +2984,25 @@ void main() {
     float clearK = gDeep * (1.0 - aLand) * (1.0 - aIce) * (1.0 - aCut) * (1.0 - smoothstep(4200.0, 7000.0, t));
 #ifdef SEA
     // (Over the open sea at the end of the day the air is clearer: the water keeps its depth out to the mist on the horizon.)
-    col = mix(col, air, fog * (1.0 - clearK) * (1.0 - gSea * mix(0.4, 0.55, gDusk)));
+    // (And where the camera comes to rest the far water is a mirror: almost none of the air lies on it, so the ranges stand in it whole.)
+    float stillM = uSea.y * gDusk * gSea;
+    col = mix(col, air, fog * (1.0 - clearK) * (1.0 - gSea * mix(mix(0.4, 0.55, gDusk), 0.94, uSea.y * gDusk)));
 #else
     col = mix(col, air, fog * (1.0 - clearK));
 #endif
     // The horizon is soft: the same mist that lies at the ranges' foot.
+#ifdef SEA
+    // (Over the still sea it is a fine line of mist on the waterline, no more: the mirror begins right under it.)
+    col = mix(col, air, exp(dir.z / mix(0.006, 0.0032, stillM)) * mix(0.75, 0.42, stillM));
+#else
     col = mix(col, air, exp(dir.z / 0.006) * 0.75);
+#endif
     // The cliff at the confluence and its falls stand in front of what lies behind them.
     col = confCliff(col, dir, aLand);
 #ifdef SEA
-    // The lee's shade, on the water the words stand over.
-    col *= 1.0 - 0.56 * gLee;
+    // The lee's shade, on the water the words stand over. (At the ending the water there is dark of itself: it mirrors
+    // the deep of the sky, and the lee only keeps it calm.)
+    col *= 1.0 - mix(0.56, 0.1, gDusk) * gLee;
 #endif
   }
   // The boulders of the rock pool stand in front of its water and its far bank.
@@ -2973,6 +3111,10 @@ void main() {
     if (uSt.w > 0.0) col = canyon(col, dir, twS);
   }
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
+#ifdef SEA
+  // The ribbon of light stands in front of the ranges: it is only looked for in the strip of the frame it can be in.
+  if (uRay.z > 0.0 && dir.z > -0.0006 && vUv.x > uRib.z && vUv.x < uRib.w) col += ribbonSky(dir);
+#endif
 
   // ---- the finish, in this same pass: the glow of the last frame's
   // highlights, a gentle vignette, the filmic curve, and a fine grain that

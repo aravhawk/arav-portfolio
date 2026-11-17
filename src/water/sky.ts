@@ -138,17 +138,18 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
     dusk: 0,
     under: 0.9,
   };
-  // The old light ending: the blue hour, the sun on the ranges.
+  // The light ending: a low sun on the ranges under a deep blue sky that comes down to warm gold at the horizon
+  // (the old ending's blue and gold: rich, with nothing of rose or lavender in it).
   const blue: Key = {
-    zen: [0.016, 0.06, 0.21],
-    mid: [0.06, 0.14, 0.36],
-    hor: [0.6, 0.34, 0.3],
-    band: [1.7, 0.72, 0.5],
+    zen: [0.007, 0.046, 0.16],
+    mid: [0.026, 0.14, 0.31],
+    hor: [0.78, 0.58, 0.25],
+    band: [1.85, 1.2, 0.46],
     az: sunAz,
     el: elEnd,
-    key: mul([1.0, 0.62, 0.46], 0.9),
+    key: mul([1.0, 0.68, 0.4], 0.9),
     keyEl: 0.05,
-    amb: [0.09, 0.14, 0.3],
+    amb: [0.07, 0.12, 0.28],
     haze: 0.85,
     aurora: 0,
     dusk: 1,
