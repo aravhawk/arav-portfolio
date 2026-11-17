@@ -32,6 +32,7 @@
  * keyDir, simUv, stars, sunBloom, RW declared before it.
  */
 export const NAME_ICE = `
+uniform vec3 uNameW;       // where the first frame's words stand, in the frame: x: the right end of the left block, y: the left end of the right one (both 1 when they are stacked), z: how far up the frame their top is
 uniform vec4 uNameP;       // x: how far from the blocks' feet meltwater lies on the sheet px, y: 0..1 how wet the blocks are, z: 0..1 the sheet has opened under them, w: 0..1 the pool has opened behind them
 
 // The first camera, for which the outlines are laid: where it is, how deep the name's middle lies from it, and the slope of its line of sight to that middle.
@@ -463,6 +464,11 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   float drift = smoothstep(0.5 - ew, 0.5 + ew, lvlS) * (1.0 - uNight);
   // (Past its edge the bare ice goes under a dusting, in streaks, not all at once.)
   float K = (1.0 - drift) * (1.0 - smoothstep(0.0, mix(0.03 + 0.004 * footL, 0.3, uNight), d - 1.0 + ((lvl - 0.5) * 0.6 + fin * 0.16 * (1.0 - smoothstep(4.0, 12.0, footL))) * (1.0 - uNight)));
+  // (The first frame's words stand at the foot of the frame, on calm snow: whatever the screen's shape, the bare ice and
+  // the image in it stop short of them, under drifts.)
+  // (Between the two blocks, where there are two, it may come on toward the eye.)
+  float between = smoothstep(uNameW.x + 0.02, uNameW.x + 0.08, vUv.x) * (1.0 - smoothstep(uNameW.y - 0.08, uNameW.y - 0.02, vUv.x));
+  K *= smoothstep(0.0, 0.014, vUv.y - mix(uNameW.z + 0.03, 0.0, between) + (lvl - 0.5) * 0.09);
   float fd = nameFoot(p);
   // The meltwater on the sheet at the blocks' feet: its edge wanders.
   float wob = (textureLod(uGrain, p / 310.0, 0.0).g - 0.5) * 22.0 + (textureLod(uGrain, p / 71.0 + 0.3, 0.0).b - 0.5) * 7.0;
