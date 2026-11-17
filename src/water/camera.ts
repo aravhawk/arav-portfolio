@@ -256,8 +256,8 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s7 - 0.05, pos: [1620, T + 3560, 400], aim: [1120, T + 3840, 0], fov: 45 },
         { s: s7 + 0.45, pos: [820, T + 3640, 400], aim: [900, T + 4350, 10], fov: 44 },
         // The lattice from over its west bank, corner on: every cube and its mirror image.
-        { s: s7 + 1.15, pos: [450, T + 3690, 420], aim: [1200, T + 4500, 20], fov: 42 },
-        { s: s8 - 0.6, pos: [462, T + 3718, 412], aim: [1203, T + 4510, 20], fov: 42 },
+        { s: s7 + 1.15, pos: [500, T + 3800, 640], aim: [1215, T + 4500, 0], fov: 42 },
+        { s: s8 - 0.6, pos: [512, T + 3828, 630], aim: [1218, T + 4510, 0], fov: 42 },
         { s: s8 + 0.3, pos: [1300, T + 4960, 170], aim: [1300, T + 5700, 90], fov: 48 },
         ...canyonKeys(s8, 50),
       ];

@@ -314,7 +314,7 @@ export const SLUICES: Pt[][] = [
 ];
 
 /** Station 7, the still pool and the four by four lattice of cubes of ice in it. */
-export const LATTICE = { x: 1300, y: T2 + 4520, pitch: 172, size: 98, h: 56 };
+export const LATTICE = { x: 1300, y: T2 + 4520, pitch: 172, size: 92, h: 50 };
 
 /** Station 8, the canyon: the river's middle through a glacier, two tight bends back to back. */
 // (Its walls lean back as they rise, by `lean` units to each unit of height, so the sky and the day reach the water.)

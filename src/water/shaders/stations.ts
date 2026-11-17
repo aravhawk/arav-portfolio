@@ -707,11 +707,31 @@ vec3 dam(vec3 col, vec3 dir, float tw) {
 }
 `;
 
+const cubeRnd = (k: number, m: number) => fr(Math.sin((k % 4) * 127.1 + Math.floor(k / 4) * 311.7 + m * 74.7 + 4.7) * 43758.5453);
+/** Each cube's half width, its height, and how far its upright and its top edges have melted back. */
 const cubeSizes = () =>
   Array.from({ length: 16 }, (_, k) => {
-    const a = fr(Math.sin((k % 4) * 127.1 + Math.floor(k / 4) * 311.7 + 4.7) * 43758.5453);
-    const b = fr(Math.sin((k % 4) * 269.5 + Math.floor(k / 4) * 183.3 + 9.1) * 43758.5453);
-    return `vec2(${((LATTICE.size / 2) * (0.88 + 0.2 * a)).toFixed(2)}, ${(LATTICE.h * (0.78 + 0.5 * b)).toFixed(2)})`;
+    const half = (LATTICE.size / 2) * (0.86 + 0.24 * cubeRnd(k, 0));
+    const h = LATTICE.h * (0.7 + 0.75 * cubeRnd(k, 1));
+    return `vec4(${half.toFixed(2)}, ${h.toFixed(2)}, ${(7 + 12 * cubeRnd(k, 2)).toFixed(2)}, ${(6 + 10 * cubeRnd(k, 3)).toFixed(2)})`;
+  }).join(', ');
+/** How unevenly each cube's four corners have melted (x, y: toward which side more). */
+const cubeLean = () => Array.from({ length: 16 }, (_, k) => `vec2(${(1.6 * cubeRnd(k, 4) - 0.8).toFixed(3)}, ${(1.6 * cubeRnd(k, 5) - 0.8).toFixed(3)})`).join(', ');
+/** How each cube has settled: turned a little on the water, and tipped a little out of level. (A mat3's columns: where its own axes point.) */
+const cubeFrames = () =>
+  Array.from({ length: 16 }, (_, k) => {
+    const yaw = 0.3 * (cubeRnd(k, 6) - 0.5);
+    const tx = 0.16 * (cubeRnd(k, 7) - 0.5);
+    const ty = 0.16 * (cubeRnd(k, 8) - 0.5);
+    const cz = Math.cos(yaw), sz = Math.sin(yaw), cx = Math.cos(tx), sx = Math.sin(tx), cy = Math.cos(ty), sy = Math.sin(ty);
+    // Rz(yaw) * Rx(tx) * Ry(ty)
+    const rx = [[1, 0, 0], [0, cx, -sx], [0, sx, cx]];
+    const ry = [[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]];
+    const rz = [[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]];
+    const mul = (a: number[][], b: number[][]) => a.map((row) => [0, 1, 2].map((j) => row[0] * b[0][j] + row[1] * b[1][j] + row[2] * b[2][j]));
+    const r = mul(rz, mul(rx, ry));
+    const col = (j: number) => `${r[0][j].toFixed(5)}, ${r[1][j].toFixed(5)}, ${r[2][j].toFixed(5)}`;
+    return `mat3(${col(0)}, ${col(1)}, ${col(2)})`;
   }).join(', ');
 
 /** Station 7: sixteen cubes of ice in a still pool, one thread of current round them all, a light passing through them in turn. */
@@ -761,43 +781,87 @@ float cubeGlow(float i, float j) {
   float d = (latPulse() - at) / (0.8 * LAT_P);
   return exp(-d * d);
 }
-// (No two cubes are quite the same: each has melted to its own size.) x: half its width, y: its height.
-const vec2 LAT_SZ[16] = vec2[16](${cubeSizes()});
-vec2 cubeSize(vec2 ij) { return LAT_SZ[int(ij.x) + 4 * int(ij.y)]; }
+// No two cubes are the same: each has melted to its own size, settled a little askew on the water, and lost its
+// corners. xy: half its width and its height; zw: how far its upright and its top edges have melted back.
+const vec4 LAT_SZ[16] = vec4[16](${cubeSizes()});
+const vec2 LAT_V[16] = vec2[16](${cubeLean()});
+const mat3 LAT_R[16] = mat3[16](${cubeFrames()});
+vec2 cubeSize(vec2 ij) { return LAT_SZ[int(ij.x) + 4 * int(ij.y)].xy; }
+float cubeGlowAt(vec2 ij) { return all(greaterThanEqual(ij, vec2(0.0))) && all(lessThanEqual(ij, vec2(3.0))) ? cubeGlow(ij.x, ij.y) : 0.0; }
 float cubesHit(vec3 ro, vec3 rd, out vec3 n, out float tF, out vec2 id) {
   vec3 n1;
   float f1;
-  float ext = 1.5 * LAT_P + LAT_S * 1.1;
-  if (boxHit(ro, rd, vec3(LAT_C - ext, -FREEBOARD - 4.0), vec3(LAT_C + ext, LAT_H * 1.3 - FREEBOARD), n1, f1) < 0.0) return -1.0;
+  float ext = 1.5 * LAT_P + LAT_S * 1.5;
+  if (boxHit(ro, rd, vec3(LAT_C - ext, -FREEBOARD - 12.0), vec3(LAT_C + ext, LAT_H * 1.7 - FREEBOARD), n1, f1) < 0.0) return -1.0;
   float best = -1.0;
   for (int k = 0; k < 16; k++) {
     vec2 ij = vec2(float(k - (k / 4) * 4), float(k / 4));
-    vec2 c = LAT_C + (ij - 1.5) * LAT_P;
-    vec2 sz = cubeSize(ij);
-    float t = boxHit(ro, rd, vec3(c - sz.x, -FREEBOARD - 4.0), vec3(c + sz.x, sz.y - FREEBOARD), n1, f1);
-    if (t > 0.0 && (best < 0.0 || t < best)) { best = t; n = n1; tF = f1; id = ij; }
+    vec3 c = vec3(LAT_C + (ij - 1.5) * LAT_P, -FREEBOARD);
+    vec4 sz = LAT_SZ[k];
+    // (The ray in the cube's own frame.)
+    vec3 ol = (ro - c) * LAT_R[k];
+    vec3 dl = rd * LAT_R[k];
+    float t = boxHit(ol, dl, vec3(-sz.x, -sz.x, -12.0), vec3(sz.x, sz.x, sz.y), n1, f1);
+    if (t < 0.0 || (best > 0.0 && t > best)) continue;
+    // Its corners have melted back: four upright edges and the four edges of its top are cut away, no two by as much.
+    float tN = t;
+    float tX = f1;
+    vec3 nn = n1;
+    for (int e = 0; e < 8; e++) {
+      vec3 pn;
+      float d;
+      if (e < 4) {
+        vec2 sg = vec2(e < 2 ? 1.0 : -1.0, e == 0 || e == 2 ? 1.0 : -1.0);
+        pn = vec3(sg, 0.0) * 0.70711;
+        d = (2.0 * sz.x - sz.z * (1.0 + 0.5 * sg.x * LAT_V[k].x + 0.5 * sg.y * LAT_V[k].y)) * 0.70711;
+      } else {
+        float sg = e < 6 ? 1.0 : -1.0;
+        bool onX = e == 4 || e == 6;
+        pn = (onX ? vec3(sg, 0.0, 1.0) : vec3(0.0, sg, 1.0)) * 0.70711;
+        d = (sz.x + sz.y - sz.w * (1.0 + 0.5 * sg * (onX ? LAT_V[k].y : LAT_V[k].x))) * 0.70711;
+      }
+      float den = dot(dl, pn);
+      float num = d - dot(ol, pn);
+      if (den < -1e-6) { float tt = num / den; if (tt > tN) { tN = tt; nn = pn; } }
+      else if (den > 1e-6) tX = min(tX, num / den);
+      else if (num < 0.0) tX = -1.0;
+    }
+    if (tN < tX && (best < 0.0 || tN < best)) { best = tN; n = LAT_R[k] * nn; tF = tX; id = ij; }
   }
   return best;
 }
 vec3 cubeColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec2 id) {
+  int k = int(id.x) + 4 * int(id.y);
   vec3 hp = ro + rd * t;
-  vec2 c = LAT_C + (id - 1.5) * LAT_P;
-  vec2 sz = cubeSize(id);
-  vec3 lp = vec3(hp.xy - c, hp.z + FREEBOARD);
+  vec3 c = vec3(LAT_C + (id - 1.5) * LAT_P, -FREEBOARD);
+  vec4 sz = LAT_SZ[k];
+  vec3 lp = (hp - c) * LAT_R[k];
+  vec3 nl = n * LAT_R[k];
   float glow = cubeGlow(id.x, id.y);
-  vec2 q = n.z > 0.5 ? lp.xy : vec2(abs(n.x) > 0.5 ? lp.y : lp.x, lp.z);
-  vec2 e = n.z > 0.5 ? sz.x - abs(lp.xy) : vec2(sz.x - abs(q.x), sz.y - lp.z);
+  // Melted, not cut: toward an edge the face turns over into the next, so no arris is a line.
+  vec3 hf = vec3(sz.x, sz.x, sz.y);
+  float rr = max(sz.z, sz.w) * 1.5;
+  vec3 over = max(vec3(abs(lp.xy), lp.z) - (hf - rr), 0.0) * vec3(sign(lp.xy), 1.0);
+  vec3 ns = normalize(nl * rr * 0.55 + over);
+  vec3 nw = LAT_R[k] * ns;
+  bool isTop = nl.z > 0.6;
+  vec2 q = isTop ? lp.xy : vec2(abs(nl.x) > abs(nl.y) ? lp.y : lp.x, lp.z);
   vec4 gr = textureLod(uGrain, q / 120.0 + id * 0.37, 0.0);
-  vec3 col = iceLook(hp, n, rd, t, tF - t, q + id * 53.0, min(e.x, e.y), 0.25 * step(n.z, 0.5), dot(id, vec2(0.37, 0.61)));
-  if (n.z < 0.5) col = waterlineOn(col, lp.z, gr.b);
-  // Its top is frosted: a thin rime, thicker toward the middle.
-  col = mix(col, snowOn(n, (gr.r - 0.5) * 0.4), step(0.5, n.z) * (0.2 + 0.5 * gr.g) * smoothstep(0.0, 14.0, min(e.x, e.y)));
+  vec3 col = iceLook(hp, nw, rd, t, tF - t, q + id * 53.0, 1e3, 0.3 * (isTop ? 0.0 : 1.0), dot(id, vec2(0.37, 0.61)));
+  if (!isTop) col = waterlineOn(col, lp.z, gr.b);
+  // Rime lies on its top in patches, where the melt has not run: it is not a lid.
+  col = mix(col, snowOn(nw, (gr.r - 0.5) * 0.4), (isTop ? 1.0 : 0.0) * smoothstep(0.42, 0.8, gr.g + 0.35 * gr.b) * 0.5);
   // The light inside: it stands at the cube's heart, so it is brightest where the eye looks through the most ice
   // and toward the middle of each face, and the air trapped in the cube carries it.
-  vec3 mid = hp + rd * (tF - t) * 0.5 - vec3(c, sz.y * 0.45 - FREEBOARD);
+  vec3 mid = hp + rd * (tF - t) * 0.5 - vec3(c.xy, sz.y * 0.45 - FREEBOARD);
   float core = exp(-dot(mid, mid) / (sz.x * sz.x * 0.9));
   float thickK = clamp((tF - t) / (sz.x * 2.0), 0.0, 1.0);
   col += vec3(0.3, 0.84, 1.0) * glow * (1.7 * core + 0.3 * thickK + 0.35 * smoothstep(0.55, 0.8, gr.r)) * mix(0.8, 1.1, uNight);
+  // And the light its neighbours hold falls on it: on the face turned to a lit cube, and a little on its top.
+  float nb = isTop
+    ? 0.2 * (cubeGlowAt(id + vec2(1.0, 0.0)) + cubeGlowAt(id - vec2(1.0, 0.0)) + cubeGlowAt(id + vec2(0.0, 1.0)) + cubeGlowAt(id - vec2(0.0, 1.0)))
+    : cubeGlowAt(id + (abs(nl.x) > abs(nl.y) ? vec2(sign(nl.x), 0.0) : vec2(0.0, sign(nl.y)))) * (0.45 + 0.55 * (1.0 - clamp(lp.z / sz.y, 0.0, 1.0)));
+  col += vec3(0.22, 0.74, 0.95) * nb * mix(0.5, 0.8, uNight) * (0.7 + 0.5 * gr.a);
   return col;
 }
 /** The lattice over the finished ground, its mirror image, the thread, and the light on the water. */
@@ -826,8 +890,9 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
   if (max(abs(q.x), abs(q.y)) > 2.0 * LAT_P + 300.0 || textureLod(uBedA, bedUv(pwp.xy), 0.0).r > -2.0) return col;
   // The thread of current: the one place the mirror is broken. Deeper, darker water with the light running on it.
   float s;
-  float d = threadAt(q, s);
-  float band = 1.0 - smoothstep(9.0, 34.0, d);
+  // (It runs close under the row it is about to light: on the far side of each lane, where the eye sees it past the row before.)
+  float d = threadAt(q - vec2(0.0, ${f((LATTICE.pitch - LATTICE.size) * 0.21)}), s);
+  float band = 1.0 - smoothstep(8.0, 26.0, d);
   float lodT = lodFor(tw * uPxAng, 40.0, 256.0);
   float run = textureLod(uGrain, vec2(d / 120.0, (s - uTime * 120.0) / 1500.0), lodT).r;
   float fine = textureLod(uGrain, vec2(d / 40.0 + 0.3, (s - uTime * 150.0) / 520.0), lodT).g;
