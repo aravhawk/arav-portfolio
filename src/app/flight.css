@@ -599,12 +599,13 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   font-size: var(--fs-label);
   pointer-events: auto;
 }
-/* The ending: the old ending's picture, still. Its sky, the far shore in its haze, the mist on the waterline, the dark near water. */
+/* The ending: the ending's picture, still. Its sky (deep blue coming down to gold), the far shore, the mist on the waterline,
+   the shore's image in the still water, the dark near water. */
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-sea .fl-pin {
   display: block;
   min-height: 100svh;
   padding: 0;
-  background: linear-gradient(to bottom, #6b7cb4 0%, #9b95be 15%, #dcc1c2 29%, #e2c8c4 33%, #9a7f95 34.5%, #886b80 37%, #d6b0a2 38%, #9e7472 40%, #906f7a 50%, #31365a 70%, #16203a 100%);
+  background: linear-gradient(to bottom, #4277a8 0%, #7892ae 8%, #b6b4b0 15%, #d7cdb3 22%, #e3d9b5 28%, #b7a781 30%, #6c5b40 33.5%, #7c6947 36.5%, #d4c58f 38%, #8a754d 40%, #b9a984 43%, #ded2af 45%, #7d97b2 48.5%, #295a8f 52%, #183a6f 62%, #122a5a 75%, #0d2048 100%);
 }
 :root[data-theme='dark']:is(html[data-flight='off'], html:not([data-scripted])) .fl-sea .fl-pin {
   background: linear-gradient(to bottom, #716874 0%, #a2877e 15%, #dcba7a 29%, #e6c682 33%, #9a7350 34.5%, #8c6344 37%, #d9a852 38%, #a47239 40%, #946941 50%, #362f32 70%, #171b22 100%);

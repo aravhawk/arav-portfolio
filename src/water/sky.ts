@@ -141,8 +141,8 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
   // The light ending: a low sun on the ranges under a deep blue sky that comes down to warm gold at the horizon
   // (the old ending's blue and gold: rich, with nothing of rose or lavender in it).
   const blue: Key = {
-    zen: [0.007, 0.046, 0.16],
-    mid: [0.026, 0.14, 0.31],
+    zen: [0.005, 0.034, 0.125],
+    mid: [0.018, 0.105, 0.25],
     hor: [0.78, 0.58, 0.25],
     band: [1.85, 1.2, 0.46],
     az: sunAz,

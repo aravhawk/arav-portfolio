@@ -270,7 +270,7 @@ float stars(vec3 d) {
 vec3 skyColor(vec3 d, float clouds) {
   float h = max(d.z, 0.0);
   // (Under the light ending's low sun the gold climbs further before it gives way to the blue: a long even fall, not a band.)
-  vec3 col = mix(S.hor, S.mid, smoothstep(0.0, mix(0.24, mix(0.17, 0.225, gDusk * (1.0 - uNight)), max(uNight, gDusk)), h));
+  vec3 col = mix(S.hor, S.mid, smoothstep(0.0, mix(0.24, mix(0.17, 0.2, gDusk * (1.0 - uNight)), max(uNight, gDusk)), h));
   col = mix(col, S.zen, smoothstep(0.07, 0.62, h));
   float az = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
   // Warmth pools on the sun's side of the horizon; it is not a stripe.
@@ -356,14 +356,14 @@ vec3 withRidges(vec3 col, vec3 d, float soft) {
           + 0.28 * clamp((textureLod(uPano, uv + vec2(0.0, 0.04), lod + 3.0).a - m.a) / 0.3, 0.0, 1.0)
           + 0.2 * clamp((textureLod(uPano, uv + vec2(0.0, 0.08), lod + 3.0).a - m.a) / 0.3, 0.0, 1.0)
           + 0.12 * clamp((textureLod(uPano, uv + vec2(0.0, 0.14), lod + 4.0).a - m.a) / 0.3, 0.0, 1.0);
-        vec3 shade = S.zen * 0.08 + S.mid * 0.02 + S.hor * 0.028;
-        vec3 sunlit = S.mid * 0.06 + S.hor * 0.085 + S.band * 0.03 * exp(-off * 1.6);
+        vec3 shade = S.zen * 0.08 + S.mid * 0.02 + S.hor * 0.02;
+        vec3 sunlit = S.mid * 0.05 + S.hor * 0.06 + S.band * 0.024 * exp(-off * 1.6);
         vec3 low = mix(shade, sunlit, found);
         low += S.band * (0.016 + 0.2 * exp(-off * 2.2)) * crest * crest * (0.3 + 0.7 * m.g * m.g);
         rock = mix(rock, low, gDusk);
         // (They are darker than the sky behind them: only the furthest stand deep in the lit air.)
-        airK = mix(airK, clamp(0.02 + far * 0.3 * S.haze, 0.0, 0.6), gDusk);
-        airR = mix(airR, S.hor * 0.5 + S.band * 0.07 * pow(sunAz, 4.0), gDusk);
+        airK = mix(airK, clamp(0.02 + far * 0.26 * S.haze, 0.0, 0.6), gDusk);
+        airR = mix(airR, S.hor * 0.42 + S.band * 0.06 * pow(sunAz, 4.0), gDusk);
       }
 #endif
       rock = mix(rock, airR, airK);
@@ -2494,7 +2494,8 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
         float eR = gRib.x;
         // The line runs out across the water from under the eye to where the ribbon will stand.
         float run = smoothstep(0.0, 0.62, uRay.x);
-        float headM = mix(0.66, -0.05, run);
+        // (It sets out from the foot of the frame: no part of its run is spent out of sight.)
+        float headM = mix(0.47, -0.05, run);
         float shownM = smoothstep(headM, headM + 0.045, eR) * (1.0 - leeFoot) * (1.0 - leeFoot);
         float tipM = exp(-pow((eR - headM - 0.02) / 0.03, 2.0)) * (1.0 - smoothstep(0.9, 1.0, run));
         // (A mirror in moving water is a little wider the nearer the eye.)
