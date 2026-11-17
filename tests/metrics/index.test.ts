@@ -158,7 +158,11 @@ describe('@/lib/metrics (Next-facing entry)', () => {
     expect(first.npm.allTime).toMatchObject({ value: base.npm.allTime.value + 100, live: true });
 
     online = false;
+    // (A reading is held for the hour: the next one is an hour later.)
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(Date.now() + (entry.METRICS_REVALIDATE_SECONDS + 1) * 1000));
     const second = await entry.getMetrics();
+    vi.useRealTimers();
     expect(second.npm.allTime).toMatchObject({
       value: base.npm.allTime.value + 100,
       snapshotValue: base.npm.allTime.value,
@@ -169,6 +173,32 @@ describe('@/lib/metrics (Next-facing entry)', () => {
     expect(second.contributions.total.value).toBe(first.contributions.total.value);
     expect(second.mergedPrs.total.value).toBe(first.mergedPrs.total.value);
     expect(second.ollama.total.live).toBe(false);
+  });
+
+  it('holds one reading for the hour, so every page rendered in it shows the same figures', async () => {
+    const base = (await load(() => undefined)).entry.getSnapshotMetrics();
+    let bump = 0;
+    const healthy = growingWorld(base);
+    const { entry, calls } = await load((url) => {
+      const reply = healthy(url);
+      // (The sources tick on between two pages' renders.)
+      if (reply && new URL(url).host === 'api.npmjs.org' && url.includes('/point/')) return { body: { downloads: base.npm.lastMonth.value + 1 + bump } };
+      return reply;
+    });
+    const first = await entry.getMetrics();
+    const asked = calls.length;
+    bump = 7;
+    const second = await entry.getMetrics();
+    expect(calls.length).toBe(asked);
+    expect(second.npm.lastMonth.value).toBe(first.npm.lastMonth.value);
+    expect(second.retrievedAt).toBe(first.retrievedAt);
+    // An hour on, the sources are asked again.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(Date.now() + (entry.METRICS_REVALIDATE_SECONDS + 1) * 1000));
+    const third = await entry.getMetrics();
+    vi.useRealTimers();
+    expect(calls.length).toBeGreaterThan(asked);
+    expect(third.npm.lastMonth.value).toBe(first.npm.lastMonth.value + 7);
   });
 
   it('uses GITHUB_TOKEN when it exists, and only for the GitHub API', async () => {

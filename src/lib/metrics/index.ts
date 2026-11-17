@@ -64,7 +64,7 @@ function logOnce(source: string, message: string): void {
   console.warn(`[metrics] ${key} (showing the last known good value)`);
 }
 
-const loadMetrics = cache(async (): Promise<SiteMetrics> => {
+async function readMetrics(): Promise<SiteMetrics> {
   try {
     const now = new Date();
     const previous = lastKnownGood;
@@ -93,8 +93,27 @@ const loadMetrics = cache(async (): Promise<SiteMetrics> => {
     });
   } catch (error) {
     logOnce('all', error instanceof Error ? error.message : String(error));
+    // (A reading that failed outright is not held: the next page asks again in a minute.)
+    if (held) held.at = Date.now() - (REVALIDATE_SECONDS - 60) * 1000;
     return getSnapshotMetrics();
   }
+}
+
+/**
+ * One reading an hour for the whole server process. Each page is rebuilt on
+ * its own schedule, so without this two pages built a few minutes apart
+ * could show a count that had ticked in between (3,202 on the home page,
+ * 3,203 on a project page). Every page rendered by this process within the
+ * hour now shows the same figures and the same "as of" time. (Across
+ * separate server instances the pages can still differ until each is next
+ * rebuilt; each page states the time of its own reading.)
+ */
+let held: { at: number; value: Promise<SiteMetrics> } | null = null;
+
+const loadMetrics = cache((): Promise<SiteMetrics> => {
+  const now = Date.now();
+  if (!held || now - held.at >= REVALIDATE_SECONDS * 1000) held = { at: now, value: readMetrics() };
+  return held.value;
 });
 
 /**
