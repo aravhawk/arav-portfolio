@@ -88,11 +88,16 @@ function linesOnPage() {
     range.selectNodeContents(node);
     for (const r of range.getClientRects()) {
       if (r.width < 1 || r.height < 1 || r.bottom <= 0 || r.top >= innerHeight || r.right <= 0 || r.left >= innerWidth) continue;
+      // A line cut by the top or the foot of the screen is measured whole at the step before or after
+      // (the steps overlap by a fifth of a screen); only a line taller than that overlap is measured in part.
+      const cut = r.top < 0 || r.bottom > innerHeight;
+      if (cut && r.height < innerHeight * 0.2) continue;
+      const top = Math.max(0, r.top);
       out.push({
-        x: r.left,
-        y: r.top,
-        w: r.width,
-        h: r.height,
+        x: Math.max(0, r.left),
+        y: top,
+        w: Math.min(innerWidth, r.right) - Math.max(0, r.left),
+        h: Math.min(innerHeight, r.bottom) - top,
         text: node.nodeValue.trim().slice(0, 40),
         ink: ink.l,
         alpha: ink.a,

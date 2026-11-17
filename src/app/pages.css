@@ -965,6 +965,8 @@
   font-weight: var(--display-wght);
   line-height: 0.9;
   letter-spacing: -0.05em;
+  /* (Room over the numeral that grows with it, so on a very wide screen its box still stands clear of the rule above.) */
+  margin-top: 0.14em;
   margin-bottom: clamp(6px, 1vw, 16px);
 }
 .group .body {
@@ -1693,7 +1695,7 @@
     padding-bottom: clamp(36px, 7svh, 72px);
   }
   .band-view::after {
-    background: linear-gradient(to top, var(--veil) 0%, var(--veil) 46%, transparent 86%);
+    background: linear-gradient(to top, var(--veil) 0%, var(--veil) 46%, transparent 72%);
   }
   .intro,
   .sec-film,

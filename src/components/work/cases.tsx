@@ -46,11 +46,11 @@ function Infiniview({ p }: { p: Project }) {
       <PlateRow media={pic(p, 'infiniview-finding.webp')} caption="A finding on infiniview.dev, with its attack path" priority />
       <Steps p={p} variant="row" />
       <Pair a={pic(p, 'infiniview-dash-findings.webp')} b={pic(p, 'infiniview-dash-review.webp')} caption="The public demo at infiniview.dev/preview. Sample data." />
-      <Sec className="sec-quote" label="In its own words">
-        <Quote text="Forensic findings, not just alerts." source="infiniview.dev" wide />
-      </Sec>
       <PlateRow media={pic(p, 'infiniview-findings.webp')} />
       <Figures label="As published on infiniview.dev" id="p-figs" items={INFINIVIEW_PUBLISHED} />
+      <Sec className="sec-quote" label="In its own words">
+        <Quote text="Real exploits, not guesses" source="infiniview.dev" wide />
+      </Sec>
       <Pair a={pic(p, 'infiniview-pipeline.webp')} b={pic(p, 'infiniview-arsenal.webp')} lean />
     </>
   );
