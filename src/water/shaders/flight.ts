@@ -3393,9 +3393,10 @@ void main() {
     if (aLand > 0.0 && gRock > 0.0) {
       float shelf = (1.0 - smoothstep(16.0, 62.0, sd0 + 14.0 * (textureLod(uGrain, p / 900.0, 0.0).g - 0.5))) * smoothstep(0.0, 0.1, gRock);
       vec3 iceI = mix(vec3(0.5, 0.74, 0.86), vec3(0.2, 0.42, 0.52), uNight) * (0.86 + 0.28 * textureLod(uGrain, p / 300.0, lodFor(foot, 300.0, 256.0)).g);
-      vec3 litI = iceI * mix(S.key * 0.2 * slabShade + S.amb * 0.9, S.amb * 2.6 + uAurora * 0.34 + slabLight * 3.0, uNight);
+      // (Before dawn the shelf is the night's ice too: the curtain's light on it is its cold part, never a green ring round the block.)
+      vec3 litI = iceI * mix(S.key * 0.2 * slabShade + S.amb * 0.9, S.amb * 2.6 + uAurora * vec3(0.45, 0.72, 1.0) * 0.1 + slabLight * 3.0, uNight);
       col = mix(col, litI * aLand, shelf * 0.8);
-      col += (S.amb * 0.45 + uAurora * 0.1) * uNight * (1.0 - shelf) * aLand * smoothstep(0.0, 0.1, gRock);
+      col += (S.amb * 0.45 + uAurora * vec3(0.45, 0.72, 1.0) * 0.05) * uNight * (1.0 - shelf) * aLand * smoothstep(0.0, 0.1, gRock);
     }
     if (aLand < 1.0 && aIce < 0.999) {
       vec2 pw = p + tilt * gFree;
