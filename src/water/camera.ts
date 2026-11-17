@@ -180,31 +180,38 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
   return upright
     ? [
         // Down the row from its tall end, so all four stand in an upright frame.
-        { s: s5 + 1.2, pos: [420, T + 380, 430], aim: [1235, T + 1110, 0], fov: 58 },
-        { s: s6 - 0.6, pos: [440, T + 400, 420], aim: [1240, T + 1115, 0], fov: 58 },
-        { s: s6 + 0.3, pos: [1300, T + 1500, 380], aim: [1300, T + 2300, 0], fov: 58 },
-        // From over the west bank: the dam across the frame, the three channels beyond it, the bank at the foot.
-        { s: s6 + 1.2, pos: [640, T + 1300, 820], aim: [1090, T + 3000, 0], fov: 62 },
-        { s: s7 - 0.6, pos: [646, T + 1330, 810], aim: [1093, T + 3012, 0], fov: 62 },
-        { s: s7 + 0.3, pos: [1300, T + 3300, 380], aim: [1300, T + 4100, 0], fov: 58 },
+        { s: s5 + 1.2, pos: [420, T + 380, 470], aim: [1235, T + 1110, 60], fov: 58 },
+        { s: s6 - 0.6, pos: [440, T + 400, 460], aim: [1240, T + 1115, 58], fov: 58 },
+        // Past the dam's east end, turning to look back at it.
+        { s: s6 + 0.3, pos: [1560, T + 1750, 420], aim: [1300, T + 2550, 20], fov: 58 },
+        { s: s6 + 0.75, pos: [2040, T + 2860, 520], aim: [1320, T + 2760, 20], fov: 60 },
+        // From the east bank below it: the dam across the frame, its three sluices, the channels running out toward the eye; the bank at the foot.
+        { s: s6 + 1.2, pos: [2150, T + 3900, 640], aim: [1340, T + 2780, 0], fov: 62 },
+        { s: s7 - 0.6, pos: [2140, T + 3925, 630], aim: [1343, T + 2790, 0], fov: 62 },
+        // Across the three channels where they meet, turning with the water to look down the river again.
+        { s: s7 - 0.05, pos: [1400, T + 3620, 700], aim: [700, T + 3720, 0], fov: 60 },
         // The lattice from up the west bank: all sixteen above the middle, the bank at the foot.
         { s: s7 + 1.15, pos: [640, T + 3200, 760], aim: [1270, T + 4470, 0], fov: 58 },
         { s: s8 - 0.6, pos: [646, T + 3228, 750], aim: [1272, T + 4480, 0], fov: 58 },
-        { s: s8 + 0.3, pos: [1300, T + 4900, 230], aim: [1300, T + 5700, 70], fov: 60 },
+        { s: s8 + 0.3, pos: [1300, T + 4900, 230], aim: [1300, T + 5700, 90], fov: 60 },
         ...canyonKeys(s8, 66),
       ]
     : [
-        { s: s5 + 1.2, pos: [760, T + 60, 250], aim: [1310, T + 1080, 70], fov: 42 },
-        { s: s6 - 0.6, pos: [772, T + 95, 243], aim: [1316, T + 1090, 68], fov: 42 },
-        { s: s6 + 0.3, pos: [1260, T + 1500, 260], aim: [1300, T + 2300, 0], fov: 46 },
-        // Over the head pond's west bank: the dam below, the three channels fanning away.
-        { s: s6 + 1.2, pos: [740, T + 2020, 500], aim: [1445, T + 3420, 0], fov: 46 },
-        { s: s7 - 0.6, pos: [749, T + 2048, 493], aim: [1448, T + 3434, 0], fov: 46 },
-        { s: s7 + 0.3, pos: [1300, T + 3350, 280], aim: [1300, T + 4100, 0], fov: 46 },
+        { s: s5 + 1.2, pos: [760, T + 60, 250], aim: [1310, T + 1080, 96], fov: 42 },
+        { s: s6 - 0.6, pos: [772, T + 95, 243], aim: [1316, T + 1090, 94], fov: 42 },
+        // Past the dam's east end, turning to look back at it.
+        { s: s6 + 0.3, pos: [1520, T + 1720, 280], aim: [1300, T + 2520, 20], fov: 46 },
+        { s: s6 + 0.75, pos: [1960, T + 2800, 300], aim: [1320, T + 2760, 30], fov: 46 },
+        // From the east bank below it: the dam across the frame, the open sluice's water coming toward the eye, the bank at lower left.
+        { s: s6 + 1.2, pos: [2200, T + 3600, 480], aim: [1590, T + 2860, 0], fov: 42 },
+        { s: s7 - 0.6, pos: [2192, T + 3624, 470], aim: [1592, T + 2868, 0], fov: 42 },
+        // Across the three channels where they meet, turning with the water to look down the river again.
+        { s: s7 - 0.05, pos: [1620, T + 3560, 400], aim: [1120, T + 3840, 0], fov: 45 },
+        { s: s7 + 0.45, pos: [820, T + 3640, 400], aim: [900, T + 4350, 10], fov: 44 },
         // The lattice from over its west bank, corner on: every cube and its mirror image.
         { s: s7 + 1.15, pos: [450, T + 3690, 420], aim: [1200, T + 4500, 20], fov: 42 },
         { s: s8 - 0.6, pos: [462, T + 3718, 412], aim: [1203, T + 4510, 20], fov: 42 },
-        { s: s8 + 0.3, pos: [1300, T + 4960, 170], aim: [1300, T + 5700, 70], fov: 48 },
+        { s: s8 + 0.3, pos: [1300, T + 4960, 170], aim: [1300, T + 5700, 90], fov: 48 },
         ...canyonKeys(s8, 50),
       ];
 }
@@ -333,31 +340,35 @@ function canyonAt(d: number): [number, number] {
 }
 
 /**
- * The flight through the canyon: low on its middle line, looking down it,
- * banking into each bend; held on the straight between them, where the
- * polished face is seen whole.
+ * The flight through the canyon: low on its middle line, looking well down
+ * it (so the water leads away, both walls stand in the frame and the day
+ * shows at the far end), banking into each bend; held on the straight
+ * between them, where the polished face is seen whole.
  */
 function canyonKeys(s8: number, fov: number): Key[] {
-  // (An upright screen keeps its words at the foot: the face is held above the middle.)
+  // (An upright screen keeps its words at the foot: the face is held above the middle, from further back so it is seen whole.)
   const tall = fov > 60;
-  const face: V3 = [FACE.x, FACE.y, FACE.z + FACE.h * 0.5 - (tall ? 44 : 4)];
-  //            scroll, along, height, bank, looks at the face
-  const run: [number, number, number, number, boolean][] = [
-    [0.8, 40, 100, 0, false],
-    [1.05, 300, 86, 0, false],
-    [1.25, 500, 82, 4, false],
-    [1.45, 690, 82, 5, false],
-    [1.7, tall ? 770 : 800, 84, 0, true],
-    [2.2, tall ? 792 : 850, 86, 0, true],
-    [2.65, tall ? 812 : 880, 86, 0, true],
-    [2.9, 1100, 84, -4, false],
-    [3.1, 1290, 84, -5, false],
-    [3.35, 1500, 105, 0, false],
+  const face: V3 = tall ? [FACE.x, FACE.y, FACE.z + FACE.h * 0.5 - 44] : [FACE.x, FACE.y + 105, FACE.z + FACE.h * 0.5 - 6];
+  //            scroll, along, height, bank, looks at the face, how far left of the middle line (the outside of a bend sees furthest down the next reach)
+  const run: [number, number, number, number, boolean, number][] = [
+    [0.8, 40, 112, 0, false, 0],
+    [1.05, 300, 98, 0, false, 20],
+    [1.25, 500, 96, 4, false, 46],
+    [1.45, 700, 94, 5, false, 30],
+    [1.7, tall ? 778 : 950, 92, 0, true, 0],
+    [2.2, tall ? 796 : 972, 94, 0, true, 0],
+    [2.65, tall ? 812 : 990, 94, 0, true, 0],
+    [2.9, 1200, 94, -4, false, -40],
+    [3.1, 1380, 94, -5, false, -24],
+    [3.35, 1580, 112, 0, false, 0],
   ];
-  return run.map(([ds, d, z, roll, toFace]) => {
-    const [x, y] = canyonAt(d);
-    const [ax, ay] = canyonAt(d + 230);
-    return { s: s8 + ds, pos: [x, y, z] as V3, aim: toFace ? face : ([ax, ay, z - 12] as V3), fov, roll };
+  return run.map(([ds, d, z, roll, toFace, left]) => {
+    const [x0, y0] = canyonAt(d);
+    const [x1, y1] = canyonAt(d + 2);
+    const x = x0 - ((y1 - y0) / 2) * left;
+    const y = y0 + ((x1 - x0) / 2) * left;
+    const [ax, ay] = canyonAt(d + 340);
+    return { s: s8 + ds, pos: [x, y, z] as V3, aim: toFace ? face : ([ax, ay, z - 4] as V3), fov, roll };
   });
 }
 

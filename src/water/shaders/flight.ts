@@ -2432,6 +2432,7 @@ void main() {
   }
   if (uSt.x + uSt.y + uSt.z + uSt.w > 0.0) {
     float twS = dir.z < -0.0006 ? (uCamPos.z + FREEBOARD) / -dir.z : -1.0;
+    gSt = smoothstep(0.0, 0.3, uSt);
     if (uSt.x > 0.0) col = columns(col, dir, twS);
     if (uSt.y > 0.0) col = dam(col, dir, twS);
     if (uSt.z > 0.0) col = lattice(col, dir, twS);

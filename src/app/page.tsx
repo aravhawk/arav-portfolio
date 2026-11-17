@@ -222,7 +222,7 @@ export default async function Home() {
           <div className="fl-pin">
             <div className="fl-calls">
               {models.map((x, i) => (
-                <Callout key={x.name} at={[COLS.xs[i], COLS.y, colH[i] - 22]} href={x.url} from={MODELS + 0.9} to={FORK - 0.85} lift={i % 2 ? 40 : 64}>
+                <Callout key={x.name} at={[COLS.xs[i], COLS.y + 26 * Math.sin(i * 2.3), colH[i] - 22]} href={x.url} from={MODELS + 0.9} to={FORK - 0.85} lift={i % 2 ? 40 : 64}>
                   {x.name}
                 </Callout>
               ))}

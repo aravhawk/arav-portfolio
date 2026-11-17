@@ -163,28 +163,38 @@ export const SHARDS: { x: number; y: number; h: number; r: number; turn: number 
   { x: 1527, y: 11090 + DY, h: 520, r: 74, turn: -0.35 },
 ];
 
-/** Station 5, the shallows, and the four columns of ice that stand in them: one to a model, as tall as its pulls. */
-export const COLS = { y: T2 + 1080, xs: [1010, 1230, 1450, 1670], r: 56, hMax: 215, hMin: 14 };
-/** How tall each column stands: linear in pulls, the tallest COLS.hMax, none under COLS.hMin. */
+/**
+ * Station 5, the shallows, and the four columns of ice that stand in them: one to a model.
+ * Every column is the same shape, so the ice in it is in proportion to its pulls: its height
+ * (and its width with it) goes as the cube root. r is the tallest one's radius.
+ */
+export const COLS = { y: T2 + 1080, xs: [1010, 1230, 1450, 1670], r: 52, hMax: 300, hMin: 40 };
+/** How tall each column stands: its volume is linear in pulls, the tallest COLS.hMax high, none under COLS.hMin. */
 export const colHeights = (pulls: number[]) => {
   const max = Math.max(...pulls, 1);
-  return pulls.map((n) => Math.max(COLS.hMin, (COLS.hMax * n) / max));
+  return pulls.map((n) => Math.max(COLS.hMin, COLS.hMax * Math.cbrt(Math.max(n, 0) / max)));
 };
 
-/** Station 6, the dam: a low wall of ice across the river with three sluices, and a channel below each. */
-export const DAM = { y: T2 + 2700, x0: 860, x1: 1740, thick: 60, h: 84, gates: [1040, 1300, 1560], gw: 124 };
+/**
+ * Station 6, the dam: one low wall of ice across the river with three sluices, and a channel below each.
+ * The wall is `thick` at its crest and leans back below (`batter`); its crest runs on over each sluice as a
+ * lintel `lintel` deep, a pair of piers stands at each sluice, and the plate between them lifts by `lift`. The camera looks back at it from downstream, so the sluices
+ * are listed east to west: that is left to right in the picture, the order of the switch's options.
+ */
+export const DAM = { y: T2 + 2700, x0: 790, x1: 1810, thick: 30, batter: 0.5, h: 124, gates: [1560, 1300, 1040], gw: 84, pier: 12, lift: 58, lintel: 28 };
 /** Each sluice's channel, from the dam down to where the three meet again. */
 export const SLUICES: Pt[][] = [
-  [pt(1040, DAM.y - 30), pt(1040, DAM.y + 150), pt(930, DAM.y + 420), pt(1000, DAM.y + 760), pt(1240, DAM.y + 1010)],
-  [pt(1300, DAM.y - 30), pt(1300, DAM.y + 150), pt(1300, DAM.y + 420), pt(1300, DAM.y + 760), pt(1300, DAM.y + 1010)],
   [pt(1560, DAM.y - 30), pt(1560, DAM.y + 150), pt(1670, DAM.y + 420), pt(1600, DAM.y + 760), pt(1360, DAM.y + 1010)],
+  [pt(1300, DAM.y - 30), pt(1300, DAM.y + 150), pt(1300, DAM.y + 420), pt(1300, DAM.y + 760), pt(1300, DAM.y + 1010)],
+  [pt(1040, DAM.y - 30), pt(1040, DAM.y + 150), pt(930, DAM.y + 420), pt(1000, DAM.y + 760), pt(1240, DAM.y + 1010)],
 ];
 
 /** Station 7, the still pool and the four by four lattice of cubes of ice in it. */
 export const LATTICE = { x: 1300, y: T2 + 4520, pitch: 172, size: 98, h: 56 };
 
 /** Station 8, the canyon: the river's middle through a glacier, two tight bends back to back. */
-export const CANYON = { y0: T2 + 5560, y1: T2 + 7160, x0: 780, x1: 2600, h: 240, w: 150, r: 220 };
+// (Its walls lean back as they rise, by `lean` units to each unit of height, so the sky and the day reach the water.)
+export const CANYON = { y0: T2 + 5560, y1: T2 + 7160, x0: 780, x1: 2600, h: 300, w: 230, r: 220, lean: 0.28 };
 const arc = (cx: number, cy: number, r: number, a0: number, a1: number): Pt[] =>
   Array.from({ length: 13 }, (_, i) => {
     const a = a0 + ((a1 - a0) * i) / 12;
@@ -204,7 +214,9 @@ export const CANYON_LINE: Pt[] = [
   pt(2020, T2 + 7150),
 ];
 /** The polished face in the outer wall of the second bend, where the app is seen: its middle, width, height; it looks toward -x. */
-export const FACE = { x: 2020 + CANYON.w / 2 - 4, y: T2 + 6300, w: 300, h: 187.5, z: 22 };
+/** The hall the second bend opens into: square-cut, so one flat wall faces the water that comes at it. x0, y0, x1, y1 of its open air. */
+export const HALL = { x0: 1800, y0: T2 + 6110, x1: 2020 + CANYON.w / 2 - 16, y1: T2 + 6510 };
+export const FACE = { x: 2020 + CANYON.w / 2 - 15, y: T2 + 6275, w: 320, h: 200, z: 14 };
 
 export interface NameLayout {
   /** the words, one per line */
@@ -332,7 +344,7 @@ function paintLater(b: BedPainter, gate: number) {
   b.channel([pt(1300, T2 + 1400), pt(1240, T2 + 1850), pt(1300, T2 + 2300), pt(1300, DAM.y - 200)], { width: [330, 280, 360, 560], speed: 0.45 });
   b.pool({ x: DAM.x0 + 30, y: DAM.y - 250, w: DAM.x1 - DAM.x0 - 60, h: 260 }, 120);
   SLUICES.forEach((line, i) => {
-    b.channel(line, { width: [DAM.gw, DAM.gw, 130, 130, 150], speed: i === gate ? 1 : 0.07 });
+    b.channel(line, { width: [DAM.gw, DAM.gw + 16, 130, 130, 150], speed: i === gate ? 1 : 0.07 });
   });
   for (const line of SLUICES) b.agitate(pt(line[0].x, DAM.y + DAM.thick + 40), 110, 0.0);
   b.agitate(pt(SLUICES[gate][0].x, DAM.y + DAM.thick + 50), 130, 0.9);
@@ -347,7 +359,7 @@ function paintLater(b: BedPainter, gate: number) {
   b.channel([pt(1300, LATTICE.y + half - 40), pt(1300, T2 + 5200), pt(1300, T2 + 5360)], { width: [260, 200, CANYON.w] });
   b.channel(CANYON_LINE, { width: CANYON.w, straight: true });
   // (The outside of the second bend is cut square: a flat wall faces the water that comes at it.)
-  b.pool({ x: 1800, y: T2 + 6220 - CANYON.w / 2, w: 220 + CANYON.w / 2, h: 300 }, 16);
+  b.pool({ x: HALL.x0, y: HALL.y0 - 12, w: HALL.x1 - HALL.x0 + 20, h: HALL.y1 - HALL.y0 + 24 }, 16);
   b.channel([pt(2020, T2 + 7100), pt(1990, T2 + 7330), pt(1800, T2 + 7560), DELTA.apex], { width: [CANYON.w, 220, 270, 300], speed: 0.7 });
   // Fast water on the outside of each bend.
   for (const c of BENDS) {
