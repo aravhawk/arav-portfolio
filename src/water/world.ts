@@ -343,11 +343,13 @@ function paintLater(b: BedPainter, gate: number) {
   // On to the head pond behind the dam.
   b.channel([pt(1300, T2 + 1400), pt(1240, T2 + 1850), pt(1300, T2 + 2300), pt(1300, DAM.y - 200)], { width: [330, 280, 360, 560], speed: 0.45 });
   b.pool({ x: DAM.x0 + 30, y: DAM.y - 250, w: DAM.x1 - DAM.x0 - 60, h: 260 }, 120);
-  SLUICES.forEach((line, i) => {
-    b.channel(line, { width: [DAM.gw, DAM.gw + 16, 130, 130, 150], speed: i === gate ? 1 : 0.07 });
-  });
-  for (const line of SLUICES) b.agitate(pt(line[0].x, DAM.y + DAM.thick + 40), 110, 0.0);
-  b.agitate(pt(SLUICES[gate][0].x, DAM.y + DAM.thick + 50), 130, 0.9);
+  // (All three channels are carved to run: which one does is the picture's to say, sluice by sluice, so a change of
+  // the switch needs no new bed and costs no frame. A shut channel's bare bed is drawn over its water.)
+  void gate;
+  for (const line of SLUICES) {
+    b.channel(line, { width: [DAM.gw, DAM.gw + 16, 130, 130, 150], speed: 1 });
+    b.agitate(pt(line[0].x, DAM.y + DAM.thick + DAM.h * DAM.batter + 30), 120, 0.6);
+  }
   // The three meet and run on into the still pool.
   b.channel([pt(1300, DAM.y + 960), pt(1300, DAM.y + 1150), pt(1300, T2 + 4060)], { width: [300, 260, 300] });
   const half = LATTICE.pitch * 2 + 110;
