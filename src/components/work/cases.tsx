@@ -228,9 +228,9 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
         </div>
         <ol className="cols" style={{ '--n': m.ollama.models.length } as React.CSSProperties}>
           {m.ollama.models.map((x) => (
-            <li key={x.name} className="col">
+            <li key={x.name} className="col" style={{ '--h': x.pulls / max } as React.CSSProperties}>
               <span className="col-n">{formatCount(x.pulls)}</span>
-              <span className="col-bar" style={{ '--h': x.pulls / max } as React.CSSProperties} aria-hidden="true" />
+              <span className="col-bar" aria-hidden="true" />
               <a className="col-name mono" href={x.url} target="_blank" rel="noopener noreferrer" aria-label={`${x.name}: ${formatCount(x.pulls)} pulls`}>
                 {x.name}
               </a>

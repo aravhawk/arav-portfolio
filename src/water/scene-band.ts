@@ -36,6 +36,15 @@ const STOP: Partial<Record<SceneId, number>> = {
 };
 
 /**
+ * On the home page a station's words are a few short lines at the foot of
+ * a tall frame. A page's title block is taller and its band is lower, so
+ * where the subject stands low in the frame the camera looks down a little
+ * more and the subject rises clear of the words: this much of the frame's
+ * height, on a wide band only (an upright one keeps its bank at the foot).
+ */
+const LIFT: Partial<Record<SceneId, number>> = { ollama: 0.1, tensorpow: 0.05 };
+
+/**
  * The two frames that are not stations. Each is a pair of poses the camera
  * drifts between, for a wide band and for an upright one.
  *  - lake: the frozen lake the home page begins on, whole (the name in
@@ -187,6 +196,14 @@ function start(first: BandOpts): Promise<Shared | null> {
     // The sea's variant of the pass: the delta needs it, the rest never ask.
     const warm = window.setTimeout(() => engine.warmSea(), 300);
 
+    // A lost context draws nothing: the still comes back in its place.
+    canvas.addEventListener('webglcontextlost', () => {
+      if (active) {
+        active.drawn = false;
+        active.host.removeAttribute('data-band');
+        active.visible = false;
+      }
+    });
     const onTheme = () => engine.setTheme(themeNow());
     const onStill = () => engine.setStill(mqStill.matches);
     window.addEventListener('themechange', onTheme);
@@ -254,6 +271,12 @@ function start(first: BandOpts): Promise<Shared | null> {
         s0 = stop;
         pose = poseAt(a.keys, stop + Math.min(0.5, next - stop) * swing);
         pose.roll = 0;
+        const lift = a.aspect >= 0.9 ? (LIFT[a.opts.scene] ?? 0) : 0;
+        if (lift) {
+          // Raising the picture by a share of the frame is a turn of the sight line downward.
+          const far = Math.hypot(pose.aim[0] - pose.pos[0], pose.aim[1] - pose.pos[1], pose.aim[2] - pose.pos[2]);
+          pose.aim = [pose.aim[0], pose.aim[1], pose.aim[2] - far * 2 * lift * Math.tan((pose.fov * Math.PI) / 360)];
+        }
       }
       cam = basisOf(pose);
       const b = a.boxOn ? a.box : box;
@@ -295,12 +318,24 @@ function start(first: BandOpts): Promise<Shared | null> {
   return starting;
 }
 
-/** Let the engine go now (the home page is opening and runs its own). */
-export function dropBand() {
+/** What this module put on the window for the checks and the capture tools, so only that is taken away again. */
+let ownWater: unknown = null;
+
+function release() {
   window.clearTimeout(killTimer);
   if (active) return;
   shared?.dispose();
   shared = null;
+  pictures.clear();
+  // (The home page's flight puts its own handle here: that one is not ours to remove.)
+  if (ownWater && window.__water === ownWater) delete window.__water;
+  ownWater = null;
+  delete window.__band;
+}
+
+/** Let the engine go now (the home page is opening and runs its own). */
+export function dropBand() {
+  release();
 }
 
 const pictures = new Map<string, string>();
@@ -457,7 +492,8 @@ export async function attachBand(host: HTMLElement, opts: BandOpts, isCancelled:
     if (active === a) active = null;
   };
   active = a;
-  window.__water = { engine, rebuild: measure, destroy: () => {} } as unknown as Window['__water'];
+  ownWater = { engine, rebuild: measure, destroy: () => {} };
+  window.__water = ownWater as Window['__water'];
   window.__band = {
     engine,
     state: () => ({ scene: a.opts.scene, aspect: a.aspect, box: a.box, drawn: a.drawn }),
@@ -479,13 +515,7 @@ export async function attachBand(host: HTMLElement, opts: BandOpts, isCancelled:
 
 function scheduleKill() {
   window.clearTimeout(killTimer);
-  killTimer = window.setTimeout(() => {
-    if (active) return;
-    shared?.dispose();
-    shared = null;
-    delete window.__water;
-    delete window.__band;
-  }, 4000);
+  killTimer = window.setTimeout(release, 4000);
 }
 
 declare global {

@@ -312,8 +312,9 @@
 }
 .sec-film {
   display: grid;
-  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
-  gap: clamp(28px, 4.4vw, 80px);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  column-gap: clamp(32px, 7vw, 140px);
+  row-gap: var(--s-7);
   align-items: center;
 }
 .film {
@@ -812,7 +813,7 @@
 .col-n {
   position: absolute;
   left: 0;
-  bottom: calc(var(--h) * (100% - 3.4rem - 44px) + 44px + 10px);
+  bottom: calc(max(8px, var(--h) * (100% - 3.4rem - 44px)) + 44px + 16px);
   font-family: var(--font-display);
   font-size: clamp(1.25rem, 1.6vw + 0.7rem, 2.6rem);
   font-weight: 700;
@@ -1702,6 +1703,12 @@
   .figs {
     --cols: 2;
   }
+  /* A live number's note opens toward the page, not off its edge. */
+  .figs .fig:nth-child(even) .metric-tip {
+    left: auto;
+    right: 0;
+    transform-origin: 100% 100%;
+  }
   .sec-steps-row .steps,
   .gates,
   .flow,
@@ -1821,6 +1828,43 @@
   }
   .chips {
     flex-wrap: wrap;
+  }
+}
+
+/* On a phone the challenge, its three backends and the answer stand one under the other. */
+@media (max-width: 620px) {
+  .dia-tensor {
+    --gap: 26px;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--gap);
+  }
+  .dia-fan {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .dia-fan::before,
+  .dia-fan::after,
+  .dia-fan .dia-node::before,
+  .dia-fan .dia-node::after {
+    display: none;
+  }
+  .dia-fan .dia-node {
+    padding: 0 4px;
+    line-height: 1.15;
+  }
+  .dia-node-in::after,
+  .dia-node-out::before {
+    top: auto;
+    left: 50%;
+    right: auto;
+    width: 1.5px;
+    height: var(--gap);
+  }
+  .dia-node-in::after {
+    top: 100%;
+  }
+  .dia-node-out::before {
+    bottom: 100%;
   }
 }
 
