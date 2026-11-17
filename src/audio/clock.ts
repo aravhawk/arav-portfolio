@@ -98,6 +98,9 @@ export class ClockMap {
   }
 }
 
+/** How close after a frame's beginning a moment still counts as shown by that frame, seconds (see `frameFor`). */
+export const SLACK = 0.0005;
+
 /** How far ahead, on the picture's clock, its moments are looked for and set, seconds. */
 export const LOOK = 0.25;
 
@@ -126,8 +129,9 @@ export const startAt = (want: number, head: number, guard = 0.004) => Math.max(w
  */
 export function frameFor(tau: number, clock: number, clockAt: number, frameMs: number, frameAt: number) {
   const exact = clockAt + (tau - clock) * 1000;
-  // (A moment that falls on a frame's own beginning, as the gates' do, is shown by that frame: hence the hair of
-  // slack, a few hundredths of a millisecond, for the arithmetic that brought it there.)
-  const n = Math.ceil((exact - frameAt) / frameMs - 0.002);
+  // (A moment that falls on a frame's own beginning, as the gates' do, is shown by that frame; and the page's
+  // clock is only told to a tenth of a millisecond. So a moment up to half a millisecond after a frame begins
+  // counts as that frame's.)
+  const n = Math.ceil((exact - SLACK * 1000 - frameAt) / frameMs);
   return frameAt + (n + 0.5) * frameMs;
 }

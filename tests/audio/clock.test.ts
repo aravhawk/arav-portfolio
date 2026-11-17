@@ -89,7 +89,7 @@ describe('a moment of the picture’s clock is set for the frame that shows it',
       for (let n = 0; n < 200; n++) {
         const tau = 10 + n * 0.01337;
         // Frames at 0, frame, 2 frame...; the clock reads 0 at the first.
-        const shows = Math.ceil((tau * 1000) / frame - 0.002) * frame;
+        const shows = Math.ceil((tau * 1000 - 0.5) / frame) * frame;
         // Set from a frame a quarter of a second before, when the clock as last drawn was the frame before that one's.
         const from = Math.floor((tau * 1000 - 250) / frame);
         const heard = map.toPerf(map.heardAt(frameFor(tau, ((from - 1) * frame) / 1000, (from - 1) * frame, frame, from * frame)));

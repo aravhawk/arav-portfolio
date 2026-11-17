@@ -24,7 +24,7 @@
 import { groundUnder } from '@/water/camera';
 import { GATE, LAP, PULSE } from '@/water/moments';
 import { COLS, LAKE, LATTICE, SHARDS, SLUICES } from '@/water/world';
-import { ClockMap, LOOK, frameFor, startAt } from './clock';
+import { ClockMap, LOOK, SLACK, frameFor, startAt } from './clock';
 import { type Graph, bell, bloom, clink, drip, drop, gateLift, gateSet, groan, hush, iceCrack, pluck, shard, tick, whoosh } from './graph';
 import { type Mix, arrivalOf, arrivalTime, crackVoice, dripVoice, dropVoice, latticeTime, latticeVoice, mixOf, place, shardVoice, surgeRing, uiVoice } from './mapping';
 import { type Scene, heard, sat, seenAt, smooth, wetUnder } from './scene';
@@ -95,10 +95,14 @@ export class Sound {
   private gatesSeen = false;
   private arrival = 0;
   private pend: Ahead[] = [];
+  private drips: { tau: number; col: number; h: number }[] = [];
   private keys = new Map<string, number>();
   private pc = { clock: 0, at: 0, ok: false };
   private frameMs = 1000 / 60;
   private slowFrames = 0;
+  private roughUntil = 0;
+  private hitches: number[] = [];
+  private shows = 0;
   private lastFrameAt = 0;
   private times: Times = { now: 0, frameAt: 0, map: ClockMap.fixed(0) };
   /** How often the picture's clock was found disturbed and what was set ahead taken back. */
@@ -150,7 +154,8 @@ export class Sound {
     const T = startAt(map.heardAt(frameFor(tau, sc.clock, sc.clockAt, this.frameMs, this.times.frameAt)), now);
     const made = make(T);
     this.keys.set(key, tau);
-    this.pend.push({ key, tau, T, heads: made ? (Array.isArray(made) ? made : [made]) : [], ev: this.note(type, NaN, T, tau), ok });
+    // (Set in the very frame that shows it: that frame is its cause.)
+    this.pend.push({ key, tau, T, heads: made ? (Array.isArray(made) ? made : [made]) : [], ev: this.note(type, this.shows >= tau - SLACK ? this.times.frameAt : NaN, T, tau), ok });
   }
 
   /** One frame: steer everything to where the scene says. Returns what it steered to. */
@@ -217,6 +222,12 @@ export class Sound {
     if (pc.ok && sc.clockAt !== pc.at && Math.abs(sc.clock - pc.clock - (sc.clockAt - pc.at) / 1000) > 0.0006) {
       this.disturbed++;
       this.cancelAhead(t);
+      // Once is a hitch: the clock is taken up again from where it now is. Three times in a second is a picture that
+      // cannot keep its beat (a slow device, a busy one): for a while nothing is set further ahead than the frame
+      // being made, and the picture is followed frame by frame instead of being guessed at.
+      this.hitches = this.hitches.filter((at) => times.frameAt - at < 1000);
+      this.hitches.push(times.frameAt);
+      if (this.hitches.length >= 3) this.roughUntil = times.frameAt + 1500;
     }
     pc.clock = sc.clock;
     pc.at = sc.clockAt;
@@ -224,8 +235,9 @@ export class Sound {
 
     // The clock this frame will draw, and the frames that show what was set.
     const shows = sc.clock + Math.min(0.05, Math.max(0, (times.frameAt - sc.clockAt) / 1000));
+    this.shows = shows;
     for (const p of this.pend) {
-      if (p.ev && Number.isNaN(p.ev.cause) && shows >= p.tau) p.ev.cause = times.frameAt;
+      if (p.ev && Number.isNaN(p.ev.cause) && shows >= p.tau - SLACK) p.ev.cause = times.frameAt;
       if (p.ok && p.T > t + 0.012 && !p.ok(sc)) {
         for (const h of p.heads) hush(h, t);
         if (p.ev) p.ev.type += ':taken-back';
@@ -252,7 +264,10 @@ export class Sound {
     this.gatesSeen = true;
 
     if (!sc.home || sc.calm || !sc.cam) return;
-    const until = sc.clock + LOOK + Math.max(0, times.map.lag) + this.frameMs / 1000;
+    const rough = times.frameAt < this.roughUntil;
+    // (Rough: only as far ahead as the device's latency and a couple of frames, so a sound can still be heard on its frame.)
+    const lag = Math.max(0, times.map.lag);
+    const until = rough ? Math.max(shows, sc.clock + lag + 0.012 + (2 * this.frameMs) / 1000) : sc.clock + LOOK + lag + this.frameMs / 1000;
     const from = sc.clock;
 
     // The tarn's two shards, in the picture's own time. Round by round they share the theme: the first calls as the
@@ -365,6 +380,28 @@ export class Sound {
           }
         }
       }
+    }
+
+    // The columns' drips, each chosen by the picture ahead of its time.
+    // (The picture drips whenever the columns are near; a drip is heard when its column is in frame.)
+    this.drips = this.drips.filter((d) => d.tau > from - 0.2);
+    for (const d of this.drips) {
+      if (d.tau <= from || d.tau > until) continue;
+      const see = seenAt(sc.cam, sc.aspect, COLS.xs[d.col], COLS.y, 0);
+      const lvl = sc.cols * see.k;
+      if (lvl <= 0.1) continue;
+      const v = dripVoice(d.h, see.pan);
+      this.ahead(
+        'drip',
+        `dr${d.tau.toFixed(4)}`,
+        d.tau,
+        sc,
+        (T) => {
+          g.water.burst(T + 0.012, 2, 1500, 4200, 0.3 * lvl, v.pan, 0.03, 0.03, 0.4);
+          return drip(g, T, v.midi, v.gain * lvl, v.pan, v.send);
+        },
+        (s) => s.cols > 0.5,
+      );
     }
 
     // The arrival: the theme whole, harmonised, each chord as the line of light passes its place.
@@ -533,27 +570,10 @@ export class Sound {
         this.note('switch', cause, t);
         return;
       }
-      case 'drip': {
-        // The picture says which column will drip and when, ahead of the drip: it is set for the frame that shows it.
-        // (The picture drips whenever the columns are near; a drip is heard when its column is in frame.)
-        const col = Math.min(3, Math.max(0, Math.round(a)));
-        const see = sc ? seenAt(sc.cam, sc.aspect, COLS.xs[col], COLS.y, 0) : null;
-        if (!sc || !see || see.k * sc.cols <= 0.1 || sc.calm) return;
-        const v = dripVoice(b, see.pan);
-        const lvl = sc.cols * see.k;
-        this.ahead(
-          'drip',
-          `dr${c.toFixed(4)}`,
-          c,
-          sc,
-          (T) => {
-            g.water.burst(T + 0.012, 2, 1500, 4200, 0.3 * lvl, v.pan, 0.03, 0.03, 0.4);
-            return drip(g, T, v.midi, v.gain * lvl, v.pan, v.send);
-          },
-          (s) => s.cols > 0.5,
-        );
+      case 'drip':
+        // The picture says which column will drip and when, ahead of the drip: it is kept, and set with the rest of the clockwork.
+        if (this.drips.length < 16) this.drips.push({ tau: c, col: Math.min(3, Math.max(0, Math.round(a))), h: b });
         return;
-      }
       case 'dawn': {
         // The sun's edge clears the ranges: the piece resolves on the event itself.
         this.dawnAt = t;

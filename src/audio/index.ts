@@ -34,12 +34,14 @@ declare global {
  * (which may be a device buffer stale), so this need only cover the hop to
  * the audio thread. That hop is measured, twice a second: the water's
  * worklet is sent a word and sends it back with the audio thread's own time
- * (on a quiet machine about 3 ms; on a loaded one 10 or more). The lead is
- * the longest hop of the last few seconds and a little over, kept between
- * these two.
+ * (on a quiet machine a millisecond or two; on a loaded one ten or more).
+ * The lead is the longest hop of the last few seconds and what new nodes
+ * need on top of it, kept between these two.
  */
-const LEAD_MIN = 0.004;
-const LEAD_MAX = 0.016;
+const LEAD_MIN = 0.009;
+const LEAD_MAX = 0.018;
+/** What it takes, over and above a word's hop, for new nodes to be taken up by the audio thread (measured: with a lead of the hop and 3 ms, sounds began 4 to 5 ms after they were asked for). */
+const TAKE_UP = 0.006;
 
 /** What counts as a control: its hover and its press are heard. */
 const CONTROL = 'a[href], button, [role="radio"], [role="button"], summary, select, input';
@@ -58,6 +60,9 @@ export interface Cost {
   phone: boolean;
   /** asked for by name (the checks do) */
   forced: string | null;
+  /** once running: what the sound's turn in a frame takes, ms, on average and at worst */
+  turn?: number;
+  turnMax?: number;
 }
 
 /** Measure what sound will cost here, before any of it is built. Two short renders; neither holds a frame. */
@@ -143,7 +148,7 @@ async function build(ctx: AudioContext): Promise<Running | null> {
 
   // The two clocks, read together: every frame and at every moment.
   const stamp = typeof ctx.getOutputTimestamp === 'function';
-  let lead = 0.008;
+  let lead = 0.01;
   const read = () => {
     const perf = performance.now();
     map.feed({ perf, audio: ctx.currentTime, out: stamp ? ctx.getOutputTimestamp() : null, latency: (ctx.baseLatency || 0) + (ctx.outputLatency || 0) });
@@ -160,7 +165,7 @@ async function build(ctx: AudioContext): Promise<Running | null> {
       if (!Number.isFinite(got)) return;
       hops.push(Math.max(0, got - sent));
       if (hops.length > 10) hops.shift();
-      lead = Math.min(LEAD_MAX, Math.max(LEAD_MIN, Math.max(...hops) + 0.003));
+      lead = Math.min(LEAD_MAX, Math.max(LEAD_MIN, Math.max(...hops) + TAKE_UP));
     });
   };
 
@@ -187,8 +192,13 @@ async function build(ctx: AudioContext): Promise<Running | null> {
       asked = now;
       hop();
     }
+    const t0 = performance.now();
     const at = read();
     sound.frame(reader.read(signals, now, env), { now: at, frameAt: now, map });
+    // (What the sound's own turn costs the frame, for the checks.)
+    const took = performance.now() - t0;
+    cost.turn = cost.turn ? cost.turn + (took - cost.turn) * 0.02 : took;
+    cost.turnMax = Math.max(cost.turnMax ?? 0, took);
   };
   onFlightFrame(turn);
   onFrame(turn, 30);

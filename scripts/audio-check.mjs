@@ -870,25 +870,26 @@ async function sync(base) {
     for (let i = lo; i > 0 && stamps[i] > since - 1; i--) worst = Math.max(worst, stamps[i] - stamps[i - 1]);
     return worst;
   };
-  const rowsA = ['| moment | count | set ahead by, ms (min / median / max) | while frames kept time: heard after its frame begins, ms (min / median / max) | of those, inside the frame | where a frame came late between its being set and shown: count, and the sound ahead of its frame by (ms, most) | start leaves the graph, ms before its frame begins (median) | start asked for to onset found in the stream, ms (median / max) |', '| --- | --- | --- | --- | --- | --- | --- | --- |'];
+  const rowsA = ['| moment | count | set ahead by, ms (median) | heard after its frame begins, ms (min / median / max) | heard inside its frame | its frame came late and the sound kept to the moment: count, sound ahead by (ms, most), frame late by (ms, most) | heard after its frame: count, by (ms, most) | start leaves the graph, ms before its frame begins (median) | start asked for to onset found in the stream, ms (median / max) |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |'];
   const summary = {};
   for (const type of AHEAD) {
     const ev = by[type];
     if (!ev) {
-      rowsA.push(`| ${type} | 0 | | | not caused | | | |`);
+      rowsA.push(`| ${type} | 0 | | | not caused | | | | |`);
       continue;
     }
     const rows = ev.map((e) => ({ heard: (e.audio - offsets(e.made).ear) * 1000 - e.cause, left: (e.audio - offsets(e.made).head) * 1000 - e.cause, gap: gapBefore(e.cause, e.made) }));
-    const steady = rows.filter((r) => r.gap <= frameMs * 1.5).map((r) => r.heard);
-    const lateRows = rows.filter((r) => r.gap > frameMs * 1.5);
+    const inside = rows.filter((r) => r.heard >= -0.5 && r.heard <= frameMs + 0.5);
+    // Ahead of its frame: the frame that shows the moment began later than the moment's own beat. That is a frame
+    // the picture missed (one between the setting and the showing ran long); the sound was already on its way.
+    const ahead = rows.filter((r) => r.heard < -0.5);
+    const behind = rows.filter((r) => r.heard > frameMs + 0.5);
     const lead = stat(ev.map((e) => e.cause - e.made));
     const on = stat(ev.map((e) => (onsetOf(e.audio) - e.audio) * 1000));
-    const outside = steady.filter((h) => h < -0.5 || h > frameMs + 0.5).length;
-    // (A late frame: the sound may be ahead of it by as much as the frame was late, and no more.)
-    const wrong = lateRows.filter((r) => r.heard > frameMs + 0.5 || r.heard < -(r.gap - frameMs) - 0.5 * frameMs - 0.5).length;
-    if (outside || wrong) bad++;
-    summary[type] = { n: ev.length, steady: steady.length, outside, late: lateRows.length, wrong, min: Math.min(...rows.map((r) => r.heard)), max: Math.max(...rows.map((r) => r.heard)) };
-    rowsA.push(`| ${type} | ${ev.length} | ${three(lead)} | ${three(stat(steady))} | ${outside ? `${steady.length - outside} of ${steady.length}` : `all ${steady.length}`} | ${lateRows.length ? `${lateRows.length}, ${f(-Math.min(...lateRows.map((r) => r.heard)))} (frame late by up to ${f(Math.max(...lateRows.map((r) => r.gap)) - frameMs)})` : 'none'} | ${f(-stat(rows.map((r) => r.left)).med)} | ${f(on.med)} / ${f(on.max)} (${on.n} found) |`);
+    const unexplained = ahead.filter((r) => r.gap <= frameMs * 1.5).length;
+    if (behind.length || unexplained) bad++;
+    summary[type] = { n: ev.length, inside: inside.length, ahead: ahead.length, behind: behind.length, unexplained, min: Math.min(...rows.map((r) => r.heard)), max: Math.max(...rows.map((r) => r.heard)) };
+    rowsA.push(`| ${type} | ${ev.length} | ${f(lead.med)} | ${three(stat(rows.map((r) => r.heard)))} | ${inside.length === ev.length ? `all ${ev.length}` : `${inside.length} of ${ev.length}`} | ${ahead.length ? `${ahead.length}, ${f(-Math.min(...ahead.map((r) => r.heard)))}, ${f(Math.max(...ahead.map((r) => r.gap)) - frameMs)}${unexplained ? ` (${unexplained} with no late frame found)` : ''}` : 'none'} | ${behind.length ? `${behind.length}, ${f(Math.max(...behind.map((r) => r.heard)) - frameMs)}` : 'none'} | ${f(-stat(rows.map((r) => r.left)).med)} | ${['ring', 'surge'].includes(type) ? 'water only: not on the bus listened to' : `${f(on.med)} / ${f(on.max)} (${on.n} found)`} |`);
   }
   const rowsB = ['| moment | count | cause to request, ms (min / median / max) | cause to start on the audio clock, ms (min / median / max) | start asked for to onset found in the stream, ms (median / max) | starts within one frame of its cause |', '| --- | --- | --- | --- | --- | --- |'];
   for (const type of AT_ONCE) {

@@ -174,6 +174,8 @@ export async function renderScene(spec: SceneSpec, sampleRate = 48000): Promise<
     const mix = sound.frame(scene, { now: t, frameAt: now, map });
     if (home && sig.cam) {
       // The flight's frame, second half: the picture's own clockwork, in the order the flight runs it.
+      // (A scene that begins past the lake begins with its ice long gone: that is not a moment.)
+      if (i === 0) melted = melt >= 1;
       if (melt >= 1 && !melted) {
         melted = true;
         sound.fire('melt', 1, 0, 0, t, now);
