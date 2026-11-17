@@ -437,7 +437,7 @@ export class FlightEngine extends WaterEngine {
     const shade = prog === this.p.flight || prog === this.seaProg;
     const old = ice.a[0] + 3;
     const hole = -30 + 78 * smooth(0.1, 0.47, m);
-    const pond = 20 + 42 * smooth(0.04, 0.45, m);
+    const pond = 32 + 34 * smooth(0.04, 0.45, m);
     const k = smooth(0.5, 0.6, m);
     gl.uniform4f(prog.u.uIceA, (shade ? hole : pond) * (1 - k) + old * k, ice.a[1], ice.a[2], ice.a[3]);
     gl.uniform4f(prog.u.uIceC, ice.c[0], ice.c[1], smooth(0.36, 0.57, m), ice.c[3]);
