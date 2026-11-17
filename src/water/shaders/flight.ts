@@ -148,7 +148,6 @@ float walledAt(float y) { return smoothstep(${STEP.y0.toFixed(1)}, ${STEP.y1.toF
 
 const float PANO_AZ = ${PANO.az.toFixed(4)};
 const float PANO_EL = ${PANO.el.toFixed(4)};
-const float PANO_W = ${PANO.w}.0;
 // What the aurora lends to things under it: zero by day.
 vec3 uAurora = vec3(0.0);
 // The governor's two steps, each 0..1 as it fades in.
@@ -329,19 +328,20 @@ vec3 withRidges(vec3 col, vec3 d, float soft) {
   if (el < PANO_EL) {
     float az = atan(d.x, d.y);
     vec2 uv = vec2(az / (2.0 * PANO_AZ) + 0.5, max(el, 0.0) / PANO_EL);
-    float lod = log2(max(uPxAng * PANO_W / (2.0 * PANO_AZ), 1.0)) + soft;
+    float lod = log2(max(uPxAng * float(textureSize(uPano, 0).x) / (2.0 * PANO_AZ), 1.0)) + soft;
     vec4 m = textureLod(uPano, uv, lod);
     float cover = 1.0 - smoothstep(0.86, 0.97, m.a);
     if (cover > 0.0) {
       // (By day snow holds only on the easier slopes: the steep faces are bare rock, which is what gives a range its drawing.)
-      float snowK = m.b * mix(smoothstep(0.86, 0.955, m.g), 1.0, uNight);
+      float snowK = m.b * mix(smoothstep(0.86, 0.955, m.g), 1.0, 0.5 * uNight);
       vec3 alb = mix(mix(vec3(0.085, 0.09, 0.105), vec3(0.05, 0.055, 0.07), uNight), mix(vec3(0.92, 0.93, 0.95), vec3(0.5, 0.56, 0.66), uNight), snowK);
       float sunAz = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
       // (What the sun does not reach is lit by the sky alone: blue, and deep in the folds.)
       // (The sun is low and behind them: level snow is only grazed by it, and it is the faces turned to it that are bright.)
       vec3 day = S.key * 0.95 * m.r * smoothstep(0.015, 0.21, m.r) + S.amb * vec3(0.78, 0.93, 1.14) * (0.02 + 0.36 * m.g * m.g);
       // Before dawn: the sky's own light, and the first warmth on what faces it.
-      vec3 night = S.amb * (0.5 + 1.6 * m.g) + S.band * 0.035 * pow(sunAz, 3.0) * m.g + uAurora * 0.02 * m.g;
+      // (And the faces the coming light will find first already hold a little of it: a range has its drawing before dawn too.)
+      vec3 night = S.amb * (0.5 + 1.6 * m.g) + S.band * 0.035 * pow(sunAz, 3.0) * m.g + uAurora * 0.02 * m.g + S.band * 0.05 * m.r * (0.35 + 0.65 * sunAz);
       vec3 rock = alb * mix(day, night, uNight);
       float far = clamp(m.a / 0.84, 0.0, 1.0);
       float airK = 1.0 - exp(-(mix(0.03, 0.1, uNight) + far * mix(0.95, 1.9, uNight)) * S.haze);

@@ -120,7 +120,8 @@ void main() {
 /** Where the morning sun stands: bearing from +y toward +x, and height, radians. */
 export const SUN = { az: -0.52, el: 0.088 };
 /** What the panorama of the ranges covers: bearings either side of +y, and elevations from the horizon up. */
-export const PANO = { az: 1.75, el: 0.11, w: 4096, h: 256 };
+/** (On a screen that can show it the panorama is drawn finer than a pixel of the picture; elsewhere at the smaller size.) */
+export const PANO = { az: 1.75, el: 0.11, w: 8192, h: 384, wSmall: 4096, hSmall: 256 };
 
 /**
  * The country the ranges are cut from: a ridged height field, tileable.
@@ -134,7 +135,8 @@ void main() {
   vec2 w = vec2(tgn(p * 4.0 + 1.7, 4.0), tgn(p * 4.0 + 5.2, 4.0));
   vec2 q = p + w * 0.035;
   float h = 0.0, a = 0.5, f = 3.0, wgt = 1.0;
-  for (int i = 0; i < 6; i++) {
+  // (Eight sizes of ridge: the last are the gullies and ribs that give a face its drawing from across the valley.)
+  for (int i = 0; i < 8; i++) {
     float r = 1.0 - min(abs(tgn(q * f + float(i) * 3.7, f)) * 2.2, 1.0);
     r *= r;
     h += a * r * wgt;
@@ -187,14 +189,15 @@ void main() {
   if (!hit) { o = vec4(0.0, 0.0, 0.0, 1.0); return; }
   vec2 xy = hd * u;
   float z = H(xy);
-  const float E = 90.0;
+  const float E = 46.0;
   vec3 n = normalize(vec3(H(xy - vec2(E, 0.0)) - H(xy + vec2(E, 0.0)), H(xy - vec2(0.0, E)) - H(xy + vec2(0.0, E)), 2.0 * E));
   vec3 sun = vec3(sin(${SUN.az.toFixed(4)}) * cos(${SUN.el.toFixed(4)}), cos(${SUN.az.toFixed(4)}) * cos(${SUN.el.toFixed(4)}), sin(${SUN.el.toFixed(4)}));
   float sh = 1.0;
   for (int j = 1; j <= 40; j++) {
     float s = 100.0 * float(j) + 6.0 * float(j * j);
     float clear = z + 30.0 + s * sun.z / length(sun.xy) - H(xy + normalize(sun.xy) * s);
-    sh = min(sh, clamp(clear / (s * 0.035), 0.0, 1.0));
+    // (A shadow's edge is narrow: the sun is a small disc.)
+    sh = min(sh, clamp(clear / (s * 0.014), 0.0, 1.0));
   }
   float light = max(dot(n, sun), 0.0) * sh;
   float rough = textureLod(uH, xy / SPAN * 7.3 + 0.21, 0.0).r;
@@ -213,7 +216,7 @@ void main() {
   ivec2 p = ivec2(gl_FragCoord.xy);
   vec4 c = texelFetch(uPano, p, 0);
   if (c.a > 0.9) {
-    for (int k = 1; k <= 6; k++) {
+    for (int k = 1; k <= 9; k++) {
       vec4 d = texelFetch(uPano, ivec2(p.x, max(p.y - k, 0)), 0);
       if (d.a < 0.9) { c.rgb = d.rgb; break; }
     }

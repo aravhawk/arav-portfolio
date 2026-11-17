@@ -135,7 +135,7 @@ export class FlightEngine extends WaterEngine {
     this.filterGround(this.grain);
     this.filterGround(this.detail);
     await tick();
-    this.bakeRanges();
+    await this.bakeRanges(tick);
     await tick();
   }
 
@@ -185,18 +185,40 @@ export class FlightEngine extends WaterEngine {
     }
   }
 
-  private bakeRanges() {
+  /** The panorama's size on this device. */
+  private panoH: number = PANO.hSmall;
+
+  /**
+   * The ranges. On a full screen the country is cut finer and the panorama
+   * is drawn finer than a pixel of the picture, so a ridge is as sharp as
+   * the screen can show; it is marched in strips, a task apart, so no one
+   * of them holds the page.
+   */
+  private async bakeRanges(tick: () => Promise<void>) {
     const gl = this.gl;
+    const big = this.tier === 0 && this.maxTexture >= PANO.w;
     const rgba8 = { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE };
-    const country = makeTarget(gl, 1024, 1024, { ...this.f16(), wrap: gl.REPEAT });
+    const side = big ? 2048 : 1024;
+    const country = makeTarget(gl, side, side, { ...this.f16(), wrap: gl.REPEAT });
     gl.useProgram(this.p.mountH.prog);
     drawTo(gl, country);
-    const w = Math.min(PANO.w, this.maxTexture);
-    const raw = makeTarget(gl, w, PANO.h, { ...rgba8, filter: gl.NEAREST });
-    gl.useProgram(this.p.mountPano.prog);
-    bindTex(gl, 0, country.tex, this.p.mountPano.u.uH);
-    drawTo(gl, raw);
-    this.pano = makeTarget(gl, w, PANO.h, { ...rgba8, wrap: gl.MIRRORED_REPEAT });
+    await tick();
+    const w = big ? PANO.w : Math.min(PANO.wSmall, this.maxTexture);
+    const h = big ? PANO.h : PANO.hSmall;
+    this.panoH = h;
+    const raw = makeTarget(gl, w, h, { ...rgba8, filter: gl.NEAREST });
+    const strips = big ? 6 : 2;
+    for (let i = 0; i < strips; i++) {
+      if (gl.isContextLost()) break;
+      gl.useProgram(this.p.mountPano.prog);
+      bindTex(gl, 0, country.tex, this.p.mountPano.u.uH);
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(Math.floor((i * w) / strips), 0, Math.ceil(w / strips) + 1, h);
+      drawTo(gl, raw);
+      gl.disable(gl.SCISSOR_TEST);
+      await tick();
+    }
+    this.pano = makeTarget(gl, w, h, { ...rgba8, wrap: gl.MIRRORED_REPEAT });
     gl.useProgram(this.p.mountEdge.prog);
     bindTex(gl, 0, raw.tex, this.p.mountEdge.u.uPano);
     drawTo(gl, this.pano);
@@ -225,21 +247,21 @@ export class FlightEngine extends WaterEngine {
     const x0 = col(SUN_END_AZ - 0.2);
     const x1 = col(SUN_END_AZ + 0.2);
     const n = x1 - x0 + 1;
-    const px = new Uint8Array(n * PANO.h * 4);
+    const px = new Uint8Array(n * this.panoH * 4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.pano.fbo);
-    gl.readPixels(x0, 0, n, PANO.h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.readPixels(x0, 0, n, this.panoH, gl.RGBA, gl.UNSIGNED_BYTE, px);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     // The skyline: the highest row in each column that is not open sky.
     const sky = new Float32Array(n);
     for (let x = 0; x < n; x++) {
       let top = 0;
-      for (let y = PANO.h - 1; y >= 0; y--) {
+      for (let y = this.panoH - 1; y >= 0; y--) {
         if (px[(y * n + x) * 4 + 3] < 235) {
           top = y + 1;
           break;
         }
       }
-      sky[x] = (top / PANO.h) * PANO.el;
+      sky[x] = (top / this.panoH) * PANO.el;
     }
     const perRad = w / (2 * PANO.az);
     const gap = Math.round(0.045 * perRad);
@@ -349,8 +371,10 @@ export class FlightEngine extends WaterEngine {
    * shade, the second layer of current threads, the widest bloom level, and
    * a third of the pressure solve's rounds.
    * Step 2 also drops: the focused net of light on the bed (the baked net
-   * stands in), the snow's finest relief and its sparkle, the drift edges'
-   * lit lip and lee, and more of the pressure solve.
+   * stands in), the drift edges' lit lip and lee, and more of the pressure
+   * solve. (The snow is never made leaner: it is the largest surface in the
+   * frame, and all of it is baked, so there is nothing in it to drop that
+   * would not show as softness.)
    */
   private lean = 0;
   private leanNow = 0;
