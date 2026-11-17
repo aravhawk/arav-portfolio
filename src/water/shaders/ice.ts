@@ -117,7 +117,7 @@ float nameSwept(vec2 u) {
   if (abs(s.x) > 4.0 || s.y > 5.4 || s.y < -4.8) return 9.0;
   // (Two lines stand taller in the picture than one: the field is measured in the name's own heights, and keeps the same reach.)
   bool two = uNameG.z > -5e3;
-  float up = two ? 1.5 : 2.55;
+  float up = two ? 1.5 : 2.45;
   float dn = two ? 1.42 : 2.3;
   float y = s.y - 0.1;
   vec2 e = vec2(s.x / (two ? 2.1 : 1.9), y / (y > 0.0 ? up : dn));

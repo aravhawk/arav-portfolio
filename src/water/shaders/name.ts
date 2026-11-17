@@ -223,7 +223,7 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
     vec3 body = mix(vec3(0.4, 0.62, 0.84), vec3(0.16, 0.38, 0.66), smoothstep(0.35, 1.1, dK) * 0.6 * whole);
     body = mix(body, vec3(0.82, 0.91, 0.98), 0.08 + 0.6 * cloud);
     // (Before dawn it is palest under the tops, and darker and clearer toward its foot.)
-    col = mix(body, vec3(0.8, 0.87, 0.93), 0.55 * uNight) * lit * mix(0.86 + 0.24 * hK, 0.6 + 1.9 * pow(min(hK, 1.0), 1.2), uNight);
+    col = mix(body, vec3(0.8, 0.87, 0.93), 0.55 * uNight) * lit * mix(0.9 + 0.24 * hK, 0.6 + 1.9 * pow(min(hK, 1.0), 1.2), uNight);
     // Where there is no air in it the eye goes through to the dark ice beyond.
     float win = (1.0 - cloud) * smoothstep(0.1, -0.3, sm.g) * (0.45 + 0.3 * uNight) * whole;
     col = mix(col, lake * exp(-vec3(1.6, 0.7, 0.3) * dK) + col * 0.3, win);
@@ -323,9 +323,12 @@ vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, ve
     // (Each runs a length and stops: none crosses the whole field.)
     float cut = smoothstep(0.46, 0.6, w2.g + 0.3 * w1.g + 0.3 * (hash11(id * 7.3 + fk * 3.1) - 0.5));
     float dl = min(s, 1.0 - s) * gap;
-    hairs += (1.0 - smoothstep(0.2 * px, 1.0 * px, dl)) * cut * (k == 2 ? 0.6 : 1.0);
     // The plane below it lies toward the eye from its top edge.
     float side = dot(dk, vd);
+    // (A pixel covers far more of the sheet along the eye's line than across it: a hairline that runs across the view
+    // is measured against that, and thins away with distance instead of breaking into dots.)
+    float wpx = px * mix(1.0, 1.0 / max(-dir.z, 0.05), abs(side));
+    hairs += (1.0 - smoothstep(0.45 * wpx, 1.0 * wpx, dl)) * min(1.0, 1.5 * px / wpx) * cut * (k == 2 ? 0.6 : 1.0);
     float dist = (side > 0.0 ? 1.0 - s : s) * gap;
     float vl = clamp(1.0 - dist / (abs(side) * DEEP_ICE + px), 0.0, 1.0);
     veils += vl * vl * cut * (0.25 + 0.75 * w2.a) * (k == 2 ? 0.6 : 1.0);
@@ -353,7 +356,7 @@ vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, ve
   rf.z = abs(rf.z) + 0.01;
   vec3 sky = nameSky(normalize(rf), 1.0 - wet);
   // (In a block's shade a little less of it: the frost on the ice is unlit there.)
-  col = mix(col, sky, clamp(fres * mix(0.22, 0.3, uNight) * (1.0 + mix(0.9, 0.4, uNight) * wet) * (1.0 - 0.45 * shade), 0.0, 0.95));
+  col = mix(col, sky, clamp(fres * mix(0.19, 0.3, uNight) * (1.0 + mix(0.9, 0.4, uNight) * wet) * (1.0 - 0.45 * shade), 0.0, 0.95));
   return col;
 }
 
@@ -455,7 +458,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   float lvlS = lvl - 0.44 * (1.0 - smoothstep(0.5, 1.0, d)) - 0.12 * (1.0 - smoothstep(0.15, 0.6, d));
   // (How much of the sheet a pixel covers along the eye's line: far off, the finest of the drifts is under a pixel and is let go.)
   float footL = foot / max(-dir.z, 0.05);
-  float ew = 0.004 + 0.005 * foot;
+  float ew = 0.004 + 0.005 * foot + 0.002 * footL;
   // (Before dawn the sheet round the field is clear dark ice already: no drift cuts into it.)
   float drift = smoothstep(0.5 - ew, 0.5 + ew, lvlS) * (1.0 - uNight);
   // (Past its edge the bare ice goes under a dusting, in streaks, not all at once.)
@@ -478,7 +481,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   if (K * onIce > 0.0) {
     vec3 fl = nameFloor(p, il, dir, foot, gNmShade, pond, slope, tilt);
     // (A dusting lies on the ice ahead of each drift.)
-    float dust = smoothstep(0.12, 0.5, lvlS) * 0.22 * (1.0 - uNight);
+    float dust = smoothstep(0.12, 0.5, lvlS) * 0.18 * (1.0 - uNight);
     fl = mix(fl, mix(vec3(0.9, 0.92, 0.95) * (S.key * 0.24 * (1.0 - 0.5 * gNmShade) + S.amb * 0.8), vec3(0.4, 0.47, 0.6) * (S.amb * 1.4), uNight), dust);
     // (A dark wet line where each block meets the sheet.)
     fl *= 1.0 - 0.4 * (1.0 - smoothstep(0.0, 5.0, fd));
@@ -486,7 +489,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   }
   // (Before dawn the water the field leaves is dark, as the ice was: it holds the curtain's light dimly, and the pale
   // letters stand against it.)
-  col *= 1.0 - 0.84 * uNight * onWater * (1.0 - onIce) * (1.0 - smoothstep(0.95, 1.3, d));
+  col *= 1.0 - 0.92 * uNight * onWater * (1.0 - onIce) * (1.0 - smoothstep(0.95, 1.3, d));
   // The blocks' image: in the black ice, softened with distance and broken where the plates tilt; clearer in
   // meltwater; and in open water, shaken by its waves.
   float mirK = max(K * onIce, onWater) * uNameM.w;
