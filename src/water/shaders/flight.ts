@@ -492,7 +492,7 @@ vec4 bedAt(vec2 w) {
   // low headlands and bays, big enough to be seen from across the lake.
   // (Not in front of the outlet: the river leaves where it was carved.)
   if (w.y > ${(LAKE.y1 - 2300).toFixed(1)} && w.y < ${(LAKE.y1 + 1500).toFixed(1)}) {
-    float side = 1.0 - smoothstep(650.0, 1150.0, w.x) * (1.0 - smoothstep(1850.0, 2350.0, w.x));
+    float side = 1.0 - smoothstep(960.0, 1230.0, w.x) * (1.0 - smoothstep(1730.0, 2000.0, w.x));
     if (side > 0.0) {
       float bend = 430.0 * sin(w.x / 1870.0 + 0.6) + 270.0 * sin(w.x / 790.0 + 2.1) + 130.0 * sin(w.x / 350.0 + 4.0) + 60.0 * sin(w.x / 137.0 + 1.3);
       w.y += bend * side * smoothstep(${(LAKE.y1 - 2300).toFixed(1)}, ${(LAKE.y1 - 1000).toFixed(1)}, w.y) * (1.0 - smoothstep(${(LAKE.y1 + 600).toFixed(1)}, ${(LAKE.y1 + 1500).toFixed(1)}, w.y));
@@ -1126,7 +1126,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   if (sheetK > 0.0 && uNight < 1.0) {
     // (Dark water deepens what it mirrors: the ranges' shaded faces and the blue over them stand further from the pale air than they do above.)
     float rl = max(dot(refl, vec3(0.3, 0.6, 0.1)), 1e-3);
-    refl *= mix(vec3(1.0), vec3(0.62, 0.9, 1.25) * min(clamp(pow(rl / 0.6, 1.3), 0.22, 1.5), 0.5 / rl), sheetK * (1.0 - uNight));
+    // (And cools it: even the glare under the sun comes back as blue water, not as grey.)
+    refl = mix(refl, mix(refl, vec3(rl), 0.65) * vec3(0.52, 0.88, 1.32) * min(clamp(pow(rl / 0.6, 1.3), 0.22, 1.5), 0.5 / rl), sheetK * (1.0 - uNight));
   }
   if (sheetK * uNight > 0.0) {
     // Before dawn the letters hold the curtain itself: its rays stand in
@@ -1137,7 +1138,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     float ray = n1(azv * 46.0 + 3.0 * n1(azv * 7.0 + uTime * 0.03) + uTime * 0.04);
     float ray2 = n1(azv * 15.0 - uTime * 0.025 + 4.0);
     float deepV = smoothstep(0.75, -0.9, gCutA);
-    vec3 cur = refl * (0.56 + 1.5 * ray * ray * ray) * (0.7 + 0.9 * ray2) * mix(vec3(1.0), vec3(0.72, 0.8, 1.42), deepV * 0.8) * 1.5;
+    vec3 cur = refl * (0.56 + 1.5 * ray * ray * ray) * (0.7 + 0.9 * ray2) * mix(vec3(1.0), vec3(0.76, 0.86, 1.42), deepV * 0.8) * 1.62;
     refl = mix(refl, cur, sheetK * uNight);
   }
   // (On the running river that light is broken along the current: brighter on the ripple faces, dimmer in their troughs.)
@@ -1645,7 +1646,8 @@ void main() {
       // The cut face and the sheet's shade lie within a known reach of the
       // edge (the field is a distance, near enough): past it, open water
       // is only open water, and the field is not asked again.
-      float reach = length(tilt) * uIceH * 3.4 + 2.0 * aaI + 6.0;
+      // (While the name stands the wall's image in the water is looked for too, a little further out.)
+      float reach = length(tilt) * uIceH * (1.5 + 1.9 * smoothstep(0.75, 1.0, uGlow)) + 2.0 * aaI + 6.0;
       if (aIce < 1.0 && f0 < reach) {
         vec3 c1;
         vec2 i1;
