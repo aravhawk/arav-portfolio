@@ -511,6 +511,11 @@ export class FlightEngine extends WaterEngine {
    * the capitals' height, and a block's depth.
    */
   nameStand: { yf: [number, number]; base: [number, number]; split: number; cap: number; depth: number } | null = null;
+  /**
+   * Where the first frame's words stand, as shares of the frame: the right end of the left block, the left end of the
+   * right one (both 1 when they are stacked), and how far up the frame their top is. The bare ice round the name keeps clear of them.
+   */
+  nameWords: [number, number, number] = [1, 1, 0.2];
 
   /** The rings the last blades leave, each with its own moment. */
   private ringQ: { at: number; x: number; y: number }[] = [];
@@ -539,6 +544,7 @@ export class FlightEngine extends WaterEngine {
     if (prog.u.uIceLean) this.gl.uniform1f(prog.u.uIceLean, this.leanNow);
     const st = this.nameStand;
     const gl = this.gl;
+    if (prog.u.uNameW) gl.uniform3fv(prog.u.uNameW, this.nameWords);
     if (!prog.u.uNameG) return;
     if (!st || !this.iceMeta || ice.rect[2] <= 0) {
       gl.uniform4f(prog.u.uNameG, 0, 0, -1e4, 0);
@@ -1212,6 +1218,20 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     }
   };
 
+  /** Where the first frame's two blocks of words stand (measured while the page is at its top, where they are). */
+  let heroMeasured = false;
+  function measureHero() {
+    const role = document.querySelector<HTMLElement>('.fl-hero-words .fl-role');
+    const intro = document.querySelector<HTMLElement>('.fl-hero-words .fl-intro');
+    if (!role || !intro || window.scrollY > 4) return;
+    const a = role.getBoundingClientRect();
+    const b = intro.getBoundingClientRect();
+    if (a.width < 2 || b.width < 2) return;
+    const side = b.left > a.right;
+    engine.nameWords = [side ? a.right / viewW : 1, side ? b.left / viewW : 1, 1 - Math.min(a.top, b.top) / viewH];
+    heroMeasured = true;
+  }
+
   function measureView() {
     viewW = html.clientWidth;
     viewH = Math.max(window.innerHeight, html.clientHeight);
@@ -1226,6 +1246,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     callouts.measure();
     measureWords();
     scheduleBox();
+    measureHero();
     // The ending's words keep to the left (on a narrow screen, to the foot): the water there is kept calm for them.
     const b = endBlock ? inkOf(endBlock) : null;
     const narrow = viewW < 720;
@@ -1420,6 +1441,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
 
   const off = onFrame((now) => {
     if (!built) return;
+    if (!heroMeasured) measureHero();
     const raw = window.scrollY / unit;
     // Nothing may glide when motion is reduced: each section shows its
     // composed frame, and its words stand with it for the whole of its
