@@ -393,6 +393,13 @@ export class FlightEngine extends WaterEngine {
   nameCut: [number, number, number, number] = [0, 0, 1, 0];
   /** How much deeper than true the name lies on the lake, so that camera sees it true. */
   nameStretch = 1;
+  /**
+   * The name as blocks standing on the sheet (see the ice field and the
+   * name's own shader): the upright plane each line's faces stand in, each
+   * line's baseline and the height that parts the two lines in the raster,
+   * the capitals' height, and a block's depth.
+   */
+  nameStand: { yf: [number, number]; base: [number, number]; split: number; cap: number; depth: number } | null = null;
 
   protected bindIce(prog: Parameters<WaterEngine['bindIce']>[0], ice: Parameters<WaterEngine['bindIce']>[1], sdfUnit: number, snowUnit: number) {
     super.bindIce(prog, ice, sdfUnit, snowUnit);
@@ -403,6 +410,39 @@ export class FlightEngine extends WaterEngine {
     // (While the name is a pond no wall stands round it: the opening is the letter itself.)
     if (prog.u.uIceRim) this.gl.uniform1f(prog.u.uIceRim, ICE_H * this.nameStretch * (1 - ice.n[1]));
     if (prog.u.uIceLean) this.gl.uniform1f(prog.u.uIceLean, this.leanNow);
+    const st = this.nameStand;
+    const gl = this.gl;
+    if (!prog.u.uNameG) return;
+    if (!st || !this.iceMeta || ice.rect[2] <= 0) {
+      gl.uniform4f(prog.u.uNameG, 0, 0, -1e4, 0);
+      return;
+    }
+    // The blocks' melt, as the sheet's is: every number a function of the melt alone, so it reverses exactly.
+    // They sweat, then thin evenly from every face and through their depth, sink into the water that has
+    // opened under them, and the last of each is a thin clear blade.
+    const m = this.melt;
+    const half = -this.iceMeta.minSd;
+    // (Whole, a face is cut a hair outside the drawn letter: its lit arris is the hair, and the letter itself is all deep ice.)
+    const back = -1.4 + half * 0.4 * smooth(0.1, 0.52, m);
+    // (They keep most of their depth, and so their colour, until dark water has opened behind them; then they thin fast.)
+    const depth = st.depth * (1 - 0.3 * smooth(0.12, 0.4, m) - 0.58 * smooth(0.4, 0.55, m));
+    const sink = 22 * smooth(0.14, 0.46, m) + 0.07 * st.cap * smooth(0.4, 0.57, m);
+    const left = 1 - smooth(0.5, 0.57, m);
+    gl.uniform4f(prog.u.uNameG, st.yf[0], st.yf[1], st.split, 1);
+    gl.uniform4f(prog.u.uNameB, st.base[0], st.base[1], st.cap, st.depth);
+    gl.uniform4f(prog.u.uNameM, back, depth, sink, left);
+    // The sheet opens from under their feet. First the meltwater lies on the ice round them (the simulation
+    // takes that for open water, so the pointer wakes it); then the ice under it goes, the pools join, and
+    // from half way the one pool they have become is the sheet's own.
+    const shade = prog === this.p.flight || prog === this.seaProg;
+    const old = ice.a[0] + 3;
+    const hole = -30 + 78 * smooth(0.1, 0.47, m);
+    const pond = 20 + 42 * smooth(0.04, 0.45, m);
+    const k = smooth(0.5, 0.6, m);
+    gl.uniform4f(prog.u.uIceA, (shade ? hole : pond) * (1 - k) + old * k, ice.a[1], ice.a[2], ice.a[3]);
+    gl.uniform4f(prog.u.uIceC, ice.c[0], ice.c[1], smooth(0.36, 0.57, m), ice.c[3]);
+    if (prog.u.uIceRim) gl.uniform1f(prog.u.uIceRim, 0);
+    if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (1 - k), smooth(0, 0.14, m), smooth(0.12, 0.3, m), 0);
   }
 
   protected simCell() {
@@ -975,6 +1015,23 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     engine.iceRect = ice.rect;
     engine.nameCut = hero.cut;
     engine.nameStretch = hero.name.stretch;
+    // The blocks: each line stands where the first camera sees its baseline meet the sheet.
+    const [cy, ch, cc, cs] = hero.cut;
+    const dy0 = ice.rect.y + ice.rect.h / 2 - cy;
+    const z0 = dy0 * cc + ch * cs;
+    const ty0 = (dy0 * cs - ch * cc) / z0;
+    const footOf = (base: number) => {
+      const ty = base / z0 + ty0;
+      return cy + (ch * (cc + ty * cs)) / (cs - ty * cc);
+    };
+    const far = ice.lines[0];
+    const near = ice.lines[ice.lines.length - 1];
+    const cap = near.cap - near.base;
+    const yf: [number, number] = [footOf(far.base), footOf(near.base)];
+    // (A block is about a third as deep as its capitals are tall, in the world's own units at the plane it stands in;
+    // less on a tall screen, where the far line's feet stand just over the near line's tops.)
+    const scale = ((yf[1] - cy) * cc + ch * cs) / z0;
+    engine.nameStand = { yf, base: [far.base, near.base], split: ice.lines.length > 1 ? (far.base + near.cap) / 2 : -1e4, cap, depth: (ice.lines.length > 1 ? 0.22 : 0.3) * cap * scale };
     engine.setIce({ sd: sd.sd, w: ice.tw, h: ice.th, minSd: sd.min });
   }
 
