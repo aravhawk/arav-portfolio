@@ -903,20 +903,21 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   float fc = 1.0 - smoothstep(3.0, 7.6, foot);
   vec2 sA = a.xy * GS;
   float mA = dot(sA, Lxy);
-  float shade = smoothstep(0.0, 0.07, mix(a.z, a.w, kAz) - tanEl);
+  // (A shade's edge is cut over a narrow band of the horizon; where a size is seen smaller than it was baked the band is wider, so the edge stays a pixel wide and does not crawl.)
+  float shade = smoothstep(0.0, 0.07 * clamp(foot / 6.0, 1.0, 3.0), mix(a.z, a.w, kAz) - tanEl);
   vec2 rel = sA;
   float lit = 1.0 - 0.6 * shade;
   if (fb > 0.0) {
     vec4 b = snowTile(p, 1330.0, vec2(0.71, 0.29));
     vec2 sB = b.xy * GS;
     // (A ridge on a drift that leans from the light throws a longer shade: the drift's own lean is added to its horizon.)
-    lit *= 1.0 - 0.8 * mix(0.14, smoothstep(0.0, 0.07, mix(b.z, b.w, kAz) + mA - tanEl), fb);
+    lit *= 1.0 - 0.8 * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 1.3, 1.0, 3.0), mix(b.z, b.w, kAz) + mA - tanEl), fb);
     rel += sB * fb;
     mA += dot(sB, Lxy) * fb;
   } else lit *= 0.888;
   if (fc > 0.0) {
     vec4 c = snowTile(p, 286.0, vec2(0.37, 0.11));
-    lit *= 1.0 - 0.88 * mix(0.14, smoothstep(0.0, 0.07, mix(c.z, c.w, kAz) + mA - tanEl), fc);
+    lit *= 1.0 - 0.88 * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 0.28, 1.0, 3.0), mix(c.z, c.w, kAz) + mA - tanEl), fc);
     rel += (c.xy * GS) * fc;
   } else lit *= 0.877;
   // (Rock is rougher than snow, and it breaks in blocks: each block has its own tilt.)
@@ -959,15 +960,6 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   }
   vec3 alb = mix(snow, stone, bare);
 
-  // Scoured ice: where the wind has taken the snow off, old blue ice shows,
-  // hard and glassy, in long patches that end at a drift's edge.
-  float low = 0.5 + 0.22 * (sin(dot(p, vec2(0.00083, 0.00047)) + 1.3) + sin(dot(p, vec2(-0.00041, 0.00102)) + 4.1)) + 0.1 * sin(dot(p, vec2(0.0027, -0.0016)) + 2.2);
-  float scour = smoothstep(0.8 - ew, 0.8 + ew + 0.01, low + 2.6 * a.x) * (1.0 - calm) * (1.0 - smoothstep(0.0, 0.1, gRock));
-  if (scour > 0.0) {
-    alb = mix(alb, mix(vec3(0.42, 0.63, 0.76), vec3(0.2, 0.36, 0.46), uNight) * (0.9 + 0.2 * gr.b), scour * 0.86);
-    sun = mix(sun, clamp(sun, 0.0, 1.0) * 0.82, scour);
-  }
-
   // The bank's lip is wet ice all along the water: a blue edge under the white.
   float lipK = 1.0 - smoothstep(2.0, 13.0 + 6.0 * gr.b, sd);
   alb = mix(alb, blue * 1.15, lipK * 0.85 * (1.0 - gRock));
@@ -981,7 +973,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   if (uNight > 0.0) sky *= (1.0 + 0.32 * uNight) * (1.0 + uNight * (0.5 * (lit - 0.72) * (1.0 - 0.9 * calm) + 1.3 * clamp(rel.y, -0.2, 0.2)));
   vec3 col = alb * (S.key * mix(0.24, L.z, uNight) * sun + sky);
   // Sparkle, only on snow the sun reaches.
-  float glintK = (1.0 - smoothstep(2.0, 9.0, foot)) * (1.0 - bare) * (1.0 - scour) * (1.0 - calm);
+  float glintK = (1.0 - smoothstep(2.0, 9.0, foot)) * (1.0 - bare) * (1.0 - calm);
   if (glintK > 0.0) {
     float sp = sparkle(p, foot, dir);
     col += (S.key * 0.55 * lit * step(0.3, sun) * (1.0 - uNight) + (vec3(0.5, 0.74, 1.0) * 0.05 + uAurora * 0.3) * uNight) * sp * glintK;
@@ -989,9 +981,9 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   // Wet shore: dark and glossy at the water.
   float wet = 1.0 - smoothstep(1.0, 16.0, sd);
   col = mix(col, col * vec3(0.62, 0.74, 0.82), wet * 0.6 * smoothstep(1.5, 5.0, sd));
-  // A cold sheen: snow is a little glossy at a glancing angle, and bare ice a good deal more.
+  // A cold sheen: snow is a little glossy at a glancing angle.
   float cosi = clamp(dot(-dir, n), 0.0, 1.0);
-  col += S.hor * pow(1.0 - cosi, 4.0) * mix(0.08, 0.2, uNight) * (1.0 - 0.6 * bare) * (1.0 + 2.4 * scour);
+  col += S.hor * pow(1.0 - cosi, 4.0) * mix(0.08, 0.2, uNight) * (1.0 - 0.6 * bare);
   return col;
 }
 
