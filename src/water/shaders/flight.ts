@@ -23,7 +23,7 @@
 import { ICE_FIELD } from './ice';
 import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
 import { PANO } from './terrain';
-import { BASIN, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, SHEET_COLS, SHEET_CROP, SHEET_CROP_TALL, SHEET_GAP, SHEET_SRC, sheetSpan, slabFaces, STREAM, T2, TARN, TRIBS } from '../world';
+import { BASIN, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, SHEET_COLS, SHEET_GAP, SHEET_SRC, sheetSpan, slabFaces, STREAM, T2, TARN, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
