@@ -2384,7 +2384,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float topV = uSea.w < -0.001 ? -uSea.w : 0.42;
   float lee = (1.0 - smoothstep(0.0, 1.0, length(max((vUv - vec2(uSea.z - 0.06, topV - 0.04)) / vec2(0.3, max(0.6 - topV, 0.1)), 0.0)))) * e;
   // (On a narrow screen the words run the width of the frame and stand at its foot: the line of light comes down to them and stops.)
-  float leeFoot = step(0.001, uSea.w) * (1.0 - smoothstep(uSea.w - 0.01, uSea.w + 0.13, vUv.y)) * e;
+  float leeFoot = step(0.001, uSea.w) * (1.0 - smoothstep(uSea.w - 0.02, uSea.w + 0.2, vUv.y)) * e;
   lee = max(lee, leeFoot);
   // How still the sea is: the ending's own water, as the camera settles on it.
   float still = e * gDusk;
@@ -2415,7 +2415,11 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   vec3 n = normalize(vec3(g, 1.0));
   vec3 r = reflect(dir, n);
   // (By day a sea is darker than the sky it meets: its waves turn the mirror up, past the pale air at the horizon to the blue above it.)
-  r.z = abs(r.z) + 0.24 * (1.0 - gDusk) * (1.0 - uNight);
+  // (At rest the water nearer the eye is darker of itself, as water is: the further under the horizon the eye looks,
+  // the more its mirror is turned up past the gold to the deep of the sky. It is a level change, so it is the sea's
+  // and no shape; where the words stand it comes a little sooner.)
+  float dipK = -dir.z * inversesqrt(max(dot(dir.xy, dir.xy), 1e-6));
+  r.z = abs(r.z) + 0.24 * (1.0 - gDusk) * (1.0 - uNight) + (0.32 * smoothstep(0.0, 0.32, dipK) + 0.16 * lee) * still;
   r = normalize(r);
   float cosi = clamp(dot(-dir, n), 0.0, 1.0);
   float fres = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
@@ -2431,7 +2435,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   vec3 body = mix(deep * (0.5 + 0.5 * max(S.sun.z * 3.0, 0.3)), vec3(0.01, 0.07, 0.11) * (S.amb.b * 1.6 + 0.12), (1.0 - gDusk) * (1.0 - uNight));
   // (By day the sea is a rougher mirror than at the still ends of the day: more of its own deep colour shows.)
   float dayK = (1.0 - gDusk) * (1.0 - uNight);
-  float mir = clamp(fres + 0.05, 0.0, 1.0) * (1.0 - 0.5 * dayK);
+  float mir = clamp(fres + 0.05, 0.0, 1.0) * (1.0 - 0.5 * dayK) * (1.0 - 0.2 * lee * still);
   vec3 col = mix(body, refl, mir);
   float inv = inversesqrt(max(dot(dir.xy, dir.xy), 1e-6));
   vec2 dn = dir.xy * inv;
@@ -2462,8 +2466,9 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
         glint *= glint;
         // Far off a glint is finer than a pixel: there the path is its even mean.
         glint = mix(glint, 0.3, smoothstep(0.35, 1.1, px * 15.0));
-        // The sun's reflected bloom is broken by the same facets, so it is not a patch.
-        col = max(col - sunBloom(sd) * mir * 0.3 * (1.0 - glint) * day, 0.0);
+        // The sun's reflected bloom is broken by the same facets, so it is not a patch. (It is taken away by as much
+        // as the path is there: taken whole up to the path's edge, it left a seam down the water at that edge.)
+        col = max(col - sunBloom(sd) * mir * 0.3 * (1.0 - glint) * day * smoothstep(0.003, 0.12, path), 0.0);
         col += vec3(1.0, 0.88, 0.7) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee) * mix(9.0, 1.0, gDusk);
       }
     }
@@ -2504,7 +2509,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     // The far shore: a band of glitter along the waterline, brightest under the light.
     float shore = exp(-em / 0.0075) * (0.22 + 0.78 * exp(-xs * xs / 0.05));
     float env = max(max(pathS, pathR), shore);
-    if (env > 0.004) {
+    if (env > 0.002) {
       float pa = uPxAng;
       float r0 = max(0.0006, 0.85 * pa);
       float r1 = max(0.001, 0.85 * pa);
@@ -3000,9 +3005,9 @@ void main() {
     // The cliff at the confluence and its falls stand in front of what lies behind them.
     col = confCliff(col, dir, aLand);
 #ifdef SEA
-    // The lee's shade, on the water the words stand over. (At the ending the water there is dark of itself: it mirrors
-    // the deep of the sky, and the lee only keeps it calm.)
-    col *= 1.0 - mix(0.56, 0.1, gDusk) * gLee;
+    // The lee's shade, on the water the words stand over, while the camera is still coming in. (At the ending there is
+    // none: the water there is dark of itself, it mirrors the deep of the sky, and the lee only keeps it calm.)
+    col *= 1.0 - 0.56 * (1.0 - gDusk) * gLee;
 #endif
   }
   // The boulders of the rock pool stand in front of its water and its far bank.
@@ -3130,19 +3135,17 @@ void main() {
   // the pixels that would fight the words are touched, and the edge of the
   // lee is wide and soft, so it reads as air and shade, never as a plate.
   // (Most of the frame is nowhere near them: it is let go at once.)
-  // (The ending's words stand in the frame's own corner: their lee runs out to the frame's edges and thins only
-  // upward and toward the light, a long way, so it has no side to be seen as a shape.)
-  bool endLee = uCalmK.y > 0.5;
-  if (uCalmK.x > 0.0 && (endLee ? vUv.y < uCalmBox.w + 0.34 && vUv.x < uCalmBox.z + 0.34 : vUv.y < uCalmBox.w + 0.17 && vUv.y > uCalmBox.y - 0.17 && vUv.x < uCalmBox.z + 0.17 && vUv.x > uCalmBox.x - 0.17)) {
+  // (The ending's words need none of it: they stand over the near sea, which is deep and dark of itself. Nothing is
+  // laid over that picture.)
+  if (uCalmK.x > 0.0 && uCalmK.y < 0.5 && vUv.y < uCalmBox.w + 0.17 && vUv.y > uCalmBox.y - 0.17 && vUv.x < uCalmBox.z + 0.17 && vUv.x > uCalmBox.x - 0.17) {
     vec2 cq = abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5;
-    if (endLee) cq = vUv - uCalmBox.zw;
     cq.x *= uLens.y;
     float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);
-    float ck = 1.0 - smoothstep(-0.014, endLee ? 0.34 : 0.17, cd);
+    float ck = 1.0 - smoothstep(-0.014, 0.17, cd);
     ck *= ck * uCalmK.x;
     if (ck > 0.0) {
       float l = max(dot(col, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
-      float shadeK = mix(uNight, 1.0, uCalmK.y);
+      float shadeK = uNight;
       const float CAP = 0.082;
       const float FLOOR = 0.165;
       float capped = 0.5 * (l + CAP - sqrt((l - CAP) * (l - CAP) + 0.09 * CAP * CAP));
