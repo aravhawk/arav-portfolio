@@ -88,7 +88,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
       <article className="article wrap">
         <aside className="article-rail" aria-label="About this post">
-          <ul className="tags label" aria-label="Tags">
+          <ul className="tags" aria-label="Tags">
             {post.frontmatter.tags.map((tag) => (
               <li key={tag}>{tag}</li>
             ))}
