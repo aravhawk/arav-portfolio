@@ -114,11 +114,12 @@ vec2 nameSeat(vec2 u) {
 float nameSwept(vec2 u) {
   vec2 s = nameSeat(u);
   // (Most of the lake is nowhere near it: that is settled before anything is read.)
-  if (abs(s.x) > 5.2 || s.y > 5.4 || s.y < -4.8) return 9.0;
+  if (abs(s.x) > 5.2 || s.y > 5.4 || s.y < -6.6) return 9.0;
   // (Two lines stand taller in the picture than one: the field is measured in the name's own heights, and keeps the same reach.)
   bool two = uNameG.z > -5e3;
   float up = two ? 1.5 : 2.45;
-  float dn = two ? 1.42 : 2.3;
+  // (Toward the eye it runs on until the first frame's words stop it: see the name's own shader.)
+  float dn = two ? 1.6 : 2.6;
   float y = s.y - 0.1;
   vec2 e = vec2(s.x / (two ? 2.4 : 2.5), y / (y > 0.0 ? up : dn));
   // (Squarer than a round: its long sides run with the wind.)
