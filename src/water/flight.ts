@@ -516,6 +516,10 @@ export class FlightEngine extends WaterEngine {
    * right one (both 1 when they are stacked), and how far up the frame their top is. The bare ice round the name keeps clear of them.
    */
   nameWords: [number, number, number] = [1, 1, 0.2];
+  /** Something the picture depends on has changed: draw again, even when nothing moves. */
+  touch() {
+    this.dirty = true;
+  }
 
   /** The rings the last blades leave, each with its own moment. */
   private ringQ: { at: number; x: number; y: number }[] = [];
@@ -1219,8 +1223,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   };
 
   /** Where the first frame's two blocks of words stand (measured while the page is at its top, where they are). */
-  let heroMeasured = false;
   function measureHero() {
+    if (destroyed) return;
     const role = document.querySelector<HTMLElement>('.fl-hero-words .fl-role');
     const intro = document.querySelector<HTMLElement>('.fl-hero-words .fl-intro');
     if (!role || !intro || window.scrollY > 4) return;
@@ -1229,7 +1233,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     if (a.width < 2 || b.width < 2) return;
     const side = b.left > a.right;
     engine.nameWords = [side ? a.right / viewW : 1, side ? b.left / viewW : 1, 1 - Math.min(a.top, b.top) / viewH];
-    heroMeasured = true;
+    engine.touch();
   }
 
   function measureView() {
@@ -1350,6 +1354,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   html.dataset.flight = 'on';
   // (Each station's composition is set once the picture is there: its words are read where they then stand.)
   measureWords();
+  // (The first frame's words take their places once the flight is on, and settle a moment later: they are measured then.)
+  const heroTimers = [0, 450, 1300].map((ms) => window.setTimeout(measureHero, ms));
   // The sea's variant of the pass is compiled once the first frames are out.
   const warm = window.setTimeout(() => engine.warmSea(), 900);
 
@@ -1441,7 +1447,6 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
 
   const off = onFrame((now) => {
     if (!built) return;
-    if (!heroMeasured) measureHero();
     const raw = window.scrollY / unit;
     // Nothing may glide when motion is reduced: each section shows its
     // composed frame, and its words stand with it for the whole of its
@@ -1518,6 +1523,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       railEl?.removeEventListener('click', onRail);
       for (const w of words) for (const it of w.pieces) it.el.style.transform = '';
       window.clearTimeout(boxTimer);
+      heroTimers.forEach((t) => window.clearTimeout(t));
       window.clearTimeout(warm);
       solver.dispose();
       window.clearTimeout(resizeTimer);
