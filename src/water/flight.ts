@@ -1320,7 +1320,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a');
     const hit = a && rail.find((r) => r.el === a);
     if (!hit) return;
+    // (Stopped here: the smooth scroll takes a same-page link for itself and would glide to the link's own target.)
     e.preventDefault();
+    e.stopPropagation();
     window.scrollTo(0, Math.round(hit.at * unit));
   };
   railEl?.addEventListener('click', onRail);
