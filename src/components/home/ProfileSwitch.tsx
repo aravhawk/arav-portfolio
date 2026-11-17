@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { haptic } from '@/lib/haptics';
+import { emit } from '@/lib/signals';
 
 const PROFILES = ['claude', 'kimi', 'ollama'];
 
@@ -19,6 +20,7 @@ export function ProfileSwitch() {
     if (!feat || feat.dataset.active === String(i)) return;
     // Haptic, state and water all change in this one handler.
     haptic('selection');
+    emit('switch', i);
     setActive(i);
     feat.dataset.active = String(i);
     const w = window.__water;
