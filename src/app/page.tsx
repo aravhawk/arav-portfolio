@@ -2,7 +2,7 @@ import type { Viewport } from 'next';
 import Link from 'next/link';
 import { ViewTransition } from 'react';
 import { Arrow, Slab } from '@/components/bits';
-import { Contact, HapticsSetting } from '@/components/ending/Ending';
+import { Contact } from '@/components/ending/Ending';
 import { Callout } from '@/components/flight/Callout';
 import { ProfileSwitch } from '@/components/home/ProfileSwitch';
 import { FlightStage } from '@/components/FlightStage';
@@ -327,13 +327,9 @@ export default async function Home() {
                   <span className="ending-line">It&apos;s still early.</span>
                 </h2>
                 <p className="label ending-kicker">Selected for OpenAI DevDay 2026</p>
-                {/* One row: the ways to reach him, then, past a hairline, the feed and the haptics switch. */}
+                {/* One row: the ways to reach him, the feed among them, and the haptics switch as the row's last small control. */}
                 <div className="fl-end-row">
-                  <Contact />
-                  <div className="ending-foot label fl-end-foot">
-                    <a href="/feed.xml">RSS</a>
-                    <HapticsSetting />
-                  </div>
+                  <Contact feed />
                 </div>
               </div>
             </div>
