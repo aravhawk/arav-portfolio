@@ -21,8 +21,9 @@
  */
 
 import { ICE_FIELD } from './ice';
+import { COLUMNS, STATION_COMMON } from './stations';
 import { PANO, SUN } from './terrain';
-import { BASIN, CONF_Y, ISLAND, POOL, SHARDS, SHEET, STREAM, TARN, TRIBS } from '../world';
+import { BASIN, CONF_Y, ISLAND, POOL, SHARDS, SHEET, STREAM, T2, TARN, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -312,6 +313,7 @@ vec3 skyAll(vec3 d, float clouds) { return withRidges(skyColor(d, clouds), d, cl
 /* ---------- the slab ---------- */
 
 float lodFor(float foot, float scale, float n);
+float shallowsAt(vec2 p);
 vec3 fracture(vec2 x);
 
 /**
@@ -834,6 +836,9 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     float floorH = textureLod(uDetail, pb / 1700.0 + 0.4, 0.0).r;
     depth = mix(depth, min(depth, 70.0 + 34.0 * floorH), lakeK);
   }
+  // The shallows the columns stand in: a hand of water over a pale bed.
+  float shalK = pb.y > ${(T2 + 380).toFixed(1)} && pb.y < ${(T2 + 1700).toFixed(1)} ? shallowsAt(pb) : 0.0;
+  if (shalK > 0.0) depth = mix(depth, min(depth, 13.0 + 12.0 * textureLod(uDetail, pb / 900.0 + 0.2, 0.0).r), shalK);
   // The clear pool: a foot of still water over a pale bed, and the picture lying on it.
   float poolK = 0.0;
   float picK = 0.0;
@@ -1175,6 +1180,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   return col;
 }
 
+${STATION_COMMON}
+${COLUMNS}
 // ---- the tarn's two shards of ice, each lit from within
 const vec4 SH0 = vec4(${SHARDS[0].x.toFixed(1)}, ${SHARDS[0].y.toFixed(1)}, ${SHARDS[0].h.toFixed(1)}, ${SHARDS[0].r.toFixed(1)});
 const vec4 SH1 = vec4(${SHARDS[1].x.toFixed(1)}, ${SHARDS[1].y.toFixed(1)}, ${SHARDS[1].h.toFixed(1)}, ${SHARDS[1].r.toFixed(1)});
@@ -1444,6 +1451,10 @@ void main() {
       float along = dot(c, dir);
       if (along > 0.0) col += vec3(0.25, 0.7, 0.8) * glow * mix(0.09, 0.17, uNight) * exp(-length(c - dir * along) / (s.w * 1.9)) * mix(0.3, 1.0, uNight);
     }
+  }
+  if (uSt.x + uSt.y + uSt.z + uSt.w > 0.0) {
+    float twS = dir.z < -0.0006 ? (uCamPos.z + FREEBOARD) / -dir.z : -1.0;
+    if (uSt.x > 0.0) col = columns(col, dir, twS);
   }
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
 

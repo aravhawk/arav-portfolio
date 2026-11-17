@@ -20,7 +20,7 @@ import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
-import { LAKE, OUTLET, SHARDS, SHOAL_Y, SLAB, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
+import { CANYON, COLS, DAM, LAKE, LATTICE, OUTLET, SHARDS, SHOAL_Y, SLAB, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -224,6 +224,19 @@ export class FlightEngine extends WaterEngine {
     return { ...super.info, tier: Math.max(this.tier, this.lean), simTier: this.tier, lean: this.lean, leanLog: this.leanLog.slice(-12) };
   }
 
+  /** Station 5: each column's height. */
+  colH = new Float32Array([COLS.hMax, COLS.hMax * 0.75, COLS.hMax * 0.2, COLS.hMin]);
+  /** Station 6: which sluice is open, how far open each is, and the surge down each. */
+  gate = 0;
+  private gateNow = new Float32Array([1, 0, 0]);
+  private surge = new Float32Array(3);
+  private dripAt = 0;
+  /** How much of each later station's subject is there to see from this camera. */
+  private stations(cam: Basis): [number, number, number, number] {
+    const near = (x: number, y: number, a: number, b: number) => 1 - smooth(a, b, Math.hypot(cam.pos[0] - x, cam.pos[1] - y));
+    return [near(1340, COLS.y, 2300, 2900), near(1300, DAM.y, 2300, 2900), near(LATTICE.x, LATTICE.y, 2300, 2900), near(1700, (CANYON.y0 + CANYON.y1) / 2, 4600, 5400)];
+  }
+
   /** Each stream's width at the confluence. */
   tribW = new Float32Array(TRIBS.length);
 
@@ -407,6 +420,20 @@ export class FlightEngine extends WaterEngine {
         this.splash(from.x, from.y - from.r * 1.6, 34, 0.9);
       }
     }
+    const st = this.stations(cam);
+    gl.uniform4f(r.u.uSt, st[0], st[1], st[2], st[3]);
+    gl.uniform4fv(r.u.uColH, this.colH);
+    gl.uniform3fv(r.u.uGate, this.gateNow);
+    gl.uniform3fv(r.u.uSurge, this.surge);
+    if (st[0] > 0.5 && !this.still && this.time > this.dripAt) {
+      // Meltwater drips from the columns into the shallows: real rings, most from the tallest.
+      this.dripAt = this.time + 0.22 + 0.3 * Math.random();
+      let pick = Math.random() * (this.colH[0] + this.colH[1] + this.colH[2] + this.colH[3]);
+      let i = 0;
+      while (i < 3 && pick > this.colH[i]) pick -= this.colH[i++];
+      const a = Math.random() * Math.PI * 2;
+      this.splash(COLS.xs[i] + Math.cos(a) * COLS.r * 1.15, COLS.y + Math.sin(a) * COLS.r * 1.15, 12 + 8 * Math.random(), 0.5);
+    }
     gl.uniform1f(r.u.uFlowSpeed, FLOW_SPEED);
     gl.uniform1f(r.u.uQuality, tier.quality);
     gl.uniform1f(r.u.uLean, this.leanNow);
@@ -583,6 +610,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   root.appendChild(canvas);
   const solver = makeSolver();
   const tribCounts = (root.dataset.tribs || '').split(',').map(Number).filter((n) => n > 0);
+  const colH = (root.dataset.cols || '').split(',').map(Number).filter((n) => n > 0);
+  if (colH.length === 4) engine.colH.set(colH);
 
   let viewW = 1;
   let viewH = 1;

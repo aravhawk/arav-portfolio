@@ -3,12 +3,13 @@ import Link from 'next/link';
 import { Arrow, Slab } from '@/components/bits';
 import { Ending } from '@/components/ending/Ending';
 import { Callout } from '@/components/flight/Callout';
+import { ProfileSwitch } from '@/components/home/ProfileSwitch';
 import { FlightStage } from '@/components/FlightStage';
 import { LiveNumber } from '@/components/LiveNumber';
 import { PROJECTS, type ProjectMedia } from '@/content/projects';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 import { SECTIONS } from '@/water/camera';
-import { TRIBS } from '@/water/world';
+import { COLS, TRIBS, colHeights } from '@/water/world';
 import '../home.css';
 import './flight.css';
 
@@ -24,6 +25,9 @@ export const revalidate = 3600;
 const INFINIVIEW = PROJECTS.find((p) => p.slug === 'infiniview')!;
 const BENCH_P = PROJECTS.find((p) => p.slug === 'kilo-bench')!;
 const BRIDGE_P = PROJECTS.find((p) => p.slug === 'agent-bridge')!;
+const SWITCH_P = PROJECTS.find((p) => p.slug === 'cc-switch')!;
+const TENSOR_P = PROJECTS.find((p) => p.slug === 'tensorpow')!;
+const RYDAR_P = PROJECTS.find((p) => p.slug === 'rydar')!;
 
 const INFINIVIEW_HOME: ProjectMedia = {
   kind: 'image',
@@ -39,17 +43,27 @@ const VIEW = SAY + SECTIONS.say;
 const OUT = VIEW + SECTIONS.infiniview;
 const BENCH = OUT + SECTIONS.upstream;
 const BRIDGE = BENCH + SECTIONS.bench;
-const END = BRIDGE + SECTIONS.bridge;
+const MODELS = BRIDGE + SECTIONS.bridge;
+const FORK = MODELS + SECTIONS.models;
+const LATTICE = FORK + SECTIONS.fork;
+const CANYON = LATTICE + SECTIONS.lattice;
+const END = CANYON + SECTIONS.canyon;
 
 const len = (screens: number, last = false) => ({ '--len': last ? screens : screens + 1 }) as React.CSSProperties;
 
 export default async function Flight() {
   const m = await getMetrics();
   const repos = m.mergedPrs.byRepo.slice(0, TRIBS.length);
+  const models = m.ollama.models.slice(0, COLS.xs.length);
+  const colH = colHeights(models.map((x) => x.pulls));
+  const rydar = RYDAR_P.media[0];
   return (
     <>
       <main id="main" className="fl">
-        <FlightStage slab={INFINIVIEW_HOME.src} sheet={BENCH_P.media[0].kind === 'image' ? BENCH_P.media[0].src : ''} tribs={repos.map((r) => r.count).join(',')} />
+        <FlightStage slab={INFINIVIEW_HOME.src} sheet={BENCH_P.media[0].kind === 'image' ? BENCH_P.media[0].src : ''} tribs={repos.map((r) => r.count).join(',')}
+          cols={colH.map((h) => h.toFixed(1)).join(',')}
+          face={rydar.kind === 'image' ? rydar.src : ''}
+        />
 
         {/* ---------- the frozen lake ---------- */}
         <section className="fl-sec fl-hero" data-fl style={len(SECTIONS.hero)} aria-labelledby="name">
@@ -175,7 +189,7 @@ export default async function Flight() {
         {/* ---------- 04 Agent Bridge ---------- */}
         <section className="fl-sec fl-bridge" data-fl style={len(SECTIONS.bridge)} aria-label="Agent Bridge">
           <div className="fl-pin">
-            <div className="fl-words fl-view-words fl-bridge-words" data-fl-from={BRIDGE + 1.1} data-fl-to={END - 0.85}>
+            <div className="fl-words fl-view-words fl-bridge-words" data-fl-from={BRIDGE + 1.1} data-fl-to={MODELS - 0.85}>
               {BRIDGE_P.kicker ? <p className="label fl-label">{BRIDGE_P.kicker}</p> : null}
               <h2 className="display fl-view-name">
                 <Link className="beat-link" href={`/work/${BRIDGE_P.slug}`}>
@@ -187,6 +201,99 @@ export default async function Flight() {
               <div className="fl-film">
                 <Slab media={BRIDGE_P.media[0]} sizes="(max-width: 860px) 70vw, 30vw" />
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- 05 Open models ---------- */}
+        <section className="fl-sec fl-models" data-fl style={len(SECTIONS.models)} aria-label="Open models">
+          <div className="fl-pin">
+            <div className="fl-calls">
+              {models.map((x, i) => (
+                <Callout key={x.name} at={[COLS.xs[i], COLS.y, colH[i] - 22]} href={x.url} from={MODELS + 0.9} to={FORK - 0.85} lift={i % 2 ? 40 : 64}>
+                  {x.name}
+                </Callout>
+              ))}
+            </div>
+            <div className="fl-words fl-up-words fl-models-words" data-fl-from={MODELS + 0.9} data-fl-to={FORK - 0.85}>
+              <p className="label fl-label">Ollama</p>
+              <h2 className="beat-figure fl-figure">
+                <LiveNumber
+                  className="number number-sm"
+                  value={m.ollama.total.value}
+                  from={m.ollama.total.snapshotValue}
+                  source={m.ollama.total.source}
+                  asOf={formatAsOf(m.ollama.total.asOf)}
+                  what="pulls of my open models on Ollama"
+                />
+                <span className="title beat-unit">pulls, four open models</span>
+              </h2>
+              <Link className="link beat-more fl-more" href="/work/ollama">
+                Open models <Arrow />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- 06 cc-switch ---------- */}
+        <section className="fl-sec fl-forks" data-fl style={len(SECTIONS.fork)} aria-label="cc-switch">
+          <div className="fl-pin">
+            <div className="fl-words fl-up-words fl-fork-words" data-fl-from={FORK + 0.9} data-fl-to={LATTICE - 0.85}>
+              <h2 className="display fl-view-name">
+                <Link className="beat-link" href={`/work/${SWITCH_P.slug}`}>
+                  {SWITCH_P.name}
+                  <Arrow />
+                </Link>
+              </h2>
+              <p className="lead fl-view-line">{SWITCH_P.line}</p>
+              <p className="small beat-sub fl-sub">
+                <LiveNumber
+                  className="mono"
+                  value={m.npm.allTime.value}
+                  from={m.npm.allTime.snapshotValue}
+                  source={m.npm.allTime.source}
+                  asOf={formatAsOf(m.npm.allTime.asOf)}
+                  what="npm downloads of cc-switch, all time"
+                />{' '}
+                npm downloads.
+              </p>
+              <div className="fl-fork" data-bed="feat:fork" data-active="0">
+                <ProfileSwitch />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- 07 TensorPoW ---------- */}
+        <section className="fl-sec fl-tensor" data-fl style={len(SECTIONS.lattice)} aria-label="TensorPoW">
+          <div className="fl-pin">
+            <div className="fl-words fl-view-words fl-tensor-words" data-fl-from={LATTICE + 0.85} data-fl-to={CANYON - 0.85}>
+              {TENSOR_P.kicker ? <p className="label fl-label">{TENSOR_P.kicker}</p> : null}
+              <h2 className="display fl-view-name">
+                <Link className="beat-link" href={`/work/${TENSOR_P.slug}`}>
+                  {TENSOR_P.name}
+                  <Arrow />
+                </Link>
+              </h2>
+              <p className="lead fl-view-line">{TENSOR_P.line}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- 08 RydAR ---------- */}
+        <section className="fl-sec fl-rydar" data-fl style={len(SECTIONS.canyon)} aria-label="RydAR">
+          <div className="fl-pin">
+            <div className="fl-words fl-view-words fl-rydar-words" data-fl-from={CANYON + 1.9} data-fl-to={END - 0.75}>
+              <h2 className="display fl-view-name">
+                <Link className="beat-link" href={`/work/${RYDAR_P.slug}`}>
+                  {RYDAR_P.name}
+                  <Arrow />
+                </Link>
+              </h2>
+              <p className="lead fl-view-line">{RYDAR_P.line}</p>
+            </div>
+            <div className="fl-still feat">
+              <Slab media={rydar} sizes="(max-width: 860px) 60vw, 30vw" />
             </div>
           </div>
         </section>

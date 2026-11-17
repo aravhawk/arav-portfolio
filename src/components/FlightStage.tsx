@@ -14,7 +14,7 @@ declare global {
  * paint, like the page's water. If WebGL2 or float targets are missing,
  * nothing mounts and the sections stack as a plain page.
  */
-export function FlightStage({ slab, sheet, tribs }: { slab: string; sheet: string; tribs: string }) {
+export function FlightStage({ slab, sheet, tribs, cols, face }: { slab: string; sheet: string; tribs: string; cols: string; face: string }) {
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,5 +53,5 @@ export function FlightStage({ slab, sheet, tribs }: { slab: string; sheet: strin
     };
   }, []);
 
-  return <div ref={root} className="flight-root" data-slab={slab} data-sheet={sheet} data-tribs={tribs} aria-hidden="true" />;
+  return <div ref={root} className="flight-root" data-slab={slab} data-sheet={sheet} data-tribs={tribs} data-cols={cols} data-face={face} aria-hidden="true" />;
 }

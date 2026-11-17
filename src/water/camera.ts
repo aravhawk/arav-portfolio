@@ -7,7 +7,7 @@
  * so a held frame still drifts.
  */
 
-import { DY, EXT, NAME, type NameLayout, SLAB } from './world';
+import { DY, EXT, EXT2, NAME, type NameLayout, SLAB, T2 } from './world';
 
 export type V3 = [number, number, number];
 
@@ -16,6 +16,8 @@ export interface Pose {
   aim: V3;
   /** vertical field of view, degrees */
   fov: number;
+  /** degrees the camera leans about its line of sight: positive banks to the right */
+  roll?: number;
 }
 
 export interface Key extends Pose {
@@ -24,9 +26,9 @@ export interface Key extends Pose {
 }
 
 /** How long each section of the page is, in screens. */
-export const SECTIONS = { hero: 2.4, say: 2.2, infiniview: 2.6, upstream: 2.8, bench: 2.6, bridge: 2.8, runout: 2.0 };
+export const SECTIONS = { hero: 2.4, say: 2.2, infiniview: 2.6, upstream: 2.8, bench: 2.6, bridge: 2.8, models: 2.8, fork: 2.8, lattice: 2.6, canyon: 3.6, runout: 2.0 };
 /** The whole flight's length in screens. The last screen of it is the hand-over to the ending. */
-export const FLIGHT_SCREENS = SECTIONS.hero + SECTIONS.say + SECTIONS.infiniview + SECTIONS.upstream + SECTIONS.bench + SECTIONS.bridge + SECTIONS.runout;
+export const FLIGHT_SCREENS = SECTIONS.hero + SECTIONS.say + SECTIONS.infiniview + SECTIONS.upstream + SECTIONS.bench + SECTIONS.bridge + SECTIONS.models + SECTIONS.fork + SECTIONS.lattice + SECTIONS.canyon + SECTIONS.runout;
 /** Scroll (in screens) over which the lake's ice melts. */
 export const MELT = { from: 0.1, to: 2.0 };
 /** Until here the first camera only drifts: the name is still letters. */
@@ -82,6 +84,9 @@ export function flightKeys(aspect: number): Key[] {
   const s3 = s2 + SECTIONS.upstream;
   const s4 = s3 + SECTIONS.bench;
   const s5 = s4 + SECTIONS.bridge;
+  const s6 = s5 + SECTIONS.models;
+  const s7 = s6 + SECTIONS.fork;
+  const s8 = s7 + SECTIONS.lattice;
   const end = FLIGHT_SCREENS - 1;
   const Y = DY;
 
@@ -121,8 +126,9 @@ export function flightKeys(aspect: number): Key[] {
         // The tarn: both shards, the far shore, the ranges.
         { s: s4 + 1.2, pos: [1900, 9300 + Y, 500], aim: [1740, 9940 + Y, 0], fov: 58 },
         { s: s5 - 0.6, pos: [1896, 9340 + Y, 490], aim: [1740, 9900 + Y, 0], fov: 58 },
-        { s: s5 + 0.35, pos: [1300, 11300 + Y, 420], aim: [1300, 12100 + Y, 0], fov: 50 },
-        { s: end, pos: [1300, 7300 + DY + EXT, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)) + DY + EXT, 0], fov: 40 },
+        { s: s5 + 0.3, pos: [1300, T2 - 250, 400], aim: [1300, T2 + 600, 0], fov: 56 },
+        ...laterKeys(true, s5, s6, s7, s8),
+        { s: end, pos: [1300, 7300 + DY + EXT + EXT2, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)) + DY + EXT + EXT2, 0], fov: 40 },
       ]
     : [
         { s: 0, ...hero },
@@ -152,11 +158,43 @@ export function flightKeys(aspect: number): Key[] {
         // The tarn: one shard near on the left, one far on the right, the ranges beyond.
         { s: s4 + 1.2, pos: [1120, 9900 + Y, 250], aim: [1400, 10950 + Y, 130], fov: 46 },
         { s: s5 - 0.6, pos: [1135, 9950 + Y, 242], aim: [1405, 10975 + Y, 130], fov: 46 },
-        { s: s5 + 0.35, pos: [1300, 11300 + Y, 320], aim: [1300, 12200 + Y, 0], fov: 40 },
+        { s: s5 + 0.3, pos: [1300, T2 - 300, 300], aim: [1300, T2 + 600, 0], fov: 44 },
+        ...laterKeys(false, s5, s6, s7, s8),
         // Open water seen from above: the ending's first frame.
-        { s: end, pos: [1300, 7300 + DY + EXT, 1100], aim: [1300, 7300 + 1100 / Math.tan(rad(57)) + DY + EXT, 0], fov: 36 },
+        { s: end, pos: [1300, 7300 + DY + EXT + EXT2, 1100], aim: [1300, 7300 + 1100 / Math.tan(rad(57)) + DY + EXT + EXT2, 0], fov: 36 },
       ];
   return keys;
+}
+
+/** The last four stations' keys: the columns, the dam, the lattice, the canyon. */
+function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: number): Key[] {
+  const T = T2;
+  return upright
+    ? [
+        // Down the row from its tall end, so all four stand in an upright frame.
+        { s: s5 + 1.2, pos: [420, T + 380, 430], aim: [1235, T + 1110, 0], fov: 58 },
+        { s: s6 - 0.6, pos: [440, T + 400, 420], aim: [1240, T + 1115, 0], fov: 58 },
+        { s: s6 + 0.3, pos: [1300, T + 1500, 380], aim: [1300, T + 2300, 0], fov: 58 },
+        { s: s6 + 1.2, pos: [1300, T + 1850, 640], aim: [1300, T + 2800, 0], fov: 58 },
+        { s: s7 - 0.6, pos: [1300, T + 1890, 625], aim: [1300, T + 2815, 0], fov: 58 },
+        { s: s7 + 0.3, pos: [1300, T + 3300, 380], aim: [1300, T + 4100, 0], fov: 58 },
+        { s: s7 + 1.15, pos: [1300, T + 3500, 640], aim: [1300, T + 4500, 0], fov: 58 },
+        { s: s8 - 0.6, pos: [1300, T + 3540, 625], aim: [1300, T + 4515, 0], fov: 58 },
+        { s: s8 + 0.3, pos: [1300, T + 5000, 260], aim: [1300, T + 5700, 40], fov: 60 },
+        { s: s8 + 3.2, pos: [1300, T + 7700, 400], aim: [1300, T + 8400, 0], fov: 54 },
+      ]
+    : [
+        { s: s5 + 1.2, pos: [760, T + 60, 250], aim: [1310, T + 1080, 70], fov: 42 },
+        { s: s6 - 0.6, pos: [772, T + 95, 243], aim: [1316, T + 1090, 68], fov: 42 },
+        { s: s6 + 0.3, pos: [1260, T + 1500, 260], aim: [1300, T + 2300, 0], fov: 46 },
+        { s: s6 + 1.2, pos: [1150, T + 1900, 470], aim: [1330, T + 2900, 0], fov: 46 },
+        { s: s7 - 0.6, pos: [1156, T + 1935, 460], aim: [1332, T + 2915, 0], fov: 46 },
+        { s: s7 + 0.3, pos: [1300, T + 3350, 280], aim: [1300, T + 4100, 0], fov: 46 },
+        { s: s7 + 1.15, pos: [900, T + 3600, 430], aim: [1340, T + 4560, 0], fov: 44 },
+        { s: s8 - 0.6, pos: [910, T + 3635, 420], aim: [1343, T + 4572, 0], fov: 44 },
+        { s: s8 + 0.3, pos: [1300, T + 5000, 200], aim: [1300, T + 5700, 40], fov: 48 },
+        { s: s8 + 3.2, pos: [1300, T + 7700, 330], aim: [1300, T + 8500, 0], fov: 42 },
+      ];
 }
 
 /** Where each section begins, in screens. */
@@ -172,8 +210,8 @@ export function sectionStarts(): number[] {
 
 /** The scroll position of each section's composed frame, for a still (reduced motion) flight. */
 export function stillStops(): number[] {
-  const [, say, view, up, bench, bridge] = sectionStarts();
-  return [0, say + 0.7, view + 1.0, up + 1.25, bench + 1.15, bridge + 1.2, FLIGHT_SCREENS - 1];
+  const [, say, view, up, bench, bridge, models, fork, lattice, canyon] = sectionStarts();
+  return [0, say + 0.7, view + 1.0, up + 1.25, bench + 1.15, bridge + 1.2, models + 1.2, fork + 1.2, lattice + 1.15, canyon + 2.2, FLIGHT_SCREENS - 1];
 }
 
 /** Which composed frame a scroll position shows when nothing may glide. */
