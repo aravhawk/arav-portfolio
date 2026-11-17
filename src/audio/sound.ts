@@ -11,7 +11,7 @@
 import { COLS, DAM, LATTICE, SHARDS, SLUICES } from '@/water/world';
 import { type Graph, bell, bloom, crack, drip, drop, gateLift, gateSet, groan, pluck, shard, tick, whoosh } from './graph';
 import { type Mix, arrivalIndex, arrivalOf, crackVoice, dripVoice, dropVoice, latticeAt, latticeVoice, mixOf, shardVoice, uiVoice } from './mapping';
-import { type Scene, sat, seenAt, smooth } from './scene';
+import { type Scene, sat, seenAt, smooth, wetUnder } from './scene';
 import { Score } from './score';
 import { ARRIVAL, type Rng, hz, makeRng } from './theory';
 
@@ -49,6 +49,7 @@ export class Sound {
   private tapAt = -1e9;
   private gates = [1, 0, 0];
   private gatesSeen = false;
+  private arrival = 0;
   /** Set by the page: the time (performance ms) of the frame being made. */
   frameAt = 0;
   /** When set, every moment's cause and start are kept here (the sync check reads it). */
@@ -72,36 +73,25 @@ export class Sound {
     this.g.on.setTargetAtTime(on ? 1 : 0, t, seconds / 3);
   }
 
-  /** One frame: steer everything to where the scene says, for time `t`. Returns what it steered to. */
-  frame(sc: Scene, t: number): Mix {
+  /**
+   * One frame: steer everything to where the scene says. Returns what it steered to.
+   * @param now the audio clock's present: continuous parameters glide from here
+   * @param lead how far after it this frame's moments start (see the page's runtime)
+   */
+  frame(sc: Scene, now: number, lead = 0): Mix {
+    const m = mixOf(sc, now);
+    this.steer(sc, m, now);
+    this.moments(sc, m, now + lead);
+    return m;
+  }
+
+  /** The continuous part: every level, colour and place. */
+  private steer(sc: Scene, m: Mix, t: number) {
     const g = this.g;
-    const m = mixOf(sc, t);
     // Reduced motion: the same places, reached slowly.
     const slow = sc.calm ? 5 : 1;
     this.scene = sc;
-
-    // The arrival: the bed swells with the sun's last lift, then lets go.
-    if (this.dawn) {
-      this.dawn = false;
-      this.dawnAt = t;
-      this.liftDone = -1;
-      this.arrived = -1;
-      this.score.arrive(t);
-      bloom(g, t, 38, 0.9, 2.4);
-      this.note('dawn', this.dawnCause, t);
-    }
-    if (this.dawnAt >= 0 && this.liftDone < 0 && sc.lift >= 1) this.liftDone = t;
-    const arrival = this.dawnAt >= 0 && sc.home ? arrivalOf(sc.lift, this.liftDone >= 0 ? t - this.liftDone : 0) : 0;
-    if (sc.home && this.dawnAt >= 0) {
-      // The line of light: each of the arrival's notes sounds as the light reaches it.
-      const idx = arrivalIndex(sc.ray);
-      if (idx > this.arrived && this.arrived < ARRIVAL.length - 1) {
-        this.arrived = idx;
-        bell(g, ARRIVAL[idx], t, 0.5 + 0.06 * idx, 0.45 - 0.09 * idx, { bright: 0.9 - 0.5 * sc.night, long: 3.6, send: 0.7 });
-        this.note('ray', this.frameAt, t);
-      }
-    }
-
+    const arrival = this.arrival;
     g.bed.to(m.bed * (1 + 0.4 * arrival), t);
     g.padCut.to(m.bedCut * (1 + 0.35 * arrival), t);
     g.air.to(m.air, t);
@@ -127,6 +117,34 @@ export class Sound {
     g.worldCut.to(m.worldCut, t);
     g.echo.to(m.echo, t);
     g.worldSend.to(m.worldSend, t);
+  }
+
+  /** The moments this frame's state gives rise to, each starting at `t`. */
+  private moments(sc: Scene, m: Mix, t: number) {
+    const g = this.g;
+
+    // The arrival: the bed swells with the sun's last lift, then lets go.
+    if (this.dawn) {
+      this.dawn = false;
+      this.dawnAt = t;
+      this.liftDone = -1;
+      this.arrived = -1;
+      this.score.arrive(t);
+      bloom(g, t, 38, 0.9, 2.4);
+      this.note('dawn', this.dawnCause, t);
+    }
+    if (this.dawnAt >= 0 && this.liftDone < 0 && sc.lift >= 1) this.liftDone = t;
+    // (Steered from the next frame on: a swell does not need this frame.)
+    this.arrival = this.dawnAt >= 0 && sc.home ? arrivalOf(sc.lift, this.liftDone >= 0 ? t - this.liftDone : 0) : 0;
+    if (sc.home && this.dawnAt >= 0) {
+      // The line of light: each of the arrival's notes sounds as the light reaches it.
+      const idx = arrivalIndex(sc.ray);
+      if (idx > this.arrived && this.arrived < ARRIVAL.length - 1) {
+        this.arrived = idx;
+        bell(g, ARRIVAL[idx], t, 0.5 + 0.06 * idx, 0.45 - 0.09 * idx, { bright: 0.9 - 0.5 * sc.night, long: 3.6, send: 0.7 });
+        this.note('ray', this.frameAt, t);
+      }
+    }
 
     this.score.advance(t, { move: sc.move, night: sc.night, bass: m.bass, calm: sc.calm });
 
@@ -223,7 +241,6 @@ export class Sound {
         this.note('lattice', this.frameAt, t);
       }
     }
-    return m;
   }
 
   /**
@@ -237,7 +254,8 @@ export class Sound {
     switch (type) {
       case 'press': {
         // A press on water: a drop, pitched by how far off the water is, placed where it fell.
-        if (c <= 0) return;
+        // (Not on the lake's ice and not on land: nothing is seen to happen there.)
+        if (c <= 0 || !sc || wetUnder(sc.cam, sc.aspect, a, b, sc.melt, sc.gate) < 0.4) return;
         const v = dropVoice(a, c);
         // (A press that is also a press on a control keeps its tick in front.)
         drop(g, t, hz(v.midi), v.gain * (Math.abs(cause - this.tapAt) < 40 ? 0.4 : 1), v.pan, v.cut, v.send);

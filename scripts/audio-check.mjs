@@ -410,11 +410,12 @@ function scenes(K) {
     'station-7-lattice': { ...station(8), seconds: 24, transients: true },
     'station-8-canyon': { seconds: 22, scroll: [[0, canyon - 0.4], [3, canyon - 0.4], [9, stop[9]]], clock0: 2.2 },
     'station-9-delta': station(10),
+    // The basin: the pointer crosses the water slowly, then fast, then rests; three presses, near, middle and far.
     'wake-press': {
       seconds: 16,
-      scroll: [[0, stop[1]]],
-      pointer: [[0, 0.3, 0.7, 0], [3, 0.3, 0.7, 30], [6, 0.8, 0.72, 30], [6.6, 0.8, 0.72, 30], [7.1, 0.25, 0.68, 22], [7.6, 0.85, 0.7, 22], [8.1, 0.3, 0.66, 22], [8.5, 0.5, 0.7, 22], [16, 0.5, 0.7, 22]],
-      events: [[10, 'press', 0.3, 0.8, 14], [11.5, 'press', 0.55, 0.66, 34], [13, 'press', 0.8, 0.56, 66]],
+      scroll: [[0, stop[2]]],
+      pointer: [[0, 0.4, 0.78, 0], [3, 0.4, 0.78, 30], [6, 0.9, 0.8, 30], [6.6, 0.9, 0.8, 30], [7.1, 0.4, 0.76, 22], [7.6, 0.92, 0.78, 22], [8.1, 0.42, 0.74, 22], [8.5, 0.6, 0.78, 22], [16, 0.6, 0.78, 22]],
+      events: [[10, 'press', 0.42, 0.88, 14], [11.5, 'press', 0.62, 0.72, 34], [13, 'press', 0.8, 0.56, 66]],
       transients: true,
     },
     switch: { seconds: 20, scroll: [[0, stop[7]]], events: [[5, 'switch', 1], [9.5, 'switch', 2], [14, 'switch', 0]], transients: true },
@@ -564,29 +565,34 @@ async function sync(base) {
   await page.click('.nav-sound');
   await page.waitForFunction(() => window.__sound && window.__sound.ctx.state === 'running', null, { timeout: 20000 });
   await page.waitForTimeout(2500);
-  // Listen to the buses the moments sound on, block by block, in the context's own time.
-  await page.evaluate(() => {
+  // Listen to the buses the moments sound on, in the context's own time: for each block, the first sample that
+  // stands clear of the blocks before it. The listening node has a delay of its own, so that is measured first,
+  // with ticks asked for at known times while nothing else is sounding there.
+  const tapDelay = await page.evaluate(async () => {
     const { ctx, sound } = window.__sound;
     sound.trace = [];
     const tap = ctx.createScriptProcessor(256, 2, 2);
     const blocks = (window.__blocks = []);
+    const prior = [0, 0, 0, 0];
     tap.onaudioprocess = (e) => {
       const d = e.inputBuffer.getChannelData(0);
       const r = e.inputBuffer.getChannelData(1);
+      const ref = Math.max(4e-4, 2.2 * Math.max(prior[0], prior[1], prior[2], prior[3]));
       let first = -1;
       let pk = 0;
       for (let i = 0; i < d.length; i++) {
         const v = Math.max(Math.abs(d[i]), Math.abs(r[i]));
         if (v > pk) pk = v;
-        if (first < 0 && v > 2e-4) first = i;
+        if (first < 0 && v > ref) first = i;
       }
+      prior.shift();
+      prior.push(pk);
       if (blocks.length < 400000) blocks.push([e.playbackTime, pk, first]);
     };
     const mute = ctx.createGain();
     mute.gain.value = 0;
     sound.g.fx.connect(tap);
     sound.g.ui.connect(tap);
-    sound.g.bellIn.connect(tap);
     tap.connect(mute).connect(ctx.destination);
     // The two clocks, read together every frame.
     const pairs = (window.__pairs = []);
@@ -596,6 +602,18 @@ async function sync(base) {
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+    await new Promise((res) => setTimeout(res, 400));
+    const found = [];
+    for (let k = 0; k < 5; k++) {
+      const at = ctx.currentTime + 0.25;
+      sound.fire('tap', 0.5, 0, 0, at, performance.now());
+      await new Promise((res) => setTimeout(res, 700));
+      const b = blocks.find((x) => x[2] >= 0 && x[0] + x[2] / ctx.sampleRate >= at - 0.002);
+      if (b) found.push(b[0] + b[2] / ctx.sampleRate - at);
+    }
+    sound.trace = [];
+    found.sort((x, y) => x - y);
+    return found.length ? found[Math.floor(found.length / 2)] : NaN;
   });
   const unit = await page.evaluate(() => window.__flight.state().unit);
   const K = await page.evaluate(() => {
@@ -617,9 +635,9 @@ async function sync(base) {
   // The melt's first crack: from the frozen lake, begin to scroll.
   await to(0, 1500);
   await glide(0.05, 1.6, 5);
-  // A press on water: the river at the statement.
-  await to(stops[1] + 0.7, 2500);
-  for (const [x, y] of [[980, 620], [700, 700], [1100, 560], [860, 760]]) {
+  // A press on water: the basin.
+  await to(stops[2] + 1.0, 2500);
+  for (const [x, y] of [[650, 720], [900, 650], [1150, 760], [760, 800]]) {
     await page.mouse.move(x, y, { steps: 3 });
     await page.mouse.down();
     await page.waitForTimeout(60);
@@ -653,14 +671,12 @@ async function sync(base) {
     return best[0] + (ct - best[1]) * 1000;
   };
   const onsetOf = (audio) => {
-    // The first block, from just before the asked-for start, whose level stands clear of the blocks before it.
-    // (A block is 256 samples, 5.3 ms: that is how finely the onset is placed.)
-    const span = 256 / data.sr;
-    let i = data.blocks.findIndex((b) => b[0] + span >= audio - span);
-    if (i < 4) return NaN;
-    for (; i < data.blocks.length && data.blocks[i][0] <= audio + 0.12; i++) {
-      const before = Math.max(data.blocks[i - 1][1], data.blocks[i - 2][1], data.blocks[i - 3][1], data.blocks[i - 4][1]);
-      if (data.blocks[i][1] > 4e-4 && data.blocks[i][1] > 2.2 * before) return Math.max(data.blocks[i][0], audio - span);
+    // The first rise in the stream at or after the start that was asked for, with the listening node's own delay taken off.
+    for (const b of data.blocks) {
+      if (b[2] < 0) continue;
+      const t = b[0] + b[2] / data.sr - tapDelay;
+      if (t < audio - 0.0015) continue;
+      return t <= audio + 0.06 ? t : NaN;
     }
     return NaN;
   };
@@ -671,12 +687,13 @@ async function sync(base) {
     return s.length ? { n: s.length, min: s[0], med: s[Math.floor(s.length / 2)], max: s[s.length - 1] } : { n: 0, min: NaN, med: NaN, max: NaN };
   };
   const f = (x) => (Number.isFinite(x) ? x.toFixed(1) : 'n/a');
-  const lines = ['| moment | count | cause to request, ms (min / median / max) | cause to start on the audio clock, ms (min / median / max) | start asked for to onset found in the stream, ms (median / max; 5.3 ms blocks) | within a frame |', '| --- | --- | --- | --- | --- | --- |'];
+  const lines = ['| moment | count | cause to request, ms (min / median / max) | cause to start on the audio clock, ms (min / median / max) | start asked for to onset found in the stream, ms (median / max) | within a frame |', '| --- | --- | --- | --- | --- | --- |'];
   let bad = 0;
-  for (const type of ['press', 'switch', 'crack', 'pulse', 'landing', 'lattice', 'drip', 'dawn', 'ray', 'melt', 'tap', 'hover']) {
+  for (const type of ['press', 'switch', 'gate-up', 'gate-down', 'crack', 'pulse', 'landing', 'lattice', 'drip', 'dawn', 'ray', 'melt', 'tap', 'hover']) {
     const ev = by[type];
     if (!ev) {
       lines.push(`| ${type} | 0 | | | | not caused |`);
+      bad++;
       continue;
     }
     const req = stat(ev.map((e) => e.made - e.cause));
@@ -687,7 +704,7 @@ async function sync(base) {
     lines.push(`| ${type} | ${ev.length} | ${f(req.min)} / ${f(req.med)} / ${f(req.max)} | ${f(start.min)} / ${f(start.med)} / ${f(start.max)} | ${f(on.med)} / ${f(on.max)} (${on.n} found) | ${ok ? 'yes' : 'NO'} |`);
   }
   const lead = stat(data.pairs.filter((p) => p[3] > 0).map((p) => (p[1] - p[2]) * 1000));
-  const note = `\nAudio context: ${data.sr} Hz, base latency ${(data.base * 1000).toFixed(1)} ms, output latency ${(data.outLat * 1000).toFixed(1)} ms; the audio clock runs ${f(lead.med)} ms (median) ahead of what the output device is playing. Sound loaded before the click: ${before}. Console errors: ${errors.length}.\n`;
+  const note = `\nThe listening node's own delay, measured with ticks asked for at known times and taken off the last column: ${(tapDelay * 1000).toFixed(2)} ms. An onset is found where the effects bus first rises clear of the 21 ms before it, so a moment that begins under another sound, or swells in slowly, is not found.\nAudio context: ${data.sr} Hz, base latency ${(data.base * 1000).toFixed(1)} ms, output latency ${(data.outLat * 1000).toFixed(1)} ms; the audio clock runs ${f(lead.med)} ms (median) ahead of what the output device is playing. Sound loaded before the click: ${before}. Console errors: ${errors.length}.\n`;
   writeFileSync(join(out, 'sync.md'), lines.join('\n') + '\n' + note);
   writeFileSync(join(out, 'sync.json'), JSON.stringify({ trace: data.trace, base: data.base, outLat: data.outLat, errors }));
   console.log(lines.join('\n') + '\n' + note);

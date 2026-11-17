@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { arrivalIndex, arrivalOf, camN, crackVoice, dripVoice, dropVoice, gust, latticeAt, latticeVoice, mixOf, scrollN, shardVoice, swell, uiVoice } from '@/audio/mapping';
-import { type Scene, SceneReader, type SignalsLike, groundAt, movementAt, seenAt } from '@/audio/scene';
+import { type Scene, SceneReader, type SignalsLike, groundAt, movementAt, seenAt, wetUnder } from '@/audio/scene';
 import { ARRIVAL, MOVE, PENTA } from '@/audio/theory';
 import { END_AT, MELT, SETTLE_AT, basisOf, dayAt, flightKeys, poseAt, sectionStarts, stillStops } from '@/water/camera';
 import { COLS, DAM, DELTA, LAKE, LATTICE, SHARDS, SLUICES, STREAM, TARN } from '@/water/world';
@@ -355,6 +355,10 @@ describe('the scene is read from what the picture publishes', () => {
     for (let i = 31; i <= 120; i++) sc = r.read(sig(3, 1000 + i * 16.67, { far: 30, moved: 1500, px: 0.8 }), 1000 + i * 16.67, env);
     expect(sc.pv).toBeLessThan(0.02);
     expect(new SceneReader().read(sig(3, 1000, { far: 0, moved: 1000 }), 1000, env).over).toBe(false);
+    // Over the frozen lake the ray meets the ground, but it is ice: no wake. Over the bank beside the river: none either.
+    expect(new SceneReader().read(sig(0, 1000, { far: 30, moved: 1000, px: 0.5, py: 0.7 }), 1000, env).over).toBe(false);
+    expect(wetUnder(basisOf(poseAt(flightKeys(1.6), 0)), 1.6, 0.5, 0.7, 0, [1, 0, 0])).toBe(0);
+    expect(wetUnder(basisOf(poseAt(flightKeys(1.6), 0)), 1.6, 0.5, 0.7, 1, [1, 0, 0])).toBe(1);
   });
 
   it('a sound is placed where its cause is seen, and a cause out of frame is not heard', () => {

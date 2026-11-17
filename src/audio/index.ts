@@ -23,6 +23,18 @@ declare global {
   }
 }
 
+/**
+ * A moment's sound is asked for a little ahead of the audio clock as the
+ * page reads it, so it starts on the sample it was asked for with its
+ * attack whole, not at the next render quantum with its first milliseconds
+ * gone. Inside the frame loop the clock reads about a quantum (128
+ * samples) behind; inside an input handler it reads further behind
+ * (measured: about 7 ms), so a press is asked for further ahead and
+ * starts no later for it.
+ */
+const LEAD_FRAME = 0.004;
+const LEAD_INPUT = 0.012;
+
 /** What counts as a control: its hover and its press are heard. */
 const CONTROL = 'a[href], button, [role="radio"], [role="button"], summary, select, input';
 
@@ -57,15 +69,19 @@ async function build(ctx: AudioContext): Promise<Running | null> {
   );
 
   // The frame: after the picture has drawn and published.
+  let inFrame = false;
+  onFrame(() => (inFrame = true), -1000);
   onFrame((now) => {
     if (!live()) return;
     sound.frameAt = now;
-    sound.frame(reader.read(signals, now, env), ctx.currentTime);
+    sound.frame(reader.read(signals, now, env), ctx.currentTime, LEAD_FRAME);
   }, 30);
+  onFrame(() => (inFrame = false), 1000);
+  const soon = () => ctx.currentTime + (inFrame ? LEAD_FRAME : LEAD_INPUT);
 
-  // Moments, the instant they are published.
+  // Moments, the instant they are published: by the picture inside its frame, or by a handler.
   listen((type, a, b, c, at) => {
-    if (live()) sound.fire(type, a, b, c, ctx.currentTime, at);
+    if (live()) sound.fire(type, a, b, c, soon(), at);
   });
 
   // Links and controls: a hover is heard once as the pointer comes onto one, a press as it lands.
@@ -78,14 +94,14 @@ async function build(ctx: AudioContext): Promise<Running | null> {
       const el = control(e);
       if (el === over) return;
       over = el;
-      if (el && live()) sound.fire('hover', e.clientX / env.viewW, 0, 0, ctx.currentTime, performance.now());
+      if (el && live()) sound.fire('hover', e.clientX / env.viewW, 0, 0, soon(), performance.now());
     },
     { capture: true, passive: true },
   );
   document.addEventListener(
     'pointerdown',
     (e) => {
-      if (control(e) && live()) sound.fire('tap', e.clientX / env.viewW, 0, 0, ctx.currentTime, performance.now());
+      if (control(e) && live()) sound.fire('tap', e.clientX / env.viewW, 0, 0, soon(), performance.now());
     },
     { capture: true, passive: true },
   );
@@ -96,7 +112,7 @@ async function build(ctx: AudioContext): Promise<Running | null> {
       const el = e.detail === 0 ? control(e) : null;
       if (!el || !live()) return;
       const r = el.getBoundingClientRect();
-      sound.fire('tap', (r.left + r.width / 2) / env.viewW, 0, 0, ctx.currentTime, performance.now());
+      sound.fire('tap', (r.left + r.width / 2) / env.viewW, 0, 0, soon(), performance.now());
     },
     { capture: true, passive: true },
   );

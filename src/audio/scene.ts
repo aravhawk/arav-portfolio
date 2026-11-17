@@ -227,6 +227,12 @@ export function movementAt(home: boolean, s: number, melt: number, rest: boolean
   return MOVE.delta;
 }
 
+/** Whether a point of the frame (0..1 each way) is over open water, 0..1: the lake's ice and the land are not water. */
+export function wetUnder(cam: Basis | null, aspect: number, x: number, y: number, melt: number, gate: ArrayLike<number>): number {
+  const hit = cam ? groundUnder(cam, x, y, aspect) : null;
+  return hit ? groundAt(hit.x, hit.y, melt, gate).wet : 0;
+}
+
 /**
  * How a point of the world is seen: how well inside the frame it is (0 out
  * of frame or behind the camera, 1 well inside), where it stands across
@@ -386,7 +392,8 @@ export class SceneReader {
       canyon: home ? sig.st[3] : 0,
       walls,
       move: movementAt(home, sig.s, melt, home && sig.rest),
-      over: home && sig.far > 0 && now - sig.moved < 4000,
+      // (The picture says the pointer's ray meets the ground; whether that ground is open water is read from the plan.)
+      over: home && sig.far > 0 && now - sig.moved < 4000 && wetUnder(cam, sig.aspect, sig.px, sig.py, melt, sig.gate) > 0.4,
       px: sig.px,
       pv: this.pv,
       far: sig.far,
