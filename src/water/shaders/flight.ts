@@ -2352,7 +2352,8 @@ vec3 ribbonSky(vec3 d) {
   float shim = 0.8 + 0.2 * n1(e * 44.0 - uTime * 0.6) + 0.12 * (n1(e * 9.0 - uTime * 0.17) - 0.5);
   // (Brightest where it leaves the water.)
   float foot = exp(-e / 0.03);
-  float light = l.x * (4.4 * shim + 4.0 * foot + 5.0 * tip) + l.y * (1.0 + 2.2 * foot + 2.5 * tip);
+  // (Its head is a round light on its own line: the glow round the ribbon is not lit across its whole width there.)
+  float light = l.x * (4.4 * shim + 4.0 * foot + 5.0 * tip) + l.y * (1.0 + 2.2 * foot) + exp(-dist * dist / 0.00016) * tip * 1.4;
   light += exp(-(e * e + gRib.y * gRib.y) / 0.0003) * 1.2;
   // The dust: fine points that leave the ribbon to either side and thin away, each coming and going.
   float a = abs(gRib.y);
@@ -2422,7 +2423,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   // the more its mirror is turned up past the gold to the deep of the sky. It is a level change, so it is the sea's
   // and no shape; where the words stand it comes a little sooner.)
   float dipK = -dir.z * inversesqrt(max(dot(dir.xy, dir.xy), 1e-6));
-  r.z = abs(r.z) + 0.24 * (1.0 - gDusk) * (1.0 - uNight) + (0.32 * smoothstep(0.0, 0.32, dipK) + 0.16 * lee) * still;
+  r.z = abs(r.z) + 0.24 * (1.0 - gDusk) * (1.0 - uNight) + (0.32 * smoothstep(0.0, 0.32, dipK) + 0.09 * lee) * still;
   r = normalize(r);
   float cosi = clamp(dot(-dir, n), 0.0, 1.0);
   float fres = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
@@ -2438,7 +2439,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   vec3 body = mix(deep * (0.5 + 0.5 * max(S.sun.z * 3.0, 0.3)), vec3(0.01, 0.07, 0.11) * (S.amb.b * 1.6 + 0.12), (1.0 - gDusk) * (1.0 - uNight));
   // (By day the sea is a rougher mirror than at the still ends of the day: more of its own deep colour shows.)
   float dayK = (1.0 - gDusk) * (1.0 - uNight);
-  float mir = clamp(fres + 0.05, 0.0, 1.0) * (1.0 - 0.5 * dayK) * (1.0 - 0.2 * lee * still);
+  float mir = clamp(fres + 0.05, 0.0, 1.0) * (1.0 - 0.5 * dayK) * (1.0 - 0.12 * lee * still);
   vec3 col = mix(body, refl, mir);
   float inv = inversesqrt(max(dot(dir.xy, dir.xy), 1e-6));
   vec2 dn = dir.xy * inv;
@@ -2504,7 +2505,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
         float foot = exp(-eR / 0.03);
         // (Light lying on water: the faces turned to it carry it, the others a little less.)
         float carry = 0.7 + 0.3 * smoothstep(-0.02, 0.02, g.y);
-        lineK = (l.x * (3.4 * shim * carry + 4.0 * foot + 5.0 * tipM) + l.y * (0.8 + 2.2 * foot + 2.5 * tipM)) * shownM;
+        lineK = (l.x * (3.4 * shim * carry + 4.0 * foot + 5.0 * tipM) + l.y * (0.8 + 2.2 * foot) + exp(-dR * dR / 0.00016) * tipM * 1.4) * shownM;
         lineK += exp(-(eR * eR + gRib.y * gRib.y) / 0.0003) * 1.2 * smoothstep(0.0, 0.3, uRay.y) * shownM;
         line = mix(vec3(1.0, 0.975, 0.94), vec3(1.0, 0.9, 0.7), 0.55 * exp(-eR / 0.03)) * lineK * uRay.z;
         pathR = exp(-abs(gRib.y) / (0.004 + 0.05 * eR)) * shownM * uRay.z * (1.0 - smoothstep(0.03, 0.06, abs(gRib.y)));
