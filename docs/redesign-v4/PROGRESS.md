@@ -616,3 +616,75 @@ first one did.
    the median is 9.5 with none under 9.
 6. The sound phase.
 
+
+## All in, in parallel (Arav, t268u, 2026-11-16 11:38 PM CT)
+
+Arav's direction, which replaces the one-helper limit above: finish v4
+completely tonight. The weekly limit is at 93 percent remaining and
+resets on Nov 17 at 1 PM CT, so use it fully. As many parallel Claude
+helpers as genuinely speed the work up, on any model tier; **Fable 5.2
+never above High effort** (High for critical design, planning and
+review; Medium and Low for testing and trivial steps). Each helper gets
+a disjoint area so no two duplicate or clash; this thread stays
+responsible for integration and clean commits. No Kilo. To finish:
+frame rate at large screens, polish on the stations and the hero,
+project pages in the new style, per-page sharing cards with the
+arav.pro canonical, WebHaptics, the metrics, full gates, then the
+composed sound phase (igloo.inc as the benchmark), then fresh
+independent critic rounds until the median is 9.5 with none under 9.
+Commits SSH-signed and pushed as frequent checkpoints. No PR and no
+merge from this thread: Arav opens the PR when this file says DONE.
+
+### K9c (the last single helper), reviewed and pushed, 23:59
+
+Five signed commits, `8e81133` to `7ebccf1`, pushed. **The flight is
+now the home page at `/`**: the old relief page, `/flight`, the
+separate `Ending` canvas and its shader are gone. New: the delta (the
+river parts into three arms and six braids; the interests stand
+there); time passes along the flight (cold morning to low sun; polar
+night to first light); the ending is the flight's last frame, with one
+light event per visit (the sun's edge clears the lowest saddle of the
+ranges, found per device, and a line of light runs in across the sea);
+the "words' lee" (the picture keeps itself calm behind whichever words
+are up); reduced motion as composed stills; a plain stacked page
+without WebGL; the home sharing card redrawn as the hero.
+
+Gates at `7ebccf1`: lint, typecheck clean; 196 tests; build; legibility
+on `/` at seven widths in both themes, 9,286 lines, 0 failures; overlap
+on eight pages at seven widths, 2,583 positions, 0 overlaps; 197 words,
+0 dashes, 0 console errors; protected paths diff empty.
+
+**Frame rate is the open gate.** Fixed harness (every profile now
+scrolls the whole page):
+
+| profile | slow frames | p95 | tier |
+| --- | --- | --- | --- |
+| desktop-1440-dpr2 | 1 / 2,443 | 16.7 | 0 |
+| desktop-1728-dpr2 | 93 / 2,350 (4.0%) | 16.8 | one step lean |
+| phone-390-dpr3-cpu4x | 0 / 2,406 | 16.7 | 1 |
+| desktop-1440-dpr2-contended | 331 / 2,109 | 33.4 | two steps lean |
+
+The useful finding: the GPU driver's cost follows the whole shader's
+shape, so code that never runs still slows the frame. The pass is now
+compiled in two variants (the sea's code only from the canyon on).
+The next step is a variant per stretch of the flight.
+
+### The wave (launched 2026-11-17 about 00:05)
+
+Six helpers, each in its own worktree and branch, its own ports, its
+own files, briefs in `.tools/briefs/W*.md` (rules common to all in
+`W-common.md`). None pushes; this thread cherry-picks their commits
+onto the branch, re-runs the gates and pushes.
+
+| helper | area | ports |
+| --- | --- | --- |
+| W1 | the hero: the name as open water, lake ice, the melt, ranges, the river between stations | 3151 / 3161 |
+| W2 | stations 1 to 4 (Infiniview, Upstream, Kilo Bench, Agent Bridge) and callouts | 3152 / 3162 |
+| W3 | stations 5 to 8 (Open models, cc-switch, TensorPoW, RydAR), the delta, the sea, the ending | 3153 / 3163 |
+| W4 | every inner page in the home page's world: project pages as case studies, work, blog, 404 | 3154 / 3164 |
+| W5 | sound: study of igloo.inc, a composed generative bed and effects driven by the picture's state | 3155 / 3165 |
+| W6 | sharing cards from the real picture on every route, arav.pro canonical, icons (Medium effort) | 3156 / 3166 |
+
+After the wave, in order: integrate; the frame-rate task alone on the
+GPU (a compiled variant per stretch); haptics and metrics checks; full
+gates; a panel of three fresh critics; rounds until the bar.
