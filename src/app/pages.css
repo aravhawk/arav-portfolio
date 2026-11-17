@@ -1890,6 +1890,10 @@
 
 /* On a phone the challenge, its three backends and the answer stand one under the other. */
 @media (max-width: 620px) {
+  /* (The leaderboard strip is a line of small type 2,300 px wide: on a phone it is a sliver, and the full results plate above already shows it.) */
+  .trio-main > .plate:first-child {
+    display: none;
+  }
   .dia-tensor {
     --gap: 26px;
     grid-template-columns: minmax(0, 1fr);
