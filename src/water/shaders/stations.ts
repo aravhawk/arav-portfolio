@@ -49,6 +49,8 @@ uniform vec3 uSurge;       // station 6: 0..1, the surge running down each chann
 
 // How much of each subject is drawn. (One that is in sight at all is drawn whole and left to the air: half there, it would be a ghost.)
 vec4 gSt = vec4(0.0);
+// How far off the nearest of these subjects already drawn at this pixel is: one further off is not drawn over it, nor is its water.
+float gDepth = 1e9;
 /** The air between the eye and something t away. */
 vec3 inAir(vec3 c, vec3 dir, float t) {
   float thin = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
@@ -72,7 +74,18 @@ vec3 snowOn(vec3 n, float lump) {
  * seen bent through ice, or lying on a wet face.)
  */
 vec3 beyond(vec3 ro, vec3 rd) {
-  if (rd.z > 0.0) return skyAll(rd, 0.0);
+  if (rd.z > 0.0) {
+    // (The sky's own colours and the sun's glow; the aurora as its wash. Nothing finer survives the ice.)
+    float h = rd.z;
+    vec3 sky = mix(mix(S.hor, S.mid, smoothstep(0.0, 0.2, h)), S.zen, smoothstep(0.07, 0.62, h));
+    float az = max(dot(normalize(rd.xy + 1e-5), normalize(S.sun.xy)), 0.0);
+    sky += S.band * exp(-h * 15.0) * az * az * az * az * 0.4 + sunBloom(max(dot(rd, S.sun), 0.0)) * (1.0 - 0.5 * uNight);
+    if (uNight > 0.0 && uSkyK.y > 0.0) {
+      float up = h - 0.27;
+      sky += mix(vec3(0.16, 0.92, 0.6), vec3(0.42, 0.22, 0.9), smoothstep(0.0, 1.32, up)) * (smoothstep(-0.05, 0.03, up) * exp(-max(up, 0.0) / 0.55) * 0.9) * uNight * uSkyK.y;
+    }
+    return sky;
+  }
   float t = min((ro.z + FREEBOARD) / max(-rd.z, 0.03), 800.0);
   float sd = textureLod(uBedA, bedUv(ro.xy + rd.xy * t), 0.0).r;
   vec3 L = keyDir();
@@ -127,9 +140,12 @@ vec3 iceLook(vec3 p, vec3 n, vec3 rd, float t, float thick, vec2 q, float edge, 
   vec3 milk = mix(vec3(0.6, 0.83, 0.94) * lit, vec3(0.45, 0.82, 0.88) * (S.amb * 2.4 + uAurora * 0.42) + vec3(0.003, 0.01, 0.013), uNight);
   col = mix(col, milk, clamp(0.1 + 0.16 * heart + 0.55 * air, 0.0, 0.8) * gAiry);
   // Fracture planes inside, at two depths: each a sheet, a bright hairline where it is seen edge on, and a flash where it turns to the light.
-  float near = 1.0 - smoothstep(1.2, 4.5, px);
+  // (In a glacier's wall the hairlines are only looked for close by.)
+  float near = gAiry < 0.9 ? 1.0 - smoothstep(0.22, 0.5, px) : 1.0 - smoothstep(1.2, 4.5, px);
   if (near > 0.0 && gMirror < 0.5) {
     for (int k = 0; k < 2; k++) {
+      // (The deeper sheets are only looked for from close by, and not in a glacier's pressed ice.)
+      if (k == 1 && (px > 0.9 || gAiry < 0.9)) break;
       float dep = k == 0 ? 7.0 : 28.0;
       float sc = k == 0 ? 62.0 : 124.0;
       vec3 f3 = fracture((q + par * dep) / vec2(sc, sc * 1.5) + seed * 3.1 + float(k) * 7.3);
@@ -240,6 +256,7 @@ vec3 columns(vec3 col, vec3 dir, float tw) {
     if (t > 0.0 && (best < 0.0 || t < best)) { best = t; bi = i; n = n1; tF = f1; }
   }
   if (best < 0.0 && !rect) return col;
+  if (best > gDepth || (best < 0.0 && tw > gDepth)) return col;
   if (best < 0.0 || (tw > 0.0 && best > tw)) {
     // Each column's shade lies long across the water and the snow, away from the low light.
     vec3 Ls = keyDir();
@@ -270,6 +287,7 @@ vec3 columns(vec3 col, vec3 dir, float tw) {
         if (colHit(uCamPos, rd, bi, n2, tF2) < 0.0) cov -= 0.33;
       }
     }
+    gDepth = best;
     return mix(col, inAir(colColor(uCamPos, dir, best, tF, n, bi), dir, best), cov * gSt.x);
   }
   // (Water is only seen where the land above it is not in the way.)
@@ -465,7 +483,9 @@ vec3 dam(vec3 col, vec3 dir, float tw) {
     spray += g * exp(-dot(off * vec3(1.0, 1.0, 1.7), off) / 2600.0) * (0.35 + 0.65 * puff);
   }
   vec3 mist = mix(vec3(0.93, 0.97, 1.0) * (S.key * 0.24 + S.amb * 1.05), vec3(0.3, 0.45, 0.5) * 0.3 + uAurora * 0.2, uNight);
+  if (t > gDepth || (t < 0.0 && tw > gDepth)) return col;
   if (t > 0.0 && (tw < 0.0 || t < tw)) {
+    gDepth = t;
     col = mix(col, inAir(damColor(uCamPos, dir, t, tF, n, kind, lo, hi), dir, t), gSt.y);
     return mix(col, mist, clamp(spray * 0.5, 0.0, 0.6) * gSt.y);
   }
@@ -530,6 +550,13 @@ vec3 dam(vec3 col, vec3 dir, float tw) {
 }
 `;
 
+const cubeSizes = () =>
+  Array.from({ length: 16 }, (_, k) => {
+    const a = fr(Math.sin((k % 4) * 127.1 + Math.floor(k / 4) * 311.7 + 4.7) * 43758.5453);
+    const b = fr(Math.sin((k % 4) * 269.5 + Math.floor(k / 4) * 183.3 + 9.1) * 43758.5453);
+    return `vec2(${((LATTICE.size / 2) * (0.88 + 0.2 * a)).toFixed(2)}, ${(LATTICE.h * (0.78 + 0.5 * b)).toFixed(2)})`;
+  }).join(', ');
+
 /** Station 7: sixteen cubes of ice in a still pool, one thread of current round them all, a light passing through them in turn. */
 export const LATTICE_ICE = `
 const vec2 LAT_C = vec2(${f(LATTICE.x)}, ${f(LATTICE.y)});
@@ -578,10 +605,8 @@ float cubeGlow(float i, float j) {
   return exp(-d * d);
 }
 // (No two cubes are quite the same: each has melted to its own size.) x: half its width, y: its height.
-vec2 cubeSize(vec2 ij) {
-  vec2 hq = hash2(ij + 4.7);
-  return vec2(LAT_S * (0.88 + 0.2 * hq.x), LAT_H * (0.78 + 0.5 * hq.y));
-}
+const vec2 LAT_SZ[16] = vec2[16](${cubeSizes()});
+vec2 cubeSize(vec2 ij) { return LAT_SZ[int(ij.x) + 4 * int(ij.y)]; }
 float cubesHit(vec3 ro, vec3 rd, out vec3 n, out float tF, out vec2 id) {
   vec3 n1;
   float f1;
@@ -611,12 +636,11 @@ vec3 cubeColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec2 id) {
   // Its top is frosted: a thin rime, thicker toward the middle.
   col = mix(col, snowOn(n, (gr.r - 0.5) * 0.4), step(0.5, n.z) * (0.2 + 0.5 * gr.g) * smoothstep(0.0, 14.0, min(e.x, e.y)));
   // The light inside: it stands at the cube's heart, so it is brightest where the eye looks through the most ice
-  // and toward the middle of each face, and every fracture plane in the cube carries it.
+  // and toward the middle of each face, and the air trapped in the cube carries it.
   vec3 mid = hp + rd * (tF - t) * 0.5 - vec3(c, sz.y * 0.45 - FREEBOARD);
   float core = exp(-dot(mid, mid) / (sz.x * sz.x * 0.9));
   float thickK = clamp((tF - t) / (sz.x * 2.0), 0.0, 1.0);
-  vec3 f3 = fracture(q / 46.0 + id * 1.9);
-  col += vec3(0.3, 0.84, 1.0) * glow * (1.7 * core + 0.3 * thickK + 0.5 * (1.0 - smoothstep(0.0, 0.05, f3.x))) * mix(0.8, 1.1, uNight);
+  col += vec3(0.3, 0.84, 1.0) * glow * (1.7 * core + 0.3 * thickK + 0.35 * smoothstep(0.55, 0.8, gr.r)) * mix(0.8, 1.1, uNight);
   return col;
 }
 /** The lattice over the finished ground, its mirror image, the thread, and the light on the water. */
@@ -625,7 +649,9 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
   float tF;
   vec2 id;
   float t = cubesHit(uCamPos, dir, n, tF, id);
+  if (t > gDepth || (t < 0.0 && tw > gDepth)) return col;
   if (t > 0.0 && (tw < 0.0 || t < tw)) {
+    gDepth = t;
     float cov = 1.0;
     vec3 n2;
     float tF2;
@@ -644,7 +670,7 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
   // The thread of current: the one place the mirror is broken. Deeper, darker water with the light running on it.
   float s;
   float d = threadAt(q, s);
-  float band = 1.0 - smoothstep(9.0, 22.0, d);
+  float band = 1.0 - smoothstep(7.0, 27.0, d);
   float lodT = lodFor(tw * uPxAng, 40.0, 256.0);
   float run = textureLod(uGrain, vec2(d / 120.0, (s - uTime * 120.0) / 1500.0), lodT).r;
   float fine = textureLod(uGrain, vec2(d / 40.0 + 0.3, (s - uTime * 150.0) / 520.0), lodT).g;
@@ -657,8 +683,9 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
     gMirror = 0.0;
   }
   col = mix(col, col * mix(vec3(0.42, 0.7, 0.78), vec3(0.7, 0.9, 0.9), uNight), band * 0.6 * gSt.z);
-  float lines = smoothstep(0.5, 0.74, 0.55 * run + 0.45 * fine) + 0.7 * (1.0 - smoothstep(0.0, 3.5, abs(d - 15.0)));
-  col = mix(col, vec3(0.88, 0.96, 1.0) * (S.key * mix(0.24, 0.06, uNight) + S.amb * 0.95) + uAurora * 0.3, clamp(lines, 0.0, 1.0) * band * 0.62 * gSt.z);
+  // (Moving water: soft bright faces that travel along it, never an outline.)
+  float lines = smoothstep(0.42, 0.8, 0.55 * run + 0.45 * fine);
+  col = mix(col, vec3(0.88, 0.96, 1.0) * (S.key * mix(0.24, 0.06, uNight) + S.amb * 0.95) + uAurora * 0.3, lines * band * band * 0.6 * gSt.z);
   col += vec3(0.3, 0.84, 1.0) * band * head * mix(0.5, 0.8, uNight) * gSt.z;
   // Each lit cube throws its light on the water round it.
   vec2 cell = clamp(floor(q / LAT_P + 2.0), 0.0, 3.0);
@@ -702,8 +729,10 @@ float faceNear(vec3 p) {
 float canyonAir(vec3 p) {
   float z = p.z + FREEBOARD;
   float along = (p.x + p.y) * 0.7;
-  float relief = 13.0 * sin(along * 0.021 + 1.6 * sin(z * 0.017)) + 5.0 * sin(z * 0.09 + 2.0 * sin(along * 0.008)) + 4.0 * sin(along * 0.083 + z * 0.05);
-  return CY_W + mix(CY_LEAN * z + relief, 0.0, faceNear(p)) - canyonD(p.xy);
+  float relief = 13.0 * sin(along * 0.021 + 1.6 * sin(z * 0.017)) + 5.0 * sin(z * 0.09 + along * 0.004) + 4.0 * sin(along * 0.083 + z * 0.05);
+  // (Only the hall's east wall is cut plumb: nowhere else is it asked.)
+  float plumb = p.x > ${f(FACE.x - 160)} ? faceNear(p) : 0.0;
+  return CY_W + (CY_LEAN * z + relief) * (1.0 - plumb) - canyonD(p.xy);
 }
 // The polished face in the second bend's outer wall: the app is seen in the ice.
 vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
@@ -757,7 +786,9 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, out float wall) {
     if (t > tEnd) return -1.0;
     vec3 p = ro + rd * t;
     float w = canyonAir(p) * 0.6;
-    float top = (p.z - glacierTop(p.xy)) * 0.42;
+    // (Well inside the glacier and well under its top, the top is not what a ray meets next: it is not worked out.)
+    vec2 eg = min(p.xy - CY_LO, CY_HI - p.xy);
+    float top = min(eg.x, eg.y) > 320.0 && p.z < ${f(CANYON.h * 0.84 - 60)} ? -12.0 : (p.z - glacierTop(p.xy)) * 0.42;
     float d = max(w, top);
     if (d < 0.5 + t * 0.0012) { wall = w > top ? 1.0 : 0.0; return t; }
     near = d;
@@ -789,6 +820,12 @@ vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
     ice = mix(ice, beyond(p, reflect(rd, n)), fr * 0.4);
     return mix(sn, ice, bareK);
   }
+  if (gMirror > 0.5) {
+    // (Its mirror image in moving water keeps the wall's colour and its bands, and nothing finer.)
+    float upM = clamp((p.z + FREEBOARD) / (topZ + FREEBOARD), 0.0, 1.0);
+    vec3 cm = iceBody(1.0 - 0.7 * upM * upM) * (0.7 + 0.3 * sin(p.z * 0.15)) * mix(S.amb * (0.8 + 0.5 * upM) + S.key * 0.08 * upM, S.amb * 1.7 + uAurora * 0.25 * upM, uNight);
+    return p.x > ${f(FACE.x - 60)} ? faceIn(cm, p, vec3(-1.0, 0.0, 0.0), rd, pic) : cm;
+  }
   // The wall's true face: the slope of the canyon's own field.
   float d0 = canyonAir(p);
   vec3 n = normalize(vec3(canyonAir(p + vec3(2.0, 0.0, 0.0)) - d0, canyonAir(p + vec3(0.0, 2.0, 0.0)) - d0, canyonAir(p + vec3(0.0, 0.0, 2.0)) - d0));
@@ -815,11 +852,13 @@ vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
 /** The glacier over the finished ground, and its walls in the water between them. */
 vec3 canyon(vec3 col, vec3 dir, float tw) {
   float wall;
-  float t = glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, uLean > 0.5 ? 40 : 56, wall);
+  float t = glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, uLean > 0.5 ? 36 : 48, wall);
   // Cold air lies between the walls: what is far down the canyon stands in it, paler, and the day at the canyon's end shows through it.
   float inK = smoothstep(CY_LO.y - 60.0, CY_LO.y + 120.0, uCamPos.y) * (1.0 - smoothstep(CY_HI.y - 120.0, CY_HI.y + 60.0, uCamPos.y)) * step(uCamPos.z, CY_H);
   vec3 mistC = mix(S.hor * 0.9 + S.band * 0.1, S.hor * 0.5 + uAurora * 0.3, uNight);
+  if (t > gDepth || (t < 0.0 && tw > gDepth)) return col;
   if (t >= 0.0) {
+    gDepth = t;
     vec3 c = inAir(glacierColor(uCamPos, dir, t, wall, 1.0), dir, t);
     c = mix(c, mistC, (1.0 - exp(-t / 2600.0)) * inK * (1.0 - 0.8 * faceNear(uCamPos + dir * t)));
     return mix(col, c, gSt.w);
@@ -829,10 +868,11 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
   if (any(lessThan(pwp.xy, CY_LO)) || any(greaterThan(pwp.xy, CY_HI)) || canyonD(pwp.xy) > CY_W + 12.0) return col;
   vec4 wv = textureLod(uGrain, pwp.xy / 300.0 + vec2(0.0, -uTime * 0.25), 1.0);
   vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3((wv.rg - 0.5) * 0.09, 0.0));
-  float t2 = uLean < 1.5 ? glacierHit(pwp + vec3(0.0, 0.0, 1.0), rd2, 900.0, 18, wall) : -1.0;
+  float t2 = uLean < 1.5 ? glacierHit(pwp + vec3(0.0, 0.0, 1.0), rd2, 700.0, 14, wall) : -1.0;
   if (t2 >= 0.0) {
     gMirror = 1.0;
-    col = mix(col, inAir(glacierColor(pwp, rd2, t2, wall, mix(0.3, 0.12, uNight)), dir, tw + t2) * 0.8, 0.6 * gSt.w);
+    // (By day the water keeps its own colour under the walls' image.)
+    col = mix(col, inAir(glacierColor(pwp, rd2, t2, wall, mix(0.3, 0.12, uNight)), dir, tw + t2) * 0.8, mix(0.36, 0.6, uNight) * gSt.w);
     gMirror = 0.0;
   }
   // Fast water on the outside of each bend, piled white against the wall; slack on the inside.
@@ -847,6 +887,6 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
   // (Little of the night sky reaches the water between the walls.)
   float deep = uNight * gSt.w * smoothstep(0.0, 120.0, glacierTop(pwp.xy));
   col = mix(col, min(col * 0.4, vec3(0.05, 0.085, 0.09)), deep);
-  return mix(col, mistC, (1.0 - exp(-tw / 2600.0)) * inK * gSt.w);
+  return mix(col, mistC, (1.0 - exp(-tw / 5200.0)) * inK * gSt.w);
 }
 `;

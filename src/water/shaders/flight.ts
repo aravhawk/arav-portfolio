@@ -2014,7 +2014,8 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     col = mix(col, mix(vec3(0.3, 0.62, 0.74), vec3(0.1, 0.22, 0.28), uNight) * (S.amb * 1.4 + S.key * 0.1), aSide);
     // (Its top is wind-packed snow; its edge has been rounded and glazed by the swell.)
     float rim = 1.0 - smoothstep(0.0, 4.0, -top);
-    col = mix(col, mix(vec3(0.93, 0.94, 0.96), vec3(0.6, 0.68, 0.8), uNight) * lightF * (1.0 - 0.22 * rim) + S.band * 0.05 * rim * gDusk, aTop);
+    // (Against the low light its thin edge glows: the light comes through it.)
+    col = mix(col, mix(vec3(0.93, 0.94, 0.96), vec3(0.62, 0.72, 0.86), uNight) * (lightF + S.hor * 0.22 * uNight) * (1.0 - 0.22 * rim) + S.band * 0.16 * rim * gDusk, aTop);
     lee *= 1.0 - max(aTop, aSide);
   }
   gLee = lee;
