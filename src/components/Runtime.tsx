@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { onFrame } from '@/lib/frame';
 import { primeHaptics } from '@/lib/haptics';
+import { emit, signals } from '@/lib/signals';
 
 /**
  * Page runtime: smooth scroll, reveals and the nav's scroll state. One
@@ -52,9 +53,11 @@ export function Runtime() {
     let hidden = false;
     let melted: boolean | null = null;
     const home = pathname === '/';
+    emit('route');
     const off = onFrame(() => {
       const y = window.scrollY;
       const vh = window.innerHeight;
+      signals.scrollY = y;
       // (On the home page the name is the hero: the mark waits until the lake's letters have run together into open water.)
       const nowMelted = !home || y > vh * 1.25;
       if (nowMelted !== melted) {
