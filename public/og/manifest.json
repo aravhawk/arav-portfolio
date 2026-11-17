@@ -7,40 +7,40 @@
       "mid": 0.654,
       "high": 0.806
     },
-    "bytes": 208620,
+    "bytes": 208633,
     "quality": 74
   },
   "infiniview": {
     "s": 5.87,
     "tone": "light",
     "light": {
-      "low": 0.245,
+      "low": 0.246,
       "mid": 0.656,
       "high": 0.888
     },
-    "bytes": 215309,
+    "bytes": 215385,
     "quality": 78
   },
   "open-source": {
     "s": 8.67,
     "tone": "light",
     "light": {
-      "low": 0.462,
+      "low": 0.463,
       "mid": 0.739,
       "high": 0.903
     },
-    "bytes": 209212,
+    "bytes": 209271,
     "quality": 78
   },
   "kilo-bench": {
     "s": 11.33,
     "tone": "light",
     "light": {
-      "low": 0.241,
+      "low": 0.24,
       "mid": 0.714,
       "high": 0.903
     },
-    "bytes": 216685,
+    "bytes": 216815,
     "quality": 82
   },
   "agent-bridge": {
@@ -49,53 +49,53 @@
     "light": {
       "low": 0.238,
       "mid": 0.57,
-      "high": 0.861
+      "high": 0.859
     },
-    "bytes": 189814,
+    "bytes": 189965,
     "quality": 82
   },
   "blog": {
     "s": 13,
     "tone": "light",
     "light": {
-      "low": 0.159,
+      "low": 0.156,
       "mid": 0.525,
-      "high": 0.849
+      "high": 0.847
     },
-    "bytes": 221440,
+    "bytes": 224021,
     "quality": 82
   },
   "ollama": {
     "s": 16.83,
     "tone": "light",
     "light": {
-      "low": 0.45,
+      "low": 0.449,
       "mid": 0.576,
       "high": 0.88
     },
-    "bytes": 224044,
+    "bytes": 224176,
     "quality": 82
   },
   "cc-switch": {
     "s": 19.7,
     "tone": "light",
     "light": {
-      "low": 0.422,
+      "low": 0.42,
       "mid": 0.678,
       "high": 0.888
     },
-    "bytes": 199276,
+    "bytes": 199221,
     "quality": 74
   },
   "tensorpow": {
     "s": 22.37,
     "tone": "light",
     "light": {
-      "low": 0.335,
+      "low": 0.336,
       "mid": 0.688,
       "high": 0.895
     },
-    "bytes": 195109,
+    "bytes": 195254,
     "quality": 78
   },
   "rydar": {
@@ -106,7 +106,7 @@
       "mid": 0.437,
       "high": 0.737
     },
-    "bytes": 178846,
+    "bytes": 178800,
     "quality": 82
   },
   "work": {
@@ -117,7 +117,7 @@
       "mid": 0.541,
       "high": 0.88
     },
-    "bytes": 200971,
+    "bytes": 200890,
     "quality": 82
   }
 }
