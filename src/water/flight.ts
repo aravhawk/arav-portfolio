@@ -712,8 +712,8 @@ export class FlightEngine extends WaterEngine {
         this.dripAt = this.time;
         this.drip = null;
         const a = Math.random() * Math.PI * 2;
-        // (Each column is as wide as it is tall, in proportion: the drop lands at its own foot.)
-        const r = COLS.r * (this.colH[i] / COLS.hMax) * 1.15;
+        // (Each serac is as wide as it is tall, in proportion: the drop lands at its own foot, clear of its shoulder and its fallen block.)
+        const r = COLS.r * (this.colH[i] / COLS.hMax) * 2.0;
         this.splash(COLS.xs[i] + Math.cos(a) * r, COLS.y + 26 * Math.sin(i * 2.3) + Math.sin(a) * r, 12 + 8 * Math.random(), 0.5);
       }
     } else this.drip = null;
