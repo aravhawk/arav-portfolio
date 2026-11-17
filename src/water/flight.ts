@@ -294,14 +294,16 @@ export class FlightEngine extends WaterEngine {
    * Its foot is on the far waterline, right of the frame's middle and left
    * of the sun; it leans toward the sun as it climbs.
    */
-  private setRibbon(r: Program, cam: Basis, aspect: number, seaOn: number) {
+  private setRibbon(r: Program, cam: Basis, aspect: number, seaOn: number, settle: number) {
     const gl = this.gl;
     const L = endLens(aspect);
     const th = Math.tan((L.fov * Math.PI) / 360);
     const az = this.sunAz - L.sunOff + Math.atan(RIBBON.at(aspect) * aspect * th);
     const fx = Math.sin(az);
     const fy = Math.cos(az);
-    const on = seaOn > 0 && this.ray > 0 ? seaOn * Math.min(1, this.ray * 8) : 0;
+    // (It belongs to the ending's frame: once it stands it holds there, and on the way back up the page it thins out
+    // with the camera's leaving, so it is neither drawn nor paid for over the delta.)
+    const on = seaOn > 0 && this.ray > 0 ? seaOn * Math.min(1, this.ray * 8) * smooth(0.2, 0.8, settle) : 0;
     let u0 = 1;
     let u1 = 0;
     if (on > 0) {
@@ -744,7 +746,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
     gl.uniform4fv(r.u.uCalmBox, at.box);
     gl.uniform2f(r.u.uCalmK, at.boxK, at.boxLight ? 1 : 0);
-    this.setRibbon(r, cam, aspect, seaOn);
+    this.setRibbon(r, cam, aspect, seaOn, at.settle);
     this.bindIce(r, ice, 7, 9);
     gl.uniform1f(r.u.uIceH, ICE_H);
     gl.uniform1f(r.u.uIceOn, this.iceTex && this.melt < 0.999 ? 1 : 0);
