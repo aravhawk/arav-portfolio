@@ -105,7 +105,7 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
   // phone's path after the hero: its copy sits at the foot, where that
   // path keeps a bank.
   const upright = aspect < 0.9;
-  const squat = 200 * Math.min(1, Math.max(0, (aspect - 0.465) / 0.035));
+  const squat = 250 * Math.min(1, Math.max(0, (aspect - 0.465) / 0.035));
   const wideFov = upright ? 62 : 50;
   const slabAim: V3 = [SLAB.x, SLAB.y, SLAB.h * 0.5];
   const keys: Key[] = upright
