@@ -1093,6 +1093,14 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // letters is what stands over the lake. By day that is the ranges, the
   // warm air at their foot and the sun's path; before dawn it is the body
   // of the high curtain, well clear of its hem.
+  // Before dawn the running river mirrors the curtain, not the dark country
+  // under it: its ripples break the light into strokes, they do not punch
+  // dark holes in it.
+  float streamK = smoothstep(0.25, 0.6, length(flow)) * (1.0 - lakeK) * (1.0 - shoalK) * (1.0 - gWalled);
+  if (uNight * streamK > 0.0) {
+    rf.z = mix(rf.z, max(rf.z, 0.2 + 0.25 * rf.z), uNight * streamK);
+    rf = normalize(rf);
+  }
   float sheetK = smoothstep(0.75, 1.0, uGlow) * lakeK;
   if (sheetK > 0.0) {
     // Where the eye's ray came through the top of the sheet, in the first
@@ -1132,6 +1140,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     vec3 cur = refl * (0.56 + 1.5 * ray * ray * ray) * (0.7 + 0.9 * ray2) * mix(vec3(1.0), vec3(0.72, 0.8, 1.42), deepV * 0.8) * 1.5;
     refl = mix(refl, cur, sheetK * uNight);
   }
+  // (On the running river that light is broken along the current: brighter on the ripple faces, dimmer in their troughs.)
+  refl *= 1.0 + (0.5 * (df.r - 0.5) + 0.3 * (dw2.r - 0.5)) * uNight * streamK;
   // The slab stands in the water: its mirror image, broken by the ripples.
   if (slabOn > 0.0) {
     vec2 suvS;
@@ -1268,6 +1278,9 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     float quick = smoothstep(0.7, 1.15, fmag);
     float wT = 0.006 + 0.01 * quick + clamp(footL * 0.004, 0.0, 0.03);
     float thread = (1.0 - smoothstep(0.0, wT, abs(th - 0.58))) * 0.6 + (1.0 - smoothstep(0.0, wT * 0.8, abs(th2 - 0.4))) * (0.4 + 0.5 * quick) * (1.0 - gL1);
+    // (Foam on a current is torn: each thread is there for a stretch, thins and is gone, and it rides the ripples, brighter on their faces.)
+    float torn = textureLod(uDetail, vec2(across / 310.0 + 0.2, (along - run * 1.1) / 560.0), lodFor(footL, 310.0, 512.0)).r;
+    thread *= smoothstep(0.42, 0.66, torn) * (0.45 + 0.9 * df.r);
     vec3 foam = mix(vec3(0.9, 0.96, 1.0) * (S.amb * 1.2 + S.key * 0.26), vec3(0.3, 0.42, 0.5) * 0.12 + uAurora * 0.16, uNight);
     col = mix(col, foam, clamp(thread, 0.0, 1.0) * runK * fadeT * (0.42 + 0.3 * quick) * (1.0 - 0.6 * shade));
     // A plate of ice: a few to a reach, each an angular chip riding the stream.
@@ -1278,12 +1291,27 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       vec2 ql = (fract(q) - 0.5 - (hq - 0.5) * 0.3) * vec2(64.0, 120.0);
       float ang = hq.y * 6.283;
       ql = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * ql;
-      float sz = 7.0 + 9.0 * fract(hq.x * 37.0);
-      float chip = max(abs(ql.x) + abs(ql.y) * 0.45, abs(ql.y) * 1.1) - sz;
+      float sz = 4.0 + 15.0 * fract(hq.x * 37.0) * fract(hq.x * 37.0);
+      // (Each is a broken piece with sides of its own.)
+      float c1 = fract(hq.y * 13.0), c2 = fract(hq.y * 29.0);
+      float chip = max(max(abs(ql.x) * (0.75 + 0.6 * c1) + abs(ql.y) * 0.4, abs(ql.y) * (0.9 + 0.7 * c2)), max(ql.x * 0.9 - ql.y * (0.25 + 0.7 * c2), -ql.x * 0.65 + ql.y * (0.2 + 0.8 * c1))) - sz;
       float mid = smoothstep(26.0, 60.0, -bw.r);
       float aC = (1.0 - smoothstep(-0.8 * foot - 0.4, 0.8 * foot + 0.4, chip)) * runK * mid * (1.0 - smoothstep(6.0, 16.0, footL));
       vec3 plate = mix(vec3(0.86, 0.92, 0.96) * (S.amb * 1.3 + S.key * 0.3), vec3(0.2, 0.26, 0.34) * 0.2 + uAurora * 0.05, uNight);
       col = mix(col * (1.0 - 0.35 * (1.0 - smoothstep(-0.5, 5.0, chip)) * runK * mid), plate, aC);
+    }
+  }
+  // Where the river steps down into the basin it breaks: white water across
+  // the stream, streaked the way it runs, and a boil below that thins out.
+  if (pw.y > ${(STEP.y0 - 60).toFixed(1)} && pw.y < ${(STEP.y1 + 260).toFixed(1)} && footL < 60.0) {
+    float lipS = smoothstep(${(STEP.y0 - 40).toFixed(1)}, ${(STEP.y0 + 70).toFixed(1)}, pw.y) * (1.0 - smoothstep(${(STEP.y1 - 20).toFixed(1)}, ${(STEP.y1 + 230).toFixed(1)}, pw.y));
+    if (lipS > 0.0) {
+      float runS = uTime * uFlowSpeed * 1.4;
+      float streakS = textureLod(uDetail, vec2(pw.x / 46.0, (pw.y - runS) / 520.0), lodFor(footL, 46.0, 512.0)).r;
+      float boilS = mix(df.r, dw2.r, 0.5);
+      float whiteS = smoothstep(0.42, 0.7, streakS * 0.6 + boilS * 0.55 + 0.3 * lipS - 0.12) * lipS * smoothstep(8.0, 40.0, -bw.r) * (1.0 - smoothstep(20.0, 60.0, footL));
+      vec3 foamS = mix(vec3(0.93, 0.97, 1.0) * (S.amb * 1.25 + S.key * 0.3), vec3(0.34, 0.5, 0.56) * 0.3 + uAurora * 0.15, uNight);
+      col = mix(col, foamS, whiteS * 0.85);
     }
   }
   // The confluence: each stream drops into the river over a short fall,
