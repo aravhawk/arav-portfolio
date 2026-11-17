@@ -37,8 +37,12 @@ const CELL = [4, 5, 6, 8];
 const SPAN = 2300;
 /** How thick the lake's sheet stands above the water, world units. */
 const ICE_H = 16;
-/** The melt at which the last of the name's blades goes under (see bindIce: they fade from 0.5 to 0.57). */
+/** The melt at which the last of the name's blocks goes under (see bindIce: they fade from 0.5 to 0.57). */
 const NAME_GONE = 0.555;
+/** How far the name's blocks sink by then, in capitals' heights. */
+const NAME_SINK = 0.57;
+/** How far the water the blocks stand in has spread from their feet at a point in the melt, world units. */
+const nameReach = (m: number) => 110 * smooth(0.03, 0.26, m) + 150 * smooth(0.2, 0.56, m) + 50 * smooth(0.56, 0.8, m);
 
 /** The light event at the ending happens once in a visit: after it, the sun stays up and the line of light holds. */
 let dawned = false;
@@ -559,15 +563,20 @@ export class FlightEngine extends WaterEngine {
     const m = this.melt;
     const half = -this.iceMeta.minSd;
     // (Whole, a face is cut a hair outside the drawn letter: its lit arris is the hair, and the letter itself is all deep ice.)
-    const back = -1.4 + half * 0.4 * smooth(0.1, 0.52, m);
-    // (They keep most of their depth, and so their colour, until dark water has opened behind them; then they thin fast.)
-    const depth = st.depth * (1 - 0.3 * smooth(0.12, 0.4, m) - 0.58 * smooth(0.4, 0.55, m));
-    // (They go down steadily, a little with every step of the scroll: a sixth of a capital's height by the end. More, and the foot of the J would be lost.)
-    const sink = 0.16 * st.cap * Math.min(1, Math.max(0, (m - 0.12) / 0.44));
+    // (They keep their drawn weight to the end: a block of ice in the sun does not grow thin, it grows low and round.)
+    const back = -1.4 + half * 0.07 * smooth(0.1, 0.52, m);
+    const depth = st.depth * (1 - 0.2 * smooth(0.12, 0.52, m));
+    // (They go down steadily into the water that has opened under them, lower with every step of the scroll: by the end
+    // only low rounded humps stand over it. What has gone under is still seen, through the water.)
+    const sink = NAME_SINK * st.cap * Math.min(1, Math.max(0, (m - 0.06) / 0.49)) ** 1.15;
     const left = 1 - smooth(0.5, 0.57, m);
     gl.uniform4f(prog.u.uNameG, st.yf[0], st.yf[1], st.split, 1);
     gl.uniform4f(prog.u.uNameB, st.base[0], st.base[1], st.cap, st.depth);
     gl.uniform4f(prog.u.uNameM, back, depth, sink, left);
+    // Their tops melt down unevenly and their shoulders round; they gloss with running water; what stands under the
+    // water goes first at the very end; and the water they stand in spreads from their own feet.
+    const reach = nameReach(m);
+    if (prog.u.uNameQ) gl.uniform4f(prog.u.uNameQ, half * 0.36 * smooth(0.06, 0.5, m), smooth(0.02, 0.4, m), smooth(0.47, 0.57, m), reach);
     // The sheet opens from under their feet. First the meltwater lies on the ice round them (the simulation
     // takes that for open water, so the pointer wakes it); then the ice under it goes, the pools join, and
     // from half way the one pool they have become is the sheet's own.
@@ -581,8 +590,10 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(prog.u.uIceA, (shade ? hole : pond * 8) * (1 - k) + old * k, ice.a[1], ice.a[2], ice.a[3]);
     gl.uniform4f(prog.u.uIceC, ice.c[0], ice.c[1], smooth(0.36, 0.57, m), ice.c[3]);
     if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (1 - k), smooth(0, 0.14, m), smooth(0.12, 0.3, m), smooth(0.41, 0.49, m));
-    // The swept field they stand on is the thinnest ice: it goes to open water from under them outward, and all of it is gone soon after they are.
-    if (prog.u.uNameS) gl.uniform1f(prog.u.uNameS, m < 0.14 ? 0 : 0.7 + 1.36 * Math.min(1, (m - 0.14) / 0.46));
+    // The water spreads from their feet (see the ice field), and leaves by one lead down the lake to the outlet: how
+    // far along the lake that lead has opened, and how wide it has become.
+    if (prog.u.uNameS) gl.uniform1f(prog.u.uNameS, reach);
+    if (prog.u.uNameL) gl.uniform2f(prog.u.uNameL, smooth(0.13, 0.5, m), 26 + 44 * smooth(0.16, 0.56, m) + 150 * smooth(0.56, 0.9, m));
   }
 
   protected simCell() {

@@ -2360,7 +2360,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       azd = normalize(azd + vec2(-vdw.y, vdw.x) * dot(slope, vec2(-vdw.y, vdw.x)) * 0.7 * pondK);
     }
     el = clamp(el, 0.002, 0.95);
-    rf = normalize(mix(rf, vec3(azd * sqrt(1.0 - el * el), el), sheetK));
+    // (Before dawn the water round the standing letters is not leaned at the curtain: it holds the sky that truly stands over it.)
+    rf = normalize(mix(rf, vec3(azd * sqrt(1.0 - el * el), el), sheetK * (1.0 - uNameG.w * uNight)));
   }
   // (Before dawn the thin cloud is too faint to be seen in moving water: it is not asked for.)
   gWash = gL1;
@@ -2378,7 +2379,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     // (And cools it: even the glare under the sun comes back as blue water, not as grey.)
     refl = mix(refl, mix(refl, vec3(rl), 0.65) * vec3(0.52, 0.88, 1.32) * min(clamp(pow(rl / 0.6, 1.3), 0.22, 1.5), 0.5 / rl), sheetK * (1.0 - uNight) * (1.0 - pondK));
   }
-  if (sheetK * uNight > 0.0 && pondK < 1.0) {
+  if (sheetK * uNight > 0.0 && pondK < 1.0 && uNameG.w < 0.5) {
     // Before dawn the letters hold the curtain itself: its rays stand in
     // the water as long strokes with dark water between them, green where
     // the far side of each letter catches the hem and turning violet in
@@ -2390,7 +2391,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     vec3 cur = refl * (0.56 + 1.5 * ray * ray * ray) * (0.7 + 0.9 * ray2) * mix(vec3(1.0), vec3(0.76, 0.86, 1.42), deepV * 0.8) * 1.62;
     refl = mix(refl, cur, sheetK * uNight * (1.0 - pondK));
   }
-  if (pondK * uNight > 0.0) {
+  if (pondK * uNight > 0.0 && uNameG.w < 0.5) {
     // Still water holds the stars too: in the dark under the hem and between the rays.
     vec3 md = normalize(vec3(dir.xy, -dir.z) + vec3(slope * 0.5, 0.0));
     // The curtain in it is the high one, drawn here in full whatever the
@@ -2448,7 +2449,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // Elsewhere it falls off as water does: a mirror toward the horizon, and
   // close under the eye dark water you look down into.
   // (Steeply under the eye it is a little less of a mirror: you look down into it.)
-  fres = mix(fres, max(fres * 1.3 + 0.1, mix(0.97, 0.66, smoothstep(0.27, 0.44, cosi)) * sheetK), uNight);
+  fres = mix(fres, max(fres * 1.3 + 0.1, mix(0.97, 0.66, smoothstep(0.27, 0.44, cosi)) * sheetK * (1.0 - uNameG.w)), uNight);
   // A bank stands over the water at its edge: there the mirror shows the dark bank, not the sky.
   // (Wider in the walled basin, where the project's words stand over the near bank.)
   refl *= 1.0 - mix(0.3, 0.8, gWalled) * uNight * (1.0 - smoothstep(4.0, mix(46.0, 150.0, gWalled), -bw.r)) * (1.0 - sheetK);
@@ -2492,7 +2493,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     // (Dark water cools what it mirrors.)
     refl = mix(refl, refl * vec3(0.45, 0.9, 1.0), pondK * (1.0 - uNight));
     // By day a pond seen from this high is mostly its own colour, with a little sky on it; before dawn still dark water is nearly a whole mirror, a little less of one over the pale shelf.
-    fres = mix(fres, mix(clamp(fres0 * PONDK.z + 0.02, 0.03, 0.4) + 0.1 * pawP, mix(0.92, 0.4, thru.g), uNight), pondK);
+    fres = mix(fres, mix(clamp(fres0 * PONDK.z + 0.02, 0.03, 0.4) + 0.1 * pawP, mix(mix(0.92, 0.4, thru.g), clamp(fres0 * 1.5 + 0.12, 0.0, 0.6), uNameG.w), uNight), pondK);
   }
   vec3 col = mix(water, refl, fres);
   if (sheetK > 0.0 && gFarK > 0.0) col = cutFoot(col, pw, dir, slope, foot, sheetK);
@@ -2549,12 +2550,14 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       // (A glint finer than a pixel is its even mean.)
       glint = mix(glint, 0.12 * (1.0 - pondK), smoothstep(2.0, 6.0, footL) * (1.0 - 0.6 * pondK));
       // (It is the name's own: once the sheet is plates the sun's true path on the open lake takes over.)
-      col += S.band * path * glint * mix(1.0, 0.7, nearK) * gDeep * sheetK * sheetK;
+      // (Not where the letters stand as blocks: on that water single glints were specks round the word.)
+      col += S.band * path * glint * mix(1.0, 0.7, nearK) * gDeep * sheetK * sheetK * (1.0 - uNameG.w);
     }
   }
   // A few plates of ice lie afloat in the name's water, turning slowly:
   // angular, of different sizes, each with its own thin shade.
-  if (sheetK > 0.0 && gIceF1 > 6.0 && gIceF > shelfP * 1.6 * pondK && footL < 12.0) {
+  // (Where the letters stand as blocks the pieces that come away from them are drawn with them: see the name's own shader.)
+  if (sheetK > 0.0 && uNameG.w < 0.5 && gIceF1 > 6.0 && gIceF > shelfP * 1.6 * pondK && footL < 12.0) {
     vec2 q = pw / vec2(150.0, 330.0);
     vec2 hq = hash2(floor(q) + 3.0);
     if (hq.x > 0.64) {

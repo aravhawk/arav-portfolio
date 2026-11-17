@@ -28,7 +28,8 @@ uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet 
 uniform vec4 uNameG;       // the standing letters. x: the upright plane the far line's faces stand in (world y), y: the near line's (the same when there is one line), z: the height in the raster that parts the two lines (far below it when there is one), w: 1 when the letters stand on the sheet as blocks (0: they are cut through it)
 uniform vec4 uNameB;       // x: the far line's baseline, y: the near line's, in the raster's true units up from its middle, z: the capitals' height, w: a block's depth front to back while it is whole
 uniform vec4 uNameM;       // the blocks' melt. x: how far every face has melted back px, y: the depth left, z: how far they have sunk, w: 0..1 how much of them is left to see
-uniform float uNameS;      // how far the swept field the letters stand on has gone to open water: 1 more than the field's own measure of it (0: not at all)
+uniform float uNameS;      // how far the water the standing letters stand in has spread from their feet px (0: not at all)
+uniform vec2 uNameL;       // the lead that water leaves by, from the name down the lake to the outlet. x: 0..1 how far down the lake it has opened, y: its width px
 uniform sampler2D uIceSdf; // signed distance to the letters px (negative inside), _, gradient
 uniform sampler2D uDetail;
 uniform sampler2D uSnow;   // three draws of one smooth field, in half floats: about -0.7..0.7
@@ -75,7 +76,8 @@ float nameFoot(vec2 u) {
     if (i == 1 && uNameG.z < -5e3) break;
     float yf = i == 0 ? uNameG.x : uNameG.y;
     float dyo = max(max(yf - u.y, u.y - yf - uNameB.w), 0.0);
-    if (dyo > 500.0) continue;
+    // (Far from the row the letters are not looked for: the distance to the row itself carries on, so nothing that grows from the feet ever ends on a ruled line.)
+    if (dyo > 500.0) { d = min(d, length(vec2(max(abs(u.x - cx) - uIceBox.z, 0.0), dyo))); continue; }
     // (The foot of a letter is its outline a little above the baseline, so a round letter has a foot too.)
     float zc = (yf - uIceP.x) * uIceP.z + uIceP.y * uIceP.w;
     float b = (i == 0 ? uNameB.x : uNameB.y) + 0.05 * uNameB.z;
@@ -127,6 +129,22 @@ float nameSwept(vec2 u) {
   float d = sqrt(sqrt(e2.x * e2.x + e2.y * e2.y) * 0.4 + 0.6 * (e2.x + e2.y));
   // (No ruled outline: it bulges and narrows as the wind has left it.)
   return d * (0.96 + 0.16 * textureLod(uSnow, (u - uIce.xy) / vec2(4300.0, 2900.0) + 0.27, 0.0).r) + 0.08 * textureLod(uSnow, (u - uIce.xy) / vec2(1900.0, 800.0) + 0.6, 0.0).g;
+}
+
+/**
+ * The lead the name's meltwater leaves by: one long wandering fracture from
+ * behind the letters down the lake to the outlet, which the water finds and
+ * widens. x: where its middle lies at a place down the lake (the sheet's own
+ * frame), y: how far along it that is (0 behind the name, 1 at the outlet).
+ */
+vec2 leadAt(float y) {
+  float y0 = max(uNameG.x, uNameG.y) + uNameB.w;
+  float t = clamp((y - y0) / max(uLake.y - y0, 1.0), 0.0, 1.0);
+  // (It leaves between the two words where they stand side by side.)
+  float x0 = uIce.x + uIce.z * 0.5 + (uNameG.z > -5e3 ? 0.0 : 0.115 * uIceBox.z);
+  float x = mix(x0, uIceB.x, t * t * (3.0 - 2.0 * t));
+  x += (150.0 * sin(t * 6.1 + 0.8) + 56.0 * sin(t * 17.0 + 2.3) + 20.0 * sin(t * 43.0 + 1.1)) * smoothstep(0.0, 0.14, t) * (1.0 - smoothstep(0.86, 1.0, t));
+  return vec2(x, t);
 }
 
 /** Distance to the one rounded pool the letters run together into. */
@@ -311,7 +329,8 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
       // together: a few fractures wander out from that water to the leads
       // round it and widen as the others do, so the opening the name leaves
       // has bays and points, and the ice beside it goes as plates.
-      if (uIceN.z > 0.0 && gIceBoxD < cellA) {
+      // (Not where the letters stand as blocks: their water leaves by one lead of its own, further on.)
+      if (uIceN.z > 0.0 && gIceBoxD < cellA && uNameG.w < 0.5) {
         vec2 q2 = nl - uIceBox.xy + textureLod(uSnow, il / vec2(900.0, 2000.0) + 0.37, 0.0).rg * 110.0;
         float sp = 1e4;
         for (int i = 0; i < 6; i++) {
@@ -332,18 +351,26 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     f = smax(f, lead - cr.x, kS);
   }
   if (uNameG.w > 0.5 && uNameS > 0.0) {
-    // The swept field the letters stand on is the thinnest ice on the lake, and it goes first: from under their
-    // feet outward, further in some places than in others, and furthest along the fractures, so the water the
-    // letters come to stand in has bays and points and runs out into the leads round it.
-    float dS = nameSwept(u);
-    if (dS < 1.7) {
+    // The water the letters stand in spreads from their own feet: a puddle to each, wider at one than at the next,
+    // then one pool as they join. It goes furthest toward the eye, where the swept ice is thinnest, and along the
+    // fractures it meets, so its shore has bays and points and runs out into the leads round it.
+    if (lsd < uNameS * 2.4 + 140.0) {
       float un1 = textureLod(uSnow, il / vec2(1300.0, 700.0) + 0.41, 0.0).r;
-      float un2 = textureLod(uSnow, il / vec2(520.0, 300.0) + 0.17, 0.0).g;
-      // (How far from the row the letters stand in: the water reaches the far ice last.)
-      float dyR = max(max(min(uNameG.x, uNameG.y) - u.y, u.y - max(uNameG.x, uNameG.y) - uNameB.w), 0.0);
-      float rowD = length(vec2(max(abs(u.x - uIce.x - uIce.z * 0.5) - uIceBox.z, 0.0), dyR));
-      float wS = 0.55 * dS * (1.0 + 0.5 * un1) + 0.22 * un2 + 0.65 * clamp(rowD / 600.0, 0.0, 1.3) - 0.22 * exp(-cr.x / 46.0);
-      f = smax(f, (uNameS - 1.0 - wS) * 420.0, 14.0);
+      float un2 = textureLod(uSnow, il / vec2(420.0, 260.0) + 0.17, 0.0).g;
+      float toEye = max(min(uNameG.x, uNameG.y) - u.y, 0.0);
+      float dE = lsd - 0.32 * min(toEye, lsd);
+      float R = uNameS * (0.8 + 0.6 * un1 + 0.34 * un2) + 40.0 * exp(-cr.x / 46.0) * smoothstep(50.0, 170.0, uNameS);
+      f = smax(f, R - dE, 14.0);
+    }
+    // And it leaves: one lead opens from behind the letters down the lake, its head running on ahead of the melt
+    // until it reaches the outlet; then it widens, and the sheet either side of it goes as plates.
+    if (uNameL.x > 0.0 && uIceP.y > 0.0) {
+      vec2 ld = leadAt(u.y);
+      float y0 = max(uNameG.x, uNameG.y) + uNameB.w;
+      float wide = uNameL.y * (0.62 + 0.38 * sin(ld.y * 29.0 + 1.0) * sin(ld.y * 11.0 + 0.3) + 0.3 * textureLod(uSnow, il / vec2(300.0, 900.0) + 0.77, 0.0).b);
+      // (It leaves the pool by a broad mouth and narrows to its own width.)
+      wide *= (1.0 - smoothstep(uNameL.x - 0.12, uNameL.x, ld.y)) * smoothstep(y0 - 60.0, y0 + 20.0, u.y) * (1.0 + 1.1 * (1.0 - smoothstep(0.0, 0.09, ld.y)));
+      if (wide > 0.0) f = smax(f, wide - abs(u.x - ld.x), 30.0);
     }
   }
   if (uIceC.y > 0.0 && uIceP.y <= 0.0) {
