@@ -694,7 +694,7 @@ export class FlightEngine extends WaterEngine {
     this.runGates();
     gl.uniform3fv(r.u.uGate, this.gateNow);
     gl.uniform3fv(r.u.uSurge, this.surge);
-    pictureSignal(this.time, st, this.gateNow, this.surge, this.ray, this.lift);
+    pictureSignal(this.time, st, this.gateNow, this.surge, this.ray, this.lift, this.rise);
     if (st[0] > 0.5 && !this.still) {
       // Meltwater drips from the columns into the shallows: real rings, most from the tallest.
       // (Each is chosen ahead of its time and published then, so its sound can be set for the frame that shows it.)

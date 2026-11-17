@@ -45,6 +45,8 @@ export const signals = {
   /** the ending's light: the line of light and the sun's last lift, 0..1 each */
   ray: 0,
   lift: 0,
+  /** the ribbon of light's rise from the water, 0..1: it begins as the line reaches the far shore and takes about two seconds */
+  rise: 0,
   /** the pointer in the frame (0..1 each way), how far off the water under it lies (0 when it is not over water), and when it last moved */
   px: 0.5,
   py: 0.5,
@@ -94,7 +96,7 @@ export function flightSignal(at: number, s: number, cam: SignalCam, aspect: numb
 }
 
 /** What the picture itself is doing this frame. */
-export function pictureSignal(clock: number, st: ArrayLike<number>, gate: ArrayLike<number>, surge: ArrayLike<number>, ray: number, lift: number) {
+export function pictureSignal(clock: number, st: ArrayLike<number>, gate: ArrayLike<number>, surge: ArrayLike<number>, ray: number, lift: number, rise = 0) {
   signals.clock = clock;
   signals.st = st;
   signals.gate = gate;
@@ -102,6 +104,7 @@ export function pictureSignal(clock: number, st: ArrayLike<number>, gate: ArrayL
   signals.ray = ray;
   signals.lift = lift;
   signals.clockAt = signals.at;
+  signals.rise = rise;
 }
 
 /** The pointer: where it is in the frame, and how far away the water under it is (0: not over water). */
