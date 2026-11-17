@@ -315,6 +315,26 @@ export class FlightEngine extends WaterEngine {
     this.sheetTex = tex;
   }
 
+  /** The app's picture, seen in the canyon's polished wall. (It takes the slab's unit: the two are never in one frame.) */
+  private faceTex: WebGLTexture | null = null;
+  private faceOn = false;
+  setFace(img: HTMLImageElement) {
+    const gl = this.gl;
+    if (this.faceTex) gl.deleteTexture(this.faceTex);
+    const tex = gl.createTexture()!;
+    gl.activeTexture(gl.TEXTURE15);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.faceTex = tex;
+  }
+
   /** The product picture the slab carries. */
   setSlab(img: HTMLImageElement) {
     const gl = this.gl;
@@ -447,6 +467,7 @@ export class FlightEngine extends WaterEngine {
     }
     const st = this.stations(cam);
     gl.uniform4f(r.u.uSt, st[0], st[1], st[2], st[3]);
+    this.faceOn = st[3] > 0;
     gl.uniform4fv(r.u.uColH, this.colH);
     this.runGates();
     gl.uniform3fv(r.u.uGate, this.gateNow);
@@ -526,7 +547,7 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 6, this.grain.tex, r.u.uGrain);
     bindTex(gl, 8, this.heat.read.tex, r.u.uHeat);
     bindTex(gl, 10, this.curv.tex, r.u.uCurv);
-    bindTex(gl, 11, (this.slabTex ?? this.grain.tex) as WebGLTexture, r.u.uSlabTex);
+    bindTex(gl, 11, ((this.faceOn ? this.faceTex : null) ?? this.slabTex ?? this.grain.tex) as WebGLTexture, r.u.uSlabTex);
     bindTex(gl, 12, this.ground.tex, r.u.uGround);
     bindTex(gl, 13, this.pano.tex, r.u.uPano);
     this.finish(night);
@@ -601,6 +622,7 @@ export class FlightEngine extends WaterEngine {
   destroy() {
     for (const t of this.film) freeTarget(this.gl, t);
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
+    if (this.faceTex) this.gl.deleteTexture(this.faceTex);
     if (this.sheetTex) this.gl.deleteTexture(this.sheetTex);
     freeTarget(this.gl, this.ground);
     freeTarget(this.gl, this.pano);
@@ -784,6 +806,14 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     if (!destroyed) engine.setSlab(img);
   };
   img.src = root.dataset.slab || '/media/infiniview-hero.webp';
+  if (root.dataset.face) {
+    const pic = new Image();
+    pic.decoding = 'async';
+    pic.onload = () => {
+      if (!destroyed) engine.setFace(pic);
+    };
+    pic.src = root.dataset.face;
+  }
   if (root.dataset.sheet) {
     const pic = new Image();
     pic.decoding = 'async';
@@ -874,7 +904,10 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     // composed frame.
     const s = mqStill.matches ? stillScroll(raw) : raw;
     sNow = s;
-    cam = basisOf(poseAt(keys, s));
+    const pose = poseAt(keys, s);
+    // (Nothing banks when motion is reduced.)
+    if (mqStill.matches) pose.roll = 0;
+    cam = basisOf(pose);
     const melt = (s - MELT.from) / (MELT.to - MELT.from);
     const end = smooth(FLIGHT_SCREENS - 1.7, FLIGHT_SCREENS - 1, s);
     callouts.frame(cam, aspect, viewW, viewH, raw);

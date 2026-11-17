@@ -7,7 +7,7 @@
  * behind it, and the water in front of it carries its mirror image.
  */
 
-import { COLS, DAM, LATTICE, SLUICES, T2 } from '../world';
+import { BENDS, CANYON, COLS, DAM, FACE, LATTICE, SLUICES, T2 } from '../world';
 
 const f = (n: number) => n.toFixed(1);
 
@@ -410,6 +410,136 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
   // A dark wet foot under each.
   vec2 fq = abs(q - (cell - 1.5) * LAT_P) - LAT_S;
   col *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 14.0, max(fq.x, fq.y))) * uSt.z;
+  return col;
+}
+`;
+
+/** Station 8: a glacier the river has cut a canyon through, two tight bends back to back. */
+export const CANYON_ICE = `
+const float CY_R = ${f(CANYON.r)};
+const float CY_W = ${f(CANYON.w / 2 - 5)};
+const float CY_H = ${f(CANYON.h)};
+const vec2 CY_C1 = vec2(${f(BENDS[0].x)}, ${f(BENDS[0].y)});
+const vec2 CY_LO = vec2(${f(CANYON.x0)}, ${f(CANYON.y0)});
+const vec2 CY_HI = vec2(${f(CANYON.x1)}, ${f(CANYON.y1)});
+// How far a place is from the river's middle line. (The second bend's outside is cut square.)
+float canyonD(vec2 p) {
+  float h;
+  float d = segD(p, vec2(1300.0, ${f(T2 + 5000)}), vec2(1300.0, CY_C1.y), h);
+  vec2 r1 = p - CY_C1;
+  if (r1.x < 0.0 && r1.y > 0.0) d = min(d, abs(length(r1) - CY_R));
+  d = min(d, segD(p, vec2(CY_C1.x, CY_C1.y + CY_R), vec2(1800.0, CY_C1.y + CY_R), h));
+  d = min(d, segD(p, vec2(2020.0, ${f(BENDS[1].y)}), vec2(2020.0, ${f(T2 + 7700)}), h));
+  vec2 b = abs(p - vec2(1910.0, ${f(BENDS[1].y - CANYON.r + CANYON.w / 2)})) - vec2(110.0, ${f(CANYON.w / 2)});
+  return min(d, max(max(b.x, b.y), 0.0));
+}
+// The polished face in the second bend's outer wall: the app is seen in the ice.
+vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
+  vec2 q = vec2(${f(FACE.y + FACE.w / 2)} - p.y, p.z - ${f(FACE.z)}) / vec2(${f(FACE.w)}, ${f(FACE.h)});
+  if (n.x > -0.5 || p.x < ${f(FACE.x - 30)} || any(lessThan(q, vec2(-0.05))) || any(greaterThan(q, vec2(1.05)))) return col;
+  vec2 e = min(q, 1.0 - q) * vec2(${f(FACE.w)}, ${f(FACE.h)});
+  float edge = min(e.x, e.y);
+  // Polished flat: clearer and darker than the wall round it, with a bright cut edge.
+  vec3 flat_ = iceBody(0.8) * (S.amb * mix(0.7, 1.6, uNight) + S.key * 0.05);
+  col = mix(col, flat_, smoothstep(-14.0, -9.0, edge));
+  col += vec3(0.8, 0.94, 1.0) * (S.amb * 0.5 + S.key * 0.06) * (1.0 - smoothstep(0.0, 2.5, abs(edge + 9.0)));
+  float lod = max(0.0, log2(length(p - uCamPos) * uPxAng * 1280.0 / ${f(FACE.w)}));
+  vec3 img = pow(textureLod(uSlabTex, vec2(q.x, 1.0 - q.y), lod).rgb, vec3(2.2));
+  vec3 lit = img * (S.amb * 1.05 + S.key * 0.2);
+  lit = mix(lit, img * 0.4 + iceBody(0.8) * 0.03, uNight);
+  // (Seen through ice: a little of its blue, and its cracks, lie over the picture.)
+  vec3 fr3 = fracture(q * vec2(4.4, 2.8) + 3.0);
+  lit = mix(lit, lit * vec3(0.8, 0.95, 1.0) + iceBody(0.5) * S.amb * 0.1, 0.5) * (0.94 + 0.1 * fr3.y);
+  col = mix(col, lit, smoothstep(0.0, 22.0, edge) * 0.9 * pic);
+  // (Ice over it: a little of the sky lies on the polish.)
+  float fr = 0.03 + 0.97 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
+  return mix(col, skyColor(reflect(rd, n), 0.0), fr * 0.25);
+}
+// The glacier's top: level in its middle, falling away to the snow at its edges.
+float glacierTop(vec2 p) {
+  vec2 e = min(p - CY_LO, CY_HI - p);
+  return CY_H * smoothstep(0.0, 320.0, min(e.x, e.y));
+}
+// The first ice a ray meets before tMax: wall is 1 on the canyon's side, 0 on the top.
+float glacierHit(vec3 ro, vec3 rd, float tMax, out float wall) {
+  vec3 n1;
+  float tF;
+  float t = boxHit(ro, rd, vec3(CY_LO, -8.0), vec3(CY_HI, CY_H + 1.0), n1, tF);
+  bool inside = all(greaterThan(ro.xy, CY_LO)) && all(lessThan(ro.xy, CY_HI)) && ro.z < CY_H + 1.0;
+  if (inside) t = 0.0;
+  else if (t < 0.0) return -1.0;
+  float tEnd = min(tMax, tF);
+  wall = 0.0;
+  for (int i = 0; i < 56; i++) {
+    if (t > tEnd) return -1.0;
+    vec3 p = ro + rd * t;
+    float w = CY_W - canyonD(p.xy);
+    float top = (p.z - glacierTop(p.xy)) * 0.62;
+    float d = max(w, top);
+    if (d < 0.5 + t * 0.0012) { wall = w > top ? 1.0 : 0.0; return t; }
+    t += d;
+  }
+  return -1.0;
+}
+vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
+  vec3 p = ro + rd * t;
+  vec3 L = keyDir();
+  float topZ = max(glacierTop(p.xy), 1.0);
+  vec3 sn = mix(vec3(0.93, 0.94, 0.96), vec3(0.6, 0.68, 0.8), uNight);
+  if (wall < 0.5) {
+    // The top: wind-packed snow, the same as the land's.
+    vec2 g = vec2(glacierTop(p.xy + vec2(6.0, 0.0)), glacierTop(p.xy + vec2(0.0, 6.0))) - topZ;
+    vec3 n = normalize(vec3(-g / 6.0, 1.0));
+    vec4 gr = textureLod(uGrain, p.xy / 520.0, 1.0);
+    return sn * (S.key * mix(0.26, L.z, uNight) * (0.45 + 0.95 * max(dot(n, L), 0.0)) * (0.9 + 0.2 * gr.r) + S.amb * 0.85 + uAurora * 0.04);
+  }
+  float d0 = canyonD(p.xy);
+  vec2 g = vec2(canyonD(p.xy + vec2(1.5, 0.0)), canyonD(p.xy + vec2(0.0, 1.5))) - d0;
+  vec3 n = vec3(-normalize(g + 1e-5), 0.0);
+  float up = clamp((p.z + FREEBOARD) / (topZ + FREEBOARD), 0.0, 1.0);
+  // Old ice: laid down in bands, scalloped by the water, bluest at the bottom where the least sky reaches.
+  float along = (p.x + p.y) * 0.7;
+  vec4 gr = textureLod(uGrain, vec2(along / 520.0, p.z / 190.0), 0.0);
+  vec4 g2 = textureLod(uGrain, vec2(along / 1900.0, p.z / 900.0), 1.0);
+  vec3 fr3 = fracture(vec2(along / 62.0, p.z / 44.0));
+  float band = 0.5 + 0.5 * sin(p.z * 0.15 + 2.5 * g2.b + along * 0.006);
+  float scallop = 0.5 + 0.5 * sin(along * 0.05 + 2.0 * g2.r + p.z * 0.012);
+  vec3 ice = iceBody(1.0 - 0.72 * up * up + 0.1 * band) * (0.9 + 0.16 * fr3.y) * (0.86 + 0.28 * gr.r) * (0.84 + 0.2 * band) * (0.86 + 0.22 * scallop);
+  float sky = 0.16 + 0.84 * up * up;
+  vec3 col = ice * (S.amb * (0.34 + 0.8 * sky) + S.key * (0.03 + 0.3 * max(dot(n, L), 0.0) * up + 0.1 * up));
+  // Near its top the wall is thin enough for the day to come through it.
+  col += vec3(0.5, 0.86, 0.95) * S.key * 0.1 * smoothstep(0.72, 1.0, up) * (1.0 - uNight);
+  col += vec3(0.8, 0.93, 1.0) * S.key * 0.03 * (1.0 - smoothstep(0.0, 0.03, fr3.x)) * step(0.55, fr3.z) * (1.0 - uNight) * sky;
+  col = mix(col, ice * (S.amb * 2.2 * sky + uAurora * (0.1 + 0.4 * up * up)) + vec3(0.003, 0.01, 0.014), uNight);
+  col = faceIn(col, p, n, rd, pic);
+  float fr = 0.03 + 0.97 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
+  col = mix(col, skyColor(reflect(rd, n), 0.0), fr * 0.32 * sky);
+  // Wet and dark at the waterline; snow hangs over the lip.
+  col *= 1.0 - 0.45 * (1.0 - smoothstep(0.0, 12.0 + 8.0 * gr.b, p.z + FREEBOARD));
+  float lip = smoothstep(topZ - 8.0 - 14.0 * gr.g, topZ - 5.0 - 14.0 * gr.g, p.z);
+  return mix(col, sn * (S.key * mix(0.2, L.z, uNight) * 0.9 + S.amb * 0.85), lip);
+}
+/** The glacier over the finished ground, and its walls in the water between them. */
+vec3 canyon(vec3 col, vec3 dir, float tw) {
+  float wall;
+  float t = glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, wall);
+  if (t >= 0.0) return mix(col, inAir(glacierColor(uCamPos, dir, t, wall, 1.0), dir, t), uSt.w);
+  if (tw < 0.0) return col;
+  vec3 pwp = uCamPos + dir * tw;
+  if (any(lessThan(pwp.xy, CY_LO)) || any(greaterThan(pwp.xy, CY_HI)) || canyonD(pwp.xy) > CY_W) return col;
+  vec4 wv = textureLod(uGrain, pwp.xy / 300.0 + vec2(0.0, -uTime * 0.25), 1.0);
+  vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3((wv.rg - 0.5) * 0.09, 0.0));
+  float t2 = glacierHit(pwp + vec3(0.0, 0.0, 1.0), rd2, 1400.0, wall);
+  if (t2 >= 0.0) col = mix(col, inAir(glacierColor(pwp, rd2, t2, wall, 0.3), dir, tw + t2) * 0.8, 0.6 * uSt.w);
+  // Fast water on the outside of each bend, piled white against the wall; slack on the inside.
+  vec2 r1 = pwp.xy - CY_C1;
+  float turn = atan(r1.y, -r1.x);
+  float pile = smoothstep(4.0, 58.0, length(r1) - CY_R) * smoothstep(-0.25, 0.35, turn) * (1.0 - smoothstep(1.3, 1.9, turn)) * step(r1.x, 60.0);
+  float streak = textureLod(uGrain, vec2((length(r1) - CY_R) / 110.0, (turn * CY_R - uTime * 210.0) / 1300.0), 1.0).r;
+  float east = smoothstep(1975.0, 2078.0, pwp.x) * smoothstep(${f(BENDS[1].y - CANYON.r - CANYON.w / 2 + 10)}, ${f(BENDS[1].y - CANYON.r)}, pwp.y) * (1.0 - smoothstep(${f(BENDS[1].y)}, ${f(BENDS[1].y + 160)}, pwp.y));
+  float streak2 = textureLod(uGrain, vec2(pwp.x / 110.0, (pwp.y - uTime * 210.0) / 1300.0), 1.0).r;
+  float foam = max(pile * smoothstep(0.34, 0.62, streak + 0.3 * pile), east * smoothstep(0.34, 0.62, streak2 + 0.3 * east));
+  col = mix(col, vec3(0.92, 0.97, 1.0) * (S.key * mix(0.28, 0.08, uNight) + S.amb * 1.05), foam * 0.8 * uSt.w);
   return col;
 }
 `;

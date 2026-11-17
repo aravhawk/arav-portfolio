@@ -7,7 +7,7 @@
  * so a held frame still drifts.
  */
 
-import { DY, EXT, EXT2, NAME, type NameLayout, SLAB, T2 } from './world';
+import { BENDS, CANYON, DY, EXT, EXT2, FACE, NAME, type NameLayout, SLAB, T2 } from './world';
 
 export type V3 = [number, number, number];
 
@@ -182,8 +182,9 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         // The lattice from up the west bank: all sixteen above the middle, the bank at the foot.
         { s: s7 + 1.15, pos: [640, T + 3200, 760], aim: [1270, T + 4470, 0], fov: 58 },
         { s: s8 - 0.6, pos: [646, T + 3228, 750], aim: [1272, T + 4480, 0], fov: 58 },
-        { s: s8 + 0.3, pos: [1300, T + 5000, 260], aim: [1300, T + 5700, 40], fov: 60 },
-        { s: s8 + 3.2, pos: [1300, T + 7700, 400], aim: [1300, T + 8400, 0], fov: 54 },
+        { s: s8 + 0.3, pos: [1300, T + 4900, 230], aim: [1300, T + 5700, 70], fov: 60 },
+        ...canyonKeys(s8, 66),
+        { s: s8 + 3.85, pos: [1700, T + 7620, 400], aim: [1400, T + 8300, 0], fov: 54 },
       ]
     : [
         { s: s5 + 1.2, pos: [760, T + 60, 250], aim: [1310, T + 1080, 70], fov: 42 },
@@ -196,9 +197,55 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         // The lattice from over its west bank, corner on: every cube and its mirror image.
         { s: s7 + 1.15, pos: [450, T + 3690, 420], aim: [1200, T + 4500, 20], fov: 42 },
         { s: s8 - 0.6, pos: [462, T + 3718, 412], aim: [1203, T + 4510, 20], fov: 42 },
-        { s: s8 + 0.3, pos: [1300, T + 5000, 200], aim: [1300, T + 5700, 40], fov: 48 },
-        { s: s8 + 3.2, pos: [1300, T + 7700, 330], aim: [1300, T + 8500, 0], fov: 42 },
+        { s: s8 + 0.3, pos: [1300, T + 4960, 170], aim: [1300, T + 5700, 70], fov: 48 },
+        ...canyonKeys(s8, 50),
+        { s: s8 + 3.85, pos: [1700, T + 7620, 330], aim: [1400, T + 8400, 0], fov: 42 },
       ];
+}
+
+/** A place on the canyon's middle line, d along it from the glacier's front. */
+function canyonAt(d: number): [number, number] {
+  const r = CANYON.r;
+  const q = (Math.PI * r) / 2;
+  const a = BENDS[0].y - CANYON.y0;
+  const b = BENDS[1].x - BENDS[0].x;
+  if (d < a) return [1300, CANYON.y0 + d];
+  d -= a;
+  if (d < q) return [BENDS[0].x - r * Math.cos(d / r), BENDS[0].y + r * Math.sin(d / r)];
+  d -= q;
+  if (d < b) return [BENDS[0].x + d, BENDS[0].y + r];
+  d -= b;
+  if (d < q) return [BENDS[1].x + r * Math.sin(d / r), BENDS[1].y - r * Math.cos(d / r)];
+  return [BENDS[1].x + r, BENDS[1].y + d - q];
+}
+
+/**
+ * The flight through the canyon: low on its middle line, looking down it,
+ * banking into each bend; held on the straight between them, where the
+ * polished face is seen whole.
+ */
+function canyonKeys(s8: number, fov: number): Key[] {
+  // (An upright screen keeps its words at the foot: the face is held above the middle.)
+  const tall = fov > 60;
+  const face: V3 = [FACE.x, FACE.y, FACE.z + FACE.h * 0.5 - (tall ? 44 : 4)];
+  //            scroll, along, height, bank, looks at the face
+  const run: [number, number, number, number, boolean][] = [
+    [0.8, 40, 100, 0, false],
+    [1.05, 300, 86, 0, false],
+    [1.25, 500, 82, 4, false],
+    [1.45, 690, 82, 5, false],
+    [1.7, tall ? 770 : 800, 84, 0, true],
+    [2.2, tall ? 792 : 850, 86, 0, true],
+    [2.65, tall ? 812 : 880, 86, 0, true],
+    [2.9, 1100, 84, -4, false],
+    [3.1, 1290, 84, -5, false],
+    [3.35, 1500, 105, 0, false],
+  ];
+  return run.map(([ds, d, z, roll, toFace]) => {
+    const [x, y] = canyonAt(d);
+    const [ax, ay] = canyonAt(d + 230);
+    return { s: s8 + ds, pos: [x, y, z] as V3, aim: toFace ? face : ([ax, ay, z - 12] as V3), fov, roll };
+  });
 }
 
 /** Where each section begins, in screens. */
@@ -259,7 +306,7 @@ export function poseAt(keys: Key[], s: number): Pose {
   };
   const at = (get: (p: Key) => number) => h00 * get(a) + h10 * span * slope(i, get) + h01 * get(b) + h11 * span * slope(i + 1, get);
   const v3 = (get: (p: Key) => V3): V3 => [at((p) => get(p)[0]), at((p) => get(p)[1]), at((p) => get(p)[2])];
-  return { pos: v3((p) => p.pos), aim: v3((p) => p.aim), fov: at((p) => p.fov) };
+  return { pos: v3((p) => p.pos), aim: v3((p) => p.aim), fov: at((p) => p.fov), roll: at((p) => p.roll ?? 0) };
 }
 
 export interface Basis {
@@ -291,7 +338,18 @@ export function basisOf(p: Pose): Basis {
   ux /= ul;
   uy /= ul;
   uz /= ul;
-  return { pos: p.pos, f: [fx, fy, fz], r, u: [ux, uy, uz], tan: Math.tan(rad(p.fov / 2)) };
+  // A bank: right and up turn together about the line of sight.
+  const roll = rad(p.roll ?? 0);
+  const c = Math.cos(roll);
+  const sn = Math.sin(roll);
+  const u: V3 = [ux, uy, uz];
+  return {
+    pos: p.pos,
+    f: [fx, fy, fz],
+    r: [r[0] * c - u[0] * sn, r[1] * c - u[1] * sn, r[2] * c - u[2] * sn],
+    u: [u[0] * c + r[0] * sn, u[1] * c + r[1] * sn, u[2] * c + r[2] * sn],
+    tan: Math.tan(rad(p.fov / 2)),
+  };
 }
 
 /** The ray through a point of the screen (x right, y down, both 0..1). */
