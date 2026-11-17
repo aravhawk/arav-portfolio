@@ -180,7 +180,7 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
   // sheet round it cannot: its trapped air holds it, most under the snow of the tops, least at the foot, and where
   // the ice is clear of air the dark lake shows through.
   float clearN = smoothstep(0.6, 0.36, textureLod(uGrain, q / vec2(1100.0, 1700.0) + 0.7, 0.0).g * 0.85 + g0.r * 0.15 + 0.3 * hK);
-  vec3 deepN = mix(vec3(0.44, 0.62, 0.76), vec3(1.9, 1.92, 1.95), pow(hK, 1.2)) * litN * (1.0 - 0.6 * clearN) * (front > 0.5 ? 1.0 : 0.5);
+  vec3 deepN = mix(vec3(0.5, 0.69, 0.84), vec3(2.05, 2.07, 2.1), pow(hK, 1.2)) * litN * (1.0 - 0.6 * clearN) * (front > 0.5 ? 1.0 : 0.5);
   // (Once the pool has opened behind them the water there is the brightest thing on the lake before dawn: against it
   // the thinning blades are clear, dark ice, and still letters.)
   deepN *= 1.0 - 0.88 * uNameP.w;
