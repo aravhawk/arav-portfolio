@@ -41,7 +41,8 @@ interface Call {
 
 export interface Callouts {
   measure(): void;
-  frame(cam: Basis, aspect: number, viewW: number, viewH: number, s: number): void;
+  /** Sets every caption for this frame. Returns where the captions tied to their points stand (x0, y0, x1, y1 in px), or null when there are none. */
+  frame(cam: Basis, aspect: number, viewW: number, viewH: number, s: number): [number, number, number, number] | null;
 }
 
 /** The most captions a narrow screen ties to their points; a station with more sets them all as one list. */
@@ -133,7 +134,7 @@ export function makeCallouts(): Callouts {
         c.label.style.transform = `translate3d(${at[i].lx.toFixed(1)}px,${at[i].ly.toFixed(1)}px,0)`;
       });
     }
-    if (!live.length) return;
+    if (!live.length) return null;
     const draw = (c: Call, x: number, y: number, p: { lx: number; ly: number; fx: number; fy: number }) => {
       const len = Math.hypot(p.fx - x, p.fy - y);
       const ang = Math.atan2(p.fy - y, p.fx - x);
@@ -144,6 +145,15 @@ export function makeCallouts(): Callouts {
     const caps = live.map(({ c, x, y }) => ({ x, y, w: c.w, h: c.h, lift: wide && c.atWide ? c.liftWide : c.lift, side: c.side }));
     const at = narrow ? layoutStepped(caps, viewW, edge) : layoutCaptions(caps, viewW, edge);
     live.forEach(({ c, x, y }, i) => draw(c, x, y, at[i]));
+    // Where the captions stand, taken together: the picture keeps itself readable behind them, as it does behind the words.
+    const span: [number, number, number, number] = [1e9, 1e9, -1e9, -1e9];
+    live.forEach(({ c }, i) => {
+      span[0] = Math.min(span[0], at[i].lx);
+      span[1] = Math.min(span[1], at[i].ly);
+      span[2] = Math.max(span[2], at[i].lx + c.w);
+      span[3] = Math.max(span[3], at[i].ly + c.h);
+    });
+    return span;
   };
 
   return { measure, frame };

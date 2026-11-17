@@ -44,6 +44,9 @@ const NAME_GONE = 0.555;
 let dawned = false;
 
 /** What the page tells the picture each frame, beyond the camera. */
+/** No rectangle: nothing in the frame is calmed. */
+const NO_BOX = new Float32Array(4);
+
 export interface FlightMoment {
   /** 0..1, how far the lake's ice has melted */
   melt: number;
@@ -61,6 +64,9 @@ export interface FlightMoment {
   /** 0..1, how much the picture is calmed behind them, and whether they are light in both themes */
   boxK: number;
   boxLight: boolean;
+  /** where the captions tied to their points stand, in the frame (u, v from the foot), and 0..1 how much the picture is calmed behind them */
+  cap?: [number, number, number, number];
+  capK?: number;
 }
 
 /**
@@ -704,7 +710,7 @@ export class FlightEngine extends WaterEngine {
       this.onMelt?.(false);
     }
 
-    const key = `${cam.pos.join(',')}|${cam.f.join(',')}|${cam.tan}|${m}|${at.settle}|${at.calm}|${at.near}|${at.boxK}|${at.box.join(',')}`;
+    const key = `${cam.pos.join(',')}|${cam.f.join(',')}|${cam.tan}|${m}|${at.settle}|${at.calm}|${at.near}|${at.boxK}|${at.box.join(',')}|${at.capK ?? 0}|${at.cap ? at.cap.join(',') : ''}`;
     if (key !== this.camKey) {
       this.camKey = key;
       this.dirty = true;
@@ -829,6 +835,8 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
     gl.uniform4fv(r.u.uCalmBox, at.box);
     gl.uniform2f(r.u.uCalmK, at.boxK, at.boxLight ? 1 : 0);
+    if (r.u.uCapBox) gl.uniform4fv(r.u.uCapBox, at.cap ?? NO_BOX);
+    if (r.u.uCapK) gl.uniform1f(r.u.uCapK, at.capK ?? 0);
     this.setRibbon(r, cam, aspect, seaOn, at.settle);
     this.bindIce(r, ice, 7, 9);
     gl.uniform1f(r.u.uIceH, ICE_H);
@@ -1122,6 +1130,10 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     return x1 < x0 ? null : { x0, y0, x1, y1 };
   };
   const box: [number, number, number, number] = [0, 0, 0, 0];
+  // The captions' lee: the same, behind the captions that are tied to their points.
+  const cap: [number, number, number, number] = [0, 0, 0, 0];
+  let capK = 0;
+  let capLast = 0;
   let boxK = 0;
   let boxOn = false;
   let boxLight = false;
@@ -1525,8 +1537,19 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const rest = s >= SETTLE_AT - 0.02;
     // (Published before the draw: whoever follows the picture takes its turn ahead of the picture's own work.)
     flightSignal(now, s, cam, aspect, melt, dayNow, rest);
-    callouts.frame(cam, aspect, viewW, viewH, s);
-    engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight });
+    const span = callouts.frame(cam, aspect, viewW, viewH, s);
+    // (It comes in where the captions stand and goes out where they last stood.)
+    const dtCap = Math.min(0.1, Math.max(0, (now - capLast) / 1000));
+    capLast = now;
+    if (span) {
+      const pad = 5;
+      cap[0] = (span[0] - pad) / viewW;
+      cap[1] = 1 - (span[3] + pad) / viewH;
+      cap[2] = (span[2] + pad) / viewW;
+      cap[3] = 1 - (span[1] - pad) / viewH;
+    }
+    capK = span ? Math.min(1, capK + dtCap / (mqStill.matches ? 0.001 : 0.3)) : Math.max(0, capK - dtCap / (mqStill.matches ? 0.001 : 0.25));
+    engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK });
   }, 10);
 
   return {

@@ -90,6 +90,8 @@ uniform vec4 uSkyK;        // x: haze, y: how much aurora is left, z: 0..1 how f
 uniform vec4 uSea;         // x: 1 when the open sea is near enough to be seen, y: 0..1 the camera has settled on the ending, z: u left of which the water is kept calm for the words, w: v under which it is (narrow screens), or 0
 uniform vec4 uCalmBox;     // where the words now showing stand, in vUv: x0, y0, x1, y1
 uniform vec2 uCalmK;       // x: 0..1 how much the picture is calmed for them, y: 1 when they are light in both themes (the ending)
+uniform vec4 uCapBox;      // where the captions tied to their points stand, in vUv: x0, y0, x1, y1
+uniform float uCapK;       // 0..1 how much the picture is calmed behind them
 uniform vec4 uRay;         // the ribbon of light at the ending. x: 0..1 how far its line has run out across the water, y: 0..1 how far it has risen from it, z: its strength (0: not there), w: how far it leans as it climbs, and which way
 uniform vec4 uRib;         // xy: the bearing its foot stands on (a unit vector on the ground), zw: the strip of the frame it can be in (u from, u to)
 
@@ -3650,6 +3652,24 @@ void main() {
       float lifted = 0.5 * (l + FLOOR + sqrt((l - FLOOR) * (l - FLOOR) + 0.09 * FLOOR * FLOOR));
       col *= mix(1.0, capped / l, ck * shadeK);
       col += (lifted - l) * vec3(0.95, 1.0, 1.07) * ck * (1.0 - shadeK);
+    }
+  }
+  // The captions' lee: the same rule behind the small captions that stand at their points, held closer round them:
+  // only what would fight a caption is touched, by as little as lets it be read.
+  if (uCapK > 0.0 && vUv.y < uCapBox.w + 0.07 && vUv.y > uCapBox.y - 0.07 && vUv.x < uCapBox.z + 0.07 && vUv.x > uCapBox.x - 0.07) {
+    vec2 cq = abs(vUv - (uCapBox.xy + uCapBox.zw) * 0.5) - (uCapBox.zw - uCapBox.xy) * 0.5;
+    cq.x *= uLens.y;
+    float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);
+    float ck = 1.0 - smoothstep(-0.006, 0.07, cd);
+    ck *= ck * uCapK;
+    if (ck > 0.0) {
+      float l = max(dot(col, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
+      const float CAP = 0.082;
+      const float FLOOR = 0.165;
+      float capped = 0.5 * (l + CAP - sqrt((l - CAP) * (l - CAP) + 0.09 * CAP * CAP));
+      float lifted = 0.5 * (l + FLOOR + sqrt((l - FLOOR) * (l - FLOOR) + 0.09 * FLOOR * FLOOR));
+      col *= mix(1.0, capped / l, ck * uNight);
+      col += (lifted - l) * vec3(0.95, 1.0, 1.07) * ck * (1.0 - uNight);
     }
   }
   vec3 xa = col * 1.12;
