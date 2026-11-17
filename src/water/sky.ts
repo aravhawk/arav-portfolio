@@ -118,8 +118,9 @@ const NIGHT: Key = {
  * @param ridge how high the ranges stand there, radians
  */
 export function skyAt(theme: number, day: number, lift: number, sunAz: number, ridge: number): SkyKeys {
-  // The sun waits behind the ranges, its upper edge just under the crest, and clears it when the camera settles.
-  const elEnd = ridge - 0.014 + 0.022 * lift;
+  // The sun waits behind the ranges, its upper edge just under the crest, and clears it when the camera settles:
+  // it comes to rest with its middle a little above the crest, a clean limb standing on the ranges.
+  const elEnd = ridge - 0.018 + 0.023 * lift;
   // Late in the light theme's day: the sun has come round to the right, still clear of the ranges, and the light is gold.
   const late: Key = {
     zen: [0.045, 0.13, 0.42],
@@ -165,7 +166,8 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
     keyEl: 0.05,
     amb: [0.03, 0.04, 0.06],
     haze: 1.0,
-    aurora: 0.1,
+    // (By first light the aurora has gone.)
+    aurora: 0,
     dusk: 1,
     under: 1,
   };

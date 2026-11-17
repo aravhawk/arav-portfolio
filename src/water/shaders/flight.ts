@@ -267,12 +267,35 @@ vec3 skyColor(vec3 d, float clouds) {
   col += S.band * exp(-h * 30.0) * pow(az, 2.0) * 0.14 * warm;
   float sd = max(dot(d, S.sun), 0.0);
   col += sunBloom(sd) * (1.0 - 0.5 * uNight * (1.0 - gDusk)) * gSunK;
+#ifdef SEA
+  // (At the ending the sun is a clean limb standing on the crest: a small hard disc, and the glow round it is the bloom's.)
+  float disc = mix(smoothstep(0.9996, 0.99999, sd) * 2.4 + smoothstep(0.9999, 1.0, sd) * 1.6, smoothstep(0.999838, 0.999888, sd) * 5.0, gDusk);
+  col += vec3(1.0, 0.9, 0.7) * disc * (1.0 - uNight * (1.0 - gDusk)) * gSunK;
+  // The pillar. In air this cold the light of a sun on the horizon stands up over it in a thin column; it rises once
+  // the line of light has come in across the water, and holds: with the line it is one stroke through the sun.
+  if (uRay.w > 0.0 && gDusk > 0.0) {
+    float rise = smoothstep(0.6, 1.0, uRay.z);
+    vec2 dn = normalize(d.xy + 1e-6);
+    vec2 sn = normalize(S.sun.xy);
+    float de = d.z - S.sun.z;
+    if (rise > 0.0 && dot(dn, sn) > 0.9 && de > -0.03) {
+      float da = dn.x * sn.y - dn.y * sn.x;
+      float top = 0.34 * rise;
+      float wid = 0.0075 + 0.034 * max(de, 0.0);
+      float prof = smoothstep(-0.02, 0.006, de) * exp(-max(de, 0.0) / 0.16) * (1.0 - smoothstep(top * 0.45, top, de));
+      float shim = 0.86 + 0.14 * n1(de * 90.0 - uTime * 0.35);
+      vec3 pc = mix(S.band, vec3(1.7, 1.5, 1.25), 0.55);
+      col += pc * (exp(-da * da / (wid * wid)) * 0.42 + exp(-da * da / (wid * wid * 30.0)) * 0.09) * prof * shim * gDusk * uRay.w * gSunK;
+    }
+  }
+#else
   col += vec3(1.0, 0.9, 0.7) * (smoothstep(0.9996, 0.99999, sd) * 2.4 + smoothstep(0.9999, 1.0, sd) * 1.6) * (1.0 - uNight * (1.0 - gDusk)) * gSunK;
+#endif
   if (uNight > 0.0) {
     // (The aurora fades as the first light comes, and the stars thin.)
     vec3 au = uSkyK.y > 0.0 ? aurora(d) * uSkyK.y : vec3(0.0);
     col += au * uNight;
-    if (gDirect) col += vec3(0.8, 0.88, 1.0) * stars(d) * uNight * (1.0 - 0.75 * gDusk) * (1.0 - min(dot(au, vec3(1.5)), 0.8));
+    if (gDirect) col += vec3(0.8, 0.88, 1.0) * stars(d) * uNight * (1.0 - gDusk) * (1.0 - gDusk) * (1.0 - min(dot(au, vec3(1.5)), 0.8));
   }
   if (clouds > 0.0) {
     // Thin high cloud: white where the sun finds it by day, a faint warm
@@ -1665,11 +1688,14 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // of glints on the ripple faces under the sun's bearing.
   if (uSea.x > 0.0 && S.sun.z > 0.0) {
     float daS = atan(dir.x, dir.y) - atan(S.sun.x, S.sun.y);
-    float pathS = exp(-daS * daS / 0.05);
+    float pathS = exp(-daS * daS / 0.1);
     if (pathS > 0.01) {
-      float face = smoothstep(0.52, 0.8, mix(dw2.r, df.r, 0.45));
-      face = mix(face, 0.3, smoothstep(2.0, 9.0, footL));
-      col += S.band * pathS * (0.1 + 1.25 * face * face) * (0.3 + 0.7 * fres) * uSea.x * (1.0 - shade) * mix(1.0, 0.5, uNight);
+      // Every ripple face turned to the sun throws it back whole: the braids blaze where they cross its bearing,
+      // in broad flashing faces with a fine sparkle over them that comes and goes.
+      float face = smoothstep(0.5, 0.78, mix(dw2.r, df.r, 0.45));
+      face = mix(face, 0.34, smoothstep(2.0, 9.0, footL));
+      float spark = smoothstep(0.7, 0.92, n2(pw / 9.0 + vec2(uTime * 1.1, -uTime * 0.8))) * (1.0 - smoothstep(1.2, 4.0, footL));
+      col += S.band * pathS * (0.3 + 4.2 * face * face + 3.4 * spark * face) * (0.35 + 0.65 * fres) * uSea.x * (1.0 - shade) * mix(1.0, 0.45, uNight);
     }
   }
 #endif
@@ -1843,13 +1869,35 @@ float seaH(vec2 p) {
   }
   return s;
 }
+/**
+ * Drift ice: plates the river has carried out past the delta, fewer the
+ * further the land falls behind, none where the camera comes to rest.
+ * Returns how far a place is from the nearest plate's edge (under 0: on it).
+ */
+float floeAt(vec2 p) {
+  float dens = 0.58 * smoothstep(${(T2 + 8700).toFixed(1)}, ${(T2 + 8950).toFixed(1)}, p.y) * (1.0 - smoothstep(${(T2 + 9650).toFixed(1)}, ${(T2 + 10220).toFixed(1)}, p.y));
+  vec2 q = p / 210.0;
+  vec2 c = floor(q);
+  vec2 hq = hash2(c + 7.0);
+  if (hq.y > dens) return 1e3;
+  // (Each rides the swell a little, and turns very slowly.)
+  vec2 l = (fract(q) - 0.5 - (hq - 0.5) * 0.3) * 210.0 - vec2(sin(uTime * 0.11 + hq.y * 40.0), cos(uTime * 0.09 + hq.x * 31.0)) * 8.0;
+  float ang = hq.y * 17.0 + uTime * 0.02 * (hq.x - 0.5);
+  l = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * l;
+  float big = fract(hq.x * 37.0);
+  float sz = 12.0 + 42.0 * big * big;
+  return max(abs(l.x) + abs(l.y) * 0.5, max(abs(l.y) * 1.25, abs(l.x * 0.8 - l.y * 0.6))) - sz;
+}
 // The lee at this pixel: the shade it lays on the water is put on after the air.
 float gLee = 0.0;
 // How much of this pixel is open sea.
 float gSea = 0.0;
 vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float e = uSea.y;
-  float lee = (1.0 - smoothstep(uSea.z - 0.16, uSea.z + 0.14, vUv.x)) * e;
+  // The lee has no edge and no corner: it is deepest under the words and thins away from them in every direction,
+  // to nothing at the horizon, so it is never seen as a shape. (uSea.w below zero: how high the words stand, on a wide screen.)
+  float topV = uSea.w < -0.001 ? -uSea.w : 0.42;
+  float lee = (1.0 - smoothstep(0.0, 1.0, length(max((vUv - vec2(uSea.z - 0.06, topV - 0.04)) / vec2(0.3, max(0.6 - topV, 0.1)), 0.0)))) * e;
   float leeFoot = step(0.001, uSea.w) * (1.0 - smoothstep(uSea.w - 0.01, uSea.w + 0.13, vUv.y)) * e;
   // (On a narrow screen the words run the width of the frame and stand at its foot: the line of light comes down to them and stops.)
   float leeRay = uSea.w > 0.001 ? leeFoot : lee;
@@ -1885,7 +1933,8 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float fres = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
   vec3 refl = withRidges(skyColor(r, 0.0), r, 1.0);
   // Seen from above the water shows its depth; at a glancing angle, the sky.
-  vec3 deep = mix(vec3(0.005, 0.034, 0.085), vec3(0.004, 0.028, 0.05), uNight);
+  // (Before dawn the sea's own body is dark and without colour of its own: no green in it.)
+  vec3 deep = mix(vec3(0.004, 0.026, 0.078), vec3(0.008, 0.012, 0.026), uNight);
   vec3 body = mix(deep * (0.5 + 0.5 * max(S.sun.z * 3.0, 0.3)), vec3(0.01, 0.07, 0.11) * (S.amb.b * 1.6 + 0.12), (1.0 - gDusk) * (1.0 - uNight));
   // (By day the sea is a rougher mirror than at the still ends of the day: more of its own deep colour shows.)
   float dayK = (1.0 - gDusk) * (1.0 - uNight);
@@ -1904,7 +1953,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float nearK = 1.0 / (1.0 + dist * 0.03);
   float day = (1.0 - uNight) * up;
   if (day > 0.0) {
-    float wide = mix(0.028, 0.11, nearK);
+    float wide = mix(0.028, 0.11, nearK) * mix(1.5, 1.0, gDusk);
     float path = exp(-da * da / (wide * wide));
     if (path > 0.003) {
       vec2 gq = q * vec2(30.0, 15.0);
@@ -1917,7 +1966,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
       glint = mix(glint, 0.3, smoothstep(0.35, 1.1, px * 15.0));
       // The sun's reflected bloom is broken by the same facets, so it is not a patch.
       col = max(col - sunBloom(sd) * mir * 0.3 * (1.0 - glint) * day, 0.0);
-      col += vec3(1.0, 0.88, 0.7) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee) * mix(1.5, 1.0, gDusk);
+      col += vec3(1.0, 0.88, 0.7) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee) * mix(6.5, 1.0, gDusk);
     }
   }
   // The line of light: when the sun's edge clears the ranges, one clean
@@ -1929,20 +1978,44 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     float along = dot(rel, u);
     float across = dot(rel, vec2(u.y, -u.x));
     // (The river's own wander, easing out toward the sun.)
-    float line = across - (30.0 * sin(along / 340.0 + 2.6) + 9.0 * sin(along / 127.0 + 0.4)) * exp(-max(along, 0.0) / 2400.0) - g.x * 7.0;
-    // It is a line, not a band: a few pixels wide under the eye, a hair at the horizon.
-    float wpx = max(t * uPxAng, 1e-3);
-    float w = wpx * mix(0.85, 2.3, exp(-max(along, 0.0) / 520.0));
-    // It runs in from the horizon: its head is where the eye's ray dips to.
+    // (Under the eye it runs true; further out it keeps a little of the river's wander.)
+    float line = across - (11.0 * sin(along / 340.0 + 2.6) + 3.5 * sin(along / 127.0 + 0.4)) * exp(-max(along, 0.0) / 2400.0) * smoothstep(120.0, 1100.0, along) - g.x * 2.0;
+    // It is a line, not a band: a few pixels wide under the eye, a hair at the horizon. (On a narrow screen a pixel is small: it is drawn wider there.)
+    float wpx = max(t * uPxAng, 1e-3) * (uSea.w > 0.001 ? 2.1 : 1.0);
+    float w = wpx * mix(1.25, 2.6, exp(-max(along, 0.0) / 520.0));
+    // It runs in from the horizon: its head is where the eye's ray dips to. (It has come in before the pillar rises.)
     float dip = uCamPos.z / max(along, 1.0);
-    float head = uRay.z * uRay.z * (3.0 - 2.0 * uRay.z) * 0.62;
+    float run = smoothstep(0.0, 0.66, uRay.z);
+    float head = run * 0.62;
     float shown = (1.0 - smoothstep(head * 0.82, head, dip)) * step(1.0, along);
     float core = exp(-line * line / (w * w));
     float halo = exp(-line * line / (w * w * 40.0)) * 0.14 + exp(-abs(line) / (w * 14.0)) * 0.06;
-    float tip = exp(-pow((dip - head * 0.9) / max(head * 0.12, 1e-3), 2.0)) * (1.0 - smoothstep(0.9, 1.0, uRay.z));
+    float tip = exp(-pow((dip - head * 0.9) / max(head * 0.12, 1e-3), 2.0)) * (1.0 - smoothstep(0.9, 1.0, run));
     vec3 rayC = mix(vec3(1.0, 0.9, 0.78), vec3(1.0, 0.8, 0.46), uNight);
     // (It stops short of the words: in their lee the water keeps no light.)
-    col += rayC * (core * 2.4 + halo) * shown * uRay.w * (1.0 + 2.0 * tip) * (1.0 - leeRay) * (1.0 - leeRay);
+    // (It is light lying on water: the ripples it crosses carry it, brighter on the faces turned to it.)
+    float carry = 0.62 + 0.38 * smoothstep(-0.25, 0.25, g.y * 3.0) ;
+    col += rayC * (core * 2.3 * carry + halo * 1.6) * shown * uRay.w * (1.0 + 2.0 * tip) * (1.0 - leeRay) * (1.0 - leeRay);
+  }
+  // Drift ice on the way out: each plate a hand of ice above the water, snow on its top, a blue wall on the side
+  // the eye sees, and the pale skirt of the ice under water round it.
+  if (pw.y < ${(T2 + 10230).toFixed(1)} && footL < 26.0) {
+    const float FH = 5.5;
+    float base = floeAt(pw);
+    float top = floeAt(pw - dir.xy / max(-dir.z, 0.02) * FH);
+    float pxF = max(footL * 0.7, 0.25);
+    float far = 1.0 - smoothstep(12.0, 26.0, footL);
+    float aTop = (1.0 - smoothstep(-pxF, pxF, top)) * far;
+    float aSide = (1.0 - aTop) * (1.0 - smoothstep(-pxF, pxF, base)) * far;
+    vec3 Lf = keyDir();
+    // (Before dawn its snow takes the sky's cold light more than the first warm light: it is ice, not earth.)
+    vec3 lightF = mix(S.key * 0.26 * 0.9 + S.amb * 0.85, vec3(dot(S.key, vec3(0.3333))) * vec3(0.9, 1.0, 1.15) * 0.3 + S.amb * 2.4 + S.mid * 0.5, uNight);
+    col = mix(col, mix(vec3(0.16, 0.56, 0.6), vec3(0.03, 0.09, 0.1), uNight) * (S.amb * 1.5 + S.key * 0.12), (1.0 - smoothstep(0.0, 15.0, base)) * 0.55 * far);
+    col = mix(col, mix(vec3(0.3, 0.62, 0.74), vec3(0.1, 0.22, 0.28), uNight) * (S.amb * 1.4 + S.key * 0.1), aSide);
+    // (Its top is wind-packed snow; its edge has been rounded and glazed by the swell.)
+    float rim = 1.0 - smoothstep(0.0, 4.0, -top);
+    col = mix(col, mix(vec3(0.93, 0.94, 0.96), vec3(0.6, 0.68, 0.8), uNight) * lightF * (1.0 - 0.22 * rim) + S.band * 0.05 * rim * gDusk, aTop);
+    lee *= 1.0 - max(aTop, aSide);
   }
   gLee = lee;
   return col;
@@ -2335,7 +2408,7 @@ void main() {
     float clearK = gDeep * (1.0 - aLand) * (1.0 - aIce) * (1.0 - aCut) * (1.0 - smoothstep(4200.0, 7000.0, t));
 #ifdef SEA
     // (Over the open sea at the end of the day the air is clearer: the water keeps its depth out to the mist on the horizon.)
-    col = mix(col, air, fog * (1.0 - clearK) * (1.0 - 0.55 * gSea * gDusk));
+    col = mix(col, air, fog * (1.0 - clearK) * (1.0 - gSea * mix(0.4, 0.55, gDusk)));
 #else
     col = mix(col, air, fog * (1.0 - clearK));
 #endif
@@ -2454,11 +2527,15 @@ void main() {
   // the pixels that would fight the words are touched, and the edge of the
   // lee is wide and soft, so it reads as air and shade, never as a plate.
   // (Most of the frame is nowhere near them: it is let go at once.)
-  if (uCalmK.x > 0.0 && vUv.y < uCalmBox.w + 0.17 && vUv.y > uCalmBox.y - 0.17 && vUv.x < uCalmBox.z + 0.17 && vUv.x > uCalmBox.x - 0.17) {
+  // (The ending's words stand in the frame's own corner: their lee runs out to the frame's edges and thins only
+  // upward and toward the light, a long way, so it has no side to be seen as a shape.)
+  bool endLee = uCalmK.y > 0.5;
+  if (uCalmK.x > 0.0 && (endLee ? vUv.y < uCalmBox.w + 0.34 && vUv.x < uCalmBox.z + 0.34 : vUv.y < uCalmBox.w + 0.17 && vUv.y > uCalmBox.y - 0.17 && vUv.x < uCalmBox.z + 0.17 && vUv.x > uCalmBox.x - 0.17)) {
     vec2 cq = abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5;
+    if (endLee) cq = vUv - uCalmBox.zw;
     cq.x *= uLens.y;
     float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);
-    float ck = 1.0 - smoothstep(-0.014, 0.17, cd);
+    float ck = 1.0 - smoothstep(-0.014, endLee ? 0.34 : 0.17, cd);
     ck *= ck * uCalmK.x;
     if (ck > 0.0) {
       float l = max(dot(col, vec3(0.2126, 0.7152, 0.0722)), 1e-4);

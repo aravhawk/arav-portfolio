@@ -327,11 +327,14 @@ export default async function Home() {
                   <span className="ending-line">It&apos;s still early.</span>
                 </h2>
                 <p className="label ending-kicker">Selected for OpenAI DevDay 2026</p>
-                <Contact />
-              </div>
-              <div className="ending-foot label fl-end-foot">
-                <a href="/feed.xml">RSS</a>
-                <HapticsSetting />
+                {/* One row: the ways to reach him, then, past a hairline, the feed and the haptics switch. */}
+                <div className="fl-end-row">
+                  <Contact />
+                  <div className="ending-foot label fl-end-foot">
+                    <a href="/feed.xml">RSS</a>
+                    <HapticsSetting />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

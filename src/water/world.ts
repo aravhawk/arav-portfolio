@@ -427,6 +427,17 @@ function paintDelta(b: BedPainter) {
   run([[1445, 8620], [1580, 8760], [1700, 8900], [1760, 9000]], [60, 70, 90, 160], 0.4);
   run([[2190, 8215], [2260, 8380], [2330, 8520]], [70, 80, 150], 0.4);
   run([[1765, 8560], [1930, 8640], [2060, 8770]], [70, 80, 150], 0.4);
+  // More braids, at their own angles: they cut the bars into shapes that are not alike (long spits, a round holm, slivers).
+  run([[1480, 8090], [1560, 8200], [1600, 8330], [1570, 8470]], [50, 56, 60, 70], 0.35);
+  run([[1830, 8170], [1900, 8260], [2040, 8300], [2130, 8300]], [50, 60, 60, 70], 0.4);
+  run([[1930, 8610], [2020, 8600], [2120, 8660], [2180, 8760]], [54, 60, 70, 110], 0.4);
+  run([[1600, 8660], [1690, 8700], [1790, 8740], [1880, 8830]], [50, 56, 64, 100], 0.35);
+  // Bars that stand in the water itself: a spit in each mouth, and a last low bar out in the sea on the way to the light.
+  b.dry({ x: 1512, y: Y + 8930, w: 46, h: 120 }, 0, 23);
+  b.dry({ x: 1888, y: Y + 8850, w: 40, h: 96 }, 0, 20);
+  b.dry({ x: 2380, y: Y + 8400, w: 130, h: 36 }, 0, 18);
+  b.dry({ x: 1830, y: Y + 9210, w: 230, h: 54 }, 0, 27);
+  b.dry({ x: 2110, y: Y + 9130, w: 90, h: 40 }, 0, 20);
   // The sea's own slow set, outward from the mouths.
   for (const [x0, y0, x1, y1] of [
     [1560, 9050, 1700, 9900],

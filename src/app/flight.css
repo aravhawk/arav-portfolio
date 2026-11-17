@@ -394,29 +394,62 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   max-width: min(50vw, 800px);
   margin-bottom: clamp(28px, 6.5vh, 80px);
 }
-/* The foot: one hairline the width of the links, and under it the feed and the haptics switch as one line. */
+/* The contact row. The links, and after them, past one upright hairline, the feed and the haptics switch in the
+   small face: one composed row, not a word left alone under a rule. */
+.fl-end-row {
+  display: flex;
+  align-items: center;
+  gap: 0 clamp(18px, 2.4vw, 40px);
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--gutter));
+}
+.fl-end-row .ending-links {
+  margin-top: 0;
+}
 .fl-end-foot {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0 26px;
-  min-width: min(26rem, 100%);
-  max-width: min(50vw, 800px);
-  padding-top: 4px;
+  gap: 0 22px;
+  max-width: none;
+  padding-left: clamp(18px, 2.4vw, 40px);
   color: var(--end-ink);
 }
 .fl-end-foot::before {
   content: '';
   position: absolute;
   left: 0;
-  right: 0;
-  top: 0;
-  height: 1px;
+  top: 50%;
+  width: 1px;
+  height: 1.5rem;
+  transform: translateY(-50%);
   background: var(--end-line);
 }
 .fl-end-foot a,
 .fl-end-foot .end-haptics {
   color: var(--end-ink);
+}
+/* Where the row has no room to stand in one line beside the light, the feed and the switch take the line under
+   the links, below a level hairline the links' own width. */
+@media (max-width: 999px) {
+  .fl-end-row {
+    display: grid;
+    justify-items: start;
+    width: fit-content;
+    max-width: 100%;
+  }
+  .fl-end-foot {
+    width: 100%;
+    padding-left: 0;
+    padding-top: 2px;
+    margin-top: 8px;
+  }
+  .fl-end-foot::before {
+    top: 0;
+    width: 100%;
+    height: 1px;
+    transform: none;
+  }
 }
 /* The entrance: the headline wipes in, the rest follows. It leaves fast. */
 .fl-words.fl-end-words > * {
@@ -462,10 +495,7 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     max-width: 68vw;
     margin-bottom: clamp(16px, 3.4vh, 34px);
   }
-  .fl-end-foot {
-    max-width: none;
-    min-width: 68vw;
-  }
+
   .fl .fl-into-list {
     max-width: none;
     font-size: clamp(1.6rem, 7.6vw, 2.4rem);
