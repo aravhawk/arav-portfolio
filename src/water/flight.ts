@@ -568,7 +568,9 @@ export class FlightEngine extends WaterEngine {
     const hole = -30 + 78 * smooth(0.1, 0.47, m);
     const pond = 32 + 34 * smooth(0.04, 0.45, m);
     const k = smooth(0.5, 0.6, m);
-    gl.uniform4f(prog.u.uIceA, (shade ? hole : pond) * (1 - k) + old * k, ice.a[1], ice.a[2], ice.a[3]);
+    // (A film of meltwater lies on the black ice well out in front of them, where their image is: the simulation is given
+    // all of it, so the pointer's breath shakes that image.)
+    gl.uniform4f(prog.u.uIceA, (shade ? hole : pond * 8) * (1 - k) + old * k, ice.a[1], ice.a[2], ice.a[3]);
     gl.uniform4f(prog.u.uIceC, ice.c[0], ice.c[1], smooth(0.36, 0.57, m), ice.c[3]);
     if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (1 - k), smooth(0, 0.14, m), smooth(0.12, 0.3, m), smooth(0.41, 0.49, m));
     // The swept field they stand on is the thinnest ice: it goes to open water from under them outward, and all of it is gone soon after they are.
