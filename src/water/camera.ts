@@ -123,8 +123,8 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         { s: s2 - 0.1, pos: [900, 4900 + DY, 330], aim: [1250, 5900 + DY, 0], fov: 54 },
         { s: s2 + 0.4, pos: [1380, 5700 + Y, 330], aim: [1560, 6300 + Y, 0], fov: 56 },
         // The confluence: streams above, the river across the middle, the bank at the foot.
-        { s: s2 + 1.25, pos: [1600, 5800 + Y, 560], aim: [1650, 7200 + Y, 0], fov: 60 },
-        { s: s3 - 0.6, pos: [1606, 5850 + Y, 548], aim: [1652, 7230 + Y, 0], fov: 60 },
+        { s: s2 + 1.25, pos: [1700, 5760 + Y, 580], aim: [1730, 7200 + Y, 0], fov: 60 },
+        { s: s3 - 0.6, pos: [1704, 5810 + Y, 568], aim: [1732, 7230 + Y, 0], fov: 60 },
         { s: s3 + 0.3, pos: [900, 7700 + Y, 380], aim: [1100, 8500 + Y, 0], fov: 58 },
         // The pool, looked down into from its rim.
         { s: s3 + 1.15, pos: [1780, 8620 + Y, 760], aim: [1780, 9060 + Y, 0], fov: 52 },
@@ -155,8 +155,9 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         { s: s2 - 0.1, pos: [900, 4950 + DY, 250], aim: [1250, 5900 + DY, 0], fov: 42 },
         { s: s2 + 0.4, pos: [1400, 5720 + Y, 230], aim: [1620, 6350 + Y, 0], fov: 46 },
         // The confluence: the river crosses the frame, the streams fan down to it from the snowfield.
-        { s: s2 + 1.25, pos: [1300, 5770 + Y, 470], aim: [1680, 7010 + Y, 0], fov: 52 },
-        { s: s3 - 0.6, pos: [1314, 5820 + Y, 458], aim: [1686, 7040 + Y, 0], fov: 52 },
+        // The confluence: the cliff and its seven falls across the frame, the river along its foot, the near bank below.
+        { s: s2 + 1.25, pos: [1380, 5950 + Y, 330], aim: [1730, 7000 + Y, -118], fov: 52 },
+        { s: s3 - 0.6, pos: [1392, 5990 + Y, 322], aim: [1735, 7020 + Y, -118], fov: 52 },
         // Down the bigger river.
         { s: s3 + 0.3, pos: [860, 7650 + Y, 300], aim: [1000, 8500 + Y, 0], fov: 46 },
         // The pool, looked down into from its rim.

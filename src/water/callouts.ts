@@ -83,12 +83,18 @@ export function makeCallouts(): Callouts {
       let lx = c.side > 0 ? x + dx : x + dx - c.w;
       lx = Math.min(viewW - c.w - 14, Math.max(14, lx));
       let ly = y - c.lift * (0.7 + 0.3 * scale) - c.h;
-      for (let n = 0; n < 6; n++) {
-        const hit = placed.find((r) => lx < r[0] + r[2] + 10 && lx + c.w + 10 > r[0] && ly < r[1] + r[3] + 5 && ly + c.h + 5 > r[1]);
+      // A label that would overlap one already placed is lifted above it; at the top of the frame it is
+      // set below instead, so two never share a place.
+      let down = false;
+      for (let n = 0; n < 8; n++) {
+        if (ly < 64) {
+          ly = 64;
+          down = true;
+        }
+        const hit = placed.find((r) => lx < r[0] + r[2] + 16 && lx + c.w + 16 > r[0] && ly < r[1] + r[3] + 5 && ly + c.h + 5 > r[1]);
         if (!hit) break;
-        ly = hit[1] - c.h - 6;
+        ly = down ? hit[1] + hit[3] + 6 : hit[1] - c.h - 6;
       }
-      ly = Math.max(64, ly);
       placed.push([lx, ly, c.w, c.h]);
       // The leader runs from the ring to the label's near foot.
       const fx = lx + (lx + c.w / 2 > x ? 0 : c.w);

@@ -23,7 +23,7 @@
 import { ICE_FIELD } from './ice';
 import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
 import { PANO } from './terrain';
-import { BASIN, CONF_Y, DELTA, ISLAND, LAKE, POOL, SHARDS, SHEET, SHEET_CROP, SHEET_CROP_TALL, STREAM, T2, TARN, TRIBS } from '../world';
+import { BASIN, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, POOL, SHARDS, SHEET, SHEET_CROP, SHEET_CROP_TALL, STREAM, T2, TARN, TRIBS, lipY } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -997,6 +997,210 @@ vec3 cutFoot(vec3 col, vec2 pw, vec3 dir, vec2 slope, float foot, float k) {
   return col;
 }
 
+/* ---------- the confluence: a snowfield above a cliff of ice, and seven falls ---------- */
+
+const float LIP_H = ${LIP.h.toFixed(1)};
+const vec2 LIP_O = vec2(${LIP.x0.toFixed(1)}, ${LIP.y0.toFixed(1)});
+// The way the cliff faces, in plan: out over the river.
+const vec2 LIP_N = vec2(${(-LIP.m / Math.hypot(1, LIP.m)).toFixed(5)}, ${(-1 / Math.hypot(1, LIP.m)).toFixed(5)});
+const float LIP_LEN = ${Math.hypot(1, LIP.m).toFixed(5)};
+const vec2 TRIB_M[${TRIBS.length}] = vec2[${TRIBS.length}](${TRIBS.map((t) => `vec2(${t.mouth.x.toFixed(1)}, ${t.mouth.y.toFixed(1)})`).join(', ')});
+float lipY(float x) { return LIP_O.y + (LIP_O.x - x) * ${LIP.m.toFixed(3)}; }
+// Where the cliff turns its corner: west of here there is no snowfield, and a second face runs north from it.
+const float LIP_W = ${LIP.x1.toFixed(1)};
+/** How high the snowfield stands at a place on it: it eases down to the land at its back. */
+float fieldTop(vec2 q) { return LIP_H * (1.0 - smoothstep(${LIP.back.toFixed(1)}, ${(LIP.back + LIP.backRamp).toFixed(1)}, q.y)); }
+/** 1 while the confluence is near enough to be seen. */
+bool confNear() { return uCamPos.y > ${(CONF_Y - 3300).toFixed(1)} && uCamPos.y < ${(CONF_Y + 1500).toFixed(1)}; }
+/**
+ * How far above the land the ground under a ray lies: the snowfield's
+ * height where the ray comes down on it, nothing anywhere else.
+ */
+float confLift(vec3 dir) {
+  if (!confNear()) return 0.0;
+  float h = LIP_H;
+  vec2 q = vec2(0.0);
+  for (int i = 0; i < 3; i++) {
+    q = uCamPos.xy + dir.xy * ((uCamPos.z - h) / -dir.z);
+    h = fieldTop(q);
+  }
+  return q.y > lipY(q.x) && q.x > LIP_W ? h : 0.0;
+}
+/** The ice of a cliff's face. f: 0 at its lip, 1 at the water. along: a measure along it. nP: the way it faces, in plan. */
+vec3 cliffIce(float f, float along, float tall, float px, vec2 nP) {
+  float flute = textureLod(uGrain, vec2(along / 560.0, f * 0.07 + 0.3), 0.0).g;
+  float flute2 = textureLod(uGrain, vec2(along / 150.0 + 0.4, f * 0.05 + 0.7), lodFor(px, 150.0, 256.0)).g;
+  float seam = textureLod(uGrain, vec2(along / 3000.0 + 0.2, f * 0.5), 0.0).g;
+  vec3 ice = mix(vec3(0.34, 0.64, 0.82), vec3(0.03, 0.2, 0.4), smoothstep(0.08, 0.9, f)) * (0.7 + 0.42 * flute + 0.22 * flute2);
+  // (It stands in buttresses, with deep clefts between them.)
+  float butt = textureLod(uGrain, vec2(along / 2300.0 + 0.11, 0.27), 0.0).g;
+  float cleft = 1.0 - smoothstep(0.0, 0.05, abs(butt - 0.5));
+  ice *= 1.0 - 0.5 * cleft * smoothstep(0.05, 0.3, f);
+  ice = mix(ice, vec3(0.085, 0.095, 0.11) * (0.7 + 0.6 * flute2), smoothstep(0.6, 0.68, seam) * smoothstep(0.25, 0.42, f) * 0.7);
+  // The cornice: packed snow over the lip, hanging in lobes, a soft shade under each.
+  float lobes = textureLod(uGrain, vec2(along / 1500.0, 0.61), 0.0).g;
+  float hang = (9.0 + 15.0 * smoothstep(0.3, 0.75, lobes) + 4.0 * flute2) / tall;
+  ice *= 1.0 - 0.32 * (1.0 - smoothstep(0.0, 0.09, f - hang)) * step(hang, f);
+  vec3 nC = normalize(vec3(nP + vec2(-nP.y, nP.x) * ((flute2 - 0.5) * 0.5 + (butt - 0.5) * 2.4), 0.22));
+  // (A face of ice is lit through as well as on: turned from the sun it still holds the sky's light.)
+  vec3 c = ice * (lightOn(nC, 1.0) * 0.62 + S.amb * 0.55);
+  vec3 snow = mix(vec3(0.93, 0.94, 0.96), vec3(0.74, 0.8, 0.9), uNight) * (S.key * mix(0.24, max(keyDir().z, 0.05), uNight) + (S.amb * 0.8 + uAurora * 0.035) * 0.8);
+  c = mix(c, snow, 1.0 - smoothstep(hang - 0.012, hang + 0.012, f));
+  // Wet and dark where it stands in the water.
+  c *= 1.0 - 0.45 * smoothstep(0.9, 1.0, f);
+  return mix(c, c * vec3(0.6, 0.8, 0.95) + (vec3(0.03, 0.05, 0.07) + uAurora * 0.06), uNight * 0.6);
+}
+/** The air between the eye and something t away, laid over its colour. */
+vec3 confAir(vec3 c, vec3 dir, float t) {
+  float thin = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
+  vec3 air = airAt(dir.xy);
+  air = mix(air, mix(S.hor, air, 0.45), uNight);
+  return mix(c, air, 1.0 - exp(-t * 0.00021 * S.haze * thin));
+}
+/** The cliff's second face: from the corner north along the river that leaves, looking west. */
+vec3 confWest(vec3 col, vec3 dir, float landAt0) {
+  // (It is seen only from the west of it.)
+  if (dir.x < 1e-4 || uCamPos.x > LIP_W) return col;
+  float tc = (LIP_W - uCamPos.x) / dir.x;
+  if (tc <= 0.0) return col;
+  vec3 h = uCamPos + dir * tc;
+  if (h.y < lipY(LIP_W)) return col;
+  float top = fieldTop(h.xy);
+  float px = max(tc * uPxAng, 0.05);
+  if (top < 1.0 || h.z > top + px || h.z < -FREEBOARD) return col;
+  float aC = (1.0 - smoothstep(top - px, top + px, h.z)) * smoothstep(0.0, 2.0 * px, h.y - lipY(LIP_W));
+  if (h.z < 0.0) aC *= 1.0 - landAt0;
+  if (aC <= 0.0) return col;
+  vec3 c = cliffIce((top - h.z) / (top + FREEBOARD), h.y + 400.0, top + FREEBOARD, px, vec2(-1.0, 0.0));
+  return mix(col, confAir(c, dir, tc), aC);
+}
+/**
+ * The cliff and what comes over it. Glacier ice under a cornice of snow,
+ * fluted, blue toward the water; and where a stream reaches the lip, a
+ * fall: glassy at the brink, then white strands that open as they drop,
+ * and mist standing at the foot. Each fall is as wide as its stream.
+ * landAt0: how much of this pixel's ground at the land's level is land (the ledge at the cliff's foot stands in front of it).
+ */
+vec3 confCliff(vec3 col, vec3 dir, float landAt0) {
+  if (!confNear()) return col;
+  col = confWest(col, dir, landAt0);
+  float den = dot(dir.xy, LIP_N);
+  if (den > -1e-4) return col;
+  float tc = dot(LIP_O - uCamPos.xy, LIP_N) / den;
+  if (tc <= 0.0) return col;
+  vec3 h = uCamPos + dir * tc;
+  if (h.x < LIP_W) return col;
+  float px = max(tc * uPxAng, 0.05);
+  if (h.z > LIP_H + 22.0 || h.z < -FREEBOARD) return col;
+  // Snow is banked along the lip in drifts of its own height: the cliff's crest is not a ruled line.
+  // (Not where a stream goes over: there the lip is cut down to the stream.)
+  float berm = 18.0 * smoothstep(0.3, 0.8, textureLod(uGrain, vec2(h.x / 2100.0 + 0.07, 0.43), 0.0).g) + 3.0 * textureLod(uGrain, vec2(h.x / 300.0, 0.91), 0.0).g;
+  for (int i = 0; i < ${TRIBS.length}; i++) {
+    float w = uTribW[i];
+    if (w > 0.0) berm *= smoothstep(w * 0.5 + 2.0, w * 0.5 + 34.0, abs(h.x - TRIB_M[i].x) * LIP_LEN);
+  }
+  float top = LIP_H + berm;
+  if (h.z > top + px) return col;
+  float aC = (1.0 - smoothstep(top - px, top + px, h.z)) * smoothstep(0.0, 2.0 * px, h.x - LIP_W);
+  if (h.z < 0.0) aC *= 1.0 - landAt0;
+  if (aC <= 0.0) return col;
+  float tall = top + FREEBOARD;
+  float f = (top - h.z) / tall;
+  float along = h.x * LIP_LEN;
+  vec3 c = cliffIce(f, along, tall, px, LIP_N);
+
+  // The falls.
+  float zs = LIP_H - FREEBOARD;
+  vec3 white = mix(vec3(0.95, 0.98, 1.0) * (S.amb * 1.2 + S.key * 0.3), vec3(0.4, 0.56, 0.6) * 0.75 + uAurora * 0.55, uNight);
+  vec3 glass = mix(vec3(0.2, 0.56, 0.66) * (S.amb * 1.1 + S.key * 0.2), vec3(0.02, 0.09, 0.1) + uAurora * 0.12, uNight);
+  float mist = 0.0;
+  for (int i = 0; i < ${TRIBS.length}; i++) {
+    float w = uTribW[i];
+    if (w <= 0.0) continue;
+    float d = (h.x - TRIB_M[i].x) * LIP_LEN;
+    float reach = w * 0.5 + 70.0;
+    if (abs(d) > reach) continue;
+    float fi = float(i);
+    if (h.z > zs) {
+      // The stream's own water in its notch, sliding to the brink.
+      float aN = 1.0 - smoothstep(w * 0.5 - px, w * 0.5 + px, abs(d));
+      float rush = textureLod(uGrain, vec2(d / 240.0 + fi * 0.31, (h.z - zs) / 90.0 + uTime * 0.12 + fi), 0.0).g;
+      c = mix(c, mix(glass, white, smoothstep(0.5, 0.85, rush) * 0.45 + 0.35 * smoothstep(8.0, 0.0, h.z - zs)), aN);
+    } else {
+      float v = (zs - h.z) / (zs + FREEBOARD);
+      // (It quickens as it drops: its strands are drawn longer the further down.)
+      float drop = v * (0.55 + 0.45 * v);
+      float st1 = textureLod(uGrain, vec2(d / 52.0 + fi * 0.37, drop * 0.3 - uTime * 0.16), 0.0).g;
+      float st2 = textureLod(uGrain, vec2(d / 19.0 + fi * 0.71, drop * 0.5 - uTime * 0.27 + 0.5), lodFor(px, 19.0, 256.0)).g;
+      float strand = 0.55 * st1 + 0.45 * st2;
+      // It opens as it falls, and its edges break into strands.
+      float half_ = w * 0.5 * (1.0 + 0.1 * v) + 5.0 * v;
+      float ragged = abs(d + 5.0 * sin(v * 5.0 + fi * 2.3) * v) + (strand - 0.5) * (6.0 + 14.0 * v);
+      float aF = 1.0 - smoothstep(half_ - px - 1.5, half_ + px + 1.5, ragged);
+      // A thin stream is a veil the ice shows through; a great one is solid.
+      float body = clamp(0.5 + w / 150.0, 0.0, 1.0);
+      aF *= mix(0.45 + 0.55 * smoothstep(0.3, 0.62, strand), 1.0, body * 0.8) * (0.35 + 0.65 * smoothstep(0.0, 0.07, v));
+      vec3 fall = mix(mix(vec3(0.46, 0.7, 0.82), vec3(0.16, 0.3, 0.36), uNight) * (S.amb * 1.1 + S.key * 0.16 + uAurora * 0.1), white, smoothstep(0.34, 0.66, strand) * (0.45 + 0.55 * smoothstep(0.0, 0.25, v)));
+      // (The brink: the water bends over it, glassy.)
+      fall = mix(glass * 1.3, fall, smoothstep(0.0, 0.1, v));
+      c = mix(c, fall, aF);
+    }
+    // Mist where it lands: it stands a little way up the cliff and drifts.
+    float up = (h.z + FREEBOARD) / (16.0 + 0.16 * w);
+    float lat = d / (w * 0.5 + 26.0);
+    mist += exp(-lat * lat) * exp(-up) * (0.5 + 0.004 * w) * (0.7 + 0.5 * textureLod(uGrain, vec2(d / 170.0 + uTime * 0.02, up * 0.2 - uTime * 0.03) + fi * 0.2, 0.0).g);
+  }
+  c = mix(c, white * 0.96, clamp(mist, 0.0, 0.85));
+  // The same air as the ground it stands on.
+  return mix(col, confAir(c, dir, tc), aC);
+}
+/**
+ * The river along the cliff's foot. Each stream's paler meltwater keeps to
+ * the bank it came in by and is pushed out from it by the next: seven
+ * trails side by side, a seam of foam between each and its neighbour, the
+ * newest whitest. And where each fall lands, a boil.
+ */
+vec3 confRiver(vec3 col, vec2 pw, float footL, float na, float nb, float shade) {
+  float bankY = lipY(pw.x) - ${LIP.foot.toFixed(1)};
+  float out_ = (bankY - pw.y) / LIP_LEN;
+  if (out_ < -40.0 || out_ > 760.0) return col;
+  float far = 1.0 - smoothstep(20.0, 60.0, footL);
+  vec3 white = mix(vec3(0.94, 0.97, 1.0) * (S.amb * 1.25 + S.key * 0.3), vec3(0.36, 0.5, 0.56) * 0.3 + uAurora * 0.15, uNight);
+  vec3 milk = mix(vec3(0.56, 0.87, 0.9) * (S.amb * 1.1 + S.key * 0.17), vec3(0.05, 0.12, 0.13) + uAurora * 0.09, uNight);
+  float inner = 0.0;
+  float milkK = 0.0;
+  float seam = 0.0;
+  float boil = 0.0;
+  for (int i = ${TRIBS.length - 1}; i >= 0; i--) {
+    float w = uTribW[i];
+    if (w <= 0.0) continue;
+    float mx = TRIB_M[i].x;
+    float k = smoothstep(mx + w * 0.5, mx - w * 0.5 - 60.0, pw.x);
+    float bw = ${CONF_RIVER.add.toFixed(2)} * w * k;
+    if (bw > 0.5) {
+      float a1 = inner + bw;
+      float age = max(mx - pw.x, 0.0);
+      float fresh = exp(-age / (420.0 + 3.0 * w));
+      float wob = 5.0 * sin(pw.x * 0.021 + float(i) * 2.1 + uTime * 0.5) * (1.0 - fresh * 0.5);
+      float inB = smoothstep(inner - 1.5, inner + 3.0, out_ + wob) * (1.0 - smoothstep(a1 - 3.0, a1 + 1.5, out_ + wob));
+      milkK += inB * (0.3 + 0.6 * fresh) * (0.7 + 0.3 * cos(float(i) * 3.1416));
+      seam += (1.0 - smoothstep(0.0, 3.2 + 1.5 * footL, abs(out_ + wob - a1))) * (0.45 + 0.55 * fresh) * k;
+      inner = a1;
+    }
+    // The boil at its foot: a fan of broken water, wider under a wider fall.
+    vec2 d = vec2((pw.x - mx) * LIP_LEN, out_);
+    float r2 = dot(d * vec2(1.0, 1.25), d * vec2(1.0, 1.25));
+    boil += exp(-r2 / (w * w * 0.32 + 520.0)) * (0.55 + 0.005 * w) * step(-6.0, out_);
+  }
+  // Streaks, long down the current, in the pale water.
+  float streak = 0.55 + 0.45 * smoothstep(0.3, 0.7, textureLod(uDetail, vec2(pw.y / 70.0, (pw.x + uTime * uFlowSpeed * 0.7) / 900.0), lodFor(footL, 70.0, 512.0)).r);
+  col = mix(col, milk, clamp(milkK, 0.0, 1.0) * streak * 0.62 * far);
+  col = mix(col, white, clamp(seam, 0.0, 1.0) * (0.6 + 0.4 * na) * far * (1.0 - 0.5 * shade));
+  float churn = smoothstep(0.26, 0.6, mix(na, nb, 0.5) + 0.5 * clamp(boil, 0.0, 1.0) - 0.1);
+  col = mix(col, white, clamp(boil, 0.0, 1.0) * churn * 0.95);
+  return col;
+}
+
 /* ---------- the clear pool and the picture on its bed ---------- */
 
 const vec2 POOL_C = vec2(${(POOL.x + POOL.w / 2).toFixed(1)}, ${(POOL.y + POOL.h / 2).toFixed(1)});
@@ -1576,35 +1780,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       col = mix(col, foamS, whiteS * 0.85);
     }
   }
-  // The confluence: each stream drops into the river over a short fall,
-  // white at its foot, and its paler meltwater trails away downstream.
-  if (pw.y > ${(CONF_Y - 260).toFixed(1)} && pw.y < ${(CONF_Y + 420).toFixed(1)} && pw.x > 300.0) {
-    const vec2 M[${TRIBS.length}] = vec2[${TRIBS.length}](${TRIBS.map((t) => `vec2(${t.mouth.x.toFixed(1)}, ${t.mouth.y.toFixed(1)})`).join(', ')});
-    float fall = 0.0;
-    float plume = 0.0;
-    for (int i = 0; i < ${TRIBS.length}; i++) {
-      float w = uTribW[i];
-      if (w <= 0.0) continue;
-      vec2 d = pw - M[i];
-      // The fall: a bar of broken water across the stream's mouth.
-      float bar = (1.0 - smoothstep(w * 0.5, w * 0.62 + 4.0, abs(d.x + d.y * 0.3))) * exp(-abs(d.y - 4.0) / (9.0 + w * 0.16));
-      // Its boil below: a fan that spreads and thins.
-      float boil = exp(-dot(d, d) / (w * w * 0.5 + 900.0)) * step(d.y, 14.0);
-      fall += bar * 1.4 + boil * (0.22 + 0.012 * w);
-      // The plume: carried down the river (toward -x), spreading as it goes.
-      float dn = max(-d.x, 0.0);
-      float half_ = w * 0.4 + 10.0 + dn * 0.07;
-      float lat = (d.y + 75.0 - dn * 0.3) / half_;
-      plume += exp(-lat * lat) * exp(-dn / (260.0 + 5.0 * w)) * smoothstep(-w * 0.5, w * 0.3, -d.x) * (0.45 + 0.012 * w);
-    }
-    plume = clamp(plume, 0.0, 1.0);
-    vec3 milk = mix(vec3(0.5, 0.86, 0.9) * (S.amb * 1.1 + S.key * 0.17), vec3(0.04, 0.1, 0.11) + uAurora * 0.07, uNight);
-    float streak = 0.6 + 0.4 * smoothstep(0.3, 0.7, textureLod(uDetail, vec2(pw.y / 90.0, (pw.x + uTime * uFlowSpeed * 0.7) / 900.0), lodFor(footL, 90.0, 512.0)).r);
-    col = mix(col, milk, plume * streak * 0.42 * (1.0 - smoothstep(20.0, 60.0, footL)));
-    vec3 white = mix(vec3(0.94, 0.97, 1.0) * (S.amb * 1.25 + S.key * 0.3), vec3(0.36, 0.5, 0.56) * 0.3 + uAurora * 0.15, uNight);
-    float churn = smoothstep(0.3, 0.62, mix(df.r, dw2.r, 0.5) + 0.45 * clamp(fall, 0.0, 1.0) - 0.12);
-    col = mix(col, white, clamp(fall, 0.0, 1.0) * churn * 0.92);
-  }
+  // The confluence: seven trails of paler meltwater along the cliff's foot, and a boil under each fall.
+  if (pw.x > 700.0 && pw.x < 2500.0 && pw.y > ${(lipY(LIP.x0) - 900).toFixed(1)} && pw.y < ${(lipY(700) + 40).toFixed(1)}) col = confRiver(col, pw, footL, df.r, dw2.r, shade);
   // White water where the basin's waves strike the block and the shores round it.
   if (slabOn > 0.0) col = blockWater(col, pw, bw.r, df.r, dw2.r, abs(wv.r) * 30.0 + length(wv.ba) * 40.0);
   // The pool's own surface: the sky lies on its far side, and a shelf of ice stands out over it all round.
@@ -1977,7 +2154,8 @@ void main() {
     gDirect = true;
     col = skyAll(dir, 1.0);
   } else {
-    float t = uCamPos.z / -dir.z;
+    // (At the confluence the snowfield stands above the land: there the ground under the ray is higher.)
+    float t = (uCamPos.z - confLift(dir)) / -dir.z;
     vec2 p = uCamPos.xy + dir.xy * t;
     vec2 tilt = dir.xy / -dir.z;
     // The size of a pixel on the ground: across the view, and along it.
@@ -2148,6 +2326,8 @@ void main() {
 #endif
     // The horizon is soft: the same mist that lies at the ranges' foot.
     col = mix(col, air, exp(dir.z / 0.006) * 0.75);
+    // The cliff at the confluence and its falls stand in front of what lies behind them.
+    col = confCliff(col, dir, aLand);
 #ifdef SEA
     // The lee's shade, on the water the words stand over.
     col *= 1.0 - 0.56 * gLee;

@@ -11,7 +11,7 @@ import { INTERESTS, PROJECTS, type Project, type ProjectMedia } from '@/content/
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
 import { SECTIONS, SETTLE_AT } from '@/water/camera';
-import { COLS, TRIBS, colHeights } from '@/water/world';
+import { COLS, LIP, TRIBS, colHeights } from '@/water/world';
 import './home.css';
 import './flight.css';
 
@@ -138,7 +138,7 @@ export default async function Home() {
               {repos.map((r, i) => (
                 <Callout
                   key={r.repo}
-                  at={[TRIBS[i].head.x, TRIBS[i].head.y, 0]}
+                  at={[TRIBS[i].head.x, TRIBS[i].head.y, LIP.h]}
                   href={r.url}
                   label={`${r.repo}: ${r.count} merged pull request${r.count === 1 ? '' : 's'}`}
                   from={OUT + 1.2}

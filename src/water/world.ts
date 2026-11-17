@@ -108,22 +108,41 @@ export const SHOAL_Y = DELTA.y;
 export const REST = pt(2250, T2 + 10350);
 
 /**
- * Station 2, the confluence. The river turns and runs west across the view;
- * seven streams come down out of the snowfield beyond it, toward the eye.
- * Each is { head, mouth }: where it rises and where it meets the river.
+ * Station 2, the confluence. The river turns and runs west along the foot
+ * of a cliff of ice; above the cliff lies a snowfield, and seven streams
+ * come down across it toward the eye and fall over the cliff's lip into
+ * the river. Each stream is as wide as its count.
+ *
+ * LIP is the cliff's line (straight in plan): y = y0 + (x0 - x) * m. The
+ * snowfield stands LIP.h above the land east of x1, where the cliff turns
+ * a corner and runs north along the river that leaves; it runs on past the
+ * world's east side, and eases down to the land beyond `back`. Each stream is { head, mid, mouth }:
+ * where it rises, a point on its way, and where it goes over the lip.
  */
-export const CONF_Y = 7150 + DY;
+export const LIP = { x0: 2200, y0: 7000 + DY, m: 0.3, h: 100, x1: 1300, back: 8380 + DY, backRamp: 260, foot: 28 };
+export const lipY = (x: number) => LIP.y0 + (LIP.x0 - x) * LIP.m;
+export const CONF_Y = lipY(1750);
+/** The river's width above the first stream, and how much of its width each stream adds to it. */
+export const CONF_RIVER = { w: 220, add: 0.6 };
 export const TRIBS: { head: Pt; mid: Pt; mouth: Pt }[] = [
-  [2300, 8300, 2130, 7739, 1880, 7059],
-  [2040, 8380, 1840, 7808, 1740, 7117],
-  [1810, 8330, 1755, 7810, 1610, 7171],
-  [1600, 8400, 1510, 7867, 1500, 7215],
-  [1410, 8350, 1440, 7863, 1400, 7257],
-  [1240, 8400, 1240, 7908, 1310, 7296],
-  [1080, 8340, 1185, 7895, 1230, 7331],
-].map(([hx, hy, mx, my, x, y]) => ({ head: pt(hx, hy + DY), mid: pt(mx, my + DY), mouth: pt(x, y + DY) }));
-/** How wide a stream with this many merged pull requests runs. */
-export const tribWidth = (n: number) => 8 + 16 * Math.min(n, 10);
+  [2160, 8290, 2150, 7700, 2080],
+  [1960, 8340, 1900, 7760, 1874],
+  [1790, 8300, 1770, 7740, 1728],
+  [1640, 8350, 1600, 7790, 1612],
+  [1500, 8310, 1520, 7780, 1516],
+  [1370, 8350, 1400, 7810, 1430],
+  [1240, 8300, 1300, 7800, 1344],
+].map(([hx, hy, mx, my, x]) => ({ head: pt(hx, hy + DY), mid: pt(mx, my + DY), mouth: pt(x, lipY(x)) }));
+/** How wide a stream with this many merged pull requests runs: in proportion, so the counts can be read off the widths. */
+export const tribWidth = (n: number) => 20 * Math.min(n, 10);
+/** How wide the river is at x along the cliff's foot, given each stream's width: it takes each stream in turn. */
+export const confRiverWidth = (x: number, widths: number[]) =>
+  CONF_RIVER.w +
+  TRIBS.reduce((sum, t, i) => {
+    const w = widths[i] ?? 0;
+    const k = Math.min(1, Math.max(0, (t.mouth.x + w / 2 - x) / (w + 60)));
+    return sum + CONF_RIVER.add * w * k * k * (3 - 2 * k);
+  }, 0);
 
 /**
  * Station 3, the clear pool beside the river, and the picture on its bed.
@@ -227,6 +246,9 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
   b.pool(BASIN, 300);
   b.disc(pt(BASIN.x + 240, BASIN.y + BASIN.h - 300), 260);
   b.disc(pt(BASIN.x + BASIN.w - 250, BASIN.y + 330), 270);
+  // (Where the river comes in the basin's wall opens to it in a curve, not a square corner.)
+  b.disc(pt(1380, BASIN.y + 70), 150);
+  b.disc(pt(1830, BASIN.y + 60), 140);
   b.channel([pt(1600, 4540 + DY), pt(1480, 4800 + DY), pt(1250, 5200 + DY), pt(1420, 5560 + DY)], { width: 420, speed: 0.4, flowOnly: true });
   // The island: dry ground in the middle of it.
   b.dry({ x: ISLAND.x - ISLAND.rx, y: ISLAND.y - ISLAND.ry, w: ISLAND.rx * 2, h: ISLAND.ry * 2 }, 0, ISLAND.ry * 0.96);
@@ -245,22 +267,33 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
     b.agitate(pt(SLAB.x + dx, SLAB.y + dy), r, 0.6);
   }
 
-  // Below the basin the river narrows, bends, and turns east for the confluence.
-  b.channel([pt(1440, 5560 + DY), pt(1500, 5900 + DY), pt(1750, 6300 + DY), pt(1980, 6650 + DY), pt(1900, 6950 + DY), pt(1500, 7080 + DY), pt(1150, 7200 + DY)], {
-    width: [320, 300, 190, 200, 230, 300, 360],
+  // Below the basin the river narrows, bends east, and comes round to the foot of the cliff.
+  b.channel([pt(1440, 5560 + DY), pt(1500, 5900 + DY), pt(1750, 6300 + DY), pt(2100, 6520 + DY), pt(2330, 6700 + DY), pt(2335, 6830 + DY), pt(2230, lipY(2230) - LIP.foot - CONF_RIVER.w / 2)], {
+    width: [320, 300, 190, 200, 210, 215, CONF_RIVER.w],
   });
-  // The streams: each as wide as its count, each with its own fall into the river.
+  // Along the cliff's foot, west: it takes the seven streams one after another and is wider after each.
+  const widths = TRIBS.map((_, i) => ((tribs[i] ?? 0) > 0 ? tribWidth(tribs[i]) : 0));
+  const reach: Pt[] = [];
+  const reachW: number[] = [];
+  for (let x = 2230; x >= 1150; x -= 60) {
+    const w = confRiverWidth(x, widths);
+    reach.push(pt(x, lipY(x) - LIP.foot - w / 2));
+    reachW.push(w);
+  }
+  b.channel(reach, { width: reachW, straight: true });
+  const below = confRiverWidth(1150, widths);
+  // The streams: each as wide as its count, across the snowfield and over the lip.
   TRIBS.forEach((t, i) => {
-    const n = tribs[i] ?? 0;
-    if (n <= 0) return;
-    const w = tribWidth(n);
-    b.channel([t.head, t.mid, t.mouth, pt(t.mouth.x - 50, t.mouth.y - 110)], { width: [w * 0.55, w * 0.8, w, w], speed: 1 });
-    b.disc(t.head, w * 0.42);
-    b.agitate(t.mouth, 60 + w, 0.5 + 0.05 * Math.min(n, 9));
+    const w = widths[i];
+    if (w <= 0) return;
+    b.channel([t.head, t.mid, pt(t.mouth.x, t.mouth.y + 70), pt(t.mouth.x, t.mouth.y - LIP.foot - 30)], { width: [w * 0.55, w * 0.8, w, w], speed: 1 });
+    b.disc(t.head, w * 0.42 + 6);
+    b.agitate(pt(t.mouth.x, t.mouth.y - LIP.foot - 30), 50 + w * 0.6, 0.5 + 0.05 * Math.min(tribs[i], 9));
   });
   // The bigger river below it swings north again past the pool.
-  b.channel([pt(1150, 7200 + DY), pt(960, 7480 + DY), pt(820, 7950 + DY), pt(680, 8450 + DY), pt(650, 8800 + DY), pt(720, 9200 + DY), pt(1080, 9800 + DY), pt(1350, 10150 + DY)], {
-    width: [360, 390, 400, 370, 340, 330, 340, 420],
+  const last = reach[reach.length - 1];
+  b.channel([last, pt(940, 7240 + DY), pt(860, 7520 + DY), pt(820, 7950 + DY), pt(680, 8450 + DY), pt(650, 8800 + DY), pt(720, 9200 + DY), pt(1080, 9800 + DY), pt(1350, 10150 + DY)], {
+    width: [below, below * 0.98, below * 0.94, below * 0.88, 400, 360, 340, 340, 420],
   });
 
   // The clear pool: fed by a thin spill at its head, drained by another at its foot.
