@@ -21,7 +21,7 @@
  */
 
 import { ICE_FIELD } from './ice';
-import { COLUMNS, STATION_COMMON } from './stations';
+import { COLUMNS, DAM_ICE, DAM_WATER, STATION_COMMON } from './stations';
 import { PANO, SUN } from './terrain';
 import { BASIN, CONF_Y, ISLAND, POOL, SHARDS, SHEET, STREAM, T2, TARN, TRIBS } from '../world';
 
@@ -1182,6 +1182,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 
 ${STATION_COMMON}
 ${COLUMNS}
+${DAM_ICE}
+${DAM_WATER}
 // ---- the tarn's two shards of ice, each lit from within
 const vec4 SH0 = vec4(${SHARDS[0].x.toFixed(1)}, ${SHARDS[0].y.toFixed(1)}, ${SHARDS[0].h.toFixed(1)}, ${SHARDS[0].r.toFixed(1)});
 const vec4 SH1 = vec4(${SHARDS[1].x.toFixed(1)}, ${SHARDS[1].y.toFixed(1)}, ${SHARDS[1].h.toFixed(1)}, ${SHARDS[1].r.toFixed(1)});
@@ -1455,6 +1457,7 @@ void main() {
   if (uSt.x + uSt.y + uSt.z + uSt.w > 0.0) {
     float twS = dir.z < -0.0006 ? (uCamPos.z + FREEBOARD) / -dir.z : -1.0;
     if (uSt.x > 0.0) col = columns(col, dir, twS);
+    if (uSt.y > 0.0) col = dam(col, dir, twS);
   }
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
 

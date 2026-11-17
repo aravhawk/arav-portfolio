@@ -175,8 +175,9 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s5 + 1.2, pos: [420, T + 380, 430], aim: [1235, T + 1110, 0], fov: 58 },
         { s: s6 - 0.6, pos: [440, T + 400, 420], aim: [1240, T + 1115, 0], fov: 58 },
         { s: s6 + 0.3, pos: [1300, T + 1500, 380], aim: [1300, T + 2300, 0], fov: 58 },
-        { s: s6 + 1.2, pos: [1300, T + 1850, 640], aim: [1300, T + 2800, 0], fov: 58 },
-        { s: s7 - 0.6, pos: [1300, T + 1890, 625], aim: [1300, T + 2815, 0], fov: 58 },
+        // From over the west bank: the dam across the frame, the three channels beyond it, the bank at the foot.
+        { s: s6 + 1.2, pos: [700, T + 1300, 820], aim: [1235, T + 3000, 0], fov: 62 },
+        { s: s7 - 0.6, pos: [706, T + 1330, 810], aim: [1238, T + 3012, 0], fov: 62 },
         { s: s7 + 0.3, pos: [1300, T + 3300, 380], aim: [1300, T + 4100, 0], fov: 58 },
         { s: s7 + 1.15, pos: [1300, T + 3500, 640], aim: [1300, T + 4500, 0], fov: 58 },
         { s: s8 - 0.6, pos: [1300, T + 3540, 625], aim: [1300, T + 4515, 0], fov: 58 },
@@ -187,8 +188,9 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s5 + 1.2, pos: [760, T + 60, 250], aim: [1310, T + 1080, 70], fov: 42 },
         { s: s6 - 0.6, pos: [772, T + 95, 243], aim: [1316, T + 1090, 68], fov: 42 },
         { s: s6 + 0.3, pos: [1260, T + 1500, 260], aim: [1300, T + 2300, 0], fov: 46 },
-        { s: s6 + 1.2, pos: [1150, T + 1900, 470], aim: [1330, T + 2900, 0], fov: 46 },
-        { s: s7 - 0.6, pos: [1156, T + 1935, 460], aim: [1332, T + 2915, 0], fov: 46 },
+        // Over the head pond's west bank: the dam below, the three channels fanning away.
+        { s: s6 + 1.2, pos: [740, T + 2020, 500], aim: [1445, T + 3420, 0], fov: 46 },
+        { s: s7 - 0.6, pos: [749, T + 2048, 493], aim: [1448, T + 3434, 0], fov: 46 },
         { s: s7 + 0.3, pos: [1300, T + 3350, 280], aim: [1300, T + 4100, 0], fov: 46 },
         { s: s7 + 1.15, pos: [900, T + 3600, 430], aim: [1340, T + 4560, 0], fov: 44 },
         { s: s8 - 0.6, pos: [910, T + 3635, 420], aim: [1343, T + 4572, 0], fov: 44 },

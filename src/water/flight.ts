@@ -20,7 +20,7 @@ import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
 import { makeSolver } from './stage';
-import { CANYON, COLS, DAM, LAKE, LATTICE, OUTLET, SHARDS, SHOAL_Y, SLAB, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
+import { CANYON, COLS, DAM, LAKE, LATTICE, OUTLET, SHARDS, SHOAL_Y, SLAB, SLUICES, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -231,6 +231,30 @@ export class FlightEngine extends WaterEngine {
   private gateNow = new Float32Array([1, 0, 0]);
   private surge = new Float32Array(3);
   private dripAt = 0;
+  private gateT = 0;
+  /** The sluices follow the chosen gate: one lifts, the others drop, and a surge runs down the opened channel. */
+  private runGates() {
+    const dt = Math.min(0.05, Math.max(0, this.time - this.gateT));
+    this.gateT = this.time;
+    for (let i = 0; i < 3; i++) {
+      const open = i === this.gate;
+      const was = this.gateNow[i];
+      this.gateNow[i] = this.still ? (open ? 1 : 0) : Math.min(1, Math.max(0, was + (open ? dt / 0.45 : -dt / 0.6)));
+      if (!open) this.surge[i] = 0;
+      else if (this.still) this.surge[i] = 1;
+      else if (this.surge[i] < 1) {
+        const at = this.surge[i];
+        this.surge[i] = Math.min(1, at + dt / 1.15);
+        // The surge's head is real water: it throws rings as it goes.
+        if (Math.floor(at * 6) !== Math.floor(this.surge[i] * 6)) {
+          const line = SLUICES[i];
+          const k = Math.min(line.length - 2, Math.floor(at * (line.length - 1)));
+          const f = at * (line.length - 1) - k;
+          this.splash(line[k].x + (line[k + 1].x - line[k].x) * f, line[k].y + (line[k + 1].y - line[k].y) * f, 46, 1.4);
+        }
+      }
+    }
+  }
   /** How much of each later station's subject is there to see from this camera. */
   private stations(cam: Basis): [number, number, number, number] {
     const near = (x: number, y: number, a: number, b: number) => 1 - smooth(a, b, Math.hypot(cam.pos[0] - x, cam.pos[1] - y));
@@ -423,6 +447,7 @@ export class FlightEngine extends WaterEngine {
     const st = this.stations(cam);
     gl.uniform4f(r.u.uSt, st[0], st[1], st[2], st[3]);
     gl.uniform4fv(r.u.uColH, this.colH);
+    this.runGates();
     gl.uniform3fv(r.u.uGate, this.gateNow);
     gl.uniform3fv(r.u.uSurge, this.surge);
     if (st[0] > 0.5 && !this.still && this.time > this.dripAt) {
@@ -668,7 +693,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const painter = new BedPainter(WORLD.w, WORLD.h, div);
     const tick = () => new Promise<void>((res) => setTimeout(res, 0));
     let t = performance.now();
-    paintWorld(painter, tribCounts.length ? tribCounts : undefined);
+    paintWorld(painter, tribCounts.length ? tribCounts : undefined, engine.gate);
     lap('paint', t);
     await tick();
     t = performance.now();
@@ -759,6 +784,31 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     pic.src = root.dataset.sheet;
   }
 
+  // The switch: the chosen option's sluice opens at once (the gates and the surge are drawn),
+  // and the bed is carved again behind it, off the frame path, so the water itself follows.
+  const fork = document.querySelector<HTMLElement>('.fl-fork');
+  let recarve = 0;
+  let carving = false;
+  const onGate = () => {
+    const g = Math.min(2, Math.max(0, Number(fork?.dataset.active) || 0));
+    if (g === engine.gate) return;
+    engine.gate = g;
+    window.clearTimeout(recarve);
+    const go = async () => {
+      if (destroyed) return;
+      if (carving) {
+        recarve = window.setTimeout(go, 200);
+        return;
+      }
+      carving = true;
+      await buildBed();
+      carving = false;
+    };
+    recarve = window.setTimeout(go, 700);
+  };
+  const forkWatch = new MutationObserver(onGate);
+  if (fork) forkWatch.observe(fork, { attributes: true, attributeFilter: ['data-active'] });
+
   const ro = new ResizeObserver(onResize);
   ro.observe(document.body);
   window.addEventListener('resize', onResize);
@@ -830,6 +880,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       destroyed = true;
       off();
       ro.disconnect();
+      forkWatch.disconnect();
+      window.clearTimeout(recarve);
       solver.dispose();
       window.clearTimeout(resizeTimer);
       window.removeEventListener('resize', onResize);

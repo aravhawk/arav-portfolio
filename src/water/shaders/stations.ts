@@ -7,7 +7,7 @@
  * behind it, and the water in front of it carries its mirror image.
  */
 
-import { COLS, T2 } from '../world';
+import { COLS, DAM, SLUICES, T2 } from '../world';
 
 const f = (n: number) => n.toFixed(1);
 
@@ -158,5 +158,127 @@ vec3 columns(vec3 col, vec3 dir, float tw) {
 // (The shallows the columns stand in are a hand deep: the pale bed shows through.)
 float shallowsAt(vec2 p) {
   return smoothstep(${f(T2 + 380)}, ${f(T2 + 640)}, p.y) * (1.0 - smoothstep(${f(T2 + 1420)}, ${f(T2 + 1700)}, p.y));
+}
+`;
+
+const sluiceX = (i: number) => {
+  const l = SLUICES[i];
+  // (The channel's middle at a distance d below the dam: straight runs between its points.)
+  let out = `${f(l[l.length - 1].x)}`;
+  for (let k = l.length - 2; k >= 0; k--) {
+    out = `(d < ${f(l[k + 1].y - DAM.y)} ? mix(${f(l[k].x)}, ${f(l[k + 1].x)}, clamp((d - ${f(l[k].y - DAM.y)}) / ${f(l[k + 1].y - l[k].y)}, 0.0, 1.0)) : ${out})`;
+  }
+  return out;
+};
+
+/** Station 6: a low dam of ice, three sluices, a plate of ice in each; one lifted. */
+export const DAM_ICE = `
+const float DAM_Y = ${f(DAM.y)};
+const float DAM_T = ${f(DAM.thick)};
+const float DAM_H = ${f(DAM.h)};
+const vec3 GATE_X = vec3(${DAM.gates.map(f).join(', ')});
+const float GATE_W = ${f(DAM.gw / 2)};
+float gateOf(int i) { return i == 0 ? uGate.x : i == 1 ? uGate.y : uGate.z; }
+float gateX(int i) { return i == 0 ? GATE_X.x : i == 1 ? GATE_X.y : GATE_X.z; }
+
+float boxHit(vec3 ro, vec3 rd, vec3 lo, vec3 hi, out vec3 n, out float tF) {
+  vec3 inv = 1.0 / (rd + vec3(equal(rd, vec3(0.0))) * 1e-6);
+  vec3 a = (lo - ro) * inv;
+  vec3 b = (hi - ro) * inv;
+  vec3 t0 = min(a, b);
+  vec3 t1 = max(a, b);
+  float tN = max(max(t0.x, t0.y), t0.z);
+  tF = min(min(t1.x, t1.y), t1.z);
+  n = -sign(rd) * vec3(step(t0.yzx, t0.xyz) * step(t0.zxy, t0.xyz));
+  return tN < tF && tN > 0.0 ? tN : -1.0;
+}
+// The nearest of the dam's seven pieces: four lengths of wall, three plates. kind: 0 wall, 1 plate.
+float damHit(vec3 ro, vec3 rd, out vec3 n, out float tF, out float kind) {
+  float best = -1.0;
+  vec3 n1;
+  float f1;
+  kind = 0.0;
+  if (boxHit(ro, rd, vec3(${f(DAM.x0)}, DAM_Y, -FREEBOARD - 4.0), vec3(${f(DAM.x1)}, DAM_Y + DAM_T, DAM_H + 110.0), n1, f1) < 0.0) return -1.0;
+  for (int i = 0; i < 4; i++) {
+    float xa = i == 0 ? ${f(DAM.x0)} : gateX(i - 1) + GATE_W;
+    float xb = i == 3 ? ${f(DAM.x1)} : gateX(i) - GATE_W;
+    float t = boxHit(ro, rd, vec3(xa, DAM_Y, -FREEBOARD - 4.0), vec3(xb, DAM_Y + DAM_T, DAM_H - FREEBOARD + (i == 1 || i == 2 ? 6.0 : 0.0)), n1, f1);
+    if (t > 0.0 && (best < 0.0 || t < best)) { best = t; n = n1; tF = f1; kind = 0.0; }
+  }
+  for (int i = 0; i < 3; i++) {
+    float up = gateOf(i) * (DAM_H - 8.0);
+    float t = boxHit(ro, rd, vec3(gateX(i) - GATE_W - 5.0, DAM_Y + 20.0, up - FREEBOARD - 4.0), vec3(gateX(i) + GATE_W + 5.0, DAM_Y + 36.0, up + DAM_H - 10.0 - FREEBOARD), n1, f1);
+    if (t > 0.0 && (best < 0.0 || t < best)) { best = t; n = n1; tF = f1; kind = 1.0; }
+  }
+  return best;
+}
+vec3 damColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, float kind) {
+  vec3 hp = ro + rd * t;
+  vec3 L = keyDir();
+  float z = hp.z + FREEBOARD;
+  vec2 uv = abs(n.z) > 0.5 ? hp.xy / 160.0 : vec2((abs(n.x) > 0.5 ? hp.y : hp.x) / 160.0, z / 110.0);
+  vec4 gr = textureLod(uGrain, uv, 0.0);
+  vec3 fr3 = fracture(uv * 2.6 + kind * 3.0);
+  vec3 ice = iceBody(mix(0.5, 0.16, kind) + 0.4 * clamp((tF - t) / 160.0, 0.0, 1.0)) * (0.74 + 0.46 * fr3.y);
+  float lit = 0.55 + 0.45 * max(dot(n, L), 0.0) + 0.3 * max(dot(-n, L), 0.0);
+  vec3 col = ice * (S.key * (0.1 + 0.2 * lit * lit) + S.amb * 0.95) * (0.88 + 0.24 * gr.r) * (0.8 + 0.4 * max(dot(n, L), 0.0));
+  col += vec3(0.8, 0.93, 1.0) * S.key * 0.06 * (1.0 - smoothstep(0.0, 0.03, fr3.x)) * step(0.4, fr3.z) * (1.0 - uNight);
+  col = mix(col, ice * (S.amb * 2.4 + uAurora * (0.16 + 0.3 * gr.g)) + vec3(0.004, 0.012, 0.016), uNight);
+  // Wet and dark at the waterline.
+  col *= 1.0 - 0.4 * (1.0 - smoothstep(2.0, 10.0 + 5.0 * gr.b, z)) * (1.0 - kind * 0.5);
+  float fr = 0.04 + 0.96 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
+  col = mix(col, skyColor(reflect(rd, n), 0.0), fr * mix(0.4, 0.6, kind) * step(n.z, 0.5));
+  // Snow lies along the wall's top; the plates are bare, clear ice.
+  float snowK = (1.0 - kind) * max(step(0.5, n.z), smoothstep(DAM_H - 13.0 - 8.0 * gr.g, DAM_H - 11.0 - 8.0 * gr.g, z));
+  vec3 sn = mix(vec3(0.93, 0.94, 0.96), vec3(0.6, 0.68, 0.8), uNight) * (S.key * mix(0.26, L.z, uNight) * (0.5 + 0.9 * max(dot(normalize(n + vec3(0.0, 0.0, 1.0)), L), 0.0)) + S.amb * 0.85 + uAurora * 0.04);
+  return mix(col, sn, snowK);
+}
+`;
+
+/** Station 6, the water: full and white below the open sluice, a trickle below the shut ones. */
+export const DAM_WATER = `
+vec3 dam(vec3 col, vec3 dir, float tw) {
+  vec3 n;
+  float tF;
+  float kind;
+  float t = damHit(uCamPos, dir, n, tF, kind);
+  if (t > 0.0 && (tw < 0.0 || t < tw)) return mix(col, inAir(damColor(uCamPos, dir, t, tF, n, kind), dir, t), uSt.y);
+  if (tw < 0.0) return col;
+  vec3 pwp = uCamPos + dir * tw;
+  if (textureLod(uBedA, bedUv(pwp.xy), 0.0).r > -2.0) return col;
+  float d = pwp.y - DAM_Y;
+  if (d < DAM_T) {
+    // The head pond: the dam's mirror image, and the draw toward the open sluice.
+    vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3(0.003 * sin(pwp.y * 0.2 + uTime * 0.8), 0.0, 0.0));
+    float t2 = damHit(pwp, rd2, n, tF, kind);
+    if (t2 > 0.0) col = mix(col, inAir(damColor(pwp, rd2, t2, tF, n, kind), dir, tw + t2) * 0.74, 0.55 * uSt.y);
+    for (int i = 0; i < 3; i++) {
+      vec2 q = pwp.xy - vec2(gateX(i), DAM_Y);
+      float pull = gateOf(i) * exp(-length(q * vec2(1.0, 0.55)) / 90.0);
+      float streak = textureLod(uGrain, vec2(atan(q.x, -q.y) * 0.9, (length(q) + uTime * 70.0) / 900.0), 1.5).r;
+      col = mix(col, vec3(0.9, 0.96, 1.0) * (S.key * 0.25 + S.amb), pull * smoothstep(0.45, 0.8, streak) * 0.6 * uSt.y);
+    }
+    return col;
+  }
+  if (d > 1010.0) return col;
+  int i = pwp.x < 1170.0 ? 0 : pwp.x < 1430.0 ? 1 : 2;
+  float cx = i == 0 ? ${sluiceX(0)} : i == 1 ? ${sluiceX(1)} : ${sluiceX(2)};
+  float sg = i == 0 ? uSurge.x : i == 1 ? uSurge.y : uSurge.z;
+  float front = DAM_T + sg * 1100.0;
+  float open = gateOf(i) * (1.0 - smoothstep(front - 30.0, front + 30.0, d));
+  float fade = (1.0 - smoothstep(720.0, 980.0, d)) * uSt.y;
+  float side = pwp.x - cx;
+  float off = abs(side);
+  vec4 gr = textureLod(uGrain, pwp.xy / 760.0, 2.5);
+  // Shut: the bed lies nearly bare, pale wet ice and gravel, a thread of water down its middle.
+  vec3 bare = mix(vec3(0.42, 0.5, 0.56), vec3(0.24, 0.33, 0.4), gr.r) * (S.key * 0.2 + S.amb * 0.9) * (0.8 + 0.3 * gr.g);
+  bare = mix(bare, vec3(0.05, 0.08, 0.1) + uAurora * 0.05, uNight * 0.8);
+  float thread = 1.0 - smoothstep(5.0 + 9.0 * gr.b, 12.0 + 12.0 * gr.b, abs(side - 20.0 * sin(d * 0.021 + float(i)) - 9.0 * sin(d * 0.057)));
+  col = mix(col, bare, (1.0 - open) * (1.0 - 0.9 * thread) * 0.86 * fade);
+  // Open: white water, hardest under the sluice, and a white head on the surge.
+  float white = textureLod(uGrain, vec2(pwp.x / 260.0, (d - uTime * 240.0) / 1500.0), 1.5).r;
+  float fall = 0.12 + exp(-(d - DAM_T) / 170.0) + 0.9 * exp(-abs(d - front) / 55.0) * step(sg, 0.98);
+  col = mix(col, vec3(0.93, 0.97, 1.0) * (S.key * mix(0.3, 0.1, uNight) + S.amb * 1.1), clamp(min(fall * 1.6, 1.0) * smoothstep(0.42, 0.7, white + 0.45 * fall), 0.0, 1.0) * open * (1.0 - smoothstep(48.0, 72.0, off)) * fade);
+  return col;
 }
 `;

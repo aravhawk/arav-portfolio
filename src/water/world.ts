@@ -131,7 +131,7 @@ export const colHeights = (pulls: number[]) => {
 };
 
 /** Station 6, the dam: a low wall of ice across the river with three sluices, and a channel below each. */
-export const DAM = { y: T2 + 2700, x0: 860, x1: 1740, thick: 60, h: 62, gates: [1040, 1300, 1560], gw: 124 };
+export const DAM = { y: T2 + 2700, x0: 860, x1: 1740, thick: 60, h: 84, gates: [1040, 1300, 1560], gw: 124 };
 /** Each sluice's channel, from the dam down to where the three meet again. */
 export const SLUICES: Pt[][] = [
   [pt(1040, DAM.y - 30), pt(1040, DAM.y + 150), pt(930, DAM.y + 420), pt(1000, DAM.y + 760), pt(1240, DAM.y + 1010)],
@@ -288,8 +288,8 @@ function paintLater(b: BedPainter, gate: number) {
   b.disc(pt(1830, T2 + 1150), 240);
   b.channel([pt(1300, T2 + 560), pt(1300, T2 + 1000), pt(1300, T2 + 1500)], { width: 700, speed: 0.1, flowOnly: true });
   // On to the head pond behind the dam.
-  b.channel([pt(1300, T2 + 1400), pt(1240, T2 + 1850), pt(1300, T2 + 2300)], { width: [330, 280, 420] });
-  b.pool({ x: DAM.x0 + 30, y: T2 + 2260, w: DAM.x1 - DAM.x0 - 60, h: DAM.y - T2 - 2260 + 10 }, 150);
+  b.channel([pt(1300, T2 + 1400), pt(1240, T2 + 1850), pt(1300, T2 + 2300), pt(1300, DAM.y - 200)], { width: [330, 280, 360, 560], speed: 0.45 });
+  b.pool({ x: DAM.x0 + 30, y: DAM.y - 250, w: DAM.x1 - DAM.x0 - 60, h: 260 }, 120);
   SLUICES.forEach((line, i) => {
     b.channel(line, { width: [DAM.gw, DAM.gw, 130, 130, 150], speed: i === gate ? 1 : 0.07 });
   });
