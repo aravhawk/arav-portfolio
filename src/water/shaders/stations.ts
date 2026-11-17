@@ -670,7 +670,7 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
   // The thread of current: the one place the mirror is broken. Deeper, darker water with the light running on it.
   float s;
   float d = threadAt(q, s);
-  float band = 1.0 - smoothstep(7.0, 27.0, d);
+  float band = 1.0 - smoothstep(9.0, 34.0, d);
   float lodT = lodFor(tw * uPxAng, 40.0, 256.0);
   float run = textureLod(uGrain, vec2(d / 120.0, (s - uTime * 120.0) / 1500.0), lodT).r;
   float fine = textureLod(uGrain, vec2(d / 40.0 + 0.3, (s - uTime * 150.0) / 520.0), lodT).g;
@@ -682,10 +682,10 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
     col = mix(col, inAir(cubeColor(pwp, rd2, t2, tF, n, id), dir, tw + t2) * 0.8, 0.68 * gSt.z);
     gMirror = 0.0;
   }
-  col = mix(col, col * mix(vec3(0.42, 0.7, 0.78), vec3(0.7, 0.9, 0.9), uNight), band * 0.6 * gSt.z);
+  col = mix(col, col * mix(vec3(0.36, 0.66, 0.76), vec3(0.7, 0.9, 0.9), uNight), band * 0.75 * gSt.z);
   // (Moving water: soft bright faces that travel along it, never an outline.)
   float lines = smoothstep(0.42, 0.8, 0.55 * run + 0.45 * fine);
-  col = mix(col, vec3(0.88, 0.96, 1.0) * (S.key * mix(0.24, 0.06, uNight) + S.amb * 0.95) + uAurora * 0.3, lines * band * band * 0.6 * gSt.z);
+  col = mix(col, vec3(0.88, 0.96, 1.0) * (S.key * mix(0.24, 0.06, uNight) + S.amb * 0.95) + uAurora * 0.3, lines * band * 0.85 * gSt.z);
   col += vec3(0.3, 0.84, 1.0) * band * head * mix(0.5, 0.8, uNight) * gSt.z;
   // Each lit cube throws its light on the water round it.
   vec2 cell = clamp(floor(q / LAT_P + 2.0), 0.0, 3.0);

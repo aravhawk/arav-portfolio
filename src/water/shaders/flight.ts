@@ -1695,7 +1695,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       float face = smoothstep(0.5, 0.78, mix(dw2.r, df.r, 0.45));
       face = mix(face, 0.34, smoothstep(2.0, 9.0, footL));
       float spark = smoothstep(0.7, 0.92, n2(pw / 9.0 + vec2(uTime * 1.1, -uTime * 0.8))) * (1.0 - smoothstep(1.2, 4.0, footL));
-      col += S.band * pathS * (0.3 + 4.2 * face * face + 3.4 * spark * face) * (0.35 + 0.65 * fres) * uSea.x * (1.0 - shade) * mix(1.0, 0.45, uNight);
+      col += S.band * pathS * (0.16 + 5.5 * face * face * face + 4.0 * spark * face) * (0.35 + 0.65 * fres) * uSea.x * (1.0 - shade) * mix(1.0, 0.45, uNight);
     }
   }
 #endif
@@ -1966,7 +1966,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
       glint = mix(glint, 0.3, smoothstep(0.35, 1.1, px * 15.0));
       // The sun's reflected bloom is broken by the same facets, so it is not a patch.
       col = max(col - sunBloom(sd) * mir * 0.3 * (1.0 - glint) * day, 0.0);
-      col += vec3(1.0, 0.88, 0.7) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee) * mix(6.5, 1.0, gDusk);
+      col += vec3(1.0, 0.88, 0.7) * path * glint * mix(0.6, 0.42, nearK) * day * (1.0 - lee) * mix(9.0, 1.0, gDusk);
     }
   }
   // The line of light: when the sun's edge clears the ranges, one clean
