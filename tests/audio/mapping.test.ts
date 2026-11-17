@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { arrivalIndex, arrivalOf, camN, crackVoice, dripVoice, dropVoice, gust, latticeAt, latticeVoice, mixOf, scrollN, shardVoice, swell, uiVoice } from '@/audio/mapping';
-import { type Scene, SceneReader, type SignalsLike, groundAt, movementAt } from '@/audio/scene';
+import { type Scene, SceneReader, type SignalsLike, groundAt, movementAt, seenAt } from '@/audio/scene';
 import { ARRIVAL, MOVE, PENTA } from '@/audio/theory';
 import { END_AT, MELT, SETTLE_AT, basisOf, dayAt, flightKeys, poseAt, sectionStarts, stillStops } from '@/water/camera';
-import { DELTA, LAKE, LATTICE, STREAM, TARN } from '@/water/world';
+import { COLS, DAM, DELTA, LAKE, LATTICE, SHARDS, SLUICES, STREAM, TARN } from '@/water/world';
 
 /** A scene with nothing in it, to change one thing at a time. */
 const scene = (over: Partial<Scene> = {}): Scene => ({
@@ -355,6 +355,26 @@ describe('the scene is read from what the picture publishes', () => {
     for (let i = 31; i <= 120; i++) sc = r.read(sig(3, 1000 + i * 16.67, { far: 30, moved: 1500, px: 0.8 }), 1000 + i * 16.67, env);
     expect(sc.pv).toBeLessThan(0.02);
     expect(new SceneReader().read(sig(3, 1000, { far: 0, moved: 1000 }), 1000, env).over).toBe(false);
+  });
+
+  it('a sound is placed where its cause is seen, and a cause out of frame is not heard', () => {
+    const stops = stillStops();
+    const cam = (i: number) => basisOf(poseAt(flightKeys(1.6), stops[i]));
+    // At the dam all three sluices are in frame, left to right.
+    const gates = SLUICES.map((line) => seenAt(cam(7), 1.6, line[0].x, DAM.y, 40));
+    for (const g of gates) expect(g.k).toBeGreaterThan(0.9);
+    expect(gates[0].pan).toBeLessThan(gates[1].pan);
+    expect(gates[1].pan).toBeLessThan(gates[2].pan);
+    // At the dam the columns are behind the lens: their drips are not heard there.
+    for (const x of COLS.xs) expect(seenAt(cam(7), 1.6, x, COLS.y, 0).k).toBe(0);
+    // At their own station the columns, the lattice and both shards are in frame.
+    for (const x of COLS.xs) expect(seenAt(cam(6), 1.6, x, COLS.y, 0).k).toBeGreaterThan(0.9);
+    expect(seenAt(cam(8), 1.6, LATTICE.x, LATTICE.y, 0).k).toBeGreaterThan(0.9);
+    for (const sh of SHARDS) expect(seenAt(cam(5), 1.6, sh.x, sh.y, sh.h / 2).k).toBeGreaterThan(0.9);
+    // The lattice is far nearer from its own station than from the dam.
+    expect(seenAt(cam(8), 1.6, LATTICE.x, LATTICE.y, 0).far).toBeLessThan(1500);
+    expect(seenAt(cam(7), 1.6, LATTICE.x, LATTICE.y, 0).far).toBeGreaterThan(2300);
+    expect(seenAt(null, 1.6, 0, 0, 0).k).toBe(0);
   });
 
   it('the movements follow the flight in order', () => {

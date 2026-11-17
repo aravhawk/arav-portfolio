@@ -8,10 +8,10 @@
  * The same calls make the same sound in both.
  */
 
-import { COLS, LATTICE, SHARDS, SLUICES } from '@/water/world';
-import { type Graph, bell, bloom, crack, drip, drop, gate, groan, pluck, shard, tick, whoosh } from './graph';
+import { COLS, DAM, LATTICE, SHARDS, SLUICES } from '@/water/world';
+import { type Graph, bell, bloom, crack, drip, drop, gateLift, gateSet, groan, pluck, shard, tick, whoosh } from './graph';
 import { type Mix, arrivalIndex, arrivalOf, crackVoice, dripVoice, dropVoice, latticeAt, latticeVoice, mixOf, shardVoice, uiVoice } from './mapping';
-import { type Scene, panOf, sat } from './scene';
+import { type Scene, sat, seenAt, smooth } from './scene';
 import { Score } from './score';
 import { ARRIVAL, type Rng, hz, makeRng } from './theory';
 
@@ -47,6 +47,8 @@ export class Sound {
   private liftDone = -1;
   private night = -1;
   private tapAt = -1e9;
+  private gates = [1, 0, 0];
+  private gatesSeen = false;
   /** Set by the page: the time (performance ms) of the frame being made. */
   frameAt = 0;
   /** When set, every moment's cause and start are kept here (the sync check reads it). */
@@ -176,12 +178,31 @@ export class Sound {
       const leaving = phase === 0 || phase === 2;
       const which = phase === 0 || phase === 3 ? 0 : 1;
       const at = SHARDS[which];
-      const v = shardVoice(which, panOf(sc.cam, sc.aspect, at.x, at.y, at.h * 0.5), sc.night);
-      if (leaving) shard(g, v.midi, t, v.gain * sc.tarn, v.pan, v.cut, v.send, sc.night);
-      else bell(g, v.midi - 12, t, 0.22 * sc.tarn, v.pan, { bright: 0.15, long: 2.2, send: v.send, bus: g.fx });
+      const see = seenAt(sc.cam, sc.aspect, at.x, at.y, at.h * 0.5);
+      const v = shardVoice(which, see.pan, sc.night);
+      // (A shard out of frame is still heard across the tarn, softer.)
+      const lvl = sc.tarn * (0.45 + 0.55 * see.k);
+      if (leaving) shard(g, v.midi, t, v.gain * lvl, v.pan, v.cut, v.send, sc.night);
+      else bell(g, v.midi - 12, t, 0.22 * lvl, v.pan, { bright: 0.15, long: 2.2, send: v.send, bus: g.fx });
       this.note(leaving ? 'pulse' : 'landing', this.frameAt, t);
     }
     this.phase = phase;
+
+    // The sluices, in the gates' own time: a low knock as the closing gate is set down, a lighter one as the opening gate is home.
+    for (let i = 0; i < 3; i++) {
+      const now = sc.gate[i] ?? 0;
+      const was = this.gates[i];
+      this.gates[i] = now;
+      if (!this.gatesSeen || !sc.home || sc.calm) continue;
+      // (Just short of home counts as home: the gates' own numbers are single precision.)
+      const down = was > 0.001 && now <= 0.001;
+      if (!down && !(was < 0.999 && now >= 0.999)) continue;
+      const see = seenAt(sc.cam, sc.aspect, SLUICES[i][0].x, DAM.y, 40);
+      if (see.k < 0.1) continue;
+      gateSet(g, t, see.pan * 0.8, down);
+      this.note(down ? 'gate-down' : 'gate-up', this.frameAt, t);
+    }
+    this.gatesSeen = true;
 
     // The lattice: a note for each cube as the travelling light reaches it.
     const lat = latticeAt(sc.clock, LATTICE.pitch);
@@ -190,12 +211,15 @@ export class Sound {
       this.cube = lat.cube;
     } else if (lat.cube > this.cube) {
       this.cube = lat.cube;
-      if (sc.home && sc.lattice > 0.5 && !sc.calm) {
-        const row = lat.cube >> 2;
-        const along = lat.cube & 3;
-        const col = row % 2 === 0 ? along : 3 - along;
-        const v = latticeVoice(row, along, panOf(sc.cam, sc.aspect, LATTICE.x + (col - 1.5) * LATTICE.pitch, LATTICE.y + (row - 1.5) * LATTICE.pitch, LATTICE.h));
-        pluck(g, v.midi, t, v.gain * sc.lattice, v.pan, v.cut, v.send);
+      const row = lat.cube >> 2;
+      const along = lat.cube & 3;
+      const col = row % 2 === 0 ? along : 3 - along;
+      const see = sc.home && sc.lattice > 0.5 && !sc.calm ? seenAt(sc.cam, sc.aspect, LATTICE.x + (col - 1.5) * LATTICE.pitch, LATTICE.y + (row - 1.5) * LATTICE.pitch, LATTICE.h) : null;
+      // (From the dam the lattice is a far glint: its notes are for when the cubes themselves are in front of the lens.)
+      const k = see ? see.k * (1 - smooth(1500, 2300, see.far)) : 0;
+      if (see && k > 0.1) {
+        const v = latticeVoice(row, along, see.pan);
+        pluck(g, v.midi, t, v.gain * k, v.pan, v.cut, v.send);
         this.note('lattice', this.frameAt, t);
       }
     }
@@ -229,16 +253,19 @@ export class Sound {
         return;
       }
       case 'switch': {
-        // The gates: the old one is set down as the new one lifts. The rush that follows is steered by the surge itself.
+        // The latch lets go and the chosen gate begins to lift. What follows is in the gates' own time (see the frame):
+        // the knocks as each gate comes to rest, and the rush, steered by the surge itself.
         const line = SLUICES[Math.min(2, Math.max(0, Math.round(a)))];
-        gate(g, t, sc ? panOf(sc.cam, sc.aspect, line[0].x, line[0].y, 40) * 0.8 : 0);
+        gateLift(g, t, sc ? seenAt(sc.cam, sc.aspect, line[0].x, DAM.y, 40).pan * 0.8 : 0);
         this.note('switch', cause, t);
         return;
       }
       case 'drip': {
-        if (!sc || sc.cols <= 0.05) return;
-        const v = dripVoice(b, panOf(sc.cam, sc.aspect, COLS.xs[Math.min(3, Math.max(0, Math.round(a)))], COLS.y, 0));
-        drip(g, t, v.midi, v.gain * sc.cols, v.pan, v.send);
+        // (The picture drips whenever the columns are near; a drip is heard when its column is in frame.)
+        const see = sc ? seenAt(sc.cam, sc.aspect, COLS.xs[Math.min(3, Math.max(0, Math.round(a)))], COLS.y, 0) : null;
+        if (!sc || !see || see.k * sc.cols <= 0.1) return;
+        const v = dripVoice(b, see.pan);
+        drip(g, t, v.midi, v.gain * sc.cols * see.k, v.pan, v.send);
         this.note('drip', cause, t);
         return;
       }

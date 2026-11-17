@@ -227,12 +227,18 @@ export function movementAt(home: boolean, s: number, melt: number, rest: boolean
   return MOVE.delta;
 }
 
-/** Where a point of the world stands across the frame, as a pan: -1 the left edge, 1 the right. */
-export function panOf(cam: Basis | null, aspect: number, x: number, y: number, z = 0): number {
-  if (!cam) return 0;
+/**
+ * How a point of the world is seen: how well inside the frame it is (0 out
+ * of frame or behind the camera, 1 well inside), where it stands across
+ * the frame as a pan, and how far off it is. A sound whose cause cannot be
+ * seen is not made.
+ */
+export function seenAt(cam: Basis | null, aspect: number, x: number, y: number, z = 0): { k: number; pan: number; far: number } {
+  if (!cam) return { k: 0, pan: 0, far: 0 };
   const p = projectPoint(cam, [x, y, z], aspect);
-  if (p[2] < 1) return 0;
-  return Math.min(1, Math.max(-1, p[0] * 2 - 1));
+  if (p[2] < 1) return { k: 0, pan: 0, far: p[2] };
+  const inside = (u: number) => smooth(-0.1, 0.05, u) * (1 - smooth(0.95, 1.1, u));
+  return { k: inside(p[0]) * inside(p[1]), pan: Math.min(1, Math.max(-1, p[0] * 2 - 1)), far: p[2] };
 }
 
 export interface Env {

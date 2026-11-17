@@ -480,8 +480,8 @@ export function padOn(g: Graph, midi: number, t: number, level: number, fade: nu
   gn.gain.setTargetAtTime(level, t, fade / 3);
   gn.connect(g.padIn);
   const parts: [OscillatorType, number, number, number, number][] = [
-    ['triangle', f, -6, 0.5, pan - 0.4],
-    ['triangle', f, 5, 0.5, pan + 0.4],
+    ['triangle', f, -4, 0.5, pan - 0.4],
+    ['triangle', f, 3, 0.5, pan + 0.4],
     ['sine', f * 2, 3, 0.2 * (1 - night), pan],
     ['sine', f / 2, -2, 0.42 * night, 0],
   ];
@@ -692,28 +692,39 @@ export function tick(g: Graph, t: number, midi: number, gainV: number, pan: numb
   }
 }
 
-/** A sluice gate set down: a low knock of ice on ice, tuned to the key's root. */
-export function gate(g: Graph, t: number, pan: number) {
+/** The switch is thrown: the latch lets go, and the gate that is to open scrapes upward for as long as it takes to lift. */
+export function gateLift(g: Graph, t: number, pan: number) {
   const head = route(g, g.fx, pan, 0.25);
   head.gain.value = 0.3;
-  const f = hz(38);
+  const f = hz(50);
+  const o = sine(g, f * 1.6, t, t + 0.5);
+  o.frequency.exponentialRampToValueAtTime(f, t + 0.03);
+  const e = g.ctx.createGain();
+  pluckEnv(e.gain, t, 0.5, 0.003, 0.05);
+  o.connect(e).connect(head);
+  const s = burst(g, t, 0.5, 'bandpass', 2100, 4);
+  s.frequency.exponentialRampToValueAtTime(3600, t + 0.45);
+  const es = g.ctx.createGain();
+  es.gain.setValueAtTime(0, t);
+  es.gain.linearRampToValueAtTime(0.12, t + 0.1);
+  es.gain.setTargetAtTime(0, t + 0.3, 0.06);
+  s.connect(es).connect(head);
+}
+
+/** A gate comes to rest: set down, a low knock of ice on ice on the key's root; fully lifted, a lighter one a fifth above. */
+export function gateSet(g: Graph, t: number, pan: number, down: boolean) {
+  const head = route(g, g.fx, pan, 0.3);
+  head.gain.value = down ? 0.3 : 0.16;
+  const f = hz(down ? 38 : 45);
   const o = sine(g, f * 1.8, t, t + 0.9);
   o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
   const e = g.ctx.createGain();
-  pluckEnv(e.gain, t, 1, 0.004, 0.13);
+  pluckEnv(e.gain, t, 1, 0.004, down ? 0.13 : 0.07);
   o.connect(e).connect(head);
-  const n = burst(g, t, 0.12, 'lowpass', 420, 0.7);
+  const n = burst(g, t, 0.12, 'lowpass', down ? 420 : 900, 0.7);
   const en = g.ctx.createGain();
-  pluckEnv(en.gain, t, 0.7, 0.002, 0.03);
+  pluckEnv(en.gain, t, down ? 0.7 : 0.4, 0.002, 0.03);
   n.connect(en).connect(head);
-  // The scrape of the gate that lifts.
-  const s = burst(g, t + 0.03, 0.4, 'bandpass', 2300, 4);
-  s.frequency.exponentialRampToValueAtTime(3600, t + 0.4);
-  const es = g.ctx.createGain();
-  es.gain.setValueAtTime(0, t + 0.03);
-  es.gain.linearRampToValueAtTime(0.1, t + 0.12);
-  es.gain.setTargetAtTime(0, t + 0.2, 0.08);
-  s.connect(es).connect(head);
 }
 
 /** Air moving: a band of noise that sweeps from one colour to another. For a change of page and a change of theme. */
