@@ -282,11 +282,15 @@ export const SHARDS: { x: number; y: number; h: number; r: number; turn: number 
 ];
 
 /**
- * Station 5, the shallows, and the four columns of ice that stand in them: one to a model.
- * Every column is the same shape, so the ice in it is in proportion to its pulls: its height
- * (and its width with it) goes as the cube root. r is the tallest one's radius.
+ * Station 5, the shallows, and the four seracs that stand in them: one pillar of glacier ice to a model.
+ * Every one is cut to the same measure (a pillar `r` across for every `hMax` tall), so the ice in it is in
+ * proportion to its pulls: its height (and its width with it) goes as the cube root. Each is broken in its
+ * own way inside that measure: it leans (`lean`: which way, radians from +x), it has a shoulder, a block has
+ * fallen from it. Its highest point stands at its scaled height. r is the tallest one's radius.
  */
-export const COLS = { y: T2 + 1080, xs: [1010, 1230, 1450, 1670], r: 52, hMax: 300, hMin: 40 };
+export const COLS = { y: T2 + 1080, xs: [1010, 1230, 1450, 1670], r: 52, hMax: 300, hMin: 40, lean: [-0.7, 2.62, 0.35, 3.5], apex: 0.4 };
+/** Where a serac's highest point stands, off its own middle line: x and y in units of its radius. */
+export const colApex = (i: number): [number, number] => [COLS.apex * Math.cos(COLS.lean[i]), COLS.apex * Math.sin(COLS.lean[i])];
 /** How tall each column stands: its volume is linear in pulls, the tallest COLS.hMax high, none under COLS.hMin. */
 export const colHeights = (pulls: number[]) => {
   const max = Math.max(...pulls, 1);
@@ -294,12 +298,14 @@ export const colHeights = (pulls: number[]) => {
 };
 
 /**
- * Station 6, the dam: one low wall of ice across the river with three sluices, and a channel below each.
- * The wall is `thick` at its crest and leans back below (`batter`); its crest runs on over each sluice as a
- * lintel `lintel` deep, a pair of piers stands at each sluice, and the plate between them lifts by `lift`. The camera looks back at it from downstream, so the sluices
- * are listed east to west: that is left to right in the picture, the order of the switch's options.
+ * Station 6, the dam: one wall of ice across the river, a deep pond `pond` long behind it, three sluices cut
+ * through it, and a channel below each. The wall is `thick` at its crest and leans back below (`batter`); each
+ * sluice is a cut through that lean down to the water, with the crest running on over it as a lintel `lintel`
+ * deep, and at the head of the cut a gate of clear ice that lifts by `lift` into the wall. The wall's two ends
+ * run down into the banks (`hip`). The camera looks back at it from downstream, so the sluices are listed east
+ * to west: that is left to right in the picture, the order of the switch's options.
  */
-export const DAM = { y: T2 + 2700, x0: 790, x1: 1810, thick: 30, batter: 0.5, h: 124, gates: [1560, 1300, 1040], gw: 84, pier: 12, lift: 58, lintel: 28 };
+export const DAM = { y: T2 + 2700, x0: 760, x1: 1840, thick: 36, batter: 0.5, h: 150, gates: [1560, 1300, 1040], gw: 84, lift: 56, lintel: 64, hip: 1.5, pond: 560 };
 /** Each sluice's channel, from the dam down to where the three meet again. */
 export const SLUICES: Pt[][] = [
   [pt(1560, DAM.y - 30), pt(1560, DAM.y + 150), pt(1670, DAM.y + 420), pt(1600, DAM.y + 760), pt(1360, DAM.y + 1010)],
@@ -465,8 +471,11 @@ function paintLater(b: BedPainter, gate: number) {
   b.disc(pt(1830, T2 + 1150), 240);
   b.channel([pt(1300, T2 + 560), pt(1300, T2 + 1000), pt(1300, T2 + 1500)], { width: 700, speed: 0.1, flowOnly: true });
   // On to the head pond behind the dam.
-  b.channel([pt(1300, T2 + 1400), pt(1240, T2 + 1850), pt(1300, T2 + 2300), pt(1300, DAM.y - 200)], { width: [330, 280, 360, 560], speed: 0.45 });
-  b.pool({ x: DAM.x0 + 30, y: DAM.y - 250, w: DAM.x1 - DAM.x0 - 60, h: 260 }, 120);
+  b.channel([pt(1300, T2 + 1400), pt(1240, T2 + 1800), pt(1300, DAM.y - DAM.pond - 30), pt(1300, DAM.y - DAM.pond + 150)], { width: [330, 280, 380, 620], speed: 0.45 });
+  // (The pond is a real reservoir: deep, dark water the wall stands against.)
+  b.pool({ x: DAM.x0 + 70, y: DAM.y - DAM.pond, w: DAM.x1 - DAM.x0 - 140, h: DAM.pond + 10 }, 150);
+  b.disc(pt(DAM.x0 + 210, DAM.y - DAM.pond + 110), 170);
+  b.disc(pt(DAM.x1 - 190, DAM.y - DAM.pond + 150), 190);
   // (All three channels are carved to run: which one does is the picture's to say, sluice by sluice, so a change of
   // the switch needs no new bed and costs no frame. A shut channel's bare bed is drawn over its water.)
   void gate;

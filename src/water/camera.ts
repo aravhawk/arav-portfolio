@@ -250,8 +250,8 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s6 + 0.3, pos: [1520, T + 1720, 280], aim: [1300, T + 2520, 20], fov: 46 },
         { s: s6 + 0.75, pos: [1960, T + 2800, 300], aim: [1320, T + 2760, 30], fov: 46 },
         // From the east bank below it: the dam across the frame, the open sluice's water coming toward the eye, the bank at lower left.
-        { s: s6 + 1.2, pos: [2200, T + 3600, 480], aim: [1590, T + 2860, 0], fov: 42 },
-        { s: s7 - 0.6, pos: [2192, T + 3624, 470], aim: [1592, T + 2868, 0], fov: 42 },
+        { s: s6 + 1.2, pos: [2130, T + 3800, 640], aim: [1520, T + 2900, 0], fov: 42 },
+        { s: s7 - 0.6, pos: [2122, T + 3824, 630], aim: [1522, T + 2908, 0], fov: 42 },
         // Across the three channels where they meet, turning with the water to look down the river again.
         { s: s7 - 0.05, pos: [1620, T + 3560, 400], aim: [1120, T + 3840, 0], fov: 45 },
         { s: s7 + 0.45, pos: [820, T + 3640, 400], aim: [900, T + 4350, 10], fov: 44 },

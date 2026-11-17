@@ -11,7 +11,7 @@ import { INTERESTS, PROJECTS, type Project, type ProjectMedia } from '@/content/
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
 import { SECTIONS, SETTLE_AT } from '@/water/camera';
-import { COLS, LIP, TRIBS, colHeights } from '@/water/world';
+import { COLS, LIP, TRIBS, colHeights, colApex } from '@/water/world';
 import './home.css';
 import './flight.css';
 
@@ -222,7 +222,7 @@ export default async function Home() {
           <div className="fl-pin">
             <div className="fl-calls">
               {models.map((x, i) => (
-                <Callout key={x.name} at={[COLS.xs[i], COLS.y + 26 * Math.sin(i * 2.3), colH[i] - 22]} href={x.url} from={MODELS + 0.9} to={FORK - 0.85} lift={i % 2 ? 40 : 64}>
+                <Callout key={x.name} at={[COLS.xs[i] + colApex(i)[0] * COLS.r * (colH[i] / COLS.hMax), COLS.y + 26 * Math.sin(i * 2.3) + colApex(i)[1] * COLS.r * (colH[i] / COLS.hMax), colH[i] - 24]} href={x.url} from={MODELS + 0.9} to={FORK - 0.85} lift={i % 2 ? 40 : 64}>
                   {x.name}
                 </Callout>
               ))}
