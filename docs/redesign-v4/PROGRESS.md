@@ -849,3 +849,26 @@ Not done from the brief:
 4. The Kilo Bench crop is upscaled past 1x of its source on wide screens; check sharpness at 2x density.
 5. The Open models copy is new wording of facts from the fact sheet: check tone and that "Claude Opus 4.6" in a model's own name is allowed.
 6. The ground's light down the page is subtle; judge whether it answers "a tinted flat".
+
+## After the outage (2026-11-17, 1:05 PM CT)
+
+At about 5:50 AM every helper then running (round 3's six, the
+frame-rate task, the sound's reconciliation) stopped on "Claude API
+rate limit reached", and this thread with them, until the limit reset
+at 1 PM. The night's parallel work had used the week's allowance.
+In between, Kilo did round 3's words and inner pages on the branch
+(the section above). State on resuming:
+
+- The sound's reconciliation (W19) had finished before it stopped:
+  five signed commits, merged as `cb081af` (the arrival recomposed for
+  the line running out and the ribbon climbing; the name's melt; each
+  station's water; the aurora's voice; the rail). 308 tests.
+- The frame-rate task (P1) stopped with a large restructuring
+  uncommitted in its own checkout (`t3-667442ba`: the shader compiled
+  in variants per stretch). Kept; to be resumed and rebased once the
+  shader's round 3 work is in.
+- Round 3's four shader helpers had committed nothing; relaunched at
+  1:08 PM from `cb081af`: stations 5 to 8 (RydAR first), stations 1 to
+  4 (Kilo Bench first), the melt, and the night's snow with the delta
+  and the ending's air.
+- From here at most four helpers run at once.
