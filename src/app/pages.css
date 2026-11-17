@@ -345,7 +345,8 @@
     0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 :root[data-theme='dark'] .plate-light .plate-media {
-  filter: brightness(0.84) saturate(0.92);
+  /* A light capture sits in the night: held well under the page's own lights, a little cooler, still read with ease. */
+  filter: brightness(0.7) contrast(1.05) saturate(0.84);
   box-shadow: none;
 }
 /* The film: the home page's slab, at the page's scale. */
