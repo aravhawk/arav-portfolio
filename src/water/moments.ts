@@ -36,6 +36,15 @@ export function stepGates(gate: { [i: number]: number }, surge: { [i: number]: n
 export const DAWN = { lift: [0, 2.6], ray: [0.7, 4.4], rise: [2.7, 4.9], over: 5.2 } as const;
 export const dawnLight = (t: number) => ({ lift: smooth(DAWN.lift[0], DAWN.lift[1], t), ray: smooth(DAWN.ray[0], DAWN.ray[1], t), rise: smooth(DAWN.rise[0], DAWN.rise[1], t) });
 
+/**
+ * The ribbon of light at the ending. `at`: where its foot stands in the
+ * frame, as a share of half the frame's width right of its middle (the sun
+ * stands at 0.46, or 0.7 on an upright screen). `lean`: how far it leans
+ * toward the sun as it climbs. `e0` and `reach` are the shading pass's own
+ * (RIB_E0, RIB_REACH).
+ */
+export const RIBBON = { at: (aspect: number) => (aspect < 0.8 ? 0.16 : 0.2), lean: 0.5, e0: 0.1, reach: 0.13 };
+
 /** How much of each later station's subject is there to see from a camera position: the columns, the dam, the lattice, the canyon. */
 // (The dam is drawn out to 3300 units and let go by 4000: whole from the columns' frame, never a half-faded duplicate.)
 export function stationsNear(pos: ArrayLike<number>): [number, number, number, number] {

@@ -17,7 +17,7 @@ import { makeCallouts } from './callouts';
 import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Pending, type Program, type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
-import { DAWN, GATE, LAP, PULSE, dawnLight, nextDrip, stationsNear, stepGates } from './moments';
+import { DAWN, GATE, LAP, PULSE, RIBBON, dawnLight, nextDrip, stationsNear, stepGates } from './moments';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { flightSource, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
@@ -39,15 +39,6 @@ const SPAN = 2300;
 const ICE_H = 16;
 /** The melt at which the last of the name's blades goes under (see bindIce: they fade from 0.5 to 0.57). */
 const NAME_GONE = 0.555;
-
-/**
- * The ribbon of light at the ending. `at`: where its foot stands in the
- * frame, as a share of half the frame's width right of its middle (the sun
- * stands at 0.46, or 0.7 on an upright screen). `lean`: how far it leans
- * toward the sun as it climbs. `e0` and `reach` are the shading pass's own
- * (RIB_E0, RIB_REACH).
- */
-const RIBBON = { at: (aspect: number) => (aspect < 0.8 ? 0.16 : 0.2), lean: 0.5, e0: 0.1, reach: 0.13 };
 
 /** The light event at the ending happens once in a visit: after it, the sun stays up and the line of light holds. */
 let dawned = false;
