@@ -141,6 +141,8 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
     : [
         { s: 0, ...hero },
         { s: HOLD, ...hero2 },
+        // Out over the breaking lake, still high: the plates, the far shore and the outlet ahead, the name's water left behind.
+        { s: 1.52, pos: [1345, 2700, 430], aim: [1480, 5300, 0], fov: wideFov },
         // Low over the lake's south end, looking down the river toward the ranges.
         { s: OUTLET_AT, pos: [1380, 1640 + DY, 200], aim: [1500, 2190 + DY, 0], fov: wideFov },
         // The statement: gliding down the first reach, river on the right, the bank on the left.
