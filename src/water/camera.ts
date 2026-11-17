@@ -238,8 +238,8 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         // Across the three channels where they meet, turning with the water to look down the river again.
         { s: s7 - 0.05, pos: [1400, T + 3620, 700], aim: [700, T + 3720, 0], fov: 60 },
         // The lattice from up the west bank: all sixteen above the middle, the bank at the foot.
-        { s: s7 + 1.15, pos: [640, T + 3200, 760], aim: [1270, T + 4470, 0], fov: 58 },
-        { s: s8 - 0.6, pos: [646, T + 3228, 750], aim: [1272, T + 4480, 0], fov: 58 },
+        { s: s7 + 1.15, pos: [500, T + 2930, 930], aim: [1350, T + 4480, 0], fov: 58 },
+        { s: s8 - 0.6, pos: [506, T + 2958, 920], aim: [1352, T + 4490, 0], fov: 58 },
         { s: s8 + 0.3, pos: [1300, T + 4900, 230], aim: [1300, T + 5700, 90], fov: 60 },
         ...canyonKeys(s8, 66),
       ]

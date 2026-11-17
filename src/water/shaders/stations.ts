@@ -1022,7 +1022,7 @@ vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
   float clear = smoothstep(1.0, 15.0, fe);
   float rough = 1.0 - smoothstep(4.0, 26.0, fe);
   vec3 fr3 = gMirror > 0.5 ? vec3(1.0, 0.5, 0.5) : fracture(q * vec2(2.9, 1.9) + 3.0);
-  vec2 qi = q + rd.yz / max(rd.x, 0.3) * vec2(-9.0 / ${f(FACE.w)}, 9.0 / ${f(FACE.h)}) + (fr3.yz - 0.5) * 0.0045 + (gi.rg - 0.5) * (0.0012 + 0.02 * rough);
+  vec2 qi = q + rd.yz / max(rd.x, 0.3) * vec2(-9.0 / ${f(FACE.w)}, 9.0 / ${f(FACE.h)}) + (fr3.yz - 0.5) * 0.0016 + (gi.rg - 0.5) * (0.0012 + 0.02 * rough);
   vec2 ei = min(qi, 1.0 - qi) * vec2(${f(FACE.w)}, ${f(FACE.h)});
   float aPic = smoothstep(-1.0, 5.0, min(ei.x, ei.y)) * clear;
   vec3 img = pow(textureLod(uSlabTex, vec2(qi.x, 1.0 - qi.y), lod + 1.5 * rough).rgb, vec3(2.2));
@@ -1056,6 +1056,13 @@ float glacierTop(vec2 p) {
   float slot = smoothstep(0.84, 0.98, cv) * smoothstep(150.0, 300.0, m) * smoothstep(600.0, 760.0, abs(p.x - 1660.0));
   return CY_H * rise * roll - 30.0 * slot;
 }
+// The hall's east wall is one flat plane where the picture lies. A ray the march has brought to that wall is set
+// exactly on the plane, so the picture is never torn by a ray that stopped a little short of it.
+float onFace(vec3 ro, vec3 rd, float t) {
+  if (rd.x < 1e-4) return t;
+  float tp = (${f(HALL.x1)} - ro.x) / rd.x;
+  return abs(tp - t) < 70.0 && abs(ro.y + rd.y * tp - ${f(FACE.y)}) < ${f(FACE.w * 0.5 + 10)} ? tp : t;
+}
 // The first ice a ray meets before tMax. wall: 0 the glacier's top, 1 the canyon's side, 2 the crevasse's side, 3 its floor.
 // blunt: for a mirror image in moving water, where the walls' scallops are not looked for.
 float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, bool blunt, out float wall) {
@@ -1088,26 +1095,25 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, bool blunt, out float 
     // Out in the canyon's open air the walls' scallops cannot matter yet: the plain canyon, less the deepest a scallop
     // goes, is a safe and far cheaper measure of the room there, and it allows a longer step.
     float D = canyonD(p.xy);
-    float room = CY_W + (p.x > ${f(FACE.x - 160)} ? 0.0 : CY_LEAN * (p.z + FREEBOARD)) - D - 22.0;
+    // (In the hall the wall ahead may be the plumb one: no lean is counted on there, or a long step would end inside it.)
+    float room = CY_W + (p.x > ${f(HALL.x0 - 120)} ? 0.0 : CY_LEAN * (p.z + FREEBOARD)) - D - 22.0;
     float w;
     if (blunt) w = (room + 22.0) * 0.8;
     else if (room > 18.0) w = room * 0.9;
-    else {
-      // (Close to a wall its scallops are followed, but only so far: a ray that slides along one for longer has, to the eye, met it.)
-      if (fine++ > 13) { wall = 1.0; return t; }
-      w = canyonAirD(p, D) * 0.7;
-    }
+    // (Close to a wall its scallops are followed, but only so far: a ray that slides along one for longer goes on to the plain wall under them.)
+    else if (fine++ > 13) w = (room + 22.0) * 0.9;
+    else w = canyonAirD(p, D) * 0.7;
     // (Well inside the glacier and well under its top, the top is not what a ray meets next: it is not worked out.)
     vec2 eg = min(p.xy - CY_LO, CY_HI - p.xy);
     float top = (min(eg.x, eg.y) > 320.0 || blunt) && p.z < ${f(CANYON.h * 0.84 - 60)} ? -12.0 : (p.z - glacierTop(p.xy)) * 0.42;
     float d = max(w, top);
     // (What is far off is found to within a pixel, not a hair: the steps there are longer.)
-    if (d < 0.4 + t * 0.002) { wall = w > top ? 1.0 : 0.0; return t; }
+    if (d < 0.4 + t * 0.002) { wall = w > top ? 1.0 : 0.0; return wall > 0.5 && !blunt ? onFace(ro, rd, t) : t; }
     near = d;
     t += d * (1.0 + min(t, 1600.0) * 0.00025);
   }
   // (A ray that runs out of steps sliding along a wall has, to the eye, met it.)
-  if (near < 16.0) { wall = 1.0; return t; }
+  if (near < 16.0) { wall = 1.0; return blunt ? t : onFace(ro, rd, t); }
   return -1.0;
 }
 vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
