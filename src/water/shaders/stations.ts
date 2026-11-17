@@ -131,7 +131,9 @@ vec3 iceBody(float path) {
 /** Snow lying on ice: lit as the land's snow is, lumped a little. */
 vec3 snowOn(vec3 n, float lump) {
   vec3 L = keyDir();
-  return mix(vec3(0.93, 0.94, 0.96), vec3(0.6, 0.68, 0.8), uNight) * (S.key * mix(0.26, L.z, uNight) * (0.42 + 0.9 * max(dot(normalize(n + vec3(lump, lump * 0.6, 1.0)), L), 0.0)) + S.amb * 0.85 + uAurora * 0.04);
+  vec3 nl = normalize(n + vec3(lump, lump * 0.6, 1.0));
+  vec3 day = vec3(0.93, 0.94, 0.96) * (S.key * 0.26 * (0.42 + 0.9 * max(dot(nl, L), 0.0)) + S.amb * 0.85);
+  return uNight > 0.0 ? mix(day, snowNight(nl), uNight) : day;
 }
 /**
  * What a ray that has left a piece of ice goes on to: the sky and the ranges
@@ -162,6 +164,7 @@ vec3 beyond(vec3 ro, vec3 rd) {
 }
 // 1 while a subject is drawn as its mirror image in the water: its fine inner work is not looked for.
 float gMirror = 0.0;
+bool gMirrorOn() { return gMirror > 0.5; }
 // How much trapped air the ice has: 1 in a block that froze in a season, less in a glacier's old pressed ice.
 float gAiry = 1.0;
 // How rough its faces are: 1 a cut face that melt has only scalloped; more where it broke off and weathered.
@@ -263,14 +266,36 @@ vec3 iceLook(vec3 p, vec3 n, vec3 rd, float t, float thick, vec2 q, float edge, 
   // An arris catches the light; just inside it the ice turns the light away.
   // (An arris is not a ruled line: it is chipped along its length, bright where it is whole.)
   float ar = (1.0 - smoothstep(0.5, 2.2 + px, edge)) * (0.25 + 0.75 * smoothstep(0.3, 0.62, g1.b)) / gRough;
-  col += mix(vec3(0.8, 0.93, 1.0) * (S.key * 0.15 + S.amb * 0.8), uAurora * 0.1 + vec3(0.01, 0.022, 0.04), uNight) * ar;
+  col += vec3(0.8, 0.93, 1.0) * (S.key * 0.15 + S.amb * 0.8) * ar * (1.0 - uNight);
+  if (uNight > 0.0) {
+    // Before dawn: the one night ice (iceNight), and in it what this piece has of its own. The air in its heart is a
+    // paler cloud in the dark; a fracture is not a drawn line but a plane that gives back the sky where it lies to it;
+    // an arris is where the ice is thinnest, so the cold comes through it, brokenly, never as a stroke.
+    float shut = min(gShut * 1.3, 1.0);
+    // (Meltwater keeps to a few lanes down a face: each is a narrow mirror for the sky.)
+    float laneN = gMirror > 0.5 ? 0.3 : smoothstep(0.54, 0.8, textureLod(uGrain, vec2(q.x / 170.0 + seed * 1.3, 0.21 + q.y / 4200.0), lodFor(px, 170.0, 256.0)).g + 0.2 * (g0.b - 0.5));
+    vec3 nc = iceNight(normalize(mix(n, nb, 0.5)), nn, rd, thick, laneN, shut);
+    nc += S.amb * vec3(0.5, 0.62, 0.72) * air * 0.7 * gAiry * (1.0 - 0.5 * shut);
+    if (gAiry >= 0.9 && gMirror < 0.5 && px < 2.5) {
+      vec3 f3 = fracture((q + par * 7.0) / vec2(62.0, 93.0) + seed * 3.1);
+      float has = step(0.42, f3.z) * smoothstep(0.3, 0.52, g0.a);
+      vec3 fn = normalize(n + tu * (f3.y - 0.5) * 1.3 + tv * (f3.z - 0.5) * 1.3);
+      vec3 fr_ = reflect(rd, fn);
+      // (The plane shows as a soft light along the break, on the side that lies to the sky, and dies away from it.)
+      float sheet = smoothstep(0.35, 0.95, fr_.z) * exp(-f3.x * 9.0);
+      nc += skyNightOn(vec3(fr_.xy, abs(fr_.z))) * sheet * has * 0.09 * (1.0 - smoothstep(1.2, 2.5, px)) * (0.35 + 0.65 * heart);
+    }
+    nc += vec3(0.012, 0.032, 0.06) * (ar * smoothstep(0.35, 0.7, g0.g) + 0.7 * exp(-max(edge, 0.0) / 11.0) * (0.5 + 0.5 * g0.g)) * (1.0 - 0.6 * shut);
+    col = mix(col, nc, uNight);
+  }
   col *= 1.0 - 0.2 * smoothstep(2.0, 5.0, edge) * (1.0 - smoothstep(6.0, 18.0, edge));
   return col;
 }
 /** Where ice stands in water: a dark wet notch the water has eaten, and the bright line of the water's own edge. */
 vec3 waterlineOn(vec3 col, float z, float g) {
-  col *= 1.0 - 0.45 * (1.0 - smoothstep(2.0, 11.0 + 5.0 * g, z));
-  return col + mix(vec3(0.8, 0.93, 1.0) * S.amb * 0.9, uAurora * 0.3, uNight) * (1.0 - smoothstep(0.0, 1.6, abs(z - 1.2)));
+  col = mix(col, col * mix(vec3(0.55), vec3(0.6, 0.7, 0.86), uNight), 1.0 - smoothstep(2.0, 11.0 + 5.0 * g, z));
+  // (Before dawn the water's edge is a dull glint of the sky, broken along its length: never a lit line.)
+  return col + mix(vec3(0.8, 0.93, 1.0) * S.amb * 0.9, (S.amb * 0.9 + uAurora * 0.03) * (0.3 + 0.7 * g), uNight) * (1.0 - smoothstep(0.0, 1.6, abs(z - 1.2)));
 }
 `;
 
@@ -363,8 +388,9 @@ vec3 colColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, int i, int part) {
   if (top < 1.0) {
     // The waterline notch: the water has eaten a hollow round its foot. Dark and wet inside, its upper lip catching the light.
     float nz = (3.5 + 9.0 * size) * (0.75 + 0.5 * gr.b);
-    col *= 1.0 - 0.6 * (1.0 - smoothstep(nz * 0.45, nz, hp.z));
-    col += mix(vec3(0.8, 0.93, 1.0) * (S.amb * 0.7 + S.key * 0.06), uAurora * 0.12 + vec3(0.01, 0.02, 0.035), uNight) * ((1.0 - smoothstep(0.0, 1.0 + t * uPxAng, abs(hp.z - nz * 1.08))) * 0.7 + (1.0 - smoothstep(0.0, 1.4, abs(hp.z - 1.0))));
+    // (Before dawn the hollow is only a shade darker and stays blue: the night's air over a black foot would turn it rust.)
+    col = mix(col, col * mix(vec3(0.4), vec3(0.5, 0.62, 0.8), uNight), 1.0 - smoothstep(nz * 0.45, nz, hp.z));
+    col += mix(vec3(0.8, 0.93, 1.0) * (S.amb * 0.7 + S.key * 0.06), (S.amb * 0.8 + uAurora * 0.02) * (0.3 + 0.7 * gr.g), uNight) * ((1.0 - smoothstep(0.0, 1.0 + t * uPxAng, abs(hp.z - nz * 1.08))) * 0.7 + (1.0 - smoothstep(0.0, 1.4, abs(hp.z - 1.0))));
   }
   // Snow holds only where the break lies easy: the long slope of its top, the shoulder's head. The steep chips are bare ice.
   return mix(col, snowOn(n, (gr.r - 0.5) * 0.5) * (0.92 + 0.16 * gr.a), top);
@@ -600,6 +626,8 @@ vec3 damColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, float kind, vec3 lo, 
   gAiry = 1.0;
   // (The leaning face is laid in courses: one year's ice on the last, each a shade its own.)
   if (kind < 0.5 && n.z > 0.2 && n.z < 0.9) col *= 0.88 + 0.2 * textureLod(uGrain, vec2(hp.x / 2600.0, z / 150.0), 0.0).g;
+  // (Before dawn the wall is darkest at its foot, where the most ice stands behind each face, and palest under its crest.)
+  if (kind < 0.5 && n.z < 0.9) col *= mix(1.0, 0.62 + 0.6 * smoothstep(0.0, DAM_H, z), uNight);
   if (n.z < 0.9) col = waterlineOn(col, z, gr.b);
   // (Inside a cut, under the lintel, the day does not reach.)
   if (n.z < -0.5) col *= 0.45;
@@ -869,7 +897,11 @@ vec3 cubeColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec2 id) {
   vec3 col = iceLook(hp, nw, rd, t, tF - t, q + id * 53.0, 1e3, 0.3 * (isTop ? 0.0 : 1.0), dot(id, vec2(0.37, 0.61)));
   if (!isTop) col = waterlineOn(col, lp.z, gr.b);
   // Rime lies on its top in patches, where the melt has not run: it is not a lid.
-  col = mix(col, snowOn(nw, (gr.r - 0.5) * 0.4), (isTop ? 1.0 : 0.0) * smoothstep(0.42, 0.8, gr.g + 0.35 * gr.b) * 0.5);
+  // (Before dawn it is a thin pale frost over the whole top, a little thicker in those patches.)
+  col = mix(col, snowOn(nw, (gr.r - 0.5) * 0.4), (isTop ? 1.0 : 0.0) * mix(smoothstep(0.42, 0.8, gr.g + 0.35 * gr.b) * 0.5, 0.3 + 0.22 * smoothstep(0.3, 0.8, gr.g + 0.35 * gr.b), uNight));
+  // (Before dawn the cold comes through a cube's melted edges, where it is thinnest.)
+  vec3 de = vec3(hf.xy - abs(lp.xy), hf.z - lp.z);
+  if (!gMirrorOn()) col += vec3(0.011, 0.03, 0.058) * exp(-max(min(de.x, de.y), min(max(de.x, de.y), de.z)) / 10.0) * uNight;
   // The light inside: it stands at the cube's heart, so it is brightest where the eye looks through the most ice
   // and toward the middle of each face, and the air trapped in the cube carries it.
   vec3 mid = hp + rd * (tF - t) * 0.5 - vec3(c.xy, sz.y * 0.45 - FREEBOARD);
@@ -1067,7 +1099,7 @@ vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
   vec3 frost = mix(vec3(0.72, 0.85, 0.93) * (S.amb * 1.25 + S.key * 0.1), vec3(0.2, 0.36, 0.6) * S.amb * 3.0 + glow * screen * vec3(0.8, 1.0, 1.15) * 1.5 * nearPic, uNight);
   col = mix(col, frost, rime * 0.8 * pic);
   // (Its light in the ice beyond the rime: a cold glow that falls away into the wall.)
-  col += glow * screen * vec3(0.5, 0.85, 1.2) * 0.5 * exp(-max(-edge, 0.0) / 30.0) * (1.0 - aPic) * uNight * pic * (0.6 + 0.4 * gj.b);
+  col += glow * screen * vec3(0.7, 0.9, 1.1) * 0.2 * exp(-max(-edge, 0.0) / 30.0) * (1.0 - aPic) * uNight * pic * (0.6 + 0.4 * gj.b);
   col = mix(col, lit, aPic * pic);
   gFaceK = aPic * pic;
   // The wall's own wet face lies over it all: a little of the sky on the ice (least over the picture, seen square on).
