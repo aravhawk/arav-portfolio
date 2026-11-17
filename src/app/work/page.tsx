@@ -4,6 +4,8 @@ import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { PageShell } from '@/components/PageShell';
 import { ArchiveList } from '@/components/work/ArchiveList';
+import { SCENE_OF } from '@/components/work/stations';
+import { stillVars } from '@/components/work/stills';
 import { ARCHIVE, MORE, PROJECTS } from '@/content/projects';
 import { pageMeta } from '@/lib/meta';
 import { formatAsOf, formatCount, getMetrics } from '@/lib/metrics';
@@ -17,6 +19,10 @@ export const metadata: Metadata = pageMeta({
   path: '/work',
 });
 
+/**
+ * The work index: the delta, then the eight featured projects, each with
+ * the picture of its own station, then the rest, one line each.
+ */
 export default async function Work() {
   const m = await getMetrics();
   const stat: Record<string, string> = {
@@ -27,6 +33,7 @@ export default async function Work() {
 
   return (
     <PageShell
+      scene="delta"
       head={{
         label: 'Work',
         title: 'Everything I have built',
@@ -34,24 +41,25 @@ export default async function Work() {
       }}
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
     >
-      <section className="block" aria-labelledby="w-featured">
-        <div className="block-head">
-          <h2 className="label" id="w-featured">
-            Featured
-          </h2>
-        </div>
-        <ul className="rows">
+      <section className="sec wrap" aria-labelledby="w-featured">
+        <h2 className="label sec-label" id="w-featured">
+          Featured
+        </h2>
+        <ul className="feats">
           {PROJECTS.map((p) => (
             <li key={p.slug}>
-              <Link className="row" href={`/work/${p.slug}`}>
-                <span className="label">{p.n}</span>
-                <ViewTransition name={`title-${p.slug}`} share="title" default="none">
-                  <span className="row-name">{p.name}</span>
-                </ViewTransition>
-                <span className="row-line">
-                  {p.line}
-                  {stat[p.slug] ? <small>{stat[p.slug]}</small> : null}
+              <Link className="feat-row" href={`/work/${p.slug}`}>
+                <span className="label feat-n">{p.n}</span>
+                <span className="feat-copy">
+                  <ViewTransition name={`title-${p.slug}`} share="title" default="none">
+                    <span className="feat-name">{p.name}</span>
+                  </ViewTransition>
+                  <span className="feat-line">
+                    {p.line}
+                    {stat[p.slug] ? <strong>{stat[p.slug]}</strong> : null}
+                  </span>
                 </span>
+                <span className="feat-pic" style={stillVars(SCENE_OF[p.slug])} aria-hidden="true" />
                 <span className="row-go" aria-hidden="true">
                   <Arrow />
                 </span>
@@ -61,12 +69,10 @@ export default async function Work() {
         </ul>
       </section>
 
-      <section className="block" aria-labelledby="w-more">
-        <div className="block-head">
-          <h2 className="label" id="w-more">
-            Also
-          </h2>
-        </div>
+      <section className="sec wrap" aria-labelledby="w-more">
+        <h2 className="label sec-label" id="w-more">
+          Also
+        </h2>
         <ul className="rows">
           {MORE.map((x) => (
             <li key={x.name} className="row">
@@ -91,12 +97,10 @@ export default async function Work() {
         </ul>
       </section>
 
-      <section className="block" aria-labelledby="w-archive">
-        <div className="block-head">
-          <h2 className="label" id="w-archive">
-            Archive
-          </h2>
-        </div>
+      <section className="sec wrap" aria-labelledby="w-archive">
+        <h2 className="label sec-label" id="w-archive">
+          Archive
+        </h2>
         <ArchiveList entries={ARCHIVE} />
         <p className="small footnote">
           Live numbers on this site are read from{' '}

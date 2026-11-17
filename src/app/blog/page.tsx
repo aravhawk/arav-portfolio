@@ -17,26 +17,28 @@ export default function BlogPage() {
   const posts = getAllPosts();
   return (
     <PageShell
+      scene="lake"
       head={{
         label: 'Writing',
         title: 'Notes from the work',
         lead: 'What I learn building agents and the tools around them.',
       }}
     >
-      <section className="block" aria-label="Posts">
+      <section className="sec wrap" aria-label="Posts">
         {posts.length ? (
           <ul className="posts">
             {posts.map((post) => (
               <li key={post.slug}>
                 <Link className="post-row" href={`/blog/${post.slug}`}>
-                  <span className="label">
+                  <span className="label post-date">
                     <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date, 'short')}</time>
+                    <span>{post.readingTime}</span>
                   </span>
-                  <span>
+                  <span className="post-copy">
                     <ViewTransition name={`post-${post.slug}`} share="title" default="none">
-                      <h2>{post.frontmatter.title}</h2>
+                      <h2 className="post-title">{post.frontmatter.title}</h2>
                     </ViewTransition>
-                    <p className="body">{post.frontmatter.description}</p>
+                    <p className="post-desc">{post.frontmatter.description}</p>
                   </span>
                   <span className="row-go" aria-hidden="true">
                     <Arrow />

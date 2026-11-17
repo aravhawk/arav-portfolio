@@ -7,6 +7,7 @@ import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import { getPostBySlug, getAllPostSlugs, getAdjacentPosts } from '@/lib/blog';
+import { Arrow } from '@/components/bits';
 import { mdxComponents } from '@/components/blog/MDXComponents';
 import { PageShell } from '@/components/PageShell';
 import { formatPostDate } from '@/lib/dates';
@@ -70,6 +71,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <PageShell
+      scene="lake"
+      short
       head={{
         back: { href: '/blog', label: 'Writing' },
         label: (
@@ -80,35 +83,44 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         title: post.frontmatter.title,
         vt: `post-${slug}`,
         titleLong: true,
-        lead: post.frontmatter.description,
       }}
     >
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
-      <article className="article">
-        <ul className="tags label" aria-label="Tags">
-          {post.frontmatter.tags.map((tag) => (
-            <li key={tag}>{tag}</li>
-          ))}
-        </ul>
-        <div className="prose block">{content}</div>
-        {prev || next ? (
-          <nav className="post-nav" aria-label="More posts">
-            {prev ? (
-              <Link href={`/blog/${prev.slug}`}>
-                <span className="label">Older</span>
-                <strong>{prev.frontmatter.title}</strong>
-              </Link>
-            ) : (
-              <span />
-            )}
-            {next ? (
-              <Link href={`/blog/${next.slug}`}>
-                <span className="label">Newer</span>
-                <strong>{next.frontmatter.title}</strong>
-              </Link>
-            ) : null}
-          </nav>
-        ) : null}
+      <article className="article wrap">
+        <aside className="article-rail" aria-label="About this post">
+          <ul className="tags label" aria-label="Tags">
+            {post.frontmatter.tags.map((tag) => (
+              <li key={tag}>{tag}</li>
+            ))}
+          </ul>
+        </aside>
+        <div className="article-main">
+          <p className="article-lead">{post.frontmatter.description}</p>
+          <div className="prose">{content}</div>
+          {prev || next ? (
+            <nav className="post-nav" aria-label="More posts">
+              {prev ? (
+                <Link href={`/blog/${prev.slug}`}>
+                  <span className="label">Older</span>
+                  <strong>{prev.frontmatter.title}</strong>
+                </Link>
+              ) : (
+                <span />
+              )}
+              {next ? (
+                <Link href={`/blog/${next.slug}`}>
+                  <span className="label">Newer</span>
+                  <strong>{next.frontmatter.title}</strong>
+                </Link>
+              ) : null}
+            </nav>
+          ) : null}
+          <p className="article-back">
+            <Link className="link" href="/blog">
+              All writing <Arrow />
+            </Link>
+          </p>
+        </div>
       </article>
     </PageShell>
   );
