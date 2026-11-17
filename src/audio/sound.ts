@@ -506,7 +506,8 @@ export class Sound {
       case 'press': {
         // A press on water: a drop, pitched by how far off the water is, placed where it fell.
         // (Not on the lake's ice and not on land: nothing is seen to happen there.)
-        if (c <= 0 || !sc || wetUnder(sc.cam, sc.aspect, a, b, sc.melt, sc.gate) < 0.4) return;
+        // (On an inner page the picture's own bed says whether the press fell on water.)
+        if (c <= 0 || !sc || (sc.home && wetUnder(sc.cam, sc.aspect, a, b, sc.melt, sc.gate) < 0.4)) return;
         const v = dropVoice(a, c);
         // (A press that is also a press on a control keeps its tick in front.)
         const k = Math.abs(cause - this.tapAt) < 40 ? 0.4 : 1;

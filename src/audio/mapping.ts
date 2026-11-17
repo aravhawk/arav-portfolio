@@ -152,6 +152,11 @@ const voice = (base: WaterVoice, gain: number, pan: number, more: Partial<Record
  */
 export function waterOf(sc: Scene, t: number): WaterVoice[] {
   const out: WaterVoice[] = Array.from({ length: 20 }, () => OFF);
+  // The pointer through water: bubbles turned over where it passes, more of them and brighter the faster it goes.
+  // (On an inner page too: its water is seen from straight above, and near.)
+  const pN = sat(sc.pv / 2.4);
+  const wake = sc.over ? Math.pow(pN, 0.8) * (0.35 + 0.65 / (1 + sc.far / 40)) * (sc.calm ? 0.5 : 1) * (sc.home ? 1 : 0.7) : 0;
+  out[W.wake] = voice(WATER.stream, wake, clamp((sc.px - 0.5) * 1.7, -0.9, 0.9), { rate: 30 + 260 * pN, lo: 480 + 480 * sat(sc.far / 70), hi: 2400 + 3800 * pN, tilt: 0.5, spread: 0.12, noise: 0.1 + 0.25 * pN, nLo: 300, nHi: 800 + 2400 * pN });
   if (!sc.home) return out;
   const sN = scrollN(sc.sv, sc.calm);
   const cN = camN(sc.camV, sc.calm);
@@ -237,10 +242,6 @@ export function waterOf(sc: Scene, t: number): WaterVoice[] {
   // (It is nearly all body: the bubbles are only the fizz at the wave's edge, many and small.)
   out[W.sea] = voice(WATER.fall, 0.16 * sea * (0.3 + 0.7 * sw.level), sc.calm ? 0 : 0.5 * sw.side, { rate: 40 + 420 * sw.wash, lo: 1700, hi: 6200 * dark, tilt: 0.3, spread: 1, noise: 6, nLo: 55, nHi: (300 + 1100 * sw.level + 900 * sw.wash + 300 * sN) * dark });
 
-  // The pointer through water: bubbles turned over where it passes, more of them and brighter the faster it goes.
-  const pN = sat(sc.pv / 2.4);
-  const wake = sc.over ? Math.pow(pN, 0.8) * (0.35 + 0.65 / (1 + sc.far / 40)) * (sc.calm ? 0.5 : 1) : 0;
-  out[W.wake] = voice(WATER.stream, wake, clamp((sc.px - 0.5) * 1.7, -0.9, 0.9), { rate: 30 + 260 * pN, lo: 480 + 480 * sat(sc.far / 70), hi: 2400 + 3800 * pN, tilt: 0.5, spread: 0.12, noise: 0.1 + 0.25 * pN, nLo: 300, nHi: 800 + 2400 * pN });
   return out;
 }
 

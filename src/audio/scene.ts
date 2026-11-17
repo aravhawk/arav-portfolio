@@ -440,8 +440,9 @@ export class SceneReader {
       wallD,
       approach: home ? smooth(seaAt - APPROACH, SETTLE_AT, sig.s) : 0,
       move: movementAt(home, sig.s, melt, home && sig.rest),
-      // (The picture says the pointer's ray meets the ground; whether that ground is open water is read from the plan.)
-      over: home && sig.far > 0 && now - sig.moved < 4000 && wetUnder(cam, sig.aspect, sig.px, sig.py, melt, sig.gate) > 0.4,
+      // (Over the flight the picture says the pointer's ray meets the ground, and whether that ground is open water is
+      // read from the plan. On an inner page the picture's own bed says whether it is water.)
+      over: sig.far > 0 && now - sig.moved < 4000 && (!home || wetUnder(cam, sig.aspect, sig.px, sig.py, melt, sig.gate) > 0.4),
       px: sig.px,
       pv: this.pv,
       far: sig.far,

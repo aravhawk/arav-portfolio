@@ -158,8 +158,11 @@ describe('the mix follows the scene', () => {
     expect(s({ near: 0.9 })[LO]).toBeLessThan(s({ near: 0.2 })[LO]);
     expect(s({ flow: 1 })[RATE]).toBeGreaterThan(s({ flow: 0.2 })[RATE]);
     expect(s({ sv: 2 })[RATE]).toBeGreaterThan(s({ sv: 0 })[RATE]);
-    // Away from the flight there is no water to hear.
+    // Away from the flight the only water heard is what the pointer turns over.
     expect(total(scene({ home: false }))).toBe(0);
+    const inner = waterOf(scene({ home: false, over: true, far: 30, pv: 2 }), 0);
+    expect(inner[W.wake][GAIN]).toBeGreaterThan(0.2);
+    expect(inner.reduce((a, v) => a + v[GAIN], 0)).toBe(inner[W.wake][GAIN]);
   });
 
   it('white water follows the white in frame, the scroll and the camera', () => {
@@ -644,6 +647,9 @@ describe('the scene is read from what the picture publishes', () => {
     expect(sc.home).toBe(false);
     expect(sc.move).toBe(MOVE.page);
     expect(sc.water).toBe(0);
+    expect(sc.over).toBe(false);
+    // There the picture's own bed says whether the pointer is over water.
+    expect(new SceneReader().read({ ...none, far: 30, moved: 4990 }, 5000, env).over).toBe(true);
     // A flight that stopped publishing (the page was left) is no longer there.
     expect(new SceneReader().read(sig(3, 1000), 3000, env).home).toBe(false);
   });
