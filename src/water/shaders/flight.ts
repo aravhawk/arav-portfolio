@@ -1408,7 +1408,7 @@ float streamX(float y) {
 // 1 over the lake's dark water while the sheet stands round it, by day.
 float gDeep = 0.0;
 // The pond's tuning: x how bright the curtain lies in it before dawn, y its stars, z how much of the day sky it gives back.
-const vec3 PONDK = vec3(1.35, 1.0, 0.3);
+const vec3 PONDK = vec3(1.3, 1.0, 0.3);
 // The ice field where the eye's ray crosses the top of the sheet: how far inside an opening this water is seen.
 float gIceF = 1e3;
 
@@ -1718,14 +1718,15 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     float upP = max(1.0 - gCutA, 0.0) * 0.5 * mix(0.5, 1.0, smoothstep(0.6, 0.9, uLens.y)) + dot(slope, vdw) * 2.0;
     // (As many rays across the frame through any lens.)
     float aP = atan(rf.x, rf.y) * 0.8 * (0.64 / atan(uLens.x * uLens.y)) + 1.9;
-    float foldP = n1(aP * 3.1 + uTime * 0.02 + 7.0);
+    // (Its broad shapes sway where they hang and do not travel: how much light lies in the name stays the same from minute to minute.)
+    float foldP = n1(aP * 3.1 + 7.0 + 0.45 * sin(uTime * 0.035));
     // (The hem swoops: over most of the name it stands clear of the letters' far side, and here and there it dips well into them, with the dark sky and its stars beyond it.)
-    float xP = upP - (0.0 + 0.36 * sin(aP * 2.6 + 0.6 + uTime * 0.011) + 0.08 * sin(aP * 7.3 - uTime * 0.017));
+    float xP = upP - (-0.06 + 0.3 * sin(aP * 2.6 + 0.6 + 0.3 * sin(uTime * 0.06)) + 0.08 * sin(aP * 7.3 - uTime * 0.017));
     // (Rays with dark water between them: what a mirror of a curtain is, and what a lamp is not.)
-    float raysP = (0.1 + 0.9 * smoothstep(0.14, 0.6, n1(aP * 19.0 + foldP * 9.0 + uTime * 0.05))) * (0.5 + 0.5 * n1(aP * 57.0 - uTime * 0.08));
+    float raysP = (0.17 + 0.83 * smoothstep(0.1, 0.52, n1(aP * 19.0 + foldP * 9.0 + uTime * 0.05))) * (0.56 + 0.44 * n1(aP * 57.0 - uTime * 0.08));
     float profP = smoothstep(-0.04, 0.02, xP) * (0.74 + 0.26 * exp(-max(xP, 0.0) / 0.5));
     // (Its colour changes along it, fold by fold, and not from the top of a letter to its foot: a picture that followed the letters would be paint.)
-    vec3 curP = mix(vec3(0.16, 0.92, 0.6), vec3(0.3, 0.38, 0.95), 0.85 * smoothstep(0.45, 0.8, n1(aP * 6.3 + 2.0 - uTime * 0.013)) + 0.15 * smoothstep(0.4, 1.3, xP)) * profP * raysP * (0.62 + 0.38 * foldP) * PONDK.x * uSkyK.y;
+    vec3 curP = mix(vec3(0.16, 0.92, 0.6), vec3(0.32, 0.5, 1.0), 0.75 * smoothstep(0.45, 0.8, n1(aP * 6.3 + 2.0 + 0.35 * sin(uTime * 0.045))) + 0.15 * smoothstep(0.4, 1.3, xP)) * profP * raysP * (0.62 + 0.38 * foldP) * PONDK.x * uSkyK.y;
     vec3 nightP = S.zen * 0.6 + curP + vec3(0.8, 0.88, 1.0) * stars(md) * PONDK.y * (1.0 - min(dot(curP, vec3(1.3)), 0.9));
     refl = mix(refl, nightP, pondK * uNight);
   }
@@ -1785,12 +1786,12 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     // dark blue-teal. No raised thing is shaded so: this is what says water.
     // (The shelf is never one width: wider here, narrower there, as a pond's is, and wider as the pond spreads.)
     float un = textureLod(uDetail, pw / vec2(1100.0, 3300.0) + 0.3, 0.0).r;
-    shelfP = max(uIceN.x, 1.0) * (0.1 + 0.1 * un) + uIceN.z * 0.3;
+    shelfP = max(uIceN.x, 1.0) * (0.065 + 0.25 * un * un) + uIceN.z * 0.3;
     float z = max(gIceF, 0.0) / shelfP;
     // (Its bed is not level either: here and there a shoal of ice comes up under the middle of a stroke, and the deep water over it is teal, not black.)
     float shoalP = smoothstep(0.44, 0.84, textureLod(uSnow, pw / vec2(900.0, 2700.0) + 0.57, 0.0).g + 0.5);
-    float hw = min(0.03 + 2.0 * pow(z, 1.5), mix(9.0, 2.45, shoalP));
-    vec3 thru = exp(-vec3(3.6, 1.0, 0.85) * hw);
+    float hw = min(0.03 + 2.0 * pow(z, 1.5), mix(9.0, 2.1, shoalP));
+    vec3 thru = exp(-vec3(2.7, 0.95, 1.0) * hw);
     // The net of light lies on the shallow bed by day.
     float netP = smoothstep(0.3, 0.75, df.a) * (1.0 - uNight) * (1.0 - smoothstep(1.5, 4.0, footL));
     vec3 lightP = mix(S.amb * 1.3 + S.key * 0.25, S.amb * 2.0 + uAurora * 0.7 + vec3(0.05, 0.13, 0.15), uNight);
