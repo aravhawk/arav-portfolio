@@ -1069,6 +1069,7 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, bool blunt, out float 
   wall = 0.0;
   float near = 1e5;
   bool slotSeen = false;
+  int fine = 0;
   for (int i = 0; i < 40; i++) {
     if (i >= steps) break;
     if (t > tEnd) return -1.0;
@@ -1088,7 +1089,14 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, bool blunt, out float 
     // goes, is a safe and far cheaper measure of the room there, and it allows a longer step.
     float D = canyonD(p.xy);
     float room = CY_W + (p.x > ${f(FACE.x - 160)} ? 0.0 : CY_LEAN * (p.z + FREEBOARD)) - D - 22.0;
-    float w = blunt ? (room + 22.0) * 0.8 : room > 18.0 ? room * 0.9 : canyonAirD(p, D) * 0.6;
+    float w;
+    if (blunt) w = (room + 22.0) * 0.8;
+    else if (room > 18.0) w = room * 0.9;
+    else {
+      // (Close to a wall its scallops are followed, but only so far: a ray that slides along one for longer has, to the eye, met it.)
+      if (fine++ > 13) { wall = 1.0; return t; }
+      w = canyonAirD(p, D) * 0.7;
+    }
     // (Well inside the glacier and well under its top, the top is not what a ray meets next: it is not worked out.)
     vec2 eg = min(p.xy - CY_LO, CY_HI - p.xy);
     float top = (min(eg.x, eg.y) > 320.0 || blunt) && p.z < ${f(CANYON.h * 0.84 - 60)} ? -12.0 : (p.z - glacierTop(p.xy)) * 0.42;
@@ -1166,10 +1174,19 @@ vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
   float lip = smoothstep(topZ - 8.0 - 14.0 * gr.g, topZ - 5.0 - 14.0 * gr.g, p.z);
   return mix(col, snowOn(vec3(n.xy * 0.4, 1.0), 0.0) * mix(1.0, 0.7, uNight), lip);
 }
+// While the eye is between the canyon's walls, most of the frame is wall. The wall on each line of sight is looked
+// for before anything else is drawn, so that what lies behind it need not be worked out at all.
+// gWallT: under -1.5 not looked for yet, -1 none, else how far off it is. gWallK: which face (see glacierHit).
+float gWallT = -2.0;
+float gWallK = 0.0;
+bool canyonEye() { return uSt.w >= 0.3 && all(greaterThan(uCamPos.xy, CY_LO)) && all(lessThan(uCamPos.xy, CY_HI)) && uCamPos.z < CY_H; }
+void canyonFirst(vec3 dir) {
+  gWallT = glacierHit(uCamPos, dir, dir.z < -0.0006 ? (uCamPos.z + FREEBOARD) / -dir.z : 1e5, uLean > 0.5 ? 30 : 40, false, gWallK);
+}
 /** The glacier over the finished ground, and its walls in the water between them. */
 vec3 canyon(vec3 col, vec3 dir, float tw) {
-  float wall;
-  float t = glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, uLean > 0.5 ? 30 : 40, false, wall);
+  float wall = gWallK;
+  float t = gWallT > -1.5 ? gWallT : glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, uLean > 0.5 ? 30 : 40, false, wall);
   // Cold air lies between the walls: what is far down the canyon stands in it, paler, and the day at the canyon's end shows through it.
   float inK = smoothstep(CY_LO.y - 60.0, CY_LO.y + 120.0, uCamPos.y) * (1.0 - smoothstep(CY_HI.y - 120.0, CY_HI.y + 60.0, uCamPos.y)) * step(uCamPos.z, CY_H);
   // (Before dawn that air is the night's own blue: the aurora is overhead, not between the walls.)
