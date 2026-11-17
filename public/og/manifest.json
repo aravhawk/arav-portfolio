@@ -1,0 +1,123 @@
+{
+  "home": {
+    "s": 0,
+    "tone": "light",
+    "light": {
+      "low": 0.051,
+      "mid": 0.654,
+      "high": 0.806
+    },
+    "bytes": 208620,
+    "quality": 74
+  },
+  "infiniview": {
+    "s": 5.87,
+    "tone": "light",
+    "light": {
+      "low": 0.245,
+      "mid": 0.656,
+      "high": 0.888
+    },
+    "bytes": 215309,
+    "quality": 78
+  },
+  "open-source": {
+    "s": 8.67,
+    "tone": "light",
+    "light": {
+      "low": 0.462,
+      "mid": 0.739,
+      "high": 0.903
+    },
+    "bytes": 209212,
+    "quality": 78
+  },
+  "kilo-bench": {
+    "s": 11.33,
+    "tone": "light",
+    "light": {
+      "low": 0.241,
+      "mid": 0.714,
+      "high": 0.903
+    },
+    "bytes": 216685,
+    "quality": 82
+  },
+  "agent-bridge": {
+    "s": 14.13,
+    "tone": "light",
+    "light": {
+      "low": 0.238,
+      "mid": 0.57,
+      "high": 0.861
+    },
+    "bytes": 189814,
+    "quality": 82
+  },
+  "blog": {
+    "s": 13,
+    "tone": "light",
+    "light": {
+      "low": 0.159,
+      "mid": 0.525,
+      "high": 0.849
+    },
+    "bytes": 221440,
+    "quality": 82
+  },
+  "ollama": {
+    "s": 16.83,
+    "tone": "light",
+    "light": {
+      "low": 0.45,
+      "mid": 0.576,
+      "high": 0.88
+    },
+    "bytes": 224044,
+    "quality": 82
+  },
+  "cc-switch": {
+    "s": 19.7,
+    "tone": "light",
+    "light": {
+      "low": 0.422,
+      "mid": 0.678,
+      "high": 0.888
+    },
+    "bytes": 199276,
+    "quality": 74
+  },
+  "tensorpow": {
+    "s": 22.37,
+    "tone": "light",
+    "light": {
+      "low": 0.335,
+      "mid": 0.688,
+      "high": 0.895
+    },
+    "bytes": 195109,
+    "quality": 78
+  },
+  "rydar": {
+    "s": 25.9,
+    "tone": "light",
+    "light": {
+      "low": 0.331,
+      "mid": 0.437,
+      "high": 0.737
+    },
+    "bytes": 178846,
+    "quality": 82
+  },
+  "work": {
+    "s": 28.73,
+    "tone": "light",
+    "light": {
+      "low": 0.397,
+      "mid": 0.541,
+      "high": 0.88
+    },
+    "bytes": 200971,
+    "quality": 82
+  }
+}
