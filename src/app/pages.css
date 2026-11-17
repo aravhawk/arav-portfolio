@@ -12,7 +12,8 @@
    texels to the pixel. A fourth, the size of the page, is the light itself:
    brighter toward the side it comes from. */
 .pg-ground {
-  --ink-3: #485157;
+  /* Small labels stand on a textured ground: the third ink is a shade stronger here than on the home page's glass. */
+  --ink-3: #40494f;
   --ink-dim: #6a7379;
   --pg-body: clamp(1.0625rem, 0.42vw + 0.86rem, 1.25rem);
   --pg-lead: clamp(1.25rem, 0.9vw + 0.95rem, 1.75rem);
@@ -45,7 +46,7 @@
   background-repeat: no-repeat, repeat, repeat, repeat;
 }
 :root[data-theme='dark'] .pg-ground {
-  --ink-3: #a3adb3;
+  --ink-3: #b6bfc4;
   --ink-dim: #8a949a;
   --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 40px 70px -40px rgba(0, 0, 0, 0.85), 0 12px 24px -18px rgba(0, 0, 0, 0.6);
   --panel: rgba(12, 18, 25, 0.42);
@@ -73,6 +74,9 @@
 }
 .band-full {
   height: max(100svh, 560px);
+}
+.band-index {
+  height: clamp(470px, 70svh, 60rem);
 }
 /* The frame ends by going over into the snow the page stands on. */
 .band-view {
@@ -236,6 +240,16 @@
 .pg-body > .sec:first-child,
 .pg-body > script + .sec {
   margin-top: clamp(20px, 4vh, 56px);
+}
+/* On an index the list begins at the foot of the scene, inside the first screen. */
+.pg-index {
+  padding-top: clamp(14px, 2.4vh, 24px);
+}
+.pg-index > .sec:first-child {
+  margin-top: 0;
+}
+.pg-index > .sec:first-child .sec-label {
+  margin-bottom: clamp(16px, 2.4vh, 24px);
 }
 /* A small label with a hairline running out from it to the edge. */
 .sec-label {
@@ -1173,16 +1187,16 @@
 
 /* ---------- the work index ---------- */
 
-.feat-row {
+.row.feat-row {
   display: grid;
   grid-template-columns: 3rem minmax(0, 1fr) clamp(11rem, 26vw, 28rem) 56px;
   align-items: center;
   gap: var(--s-4) clamp(18px, 3vw, 56px);
-  padding: clamp(18px, 2.2vw, 32px) 0;
+  padding: clamp(16px, 1.8vw, 28px) 0;
   border-top: 1px solid var(--line);
   color: var(--ink);
 }
-.feats > :first-child .feat-row {
+.feats > :first-child .row.feat-row {
   border-top: 0;
   padding-top: 0;
 }
@@ -1215,7 +1229,7 @@
 }
 /* Each project's picture is its own station. */
 .feat-pic {
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 12 / 5;
   border-radius: clamp(8px, 0.9vw, 14px);
   background-color: var(--land-2);
   background-image: var(--still-wide-light);
@@ -1747,7 +1761,7 @@
   .dia-tensor {
     --gap: 22px;
   }
-  .feat-row {
+  .row.feat-row {
     grid-template-columns: minmax(0, 1fr) 48px;
     gap: 14px var(--s-4);
   }

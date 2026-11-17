@@ -18,6 +18,7 @@ export default function BlogPage() {
   return (
     <PageShell
       scene="lake"
+      index
       head={{
         label: 'Writing',
         title: 'Notes from the work',

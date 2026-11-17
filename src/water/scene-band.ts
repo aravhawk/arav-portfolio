@@ -48,14 +48,16 @@ function ownPoses(scene: SceneId, aspect: number): [Pose, Pose] | null {
   const tall = aspect < 0.9;
   if (scene === 'lake') {
     const y = LAKE.y1 - 3300;
+    // (A low, wide band, a post's head, looks down a little more: the horizon stands above the title, not behind it.)
+    const az = aspect > 2.25 ? -30 : 78;
     return tall
       ? [
           { pos: [1300, y, 150], aim: [1340, y + 1500, 60], fov: 60 },
           { pos: [1310, y + 90, 146], aim: [1352, y + 1590, 60], fov: 60 },
         ]
       : [
-          { pos: [1300, y, 120], aim: [1380, y + 1500, 78], fov: 44 },
-          { pos: [1316, y + 110, 116], aim: [1398, y + 1610, 78], fov: 44 },
+          { pos: [1300, y, 120], aim: [1380, y + 1500, az], fov: 44 },
+          { pos: [1316, y + 110, 116], aim: [1398, y + 1610, az], fov: 44 },
         ];
   }
   if (scene === 'snow') {

@@ -34,6 +34,7 @@ export default async function Work() {
   return (
     <PageShell
       scene="delta"
+      index
       head={{
         label: 'Work',
         title: 'Everything I have built',
@@ -48,7 +49,7 @@ export default async function Work() {
         <ul className="feats">
           {PROJECTS.map((p) => (
             <li key={p.slug}>
-              <Link className="feat-row" href={`/work/${p.slug}`}>
+              <Link className="row feat-row" href={`/work/${p.slug}`}>
                 <span className="label feat-n">{p.n}</span>
                 <span className="feat-copy">
                   <ViewTransition name={`title-${p.slug}`} share="title" default="none">

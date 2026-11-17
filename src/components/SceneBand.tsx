@@ -10,6 +10,8 @@ interface Props {
   short?: boolean;
   /** A band that is the whole first screen: a page with nothing under it. */
   full?: boolean;
+  /** An index page: a little lower, so the first row of the list stands in the first screen. */
+  index?: boolean;
   /** What the stations carry (see scene-band.ts). */
   tribs?: number[];
   cols?: number[];
@@ -26,7 +28,7 @@ interface Props {
  * theme, and one for an upright screen); the engine arrives after first
  * paint and takes its place. Where the engine cannot run, the still stays.
  */
-export function SceneBand({ scene, short, full, tribs, cols, slab, sheet, face, children }: Props) {
+export function SceneBand({ scene, short, full, index, tribs, cols, slab, sheet, face, children }: Props) {
   const view = useRef<HTMLDivElement>(null);
   const tribKey = tribs?.join(',') ?? '';
   const colKey = cols?.map((c) => c.toFixed(1)).join(',') ?? '';
@@ -70,7 +72,7 @@ export function SceneBand({ scene, short, full, tribs, cols, slab, sheet, face, 
   }, [scene, tribKey, colKey, slab, sheet, face]);
 
   return (
-    <header className={`band${short ? ' band-short' : ''}${full ? ' band-full' : ''}`} data-scene-id={scene}>
+    <header className={`band${short ? ' band-short' : ''}${full ? ' band-full' : ''}${index ? ' band-index' : ''}`} data-scene-id={scene}>
       <div
         ref={view}
         className="band-view"

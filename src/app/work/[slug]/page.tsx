@@ -40,7 +40,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       scene={SCENE_OF[p.slug] ?? 'delta'}
       head={{
         back: { href: '/work', label: 'Work' },
-        label: p.kicker || 'Work',
+        // (The way back already says Work: a project with no label of its own gets none.)
+        label: p.kicker || undefined,
         title: p.name,
         vt: `title-${p.slug}`,
         lead: p.line,

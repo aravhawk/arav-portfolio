@@ -9,7 +9,8 @@ import '@/app/home.css';
 import '@/app/pages.css';
 
 interface HeadProps {
-  label: React.ReactNode;
+  /** A small line above the title: where the page belongs, or when it was written. */
+  label?: React.ReactNode;
   title: string;
   /** Shared-element name: the title travels from the link that opened it. */
   vt?: string;
@@ -31,7 +32,7 @@ export function BandWords({ head }: { head: HeadProps }) {
           <span aria-hidden="true">&larr;</span> {head.back.label}
         </Link>
       ) : null}
-      <p className="label band-label">{head.label}</p>
+      {head.label ? <p className="label band-label">{head.label}</p> : null}
       {head.vt ? (
         <ViewTransition name={head.vt} share="title" default="none">
           {title}
@@ -54,6 +55,7 @@ export function BandWords({ head }: { head: HeadProps }) {
 export async function PageShell({
   scene,
   short,
+  index,
   head,
   children,
   note,
@@ -61,6 +63,8 @@ export async function PageShell({
   scene: SceneId;
   /** A shorter scene: a post is for reading. */
   short?: boolean;
+  /** An index: the scene is a little lower and the list begins in the first screen. */
+  index?: boolean;
   head: HeadProps;
   children: React.ReactNode;
   note?: string;
@@ -69,10 +73,10 @@ export async function PageShell({
   return (
     <div className="pg-ground">
       <main id="main" className="pg" data-scene="page">
-        <SceneBand scene={scene} short={short} {...stationData(m)}>
+        <SceneBand scene={scene} short={short} index={index} {...stationData(m)}>
           <BandWords head={head} />
         </SceneBand>
-        <div className="pg-body">{children}</div>
+        <div className={`pg-body${index ? ' pg-index' : ''}`}>{children}</div>
       </main>
       <Footer note={note} />
     </div>
