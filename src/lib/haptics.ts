@@ -14,6 +14,7 @@
  */
 
 import type { WebHaptics } from 'web-haptics';
+import { emit } from './signals';
 
 export type Haptic = 'light' | 'selection' | 'medium' | 'success' | 'error' | 'soft';
 
@@ -87,7 +88,9 @@ export function primeHaptics() {
  * Safe to call anywhere on the client; it does nothing where it should not.
  */
 export function haptic(kind: Haptic = 'light') {
-  if (typeof window === 'undefined' || !allowed()) return;
+  if (typeof window === 'undefined') return;
+  emit('haptic:' + kind);
+  if (!allowed()) return;
   const fire = (h: WebHaptics | null) => {
     if (!h) return;
     try {
