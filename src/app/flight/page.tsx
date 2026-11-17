@@ -105,15 +105,15 @@ export default async function Flight() {
                   at={[TRIBS[i].head.x, TRIBS[i].head.y, 0]}
                   href={r.url}
                   label={`${r.repo}: ${r.count} merged pull request${r.count === 1 ? '' : 's'}`}
-                  from={OUT + 0.85}
-                  to={BENCH - 0.9}
+                  from={OUT + 1.3}
+                  to={BENCH - 1.05}
                   lift={i % 2 ? 78 : 44}
                 >
                   {r.repo.split('/')[1]}
                 </Callout>
               ))}
             </div>
-            <div className="fl-words fl-up-words" data-fl-from={OUT + 0.85} data-fl-to={BENCH - 0.9}>
+            <div className="fl-words fl-up-words" data-fl-from={OUT + 1.3} data-fl-to={BENCH - 1.05}>
               <p className="label fl-label">Open source</p>
               <h2 className="beat-figure fl-figure">
                 <LiveNumber

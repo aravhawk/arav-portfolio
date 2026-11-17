@@ -108,7 +108,7 @@ export const TRIBS: { head: Pt; mid: Pt; mouth: Pt }[] = [
 export const tribWidth = (n: number) => 8 + 16 * Math.min(n, 10);
 
 /** Station 3, the clear pool beside the river, and the picture on its bed. */
-export const POOL: Rect = { x: 1380, y: 8900 + DY, w: 800, h: 700 };
+export const POOL: Rect = { x: 1380, y: 8970 + DY, w: 800, h: 630 };
 export const SHEET = { x: 1780, y: 9250 + DY, w: 600, h: 440 };
 
 /** Station 4, the tarn, and the two shards of ice that stand in it. */
@@ -187,7 +187,7 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
     b.agitate(t.mouth, 60 + w, 0.5 + 0.05 * Math.min(n, 9));
   });
   // The bigger river below it swings north again past the pool.
-  b.channel([pt(1150, 7200 + DY), pt(960, 7480 + DY), pt(820, 7950 + DY), pt(780, 8450 + DY), pt(950, 8800 + DY), pt(960, 9200 + DY), pt(1080, 9800 + DY), pt(1350, 10150 + DY)], {
+  b.channel([pt(1150, 7200 + DY), pt(960, 7480 + DY), pt(820, 7950 + DY), pt(740, 8450 + DY), pt(790, 8800 + DY), pt(830, 9200 + DY), pt(1080, 9800 + DY), pt(1350, 10150 + DY)], {
     width: [360, 390, 400, 370, 340, 330, 340, 420],
   });
 
@@ -195,7 +195,7 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
   b.pool(POOL, 300);
   b.disc(pt(POOL.x + 200, POOL.y + 230), 200);
   b.disc(pt(POOL.x + POOL.w - 190, POOL.y + POOL.h - 210), 190);
-  b.channel([pt(860, 8660 + DY), pt(1080, 8770 + DY), pt(1300, 8870 + DY), pt(1450, 8970 + DY)], { width: [46, 40, 44, 60], speed: 0.7 });
+  b.channel([pt(820, 8950 + DY), pt(1060, 9080 + DY), pt(1250, 9200 + DY), pt(1420, 9230 + DY)], { width: [46, 40, 44, 60], speed: 0.7 });
   b.channel([pt(1450, 9540 + DY), pt(1300, 9640 + DY), pt(1160, 9700 + DY), pt(1070, 9790 + DY)], { width: [60, 44, 40, 46], speed: 0.7 });
   b.channel([pt(1450, 8970 + DY), pt(1780, 9250 + DY), pt(1450, 9540 + DY)], { width: 480, speed: 0.12, flowOnly: true });
 

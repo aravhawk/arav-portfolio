@@ -1352,6 +1352,11 @@ void main() {
     float aLand = smoothstep(-aa, aa, sd0);
     col = vec3(0.0);
     if (aLand > 0.0) col = (landColor(p, sd0, b0.ba, foot, dir, slabShade) + slabLight * mix(0.5, 1.1, gRock)) * aLand;
+    // The bank the pool's words stand on is open, evenly lit snow by day: no hollow's shade lies under them.
+    if (aLand > 0.0 && uNight < 1.0 && p.y > ${(POOL.y - 700).toFixed(1)} && p.y < ${(POOL.y + 200).toFixed(1)}) {
+      float calm = 1.0 - smoothstep(0.55, 1.0, length((p - vec2(1380.0, ${(POOL.y - 230).toFixed(1)})) / vec2(760.0, 420.0)));
+      col = mix(col, max(col, vec3(0.66, 0.7, 0.76) * aLand), calm * (1.0 - uNight));
+    }
     if (aLand < 1.0 && aIce < 0.999) {
       vec2 pw = p + tilt * gFree;
       vec4 bw = bedAt(pw);
@@ -1407,6 +1412,8 @@ void main() {
     vec3 pwp = uCamPos + dir * max(tw, 0.0);
     vec2 te = (pwp.xy - vec2(${TARN.x.toFixed(1)}, ${TARN.y.toFixed(1)})) / vec2(${TARN.rx.toFixed(1)}, ${TARN.ry.toFixed(1)});
     float onTarn = tw > 0.0 ? 1.0 - smoothstep(0.86, 1.0, length(te)) : 0.0;
+    // Before dawn the tarn is dark: deep, still water that gives back only a little of the sky, so its two lights carry.
+    if (tw > 0.0 && uNight > 0.0) col *= 1.0 - 0.76 * uNight * max(1.0 - smoothstep(1.15, 1.6, length(te)), smoothstep(${TARN.y.toFixed(1)}, ${(TARN.y + 350).toFixed(1)}, pwp.y));
     if (onTarn > 0.0) {
       // The pulse: a glint that crosses, and the rings it draws on the still water.
       vec2 pp = mix(SH0.xy, SH1.xy, pl.x);

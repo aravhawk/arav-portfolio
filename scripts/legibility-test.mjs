@@ -55,13 +55,18 @@ function linesOverPicture() {
   };
   const out = [];
   const range = document.createRange();
-  for (const host of document.querySelectorAll('.fl-words[data-on], .nav')) {
+  for (const host of document.querySelectorAll('.fl-words[data-on], .fl-call[data-on], .nav')) {
     const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (!node.nodeValue || !node.nodeValue.trim()) continue;
       const el = node.parentElement;
       // The nav sits on its own glass: it is not over the bare picture.
       if (el.closest('.glass')) continue;
+      // A callout's caption stands on its own opaque plate (checked: not assumed).
+      const plate = el.closest('.fl-call-label');
+      if (plate && /^rgb\(/.test(getComputedStyle(plate).backgroundColor)) continue;
+      // The film is a framed plate of its own: its control is not over the bare picture.
+      if (el.closest('.fl-film')) continue;
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       // A line that is still fading in or out is not being read yet.
@@ -110,7 +115,7 @@ async function behind({ b64, boxes }) {
 }
 
 const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-const HIDE = '.fl-words,.nav,.skip{visibility:hidden!important}nextjs-portal{display:none!important}';
+const HIDE = '.fl-words,.fl-call,.nav,.skip{visibility:hidden!important}nextjs-portal{display:none!important}';
 
 const rows = [];
 let failed = false;
@@ -140,7 +145,8 @@ for (const name of browsers) {
           const e = document.querySelector('.ending');
           return e ? e.getBoundingClientRect().top + scrollY - innerHeight : document.documentElement.scrollHeight - innerHeight;
         });
-        for (let y = 0; y <= end; y += step * vh) {
+        // (--from and --to, in screens, walk only part of the way: for work on one stretch.)
+        for (let y = Number(arg('from', '0')) * vh; y <= Math.min(end, Number(arg('to', '1e9')) * vh); y += step * vh) {
           await page.evaluate((yy) => window.scrollTo(0, yy), Math.round(y));
           // Let words that have just come in finish arriving.
           await page.waitForTimeout(820);

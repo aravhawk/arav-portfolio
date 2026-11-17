@@ -109,7 +109,8 @@ html[data-flight='on'] .flight-canvas {
   gap: var(--s-4);
   padding-bottom: max(clamp(28px, 8vh, 96px), env(safe-area-inset-bottom));
 }
-.fl-label {
+.fl-label,
+.fl-words .fl-label {
   color: var(--ink);
 }
 .fl-view-name {
@@ -302,8 +303,12 @@ html[data-flight='off'] .fl-out {
   transform-origin: 0 50%;
   opacity: 0.7;
 }
+/* Each caption stands on a small plate of the page's own land colour: it is read over streams, snow and night water alike. */
 .fl-call-label {
-  padding: 2px 0;
+  padding: 3px 6px;
+  background: var(--land);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--line);
   font-size: 11px;
   line-height: 1.2;
   letter-spacing: 0.06em;

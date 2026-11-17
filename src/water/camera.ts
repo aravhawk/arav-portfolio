@@ -111,16 +111,16 @@ export function flightKeys(aspect: number): Key[] {
         { s: s2 - 0.1, pos: [900, 4900 + DY, 330], aim: [1250, 5900 + DY, 0], fov: 54 },
         { s: s2 + 0.4, pos: [1380, 5700 + Y, 330], aim: [1560, 6300 + Y, 0], fov: 56 },
         // The confluence: streams above, the river across the middle, the bank at the foot.
-        { s: s2 + 1.25, pos: [1380, 6080 + Y, 520], aim: [1400, 7150 + Y, 0], fov: 58 },
-        { s: s3 - 0.6, pos: [1390, 6140 + Y, 505], aim: [1400, 7190 + Y, 0], fov: 58 },
+        { s: s2 + 1.25, pos: [1600, 5800 + Y, 560], aim: [1650, 7200 + Y, 0], fov: 60 },
+        { s: s3 - 0.6, pos: [1606, 5850 + Y, 548], aim: [1652, 7230 + Y, 0], fov: 60 },
         { s: s3 + 0.3, pos: [900, 7700 + Y, 380], aim: [1100, 8500 + Y, 0], fov: 58 },
         // The pool, looked down into from its rim.
-        { s: s3 + 1.15, pos: [1750, 8560 + Y, 900], aim: [1750, 9200 + Y, 0], fov: 52 },
-        { s: s4 - 0.6, pos: [1750, 8600 + Y, 880], aim: [1750, 9215 + Y, 0], fov: 52 },
+        { s: s3 + 1.15, pos: [1770, 8400 + Y, 900], aim: [1770, 9080 + Y, 0], fov: 52 },
+        { s: s4 - 0.6, pos: [1770, 8440 + Y, 880], aim: [1770, 9095 + Y, 0], fov: 52 },
         { s: s4 + 0.3, pos: [1200, 9650 + Y, 360], aim: [1300, 10500 + Y, 0], fov: 58 },
         // The tarn: both shards, the far shore, the ranges.
-        { s: s4 + 1.2, pos: [1300, 9560 + Y, 420], aim: [1310, 10900 + Y, 120], fov: 60 },
-        { s: s5 - 0.6, pos: [1300, 9620 + Y, 405], aim: [1310, 10930 + Y, 120], fov: 60 },
+        { s: s4 + 1.2, pos: [1900, 9300 + Y, 500], aim: [1740, 10000 + Y, 0], fov: 58 },
+        { s: s5 - 0.6, pos: [1896, 9340 + Y, 490], aim: [1740, 10030 + Y, 0], fov: 58 },
         { s: s5 + 0.35, pos: [1300, 11300 + Y, 420], aim: [1300, 12100 + Y, 0], fov: 50 },
         { s: end, pos: [1300, 7300 + DY + EXT, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)) + DY + EXT, 0], fov: 40 },
       ]
@@ -141,13 +141,13 @@ export function flightKeys(aspect: number): Key[] {
         { s: s2 - 0.1, pos: [900, 4950 + DY, 250], aim: [1250, 5900 + DY, 0], fov: 42 },
         { s: s2 + 0.4, pos: [1400, 5720 + Y, 230], aim: [1620, 6350 + Y, 0], fov: 46 },
         // The confluence: the river crosses the frame, the streams fan down to it from the snowfield.
-        { s: s2 + 1.25, pos: [1300, 5930 + Y, 470], aim: [1680, 7170 + Y, 0], fov: 52 },
-        { s: s3 - 0.6, pos: [1314, 5980 + Y, 458], aim: [1686, 7200 + Y, 0], fov: 52 },
+        { s: s2 + 1.25, pos: [1300, 5770 + Y, 470], aim: [1680, 7010 + Y, 0], fov: 52 },
+        { s: s3 - 0.6, pos: [1314, 5820 + Y, 458], aim: [1686, 7040 + Y, 0], fov: 52 },
         // Down the bigger river.
         { s: s3 + 0.3, pos: [860, 7650 + Y, 300], aim: [1000, 8500 + Y, 0], fov: 46 },
         // The pool, looked down into from its rim.
-        { s: s3 + 1.15, pos: [1490, 8540 + Y, 560], aim: [1540, 9130 + Y, 0], fov: 46 },
-        { s: s4 - 0.6, pos: [1496, 8565 + Y, 550], aim: [1543, 9140 + Y, 0], fov: 46 },
+        { s: s3 + 1.15, pos: [1490, 8470 + Y, 575], aim: [1540, 9080 + Y, 0], fov: 46 },
+        { s: s4 - 0.6, pos: [1496, 8495 + Y, 565], aim: [1543, 9090 + Y, 0], fov: 46 },
         { s: s4 + 0.3, pos: [1150, 9700 + Y, 300], aim: [1300, 10500 + Y, 0], fov: 46 },
         // The tarn: one shard near on the left, one far on the right, the ranges beyond.
         { s: s4 + 1.2, pos: [1120, 9900 + Y, 250], aim: [1400, 10950 + Y, 130], fov: 46 },

@@ -396,7 +396,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uBedDiv, this.bedMeta.div);
     gl.uniform1f(r.u.uTime, this.time);
     // The tarn's shards are only worked out from near by.
-    const nearTarn = Math.hypot(cam.pos[0] - TARN.x, cam.pos[1] - TARN.y) < 2600 && cam.pos[2] < 700;
+    const nearTarn = Math.hypot(cam.pos[0] - TARN.x, cam.pos[1] - TARN.y) < 3200 && cam.pos[2] < 700;
     gl.uniform1f(r.u.uShardOn, nearTarn ? 1 : 0);
     if (nearTarn) {
       // A pulse leaving a shard is a real splash at its foot.
