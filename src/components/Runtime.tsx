@@ -10,8 +10,6 @@ import { emit, signals } from '@/lib/signals';
  * Page runtime: smooth scroll, reveals and the nav's scroll state. One
  * component so they share the single frame loop and nothing here re-renders.
  */
-/** How long the scroll must hold still, on the home page, before the nav returns. */
-const REST_MS = 480;
 
 export function Runtime() {
   const pathname = usePathname();
@@ -57,9 +55,7 @@ export function Runtime() {
     let melted: boolean | null = null;
     const home = pathname === '/';
     emit('route');
-    let restY = lastY;
-    let restAt = 0;
-    const off = onFrame((now) => {
+    const off = onFrame(() => {
       const y = window.scrollY;
       const vh = window.innerHeight;
       signals.scrollY = y;
@@ -74,6 +70,10 @@ export function Runtime() {
       // moves up or is at its top. Scroll position is read, not wheel
       // events, so a scroll made by script counts too. Focus inside the
       // nav brings it back in CSS, so it stays reachable by keyboard.
+      // On the home page it never leaves: the flight's words are set clear
+      // of it at every position, so it is fixed chrome at one place and is
+      // never caught half-way.
+      if (home) return;
       const dy = y - lastY;
       const atTop = y <= 8;
       if (Math.abs(dy) > 6 || (atTop && hidden)) {
@@ -82,18 +82,6 @@ export function Runtime() {
           hidden = want;
           html.toggleAttribute('data-nav-hidden', hidden);
         }
-        lastY = y;
-      }
-      // On the home page it also comes back when the scroll comes to rest:
-      // the flight's words are set clear of it, and from any station the
-      // rest of the site is one press away. It leaves again with the next
-      // move down.
-      if (Math.abs(y - restY) > 1 || !restAt) {
-        restY = y;
-        restAt = now;
-      } else if (home && hidden && now - restAt > REST_MS) {
-        hidden = false;
-        html.removeAttribute('data-nav-hidden');
         lastY = y;
       }
     }, 20);

@@ -6,13 +6,17 @@
  * label that would overlap one already placed is lifted above it) and a
  * callout fades when its point leaves the frame or its stretch of scroll.
  *
- * On a wide screen a station with many captions sets them as a fan: one row
- * over the points, in the points' order. On a narrow screen a station shows
- * its first three captions on their points, stepped so that no leader runs
- * behind a caption, and sets the rest as one line of captions over its words.
+ * One system at every width and in both themes: the whole name in small mono
+ * type, a hairline leader, a ring on the thing it names. On a wide screen a
+ * station with many captions sets them as a fan: one row over the points, in
+ * the points' order. On a narrow screen up to four captions stand stepped
+ * over their points; a station with more sets them all as one list over its
+ * words, a name to a line, in the streams' order. The geometry is in
+ * words.ts, where it is tested.
  */
 
 import { type Basis, projectPoint, type V3 } from './camera';
+import { NAV_CLEAR, layoutCaptions, layoutList, layoutStepped } from './words';
 
 interface Call {
   el: HTMLElement;
@@ -40,8 +44,8 @@ export interface Callouts {
   frame(cam: Basis, aspect: number, viewW: number, viewH: number, s: number): void;
 }
 
-/** How many captions a station keeps on their points on a narrow screen. */
-const KEEP = 3;
+/** The most captions a narrow screen ties to their points; a station with more sets them all as one list. */
+const MANY = 4;
 
 export function makeCallouts(): Callouts {
   const v3 = (str: string | undefined) => (str ? (str.split(',').map(Number) as V3) : null);
@@ -81,22 +85,18 @@ export function makeCallouts(): Callouts {
     }
   };
 
-  const placed: [number, number, number, number][] = [];
-
   const frame = (cam: Basis, aspect: number, viewW: number, viewH: number, s: number) => {
-    placed.length = 0;
     const wide = aspect >= 0.9;
     // (A tablet held upright flies the phone's path and sets its words at the foot the same way.)
     const narrow = viewW < 720 || (viewW < 900 && !wide);
     // (The rail keeps the frame's right edge on a wide screen.)
-    const edge = narrow ? 18 : 34;
-    // Left to right, so a lifted label is always lifted over its left neighbour.
+    const edge = narrow ? 18 : 48;
     const live: { c: Call; x: number; y: number }[] = [];
-    const rows = new Map<HTMLElement, { x: number; y: number }>();
+    const lists = new Map<HTMLElement, Call[]>();
     for (const c of calls) {
       const inStretch = s >= c.from && s < c.to;
-      // (A station with one caption more than that keeps them all on their points.)
-      const loose = narrow && c.n >= KEEP && !!c.group && c.group.children.length > KEEP + 1 && (lineY.get(c.group) ?? -1) > 0;
+      // A station with more captions than a narrow frame can tie to their points sets them all as one list.
+      const loose = narrow && !!c.group && c.group.children.length > MANY && (lineY.get(c.group) ?? -1) > 0;
       if (loose !== c.loose) {
         c.loose = loose;
         c.el.toggleAttribute('data-loose', loose);
@@ -108,7 +108,7 @@ export function makeCallouts(): Callouts {
         const p = projectPoint(cam, wide && c.atWide ? c.atWide : c.at, aspect);
         x = p[0] * viewW;
         y = p[1] * viewH;
-        on = p[2] > 1 && x > 24 && x < viewW - 24 && y > 70 && y < viewH - 24;
+        on = p[2] > 1 && x > 24 && x < viewW - 24 && y > NAV_CLEAR + 30 && y < viewH - 24;
       }
       if (on !== c.on) {
         c.on = on;
@@ -117,143 +117,33 @@ export function makeCallouts(): Callouts {
       if (!on) continue;
       if (!c.w) measure();
       if (loose) {
-        // One line of captions, wrapped if the screen is too narrow for it, standing just over the words.
-        const top = lineY.get(c.group!)!;
-        const row = rows.get(c.group!) ?? { x: 16, y: top - c.h - 12 };
-        if (row.x + c.w > viewW - 16 && row.x > 16) {
-          // (A second row goes above the first: the words keep their place.)
-          row.x = 16;
-          row.y -= c.h + 5;
-        }
-        c.label.style.transform = `translate3d(${row.x.toFixed(1)}px,${row.y.toFixed(1)}px,0)`;
-        placed.push([row.x, row.y, c.w, c.h]);
-        row.x += c.w + 5;
-        rows.set(c.group!, row);
+        const list = lists.get(c.group!) ?? [];
+        list.push(c);
+        lists.set(c.group!, list);
         continue;
       }
       live.push({ c, x, y });
     }
-    live.sort((a, b) => a.x - b.x);
-    const draw = (c: Call, x: number, y: number, lx: number, ly: number) => {
-      // The leader runs from the ring to the label's near foot (to the middle of its top when it stands under its point).
-      const under = ly > y;
-      const fx = under ? Math.min(lx + c.w - 6, Math.max(lx + 6, x)) : lx + (lx + c.w / 2 > x ? 0 : c.w);
-      const fy = under ? ly - 3 : ly + c.h + 3;
-      const len = Math.hypot(fx - x, fy - y);
-      const ang = Math.atan2(fy - y, fx - x);
+    // The list: a name to a line, in the streams' own order, standing just over the station's words.
+    // (The streams run right to left in the page's order: the list reads as they stand in the frame, left to right.)
+    for (const [group, all] of lists) {
+      const list = all.slice().reverse();
+      const at = layoutList(list, 16, lineY.get(group)! - 14);
+      list.forEach((c, i) => {
+        c.label.style.transform = `translate3d(${at[i].lx.toFixed(1)}px,${at[i].ly.toFixed(1)}px,0)`;
+      });
+    }
+    if (!live.length) return;
+    const draw = (c: Call, x: number, y: number, p: { lx: number; ly: number; fx: number; fy: number }) => {
+      const len = Math.hypot(p.fx - x, p.fy - y);
+      const ang = Math.atan2(p.fy - y, p.fx - x);
       c.ring.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
       c.line.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${ang.toFixed(4)}rad) scaleX(${Math.max(0, len - 5).toFixed(1)})`;
-      c.label.style.transform = `translate3d(${lx.toFixed(1)}px,${ly.toFixed(1)}px,0)`;
+      c.label.style.transform = `translate3d(${p.lx.toFixed(1)}px,${p.ly.toFixed(1)}px,0)`;
     };
-    if (narrow) {
-      // Stepped: each caption stands over its own point, on a line of its own, a hairline straight up to it.
-      // Which caption takes which line is tried every way (there are at most four): the one that leaves no
-      // leader behind a caption and no two captions touching is used, the shortest leaders among those.
-      const n = Math.min(live.length, 4);
-      if (!n) return;
-      const h = live[0].c.h + 7;
-      const top = Math.max(64 + n * h, Math.min(...live.map((l) => l.y)) - 26);
-      const lxs = live.map(({ c, x }) => Math.min(viewW - edge - c.w, Math.max(14, x - c.w / 2)));
-      let best: number[] = [];
-      let least = Infinity;
-      const order = Array.from({ length: n }, (_, i) => i);
-      const tryOrder = (lv: number[]) => {
-        let cost = 0;
-        for (let i = 0; i < n; i++) {
-          const a = live[i];
-          const ay = top - (lv[i] + 1) * h;
-          cost += (a.y - ay) * 0.001;
-          for (let j = 0; j < n; j++) {
-            if (j === i) continue;
-            const b = live[j];
-            const by = top - (lv[j] + 1) * h;
-            // leader i (straight up from its point) behind caption j
-            if (by > ay && a.x > lxs[j] - 3 && a.x < lxs[j] + b.c.w + 3) cost += 10;
-            if (j > i && lv[i] === lv[j]) cost += 100;
-          }
-        }
-        if (cost < least) {
-          least = cost;
-          best = lv.slice();
-        }
-      };
-      const permute = (k: number) => {
-        if (k === n) return tryOrder(order);
-        for (let i = k; i < n; i++) {
-          [order[k], order[i]] = [order[i], order[k]];
-          permute(k + 1);
-          [order[k], order[i]] = [order[i], order[k]];
-        }
-      };
-      permute(0);
-      for (let i = 0; i < n; i++) {
-        const { c, x, y } = live[i];
-        const ly = top - (best[i] + 1) * h;
-        const fy = ly + c.h + 2;
-        c.ring.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
-        c.line.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(-1.5708rad) scaleX(${Math.max(0, y - fy - 5).toFixed(1)})`;
-        c.label.style.transform = `translate3d(${lxs[i].toFixed(1)}px,${ly.toFixed(1)}px,0)`;
-      }
-      return;
-    }
-    if (live.length > 4 && !live.some(({ c }) => (wide && c.atWide ? c.liftWide : c.lift) < 0)) {
-      // A fan: many captions stand in one row over their points, in the points' own order, each as near
-      // over its point as its neighbours allow. Every leader runs up to its own caption and the captions
-      // share a line, so no leader crosses another or runs behind a caption.
-      const n = live.length;
-      const gap = 10;
-      const h = live[0].c.h;
-      const ly = Math.max(66, Math.min(...live.map((l) => l.y)) - 56 - h);
-      const xs = live.map(({ c, x }) => x - c.w / 2);
-      for (let i = 1; i < n; i++) xs[i] = Math.max(xs[i], xs[i - 1] + live[i - 1].c.w + gap);
-      // (Pushed apart, the row has drifted right of its points: it is set back over them.)
-      const drift = xs.reduce((sum, v, i) => sum + v - (live[i].x - live[i].c.w / 2), 0) / n;
-      for (let i = 0; i < n; i++) xs[i] -= drift;
-      xs[n - 1] = Math.min(xs[n - 1], viewW - edge - live[n - 1].c.w);
-      for (let i = n - 2; i >= 0; i--) xs[i] = Math.min(xs[i], xs[i + 1] - gap - live[i].c.w);
-      xs[0] = Math.max(xs[0], 14);
-      for (let i = 1; i < n; i++) xs[i] = Math.max(xs[i], xs[i - 1] + live[i - 1].c.w + gap);
-      live.forEach(({ c, x, y }, i) => {
-        const fx = Math.min(xs[i] + c.w - 8, Math.max(xs[i] + 8, x));
-        const fy = ly + h + 3;
-        const len = Math.hypot(fx - x, fy - y);
-        c.ring.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
-        c.line.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${Math.atan2(fy - y, fx - x).toFixed(4)}rad) scaleX(${Math.max(0, len - 5).toFixed(1)})`;
-        c.label.style.transform = `translate3d(${xs[i].toFixed(1)}px,${ly.toFixed(1)}px,0)`;
-      });
-      return;
-    }
-    for (const { c, x, y } of live) {
-      const scale = Math.min(1, viewW / 900);
-      const lift = wide && c.atWide ? c.liftWide : c.lift;
-      let lx: number;
-      let ly: number;
-      let down = lift < 0;
-      if (down) {
-        // Under its point, centred on it.
-        lx = x - c.w / 2;
-        ly = y - lift;
-      } else {
-        const dx = 26 * scale * c.side;
-        lx = c.side > 0 ? x + dx : x + dx - c.w;
-        ly = y - lift * (0.7 + 0.3 * scale) - c.h;
-      }
-      // The label keeps inside the frame's sides.
-      lx = Math.min(viewW - c.w - edge, Math.max(14, lx));
-      // A label that would overlap one already placed is lifted above it; at the top of the frame it is
-      // set below instead, so two never share a place.
-      for (let n = 0; n < 8; n++) {
-        if (ly < 64) {
-          ly = 64;
-          down = true;
-        }
-        const hit = placed.find((r) => lx < r[0] + r[2] + 16 && lx + c.w + 16 > r[0] && ly < r[1] + r[3] + 5 && ly + c.h + 5 > r[1]);
-        if (!hit) break;
-        ly = down ? hit[1] + hit[3] + 6 : hit[1] - c.h - 6;
-      }
-      placed.push([lx, ly, c.w, c.h]);
-      draw(c, x, y, lx, ly);
-    }
+    const caps = live.map(({ c, x, y }) => ({ x, y, w: c.w, h: c.h, lift: wide && c.atWide ? c.liftWide : c.lift, side: c.side }));
+    const at = narrow ? layoutStepped(caps, viewW, edge) : layoutCaptions(caps, viewW, edge);
+    live.forEach(({ c, x, y }, i) => draw(c, x, y, at[i]));
   };
 
   return { measure, frame };

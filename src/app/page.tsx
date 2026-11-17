@@ -12,7 +12,8 @@ import { INTERESTS, PROJECTS, type Project, type ProjectMedia } from '@/content/
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
 import { SECTIONS, SETTLE_AT, sectionStarts, stillStops } from '@/water/camera';
-import { COLS, LIP, TRIBS, colHeights, colApex } from '@/water/world';
+import { streamAnchors } from '@/water/words';
+import { COLS, TRIBS, colHeights, colApex } from '@/water/world';
 import './home.css';
 import './flight.css';
 
@@ -86,6 +87,9 @@ const KIND: Record<string, string> = {
   tensorpow: 'Protocol',
   rydar: 'iOS app',
 };
+
+/** Where each stream's caption lands: on the stream itself. */
+const STREAMS = streamAnchors();
 
 /** The rail: one tick to a section, in the page's order. Each takes the page to that section's composed frame. */
 const RAIL = ['Arav Jain', 'What I do', 'Infiniview', 'Open source', 'Kilo Bench', 'Agent Bridge', 'Open models', 'cc-switch', 'TensorPoW', 'RydAR', 'Interests', 'Contact'];
@@ -184,7 +188,7 @@ export default async function Home() {
               {repos.map((r, i) => (
                 <Callout
                   key={r.repo}
-                  at={[TRIBS[i].head.x, TRIBS[i].head.y, LIP.h * 1.85]}
+                  at={STREAMS[i]}
                   href={r.url}
                   label={`${r.repo}: ${r.count} merged pull request${r.count === 1 ? '' : 's'}`}
                   from={OUT + 0.95}
@@ -282,11 +286,11 @@ export default async function Home() {
                   key={x.name}
                   at={[COLS.xs[i] + colApex(i)[0] * COLS.r * (colH[i] / COLS.hMax), COLS.y + 26 * Math.sin(i * 2.3) + colApex(i)[1] * COLS.r * (colH[i] / COLS.hMax), colH[i] - 24]}
                   href={x.url}
-                  from={MODELS + 0.75}
-                  to={FORK - 0.45}
+                  from={MODELS + 0.85}
+                  to={FORK - 0.85}
                   lift={i % 2 ? 40 : 64}
                   // (On a wide frame the figure stands in the sky over the columns: each name is set at its column's foot.)
-                  wide={{ at: [COLS.xs[i], COLS.y + 26 * Math.sin(i * 2.3), 6], lift: -34 }}
+                  wide={{ at: [COLS.xs[i], COLS.y + 26 * Math.sin(i * 2.3), 6], lift: -30 }}
                 >
                   {x.name}
                 </Callout>

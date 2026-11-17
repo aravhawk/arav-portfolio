@@ -23,6 +23,7 @@ import { flightSource, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
+import { NAV_CLEAR, composedAt } from './words';
 import { CANYON, COLS, DAM, DELTA, LAKE, LATTICE, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
@@ -1029,10 +1030,12 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   // The words. A block is on for a stretch of scroll (from, to). A block that
   // travels (it has `in` and `out`) stands at its composed place between
   // those two and, either side of them, is a small tag in a corner of the
-  // frame: its label, its name or figure and its line, set small. It grows
-  // from the one to the other with the scroll (transform only), so a
-  // station is named from the moment it is in view until the camera has
-  // left it.
+  // frame: its label, its name or figure and its line, set small. Those are
+  // its only two states, and each is a layout in which no line meets
+  // another. It never passes through anything between them: it goes out,
+  // takes the other state while it cannot be seen, and comes back in
+  // (transform only), so a station is named from the moment it is in view
+  // until the camera has left it and no two of its lines ever cross.
   type Box4 = [number, number, number, number];
   interface Piece {
     el: HTMLElement;
@@ -1056,6 +1059,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     on: boolean | null;
     /** 0: the tag, 1: composed */
     p: number;
+    /** the state it is going to, and the timer of the change while it is out */
+    goal: number;
+    swap: number;
     pieces: Piece[];
     /** the ink's bounds at rest and as a tag, px in the frame: x0, y0, x1, y1 */
     rest: Box4 | null;
@@ -1070,13 +1076,31 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     moves: el.dataset.flIn !== undefined,
     on: null,
     p: -1,
+    goal: -1,
+    swap: 0,
     pieces: Array.from(el.querySelectorAll<HTMLElement>('[data-w]')).map((piece) => ({ el: piece, x: 0, y: 0, w: 0, h: 0, k: 1, dx: 0, dy: 0 })),
     rest: null,
     tag: null,
   }));
-  /** How much scroll, in screens, a block takes to grow from its tag to its composed place, and to shrink back. */
-  const GROW = 0.55;
-  const SHRINK = 0.35;
+  /** How long a block is out while it changes from one state to the other, ms. */
+  const SWAP_MS = 240;
+  const settle = (w: Words) => {
+    w.swap = 0;
+    w.el.removeAttribute('data-swap');
+    place(w, w.goal);
+  };
+  /** Take a travelling block to a state: at once while it cannot be seen, otherwise out, changed, and back in. */
+  const go = (w: Words, to: number) => {
+    if (to === w.goal) return;
+    w.goal = to;
+    if (!w.on || w.p < 0 || mqStill.matches) {
+      window.clearTimeout(w.swap);
+      settle(w);
+    } else if (!w.swap) {
+      w.el.setAttribute('data-swap', '');
+      w.swap = window.setTimeout(() => settle(w), SWAP_MS);
+    }
+  };
   const heroWords = document.querySelector<HTMLElement>('.fl-hero-words');
 
   // The rail: one tick to a section, the current one marked.
@@ -1179,8 +1203,14 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       const right = at[1] === 'r';
       const ink = inkOf(w.el);
       w.rest = ink ? [ink.x0 - host.left, ink.y0 - host.top, ink.x1 - host.left, ink.y1 - host.top] : null;
+      // (On a narrow frame a station with many captions sets them as a list just over its words: the lee takes the list in.)
+      const list = Array.from(w.el.parentElement?.querySelectorAll<HTMLElement>('.fl-call-label') ?? []);
+      if (w.rest && list.length > 4 && (viewW < 720 || (viewW < 900 && aspect < 0.9))) {
+        w.rest[1] -= list.reduce((sum, el) => sum + el.offsetHeight + 4, 0) + 14;
+        w.rest[2] = Math.max(w.rest[2], ...list.map((el) => 16 + el.offsetWidth));
+      }
       // (Under the nav at the top; on the first frame's own foot at the bottom.)
-      let cursor = top ? 78 : host.height - foot;
+      let cursor = top ? NAV_CLEAR : host.height - foot;
       const tag: Box4 = [1e9, 1e9, -1e9, -1e9];
       for (const it of top ? w.pieces : w.pieces.slice().reverse()) {
         const r = it.el.getBoundingClientRect();
@@ -1463,8 +1493,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
         w.el.toggleAttribute('data-on', on);
       }
       if (w.moves) {
-        const p = smooth(w.inAt - GROW, w.inAt, s) * (1 - smooth(w.outAt, w.outAt + SHRINK, s));
-        if (Math.abs(p - w.p) > 0.0008 || (p !== w.p && (p === 0 || p === 1))) place(w, p);
+        go(w, composedAt(s, w.inAt, w.outAt) ? 1 : 0);
       }
       // (The first frame's two lines stand at opposite ends of the near ice, which is calm already.)
       if (on && !active && w.el !== heroWords) active = w;
@@ -1480,7 +1509,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       boxLight = !!active && active.el.classList.contains('fl-end-words');
       if (active && !active.moves) scheduleBox();
     }
-    if (leeFor && leeFor === active && leeFor.moves) boxOn = leeOf(leeFor);
+    // (While a block is out between its two states the lee goes out behind it, and comes in where it then stands.)
+    if (leeFor && leeFor === active && leeFor.moves) boxOn = !leeFor.swap && leeOf(leeFor);
     else if (leeFor !== active) boxOn = false;
     boxK = boxOn ? Math.min(1, boxK + dtBox / (mqStill.matches ? 0.001 : 0.35)) : Math.max(0, boxK - dtBox / (mqStill.matches ? 0.001 : 0.25));
     // The rail: which section this is; out of the way on the first frame and at the ending.
@@ -1521,7 +1551,11 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       ro.disconnect();
       forkWatch.disconnect();
       railEl?.removeEventListener('click', onRail);
-      for (const w of words) for (const it of w.pieces) it.el.style.transform = '';
+      for (const w of words) {
+        window.clearTimeout(w.swap);
+        w.el.removeAttribute('data-swap');
+        for (const it of w.pieces) it.el.style.transform = '';
+      }
       window.clearTimeout(boxTimer);
       heroTimers.forEach((t) => window.clearTimeout(t));
       window.clearTimeout(warm);

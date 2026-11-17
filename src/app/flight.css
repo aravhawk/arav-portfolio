@@ -81,11 +81,13 @@ html[data-flight='on'] .flight-canvas {
   transition-delay: 140ms;
 }
 
-/* A station's words travel. From the moment the station is in view they are
-   a small tag in a corner of the frame (label, name or figure, line); as the
-   camera settles they grow to their composed place, and shrink back as it
-   leaves. The flight writes the transforms from the scroll, so here they
-   only fade. */
+/* A station's words have two states and nothing between them. From the
+   moment the station is in view they are a small tag in a corner of the
+   frame (label, name or figure, line); as the camera settles they stand at
+   their composed place; as it leaves they are the tag again. Between the
+   two the block goes out, changes while it cannot be seen, and comes back
+   in: no line is ever seen part-way, so no line can meet another. The
+   flight writes the transforms; here they only fade. */
 .fl .fl-words[data-fl-in] > * {
   transform: none;
   transition: opacity 220ms var(--ease-out);
@@ -95,6 +97,12 @@ html[data-flight='on'] .flight-canvas {
 }
 .fl-words [data-w] {
   transform-origin: 0 0;
+}
+.fl .fl-words[data-fl-in][data-on][data-swap] > *,
+.fl .fl-words[data-fl-in][data-on][data-swap] [data-x] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 170ms var(--ease-out);
 }
 /* The size each piece is set at as a tag, px (none: as set). */
 .fl-words [data-w='name'] {
@@ -184,6 +192,36 @@ html[data-flight='on'] .fl-rail {
 .fl-rail a:focus-visible {
   outline-offset: -2px;
 }
+/* A tick names its section when it is pointed at or has focus. */
+.fl-rail a {
+  position: relative;
+}
+.fl-rail a::after {
+  content: attr(aria-label);
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  padding: 5px 9px;
+  border-radius: var(--r-1);
+  background: var(--ink);
+  color: var(--land);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(4px, -50%, 0);
+  transition:
+    opacity 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+.fl-rail a:focus-visible::after {
+  opacity: 1;
+  transform: translate3d(0, -50%, 0);
+}
 @media (hover: hover) and (pointer: fine) {
   .fl-rail a:hover span {
     opacity: 1;
@@ -192,21 +230,15 @@ html[data-flight='on'] .fl-rail {
   .fl-rail a[aria-current]:hover span {
     transform: scaleX(2.6);
   }
+  .fl-rail a:hover::after {
+    opacity: 1;
+    transform: translate3d(0, -50%, 0);
+  }
 }
+/* On a phone the picture is the whole screen and a thumb is the way through it: no rail. */
 @media (max-width: 720px) {
-  .fl-rail {
-    right: 0;
-  }
-  .fl-rail a {
-    width: 30px;
-    height: 24px;
-    padding-right: 4px;
-  }
-  .fl-rail a span {
-    width: 5px;
-  }
-  .fl-rail a[aria-current] span {
-    transform: scaleX(2.2);
+  html[data-flight='on'] .fl-rail {
+    display: none;
   }
 }
 @media (max-height: 540px) {
@@ -216,7 +248,8 @@ html[data-flight='on'] .fl-rail {
 }
 @media (prefers-reduced-motion: reduce) {
   .fl-rail,
-  .fl-rail a span {
+  .fl-rail a span,
+  .fl-rail a::after {
     transition: none;
   }
 }
@@ -417,17 +450,18 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   transform-origin: 0 50%;
   opacity: 0.7;
 }
-/* A caption is small mono text at the end of a hairline: no plate, no box. By day it stands over snow and the pale
-   far country, and needs nothing under it. */
+/* A caption is small mono text at the end of a hairline: the whole name, no plate, no box, the same in both
+   themes and at every width. A hair of the ground's own colour stands round the letters, so a leader that has
+   to pass near them stops short of them. */
 .fl-call-label {
   z-index: 1;
   padding: 1px 0;
-  /* (A hair of the snow's own white round the letters: where a leader has to pass behind a caption on a small
-     screen, it stops short of them.) */
   text-shadow:
+    0 0 1px var(--land),
     0 0 2px var(--land),
     0 0 2px var(--land),
-    0 0 4px var(--land);
+    0 0 4px var(--land),
+    0 0 6px var(--land);
   font-size: 11px;
   line-height: 1.2;
   letter-spacing: 0.06em;
@@ -435,23 +469,6 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   white-space: nowrap;
   color: inherit;
   text-decoration: none;
-  /* A long name is cut short by design: its whole name is in the link's label. */
-  max-width: calc(19ch + 12px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* Before dawn the far country behind it is the dusk's glow and the lit river: there a breath of the night's own air
-   lies under the letters. It is whole under the glyphs and feathered away to nothing all round, so it reads as air,
-   not as a shape; its margins are negative, so the caption stands exactly where it would without it. */
-:root[data-theme='dark'] .fl-call-label {
-  text-shadow: none;
-  margin: -8px -22px;
-  padding: 9px 22px;
-  background-color: #403b49;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 21px, #000 calc(100% - 21px), transparent), linear-gradient(180deg, transparent, #000 8px, #000 calc(100% - 8px), transparent);
-  -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(90deg, transparent, #000 21px, #000 calc(100% - 21px), transparent), linear-gradient(180deg, transparent, #000 8px, #000 calc(100% - 8px), transparent);
-  mask-composite: intersect;
 }
 .fl-call[data-on] .fl-call-label {
   pointer-events: auto;
@@ -462,13 +479,7 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     text-underline-offset: 3px;
   }
 }
-@media (max-width: 720px) {
-  .fl-call-label {
-    letter-spacing: 0.03em;
-    max-width: calc(16ch + 12px + 0.5em);
-  }
-}
-/* On a narrow screen the captions past the third stand as one line over the words: a caption alone, no ring, no leader. */
+/* On a narrow screen a station with many captions sets them as one list over its words, in the streams' order: a name to a line, no ring, no leader. */
 .fl-call[data-loose] .fl-call-ring,
 .fl-call[data-loose] .fl-call-line {
   display: none;
@@ -642,14 +653,14 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   }
 }
 
-/* ---------- each station's own composition (wide frames) ----------
-   The words stand where each frame is calm, and no two neighbours stand the
-   same way: a stack at lower left; a huge figure with its words beside it;
-   words in the sky at upper left; a figure across the top of the frame over
-   what it counts; a name set large along the foot; words at the middle of
-   the left edge. Upright frames (phones, a tablet held tall) keep their
-   words at the foot, where that flight keeps a bank. (Only with the picture:
-   the plain page stacks every block the same way.) */
+/* ---------- where a station's words stand (wide frames) ----------
+   Three places, held: a stack at lower left (the rule); a stack at upper
+   left, in the sky under the nav (Agent Bridge, RydAR); a figure across the
+   top over what it counts (Open models). One type scale and one order
+   everywhere: label, name or figure, line, action. Upright frames (phones,
+   a tablet held tall) keep their words at the foot, where that flight keeps
+   a bank. (Only with the picture: the plain page stacks every block the
+   same way.) */
 @media (min-width: 721px) and (min-aspect-ratio: 9/10) {
   /* Upstream: the figure huge at lower left, what it counts set beside it on its baseline. */
   html[data-flight='on'] .fl-out-words .fl-figure {
@@ -662,11 +673,12 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     padding-bottom: 0.14em;
   }
 
-  /* Agent Bridge: in the sky at upper left, over the far shore; the shards keep the right. */
-  html[data-flight='on'] .fl-bridge-words {
+  /* Upper left: in the sky, under the nav. */
+  html[data-flight='on'] .fl-bridge-words,
+  html[data-flight='on'] .fl-rydar-words {
     --tag-at: tl;
     justify-content: flex-start;
-    padding-top: clamp(84px, 12.5vh, 150px);
+    padding-top: 84px;
     padding-bottom: 0;
   }
 
@@ -680,7 +692,7 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     justify-content: center;
     align-content: start;
     gap: 0 clamp(22px, 2.2vw, 44px);
-    padding-top: clamp(74px, 9vh, 104px);
+    padding-top: 84px;
     padding-bottom: 0;
   }
   html[data-flight='on'] .fl-models-words .fl-figure {
@@ -712,23 +724,6 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     grid-column: 2;
     grid-row: 3;
     justify-self: start;
-  }
-
-  /* TensorPoW: the name set large along the foot of the frame; its label and line stand over it. */
-  html[data-flight='on'] .fl-tensor-words {
-    gap: var(--s-3);
-    padding-bottom: max(clamp(16px, 3.4vh, 44px), env(safe-area-inset-bottom));
-  }
-  html[data-flight='on'] .fl-tensor-words .fl-view-name {
-    order: 3;
-    font-size: clamp(4.2rem, 10.2vw, 12rem);
-    line-height: 0.9;
-  }
-
-  /* RydAR: at the middle of the left edge, level with the screen's own headline. */
-  html[data-flight='on'] .fl-rydar-words {
-    justify-content: center;
-    padding-bottom: 0;
   }
 }
 
