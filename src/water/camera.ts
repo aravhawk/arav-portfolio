@@ -7,7 +7,7 @@
  * so a held frame still drifts.
  */
 
-import { BENDS, CANYON, DY, FACE, NAME, type NameLayout, REST, SLAB, T2 } from './world';
+import { BENDS, CANYON, DY, FACE, NAME, type NameLayout, REST, SHEET, SHEET_SRC, SLAB, T2, sheetCols, sheetSpan } from './world';
 
 export type V3 = [number, number, number];
 
@@ -126,9 +126,9 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         { s: s2 + 1.25, pos: [1700, 5760 + Y, 590], aim: [1730, 7090 + Y, 0], fov: 60 },
         { s: s3 - 0.6, pos: [1704, 5810 + Y, 578], aim: [1732, 7120 + Y, 0], fov: 60 },
         { s: s3 + 0.3, pos: [900, 7700 + Y, 380], aim: [1100, 8500 + Y, 0], fov: 58 },
-        // The pool, looked down into from its rim.
-        { s: s3 + 1.15, pos: [1780, 8620 + Y, 760], aim: [1780, 9060 + Y, 0], fov: 52 },
-        { s: s4 - 0.6, pos: [1780, 8644 + Y, 748], aim: [1780, 9070 + Y, 0], fov: 52 },
+        // The rock pool, looked down into from over its near bank: the plates across the frame, the bank at the foot.
+        { s: s3 + 1.15, ...benchPose(aspect, 0) },
+        { s: s4 - 0.6, ...benchPose(aspect, 1) },
         { s: s4 + 0.3, pos: [1200, 9650 + Y, 360], aim: [1300, 10500 + Y, 0], fov: 58 },
         // The tarn: both shards, the far shore, the ranges.
         // The tarn, from low over its water: both shards stand against the sky above the middle, the words below on still water.
@@ -162,9 +162,9 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         { s: s3 - 0.6, pos: [1392, 5990 + Y, 322], aim: [1735, 7020 + Y, -118], fov: 52 },
         // Down the bigger river.
         { s: s3 + 0.3, pos: [860, 7650 + Y, 300], aim: [1000, 8500 + Y, 0], fov: 46 },
-        // The pool, looked down into from its rim.
-        { s: s3 + 1.15, pos: [1780, 8700 + Y, 600], aim: [1780, 9090 + Y, 0], fov: 46 },
-        { s: s4 - 0.6, pos: [1780, 8722 + Y, 590], aim: [1780, 9100 + Y, 0], fov: 46 },
+        // The rock pool from low over its near bank: the plates right of the words, the far shore, the tarn and the ranges above.
+        { s: s3 + 1.15, ...benchPose(aspect, 0) },
+        { s: s4 - 0.6, ...benchPose(aspect, 1) },
         { s: s4 + 0.3, pos: [1150, 9700 + Y, 300], aim: [1300, 10500 + Y, 0], fov: 46 },
         // The tarn: one shard near on the left, one far on the right, the ranges beyond.
         { s: s4 + 1.2, pos: [1120, 9900 + Y, 250], aim: [1400, 10950 + Y, 105], fov: 46 },
@@ -174,6 +174,49 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         ...seaKeys(aspect, sunAz, s9, s10),
       ];
   return keys;
+}
+
+/**
+ * Station 3's frame, composed from the plates backwards: they are set a
+ * share of the frame's width, so the table's rows are a known size on any
+ * screen. A wide screen looks across the pool from low over its near bank
+ * (the plates right of the words, the tarn and the ranges above); an
+ * upright one looks down into it (the plates above the middle, the bank at
+ * the foot). `drift`: 0 at the start of the hold, 1 at its end.
+ */
+function benchPose(aspect: number, drift: number): Pose {
+  const upright = aspect < 0.9;
+  const fov = upright ? 52 : 62;
+  const th = Math.tan(rad(fov / 2));
+  const n = sheetCols(aspect);
+  const w = sheetSpan(n) * SHEET.upp;
+  const half = (SHEET_SRC.rows * SHEET.upp) / 2;
+  // (The plates lie under the water: this far below the land.)
+  const bed = 36;
+  if (upright) {
+    const pitch = rad(68);
+    const share = 0.86;
+    // The plates' middle stands this far above the frame's.
+    const lift = Math.atan(0.2 * th);
+    const range = w / (2 * aspect * th * share) / Math.cos(lift);
+    const z = range * Math.sin(pitch - lift) - bed;
+    const back = range * Math.cos(pitch - lift);
+    const x = SHEET.x0 + w / 2 + 6 * drift;
+    const y = SHEET.y - back + 10 * drift;
+    return { pos: [x, y, z - 8 * drift], aim: [x, y + z / Math.tan(pitch), 0], fov };
+  }
+  const pitch = rad(28);
+  // The plates' near edge takes this share of the frame's width, and stands this far in from its left side.
+  const share = Math.min(0.5, Math.max(0.34, 0.875 - 0.69 / aspect));
+  const left = 1 - share - 0.035;
+  const depth = w / (2 * aspect * th * share);
+  // (The camera stands a little further back from the plates' middle than it is high.)
+  const BACK = 1.07;
+  const z = (depth + half * Math.cos(pitch) - bed * Math.sin(pitch)) / (BACK * Math.cos(pitch) + Math.sin(pitch));
+  const x = SHEET.x0 - (left - 0.5) * 2 * aspect * th * depth + 12 * drift;
+  const y = SHEET.y - z * BACK + 8 * drift;
+  const zc = z - 5 * drift;
+  return { pos: [x, y, zc], aim: [x, y + zc / Math.tan(pitch), 0], fov };
 }
 
 /** The last four stations' keys: the columns, the dam, the lattice, the canyon. */

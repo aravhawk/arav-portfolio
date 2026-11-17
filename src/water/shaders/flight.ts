@@ -23,7 +23,7 @@
 import { ICE_FIELD } from './ice';
 import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
 import { PANO } from './terrain';
-import { BASIN, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, OUTLET, POOL, SHARDS, SHEET, SHEET_CROP, SHEET_CROP_TALL, STREAM, T2, TARN, TRIBS, lipY } from '../world';
+import { BASIN, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, SHEET_COLS, SHEET_CROP, SHEET_CROP_TALL, SHEET_GAP, SHEET_SRC, sheetSpan, slabFaces, STREAM, T2, TARN, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -393,33 +393,37 @@ float gSlabThick;
 float shallowsAt(vec2 p);
 vec3 fracture(vec2 x);
 
+// The block's faces, in its own frame (x across its front, y into it, z up from the water): the way each looks, and how far
+// it is from the middle of the front's foot. 0 is the polished front, 5 the foot; 4, 6, 7 and 10 look up and carry the snow.
+const int SLN = ${slabFaces().length};
+const vec4 SLF[${slabFaces().length}] = vec4[${slabFaces().length}](${slabFaces()
+  .map((f) => `vec4(${f.map((v) => v.toFixed(5)).join(', ')})`)
+  .join(', ')});
+
 /**
- * A ray against the slab (a box). Returns the distance, or -1. uv: where on
- * its face, face: 1 on the front, 0 on an edge or the back.
+ * A ray against the block (a solid cut by flat faces). Returns the
+ * distance, or -1. hl: where it is met, in the block's frame. face: which
+ * face.
  */
-float slabHit(vec3 ro, vec3 rd, out vec2 uv, out float face) {
+float slabHit(vec3 ro, vec3 rd, out vec3 hl, out float face) {
   vec3 lo = ro - uSlabPos;
   vec3 a = vec3(dot(lo.xy, uSlabDir.zw), -dot(lo.xy, uSlabDir.xy), lo.z);
   vec3 d = vec3(dot(rd.xy, uSlabDir.zw), -dot(rd.xy, uSlabDir.xy), rd.z);
-  vec3 lo3 = vec3(-uSlabSize.x * 0.5, 0.0, 0.0);
-  vec3 hi3 = vec3(uSlabSize.x * 0.5, uSlabSize.z, uSlabSize.y);
-  vec3 inv = 1.0 / (abs(d) + 1e-6) * sign(d + 1e-9);
-  vec3 t0 = (lo3 - a) * inv;
-  vec3 t1 = (hi3 - a) * inv;
-  vec3 tn = min(t0, t1);
-  vec3 tf = max(t0, t1);
-  float tN = max(max(tn.x, tn.y), tn.z);
-  float tF = min(min(tf.x, tf.y), tf.z);
-  uv = vec2(0.0);
+  float tN = -1e9;
+  float tF = 1e9;
+  hl = vec3(0.0);
   face = 0.0;
-  if (tN > tF || tF < 0.0 || tN < 0.0) return -1.0;
+  for (int j = 0; j < SLN; j++) {
+    vec4 pl = SLF[j];
+    float den = dot(d, pl.xyz);
+    float num = pl.w - dot(a, pl.xyz);
+    if (den < -1e-6) { float t = num / den; if (t > tN) { tN = t; face = float(j); } }
+    else if (den > 1e-6) tF = min(tF, num / den);
+    else if (num < 0.0) return -1.0;
+  }
+  if (tN > tF || tN < 0.0) return -1.0;
   gSlabThick = tF - tN;
-  vec3 h = a + d * tN;
-  // 1: the front, 2: the top, 3: a side, 0: the back.
-  face = tn.y >= tn.x && tn.y >= tn.z ? step(0.0, d.y) : (tn.z > tn.x ? 2.0 : 3.0);
-  if (face > 2.5) { uv = vec2(h.y / uSlabSize.z, h.z / uSlabSize.y); return tN; }
-  if (face > 1.5) { uv = vec2(h.x / uSlabSize.x + 0.5, h.y / uSlabSize.z); return tN; }
-  uv = vec2(h.x / uSlabSize.x + 0.5, h.z / uSlabSize.y);
+  hl = a + d * tN;
   return tN;
 }
 
@@ -429,9 +433,10 @@ float gSlabSoft = 0.0;
 /**
  * What is seen inside a piece of glacier ice. Three depths are looked at
  * along the eye's ray, each a little further across the face than the last,
- * so what is in the ice shifts against its skin as the eye moves: veils of
- * trapped air standing in upright curtains, hairline fractures in short
- * lengths, and the sheen of cleavage planes, sharp on one side.
+ * so what is in the ice shifts against its skin as the eye moves: thin veils
+ * of trapped air in upright curtains, bubbles strung in level bands (each a
+ * winter's snow), hairline fractures, and the broad planes of cleavage that
+ * flash where they lie to the light.
  * q: where the ray enters, in the face's plane. v: how far the ray moves
  * across the face for each unit of depth. thick: the ice along the ray.
  * Returns x: the veils, y: the fractures' light, z: how deep the eye gets.
@@ -450,28 +455,36 @@ vec3 iceInside(vec2 q, vec2 v, float thick, float foot, float seed) {
     float dim = exp(-d * 0.011);
     // Air: cloudy, in curtains that stand upright, each with one hard side.
     float cloud = g1.g * 0.62 + g2.g * 0.56;
-    veil += smoothstep(0.6, 0.82 + 0.2 * g1.b, cloud) * dim * 0.48;
+    veil += smoothstep(0.66, 0.86 + 0.2 * g1.b, cloud) * dim * 0.48;
     if (gSlabSoft < 0.5) {
       // A fracture: a long, nearly straight break across the block, in a
       // set of two or three. Its edge is a hairline; the break itself is a
-      // film that catches the light on one side of that line and is gone a
-      // little way in. Each is cut to a length by the ice round it.
+      // plane that catches the light on one side of that line, brightest
+      // where it lies to the eye, and is gone a way in. Each is cut to a
+      // length by the ice round it.
       vec2 dk = k == 0 ? vec2(0.83, 0.56) : (k == 1 ? vec2(-0.47, 0.88) : vec2(0.97, -0.24));
-      float gap = 84.0 + 52.0 * fk;
-      float s = fract(dot(a, dk) / gap + g2.g * 0.7 + seed * 0.37);
+      float gap = 96.0 + 60.0 * fk;
+      float sf = dot(a, dk) / gap + g2.g * 0.7 + seed * 0.37;
+      float s = fract(sf);
       float cut = smoothstep(0.4, 0.52, g2.b + 0.3 * (g1.g - 0.5)) * smoothstep(0.35, 0.6, g1.b + 0.25 * g2.g);
       float w = (0.9 + foot * 1.2) / gap;
       float hair = 1.0 - smoothstep(0.0, w, min(s, 1.0 - s));
-      float film = pow(1.0 - s, 9.0) * (0.2 + 0.8 * g1.a);
-      // Bubbles: single bright beads, strung in the curtains.
-      float bead = smoothstep(0.972, 1.0, textureLod(uGrain, a / vec2(190.0, 310.0) + fk * 0.17, 0.0).r) * smoothstep(0.5, 0.75, cloud) * (1.0 - smoothstep(0.5, 1.4, foot));
-      spark += ((hair * 0.85 + film * 0.5) * cut + bead * 0.8) * dim * (1.0 - smoothstep(2.0, 6.0, foot));
+      // (Each plane lies its own way: it flashes as the eye passes the angle it mirrors.)
+      float lie = fract(sin(floor(sf) * 91.7 + fk * 7.3) * 43758.5);
+      float flash = smoothstep(0.55, 1.0, 1.0 - abs(fract(lie + dot(v, dk) * 0.9 + dot(v, vec2(dk.y, -dk.x)) * 0.5) * 2.0 - 1.0));
+      float film = pow(1.0 - s, 5.0) * (0.14 + 0.5 * g1.a + 1.5 * flash);
+      // Bubbles: single bright beads, strung in level bands through the ice.
+      float band = smoothstep(0.55, 0.9, sin(a.y / 19.0 + 5.0 * g2.g + fk * 2.0));
+      float bead = smoothstep(0.955, 1.0, textureLod(uGrain, a / vec2(170.0, 170.0) + fk * 0.17, 0.0).r) * (0.25 + 0.75 * band) * (1.0 - smoothstep(0.5, 1.4, foot));
+      spark += ((hair * 0.85 + film * 0.5) * cut + bead * 0.9 + band * 0.05) * dim * (1.0 - smoothstep(2.0, 6.0, foot));
     }
     seen = d;
   }
   return vec3(min(veil, 1.0), spark, seen);
 }
 
+// The way the basin's sea runs: its sets come in from the south-west and go on to the north-east.
+const vec2 SEA_K = vec2(0.5547, 0.8321);
 /** How hard the basin's waves are striking the block's foot at a place along it, 0..1: sets that come and go. */
 float blockBeat(float along) {
   float set_ = 0.55 + 0.45 * sin(uTime * 0.37 + along * 0.004);
@@ -490,90 +503,143 @@ vec4 blockFoot(vec2 pw) {
   float along = lb.y < 0.0 ? c.x + uSlabSize.x * 0.5 + 190.0 : c.y + 570.0;
   return vec4(d, along, uSlabDir.zw * dirL.x - uSlabDir.xy * dirL.y);
 }
-/** The phase of the waves that run in on the block: it grows with time, so a crest moves inward. */
-float blockPhase(vec4 bf) {
-  return uTime * 1.7 + bf.y * 0.021 + 1.6 * sin(uTime * 0.23 + bf.y * 0.007) + bf.x * 0.062 + 2.2 * sin(bf.x * 0.011 + bf.y * 0.013 + 1.3);
-}
-/** The slope those waves give the water: steeper as they close on the block. */
-vec2 blockSwell(vec2 pw) {
-  vec4 bf = blockFoot(pw);
-  float amp = (1.0 - smoothstep(150.0, 560.0, bf.x)) * smoothstep(0.0, 30.0, bf.x) * (0.55 + 0.45 * sin(uTime * 0.37 + bf.y * 0.004));
-  // (Before dawn the water is a mirror, and a mirror shows every slope: the swell is held lower.)
-  return bf.zw * cos(blockPhase(bf)) * mix(0.19, 0.07, uNight) * amp * (0.6 + 0.4 * sin(bf.y * 0.017 + uTime * 0.11));
+/** How much of the sea reaches a place by the block, 0..1: all of it on the weather side, none in the lee. */
+float blockWeather(vec4 bf) {
+  return smoothstep(-0.55, 0.35, -dot(bf.zw, SEA_K));
 }
 /**
- * White water in the basin: every wave that reaches the block breaks on its
- * foot (a surge of foam that widens as it lands and trails lace as it
- * drains), the crests whiten as they steepen close in, and the island's and
- * the basin's own shores take the same sea.
+ * The phase of the sea at a place: it grows with time, so a crest moves on.
+ * Out in the basin the crests are long and straight and run with the sea;
+ * close to the block each bends round to meet the face it will break on.
+ */
+float blockPhase(vec2 pw, vec4 bf) {
+  float wrap = exp(-bf.x / 110.0);
+  vec2 rel = pw - uSlabPos.xy;
+  float open = dot(rel, SEA_K) * -0.058 + 1.4 * sin(dot(rel, vec2(-SEA_K.y, SEA_K.x)) * 0.006 + 0.4);
+  float shore = bf.x * 0.062 + bf.y * 0.021;
+  return uTime * 1.7 + 1.6 * sin(uTime * 0.23 + bf.y * 0.007) + mix(open, shore, wrap) + 2.2 * sin(bf.x * 0.011 + bf.y * 0.013 + 1.3);
+}
+/** How high the sea is running at a place: it comes in sets, and each set has its own place along the crest. */
+float blockSet(vec2 pw) {
+  float along = dot(pw, vec2(-SEA_K.y, SEA_K.x));
+  return clamp(0.5 + 0.34 * sin(dot(pw, SEA_K) * 0.0052 - uTime * 0.31) + 0.3 * sin(along * 0.011 + uTime * 0.17 + 2.0 * sin(along * 0.004)), 0.0, 1.0);
+}
+/** The slope those waves give the water (added to what it had): steeper as they close on the block, and in its lee a slick, where even the small ripples die. */
+vec2 blockSwell(vec2 pw, vec2 slope) {
+  vec4 bf = blockFoot(pw);
+  float wk = blockWeather(bf);
+  slope *= 1.0 - 0.85 * (1.0 - wk) * (1.0 - smoothstep(120.0, 330.0, bf.x));
+  float amp = (1.0 - smoothstep(190.0, 620.0, bf.x)) * smoothstep(0.0, 30.0, bf.x) * (0.25 + 0.75 * blockSet(pw)) * wk;
+  vec2 way = normalize(mix(-SEA_K, bf.zw, exp(-bf.x / 110.0)));
+  // (Before dawn the water is a mirror, and a mirror shows every slope: the swell is held lower.)
+  return slope + way * cos(blockPhase(pw, bf)) * mix(0.21, 0.07, uNight) * amp;
+}
+/**
+ * White water in the basin. The sea comes from one side: a crest whitens as
+ * it steepens on the way in, breaks on the faces that meet it (a surge of
+ * foam that widens as it lands and trails lace as it drains), runs along
+ * the block's flanks in streaks, and leaves a slick of still water in its
+ * lee. The island's and the basin's own shores take the same sea.
  * sd: the bed's distance here (negative in water). na, nb: two fields of the moving surface.
  */
 vec3 blockWater(vec3 col, vec2 pw, float sd, float na, float nb, float sim) {
   vec4 bf = blockFoot(pw);
-  float beat = blockBeat(bf.y);
-  float ph = blockPhase(bf);
+  float wk = blockWeather(bf);
+  float set_ = blockSet(pw);
+  float beat = blockBeat(bf.y) * (0.2 + 0.8 * wk);
+  float ph = blockPhase(pw, bf);
   float crest = 0.5 + 0.5 * sin(ph - 1.5708);
-  float cap = smoothstep(0.72, 0.97, crest) * (1.0 - smoothstep(40.0, 300.0, bf.x)) * smoothstep(0.34, 0.6, na + 0.3 * nb) * (0.6 + 0.4 * sin(uTime * 0.37 + bf.y * 0.004));
+  float cap = smoothstep(0.74, 0.97, crest) * (1.0 - smoothstep(40.0, 330.0, bf.x)) * smoothstep(0.36, 0.62, na + 0.3 * nb + 0.3 * (set_ - 0.5)) * set_ * wk;
   float land_ = beat * beat;
   float dS = bf.x + 46.0 * (nb - 0.5) + 22.0 * sin(bf.y * 0.05 + uTime * 0.6);
-  float surge = (1.0 - smoothstep(6.0 + 40.0 * land_, 30.0 + 90.0 * land_, dS)) * smoothstep(0.2, 0.46, na + 0.5 * beat + 0.2 * nb);
-  float lace = (1.0 - smoothstep(50.0, 210.0, bf.x)) * smoothstep(0.56, 0.76, nb + 0.22 * beat) * (0.4 + 0.4 * beat);
+  float surge = (1.0 - smoothstep(4.0 + 46.0 * land_, 22.0 + 104.0 * land_, dS)) * smoothstep(0.2, 0.46, na + 0.5 * beat + 0.2 * nb) * (0.3 + 0.7 * wk);
+  // (Foam that has drained off the weather faces is drawn out down the sea, past the block's flanks.)
+  float down = dot(pw - uSlabPos.xy, SEA_K);
+  float lace = (1.0 - smoothstep(50.0, 240.0, bf.x)) * smoothstep(0.56, 0.76, nb + 0.22 * beat) * (0.3 + 0.5 * beat) * (0.35 + 0.65 * wk) * (1.0 - smoothstep(60.0, 260.0, down) * (1.0 - wk));
   // The shores: a band that comes and goes with its own waves.
   float ang = atan(pw.y - uSlabPos.y, pw.x - uSlabPos.x);
   float beatS = clamp(0.5 + 0.5 * sin(uTime * 1.5 + ang * 5.0 + 2.0 * sin(uTime * 0.5 + ang * 2.0)) + sim, 0.0, 1.0);
   float band = (1.0 - smoothstep(3.0, 8.0 + 18.0 * beatS, -sd)) * smoothstep(0.35, 0.6, na + 0.35 * beatS);
   float laceS = (1.0 - smoothstep(10.0, 46.0, -sd)) * smoothstep(0.62, 0.8, nb + 0.2 * beatS) * beatS * 0.5;
   float nearB = 1.0 - smoothstep(700.0, 1000.0, length(pw - uSlabPos.xy));
+  // The slick in the lee: flat water that holds the sky, a shade darker than the sea round it.
+  float lee = (1.0 - wk) * (1.0 - smoothstep(120.0, 330.0, bf.x)) * nearB;
+  col *= 1.0 - 0.16 * lee * (1.0 - uNight);
   vec3 white = mix(vec3(0.93, 0.96, 1.0) * (S.amb * 1.25 + S.key * 0.28), vec3(0.34, 0.5, 0.56) * 0.3 + uAurora * 0.14, uNight);
-  return mix(col, white, clamp(max(surge * 0.95 + cap * 0.8 + lace, band * 0.85 + laceS), 0.0, 1.0) * nearB);
+  return mix(col, white, clamp(max(surge * 0.95 + cap * 0.8 + lace, (band * 0.85 + laceS) * (1.0 - 0.7 * lee)), 0.0, 1.0) * nearB);
 }
 
 /**
- * The block: a great piece of glacier ice with the product picture frozen
- * in it, standing in the basin's water at the island's shore. Its front is
- * cut flat and polished, so the picture is seen clean through a hand of
- * clear ice and the eye goes on into the ice round it; the other faces are
- * rough, frosted and fluted by melt. Snow lies deep on its top and hangs
- * over its edges, and the water has eaten a notch along its foot, where the
- * waves break white.
+ * The block: a great piece of ice calved from a glacier's face, with the
+ * product picture frozen in it, standing in the basin's water at the
+ * island's shore. It is rough-hewn: leaning sides, a sloping top, corners
+ * and arrises broken away. One face is cut flat and polished, so the picture
+ * is seen clean through a hand of clear ice; the eye goes on into the ice
+ * round it, which is dark and blue-green in its depth and bright at its
+ * edges, where the light comes back out. The other faces are the break
+ * itself: frosted, fluted by melt, scalloped. Snow lies deep on everything
+ * that looks up and hangs over the faces, and the water has eaten a deep
+ * notch along the foot, where the waves break white.
+ * hl: where the eye's ray meets it, in the block's frame. foot: how much of it a pixel covers.
  * Returns the colour and, in a, how much of the pixel it covers (its
  * outline is worn, not ruled).
  */
-vec4 slabColor(vec2 uv, float face, float t, vec3 rd) {
+vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
   vec3 L = keyDir();
-  bool front = face > 0.5 && face < 1.5;
-  bool top = face > 1.5 && face < 2.5;
-  vec2 sz = face > 2.5 ? uSlabSize.zy : (top ? uSlabSize.xz : uSlabSize.xy);
-  vec2 q = uv * sz;
+  int fi = int(face + 0.5);
+  vec3 nl = SLF[fi].xyz;
+  bool front = fi == 0;
+  bool top = nl.z > 0.7;
+  vec3 dl = vec3(dot(rd.xy, uSlabDir.zw), -dot(rd.xy, uSlabDir.xy), rd.z);
+  // How near the nearest arris is on this face, and how near the block's outline (an arris whose other face is turned from the eye).
+  float edgeD = 1e3;
+  float silD = 1e3;
+  for (int j = 0; j < SLN; j++) {
+    if (j == fi) continue;
+    vec4 pj = SLF[j];
+    float c = dot(pj.xyz, nl);
+    float sd = (pj.w - dot(hl, pj.xyz)) / sqrt(max(1.0 - c * c, 0.02));
+    // (The foot stands in the water: it is no edge of the ice.)
+    if (j == 5) continue;
+    edgeD = min(edgeD, sd);
+    if (dot(dl, pj.xyz) > 0.0) silD = min(silD, sd);
+  }
+  // The face's own plane: across it, and up it (or, on a face that looks up, back along it).
+  vec3 tu = front || top ? vec3(1.0, 0.0, 0.0) : normalize(vec3(-nl.y, nl.x, 0.0));
+  vec3 tv = top ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0);
+  vec2 q = vec2(dot(hl, tu) + uSlabSize.x * 0.5, dot(hl, tv));
   float foot = t * uPxAng;
   float lodF = lodFor(foot, 64.0, 256.0);
   vec4 gr = textureLod(uGrain, q / 64.0 + face * 0.37, lodF);
   vec4 gr2 = textureLod(uGrain, q / 210.0 + face * 0.19 + 0.5, lodFor(foot, 210.0, 256.0));
-  vec3 n = face > 2.5 ? vec3(uSlabDir.zw * sign(dot(-rd.xy, uSlabDir.zw)), 0.0) : (top ? vec3(0.0, 0.0, 1.0) : vec3(-uSlabDir.xy, 0.0) * (face > 0.5 ? -1.0 : 1.0));
-  n = front ? vec3(uSlabDir.xy, 0.0) : n;
+  vec3 n = vec3(uSlabDir.zw * nl.x - uSlabDir.xy * nl.y, nl.z);
   float cosi = clamp(dot(-rd, n), 0.0, 1.0);
-  float zUp = top ? uSlabSize.y : q.y;
-  vec2 eB = min(q, sz - q);
+  float zUp = hl.z;
+  // How high the snow's surface stands over this place.
+  float zTop = min(min((SLF[4].w - dot(SLF[4].xy, hl.xy)) / SLF[4].z, (SLF[6].w - dot(SLF[6].xy, hl.xy)) / SLF[6].z), min((SLF[7].w - dot(SLF[7].xy, hl.xy)) / SLF[7].z, (SLF[10].w - dot(SLF[10].xy, hl.xy)) / SLF[10].z));
   // The ray inside the ice: bent toward the face's own line, so it moves less across the face than it did in air.
-  vec3 dl = vec3(dot(rd.xy, uSlabDir.zw), -dot(rd.xy, uSlabDir.xy), rd.z);
-  vec2 across = face > 2.5 ? vec2(dl.y, dl.z) / max(abs(dl.x), 0.25) : (top ? vec2(dl.x, dl.y) / max(abs(dl.z), 0.25) : dl.xz / max(abs(dl.y), 0.25));
-  across /= 1.31;
+  vec2 across = vec2(dot(dl, tu), dot(dl, tv)) / max(-dot(dl, nl), 0.25) / 1.31;
   float thick = gSlabThick;
   vec3 in_ = iceInside(q, across, thick, foot, face);
-  // The body. Thick ice takes the red out of the light that crosses it: pale at an edge, deep blue at its heart.
-  float deepK = 1.0 - exp(-max(thick, 0.0) / 95.0);
-  float heart = smoothstep(0.0, 110.0, min(eB.x, eB.y));
-  vec3 body = mix(vec3(0.46, 0.72, 0.85), vec3(0.03, 0.18, 0.36), deepK * (0.55 + 0.45 * heart));
-  body *= 0.92 + 0.16 * gr2.g;
+  // The body. Clear ice takes the red out of the light that crosses it and then the green: where the eye looks
+  // through a hand of it, it is pale; through the block's heart it is dark, blue toward green.
+  float deepK = 1.0 - exp(-max(thick, 0.0) / 85.0);
+  float heart = smoothstep(2.0, 70.0, edgeD);
+  vec3 body = mix(vec3(0.36, 0.68, 0.8), vec3(0.008, 0.075, 0.115), deepK * (0.45 + 0.55 * heart));
+  body *= 0.86 + 0.28 * gr2.g;
   // Light comes through it from the sun's side, and what is in it catches that light.
   float thru = 0.55 + 0.45 * max(dot(n, L), 0.0) + 0.5 * max(dot(-n, L), 0.0);
   vec3 airC = mix(vec3(0.82, 0.91, 0.96), vec3(0.42, 0.62, 0.7), uNight);
   vec3 lightD = S.key * 0.2 * thru + S.amb * 0.92;
-  vec3 lightN = S.amb * 1.15 + uAurora * 0.05 + uSlabTint * 0.1;
+  // (Before dawn it has the sky's light, and the curtain's on its top and on the side turned to it.)
+  vec3 lightN = S.amb * 0.55 + uAurora * (0.02 + 0.2 * max(n.z, 0.0) + 0.14 * max(n.x * 0.8 - n.y * 0.6, 0.0)) + uSlabTint * 0.1;
   vec3 light = mix(lightD, lightN, uNight);
-  vec3 col = mix(body, airC, in_.x * mix(0.55, 0.3, uNight)) * light;
+  vec3 col = mix(body, airC, in_.x * mix(0.2, 0.14, uNight)) * light;
   // (Before dawn a fracture is a thread of the sky's green, not a bright seam.)
-  col += mix(vec3(0.85, 0.95, 1.0) * (S.key * 0.2 + S.amb * 0.5), uAurora * 0.26 + uSlabTint * 0.3 + vec3(0.012, 0.03, 0.04), uNight) * in_.y;
+  col += mix(vec3(0.85, 0.95, 1.0) * (S.key * 0.24 + S.amb * 0.56), uAurora * 0.3 + uSlabTint * 0.34 + vec3(0.012, 0.03, 0.04), uNight) * in_.y;
+  // Its edges are where the light inside it comes back out: a bright rim to every face, widest where the ice is thin.
+  float rim = (1.0 - smoothstep(0.0, 22.0, edgeD)) * (0.35 + 0.65 * gr2.b);
+  col += mix(vec3(0.5, 0.86, 0.95) * (S.amb * 0.5 + S.key * 0.1), uAurora * 0.2 + uSlabTint * 0.1 + vec3(0.008, 0.028, 0.036), uNight) * rim * rim * rim;
   float aCov = 1.0;
   if (front) {
     // The polished front. The picture lies a little way in: it shifts
@@ -581,7 +647,7 @@ vec4 slabColor(vec2 uv, float face, float t, vec3 rd) {
     const float MX = 30.0;
     float iw = uSlabSize.x - 2.0 * MX;
     float ih = iw * ${(1376 / 2200).toFixed(4)};
-    vec2 io = vec2(MX, uSlabSize.y - 66.0 - ih);
+    vec2 io = vec2(MX, uSlabSize.y - 86.0 - ih);
     vec2 pq = q + across * 16.0;
     vec2 e0 = min(pq - io, io + vec2(iw, ih) - pq);
     float nearE = 1.0 - smoothstep(0.0, 20.0, min(e0.x, e0.y));
@@ -593,66 +659,72 @@ vec4 slabColor(vec2 uv, float face, float t, vec3 rd) {
     vec3 seen = img * mix(vec3(0.86, 0.94, 0.98), vec3(0.95, 1.05, 1.08), uNight) + img * img * 0.3 * uNight + vec3(0.012, 0.03, 0.04) * (1.0 - uNight);
     // (The first veil of air and a hairline or two lie in front of it, faintly: it is in the ice, not on it.)
     seen += mix(vec3(0.75, 0.9, 1.0) * S.amb * 0.5, uAurora * 0.12, uNight) * in_.y * 0.1;
-    // (Its edge throws a thin shade into the ice round it.)
-    col *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 16.0, -min(e0.x, e0.y))) * (1.0 - inImg);
-    col = mix(col, seen, inImg);
-    // (Before dawn the picture is the light in the block: the ice round it glows with it, and falls away to dark.)
+    // (Its edge is a break in the ice: a bright line of refracted light round it, and a thin shade outside that.)
     float dImg = max(-min(e0.x, e0.y), 0.0);
-    col += (uSlabTint * 1.6 + vec3(0.02, 0.07, 0.085)) * exp(-dImg / 60.0) * (0.35 + 0.65 * in_.x + 0.8 * in_.y) * (1.0 - inImg) * uNight;
+    col *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 16.0, dImg)) * (1.0 - inImg);
+    col += mix(vec3(0.6, 0.9, 1.0) * (S.amb * 0.5 + S.key * 0.1), uSlabTint * 0.5 + uAurora * 0.1, uNight) * (1.0 - smoothstep(0.0, 2.2 + foot, abs(dImg - 2.0))) * (1.0 - inImg) * (0.5 + 0.5 * gr.g);
+    col = mix(col, seen, inImg);
+    // (Before dawn the picture is the light in the block: its own colours spill into the ice round it, and fall away to dark.)
+    if (uNight > 0.0 && inImg < 1.0) {
+      vec3 spill = pow(textureLod(uSlabTex, vec2(clamp(iuv.x, 0.04, 0.96), 1.0 - clamp(iuv.y, 0.04, 0.96)), 5.5).rgb, vec3(2.2));
+      col += (min(spill * 2.4, vec3(0.5)) + uSlabTint * 1.2 + vec3(0.012, 0.04, 0.05)) * exp(-dImg / 64.0) * (0.3 + 0.6 * in_.x + 0.9 * in_.y + 0.5 * gr2.g) * (1.0 - inImg) * uNight;
+    }
     // Polished, but not flat: the sky lies on it at a glancing angle, and in the slow swells melt has left in the face.
     vec2 bump = (gr2.gb - 0.5) * 0.16 * (1.0 - inImg * 0.8);
     float cosB = clamp(dot(-rd, normalize(n + vec3(uSlabDir.zw * bump.x, bump.y))), 0.0, 1.0);
     col += S.hor * (0.02 + 0.5 * pow(1.0 - cosi, 5.0) + 0.9 * pow(1.0 - cosB, 4.0) * (1.0 - inImg)) * mix(1.0, 0.4, uNight);
   } else if (!top) {
-    // The rough faces: a frosted skin, fluted where melt has run down it, with windows of clear ice between.
+    // The broken faces: the ice parted here. A frosted skin, fluted where melt has run down it, scalloped in
+    // shallow shells where it split, with windows of clear ice between.
     float flute = textureLod(uGrain, vec2(q.x / 460.0 + 0.3, q.y / 5200.0), lodFor(foot, 460.0, 256.0)).g;
     float flute2 = textureLod(uGrain, vec2(q.x / 120.0, q.y / 2600.0 + 0.6), lodFor(foot, 120.0, 256.0)).g;
-    float frost = clamp(0.2 + 1.5 * (flute - 0.38) + 0.7 * (gr2.g - 0.5), 0.0, 1.0) * 0.7 + 0.12;
-    vec3 nF = normalize(n + vec3(uSlabDir.xy * (flute2 - 0.5) * 0.5, 0.0) + vec3(0.0, 0.0, (gr.g - 0.5) * 0.3));
-    vec3 skin = mix(vec3(0.84, 0.9, 0.95), vec3(0.4, 0.52, 0.62), uNight) * (S.key * mix(0.3, 0.12, uNight) * (0.25 + 0.75 * max(dot(nF, L), 0.0)) + S.amb * mix(0.8, 1.6, uNight) + uAurora * 0.06);
+    vec3 shell = fracture(q / 58.0 + face * 3.1);
+    float frost = clamp(0.2 + 1.5 * (flute - 0.38) + 0.7 * (gr2.g - 0.5), 0.0, 1.0) * 0.52 + 0.06;
+    vec3 nF = normalize(n + vec3(uSlabDir.zw * tu.x - uSlabDir.xy * tu.y, tu.z) * ((flute2 - 0.5) * 0.5 + (shell.y - 0.5) * 0.5) + vec3(0.0, 0.0, (gr.g - 0.5) * 0.3 + (shell.z - 0.5) * 0.4));
+    vec3 skin = mix(vec3(0.84, 0.9, 0.95), vec3(0.4, 0.52, 0.62), uNight) * (S.key * mix(0.3, 0.12, uNight) * (0.25 + 0.75 * max(dot(nF, L), 0.0)) + S.amb * mix(0.8, 0.7, uNight) + uAurora * (0.03 + 0.14 * max(n.x * 0.8 - n.y * 0.6, 0.0)));
     col = mix(col, skin * (0.88 + 0.24 * flute2), frost);
-    // (A facet here and there is turned to the sun.)
+    // (The lip of each shell is a thin bright line; a facet here and there is turned to the sun.)
+    col += mix(vec3(0.8, 0.92, 1.0) * (S.amb * 0.34 + S.key * 0.1), uAurora * 0.12, uNight) * (1.0 - smoothstep(0.0, 0.05 + 0.03 * foot, shell.x)) * (1.0 - smoothstep(1.5, 4.0, foot)) * 0.6;
     col += S.key * 0.2 * smoothstep(0.93, 1.0, gr.b + 0.25 * flute2) * max(dot(n, L), 0.0) * (1.0 - uNight);
     col += S.hor * 0.26 * pow(1.0 - cosi, 4.0) * mix(1.0, 0.4, uNight);
   }
   // Where two faces meet the edge is worn round: it catches the sky, and the light inside the block leaves by it.
-  float arris = 1.0 - smoothstep(0.5, 7.0, top ? min(eB.x, eB.y) : eB.x);
+  float arris = 1.0 - smoothstep(0.5, 7.0, edgeD);
   col += mix(vec3(0.78, 0.9, 1.0) * (S.key * 0.16 + S.amb * 0.8), uAurora * 0.5 + uSlabTint * 0.2 + vec3(0.03, 0.06, 0.08), uNight) * arris * (0.6 + 0.4 * gr.g);
   // Snow: deep on the top, hanging over every face in lobes, a soft shade under each.
   float lobes = textureLod(uGrain, vec2(q.x / 1500.0 + face * 0.13, 0.37), 0.0).g;
   float hang = 20.0 + 26.0 * smoothstep(0.3, 0.75, lobes) + 5.0 * gr2.g;
-  float below = uSlabSize.y - hang - zUp;
+  float below = zTop - hang - zUp;
   float snowK = top ? 1.0 : 1.0 - smoothstep(-1.0 - foot, 1.0 + foot, below);
   // (Its face rounds over toward the foot of each lobe.)
-  vec3 nS = top ? normalize(vec3((gr2.gb - 0.5) * 0.7, 1.0)) : normalize(n * (0.45 + 0.8 * smoothstep(12.0, 0.0, -below)) + vec3(0.0, 0.0, 0.75 - 0.9 * smoothstep(9.0, 0.0, -below)));
+  vec3 nS = top ? normalize(n + vec3((gr2.gb - 0.5) * 0.7, 0.6)) : normalize(n * (0.45 + 0.8 * smoothstep(12.0, 0.0, -below)) + vec3(0.0, 0.0, 0.75 - 0.9 * smoothstep(9.0, 0.0, -below)));
   // (Snow is lit as the land's is: level snow at one brightness whatever the sun's height, a lobe's face
   // turned to the sun brighter, one turned away in the sky's blue shade, its underside darkest. Before dawn
-  // it has the sky's light and what the block itself gives off, so it is the palest thing on the block.)
+  // it has the sky's light, the curtain's and what the block itself gives off, so it is the palest thing on the block.)
   float toSun = dot(normalize(nS.xy + 1e-4), normalize(L.xy));
   float lobeSh = top ? 1.0 : 1.0 - 0.22 * smoothstep(10.0, 0.0, -below);
-  vec3 sn = mix(vec3(0.93, 0.94, 0.96), vec3(0.74, 0.8, 0.9), uNight) * (S.key * mix(0.24, max(L.z, 0.05), uNight) * (top ? 1.0 : 0.9 + 0.45 * toSun) + S.amb * mix(0.8, 2.4, uNight) * (0.62 + 0.38 * nS.z) + uAurora * 0.2 + uSlabTint * 0.3 * uNight) * lobeSh;
+  vec3 sn = mix(vec3(0.93, 0.94, 0.96), vec3(0.74, 0.8, 0.9), uNight) * (S.key * mix(0.24, max(L.z, 0.05), uNight) * (top ? 0.86 + 0.5 * toSun * (1.0 - nS.z) : 0.9 + 0.45 * toSun) + S.amb * mix(0.8, 1.25, uNight) * (0.62 + 0.38 * nS.z) + uAurora * 0.1 + uSlabTint * 0.3 * uNight) * lobeSh;
   if (!top) col *= 1.0 - 0.34 * (1.0 - smoothstep(0.0, 13.0, below)) * step(0.0, below);
   col = mix(col, sn * (0.92 + 0.16 * gr.g), snowK);
   if (!top) {
-    // The notch the basin has eaten along the foot: wet, dark, undercut, with a bright lip over it.
-    float nh = 17.0 + 12.0 * gr2.b;
-    float notch = 1.0 - smoothstep(nh - 5.0, nh + 2.0, zUp);
-    col = mix(col, col * vec3(0.28, 0.46, 0.58) + S.hor * 0.05 * (1.0 - uNight), notch * 0.8);
-    col += mix(vec3(0.82, 0.93, 1.0) * S.amb * 0.9, uAurora * 0.3, uNight) * (1.0 - smoothstep(0.0, 2.6, abs(zUp - nh - 1.5))) * 0.7;
+    // The notch the basin has eaten along the foot: deep, wet and dark, undercut, the water's light moving
+    // on its roof, and a bright lip of clear ice over it.
+    float nh = 30.0 + 18.0 * gr2.b + 8.0 * sin(q.x / 37.0 + face);
+    float notch = 1.0 - smoothstep(nh - 7.0, nh + 2.0, zUp);
+    vec3 under = col * vec3(0.16, 0.34, 0.46) + mix(vec3(0.05, 0.2, 0.24) * S.amb * (0.4 + 0.9 * gr.b * smoothstep(0.0, nh, zUp)), uAurora * 0.05, uNight);
+    col = mix(col, under, notch * 0.9);
+    col += mix(vec3(0.82, 0.93, 1.0) * S.amb * 0.9, uAurora * 0.3, uNight) * (1.0 - smoothstep(0.0, 2.6 + foot, abs(zUp - nh - 1.5))) * 0.75;
     // The waves break on it: white water thrown up the face, higher with each wave that lands.
-    float beat = blockBeat(q.x + face * 190.0);
-    float reach = 12.0 + 58.0 * beat * beat;
+    float beat = blockBeat(q.x + face * 190.0) * (fi == 3 || fi == 1 ? 0.3 : 1.0);
+    float reach = 12.0 + 62.0 * beat * beat;
     float spray = (1.0 - smoothstep(reach * (0.35 + 0.65 * gr.b), reach * (0.75 + 0.9 * gr.b) + 2.0, zUp)) * (0.55 + 0.45 * beat);
     vec3 white = mix(vec3(0.93, 0.96, 1.0) * (S.amb * 1.25 + S.key * 0.28), vec3(0.34, 0.5, 0.56) * 0.34 + uAurora * 0.16, uNight);
     col = mix(col, white, clamp(spray, 0.0, 1.0) * (0.55 + 0.45 * gr.a) * (1.0 - gSlabSoft * 0.5));
-    // The outline is worn: the snow's own mounds along the top, melt down the sides.
+    // The outline is worn and chipped: no edge that stands against the sky or the water is a ruled line.
     float px = max(foot, 0.2);
-    float crest = uSlabSize.y - 15.0 * (1.0 - smoothstep(0.2, 0.8, textureLod(uGrain, vec2(q.x / 1300.0 + face * 0.41, 0.83), 0.0).g)) - 2.0 * gr2.g;
-    aCov *= 1.0 - smoothstep(crest - px, crest + px, zUp);
-    // (Only an edge that stands against the sky is worn: where the front meets the side the eye sees, the ice goes on.)
-    float sideIn = (2.0 + 9.0 * smoothstep(0.35, 0.8, textureLod(uGrain, vec2(0.3 + face * 0.2, q.y / 1900.0), 0.0).g) + 2.0 * gr.g) * step(face, 1.5);
-    float eOut = face > 2.5 ? sz.x - q.x : (dl.x > 0.0 ? sz.x - q.x : q.x);
-    aCov *= smoothstep(sideIn - px, sideIn + px, eOut);
+    vec4 gw = textureLod(uGrain, q / vec2(900.0, 1400.0) + face * 0.41, 0.0);
+    float wear = 1.5 + 12.0 * smoothstep(0.38, 0.8, gw.g) + 5.0 * smoothstep(0.5, 0.9, gw.b) * step(0.5, gr2.a) + 2.0 * gr.g;
+    aCov *= smoothstep(wear - px, wear + px, silD);
   }
   return vec4(col, aCov);
 }
@@ -1276,53 +1348,78 @@ vec3 confRiver(vec3 col, vec2 pw, float footL, float na, float nb, float shade) 
   return col;
 }
 
-/* ---------- the clear pool and the picture on its bed ---------- */
+/* ---------- the rock pool and the results on its bed ---------- */
 
 const vec2 POOL_C = vec2(${(POOL.x + POOL.w / 2).toFixed(1)}, ${(POOL.y + POOL.h / 2).toFixed(1)});
 const vec2 POOL_H = vec2(${(POOL.w / 2).toFixed(1)}, ${(POOL.h / 2).toFixed(1)});
-const vec2 SHEET_C = vec2(${SHEET.x.toFixed(1)}, ${SHEET.y.toFixed(1)});
-// (An upright screen is shown the table's first columns, at the same size on the bed.)
-#define SHEET_S (uLens.y < 0.9 ? vec2(${((SHEET.w * SHEET_CROP_TALL.w) / SHEET_CROP.w).toFixed(1)}, ${SHEET.h.toFixed(1)}) : vec2(${SHEET.w.toFixed(1)}, ${SHEET.h.toFixed(1)}))
 /** 0..1: inside the pool's reach. */
 float poolAt(vec2 p) {
-  if (p.y < ${(POOL.y - 70).toFixed(1)} || p.y > ${(POOL.y + POOL.h + 70).toFixed(1)} || p.x < ${(POOL.x - 70).toFixed(1)}) return 0.0;
   vec2 pq = abs(p - POOL_C) - POOL_H;
-  return 1.0 - smoothstep(-40.0, 30.0, max(pq.x, pq.y));
+  return 1.0 - smoothstep(-10.0, 40.0, max(pq.x, pq.y));
 }
-/** How far outside the picture's sheet a place on the bed is (negative on it). */
+/** 1 while the pool is near enough to be seen. */
+bool poolNear() { return abs(uCamPos.x - POOL_C.x) < 2300.0 && abs(uCamPos.y - POOL_C.y) < 2300.0; }
+// The results lie on the bed as plates, one to a column of the table: where each column is in the picture, and how wide.
+const float SH_UPP = ${SHEET.upp.toFixed(3)};
+const float SH_X[5] = float[5](${SHEET_COLS.map((c) => c[0].toFixed(1)).join(', ')});
+const float SH_W[5] = float[5](${SHEET_COLS.map((c) => c[1].toFixed(1)).join(', ')});
+// (A narrow frame is shown the first plates, a wide one all five. This is world.ts's sheetCols.)
+#define SH_N (uLens.y < 0.62 ? 2 : (uLens.y < 0.9 ? 3 : (uLens.y < 1.72 ? 2 : (uLens.y < 2.2 ? 3 : (uLens.y < 2.7 ? 4 : 5)))))
+const float SH_SPAN[6] = float[6](0.0, ${[1, 2, 3, 4, 5].map((n) => (sheetSpan(n) * SHEET.upp).toFixed(1)).join(', ')});
+const vec2 SH_O = vec2(${SHEET.x0.toFixed(1)}, ${SHEET.y.toFixed(1)});
+const float SH_HALF = ${((SHEET_SRC.rows * SHEET.upp) / 2).toFixed(1)};
+/** How far outside the plates a place on the bed is (negative on them). */
 float sheetEdge(vec2 pb) {
-  vec2 sq = abs(pb - SHEET_C) - SHEET_S * 0.5;
+  float w = SH_SPAN[SH_N];
+  vec2 sq = abs(pb - vec2(SH_O.x + w * 0.5, SH_O.y)) - vec2(w * 0.5, SH_HALF);
   return max(sq.x, sq.y);
 }
-/** The picture where it lies: its own table, cropped out of the screenshot. */
-vec3 sheetPic(vec2 pb, float footL) {
-  vec2 su = (pb - SHEET_C) / SHEET_S;
-  vec2 cx = uLens.y < 0.9 ? vec2(${(SHEET_CROP_TALL.x / SHEET_CROP.srcW).toFixed(5)}, ${(SHEET_CROP_TALL.w / SHEET_CROP.srcW).toFixed(5)}) : vec2(${(SHEET_CROP.x / SHEET_CROP.srcW).toFixed(5)}, ${(SHEET_CROP.w / SHEET_CROP.srcW).toFixed(5)});
-  vec2 uv = vec2(cx.x + (su.x + 0.5) * cx.y, ${(SHEET_CROP.y / SHEET_CROP.srcH).toFixed(5)} + (0.5 - su.y) * ${(SHEET_CROP.h / SHEET_CROP.srcH).toFixed(5)});
-  float lodS = clamp(log2(max(footL, 1e-3) * ${SHEET_CROP.w.toFixed(1)} / SHEET_S.x), 0.0, 6.0);
-  vec3 pic = textureLod(uSheetTex, uv, lodS).rgb;
-  return pic * pic;
+/** The picture where it lies: the table's own pixels. a: 1 on a plate, 0 in the seam between two. */
+vec4 sheetPic(vec2 pb, float footL) {
+  float sx = (pb.x - SH_O.x) / SH_UPP;
+  float at = 0.0;
+  float x = -1.0;
+  float seam = 0.0;
+  int n = SH_N;
+  for (int i = 0; i < 5; i++) {
+    if (i >= n) break;
+    float l = sx - at;
+    if (l >= 0.0 && l < SH_W[i]) { x = SH_X[i] + l; seam = min(l, SH_W[i] - l); }
+    at += SH_W[i] + ${SHEET_GAP.toFixed(1)};
+  }
+  if (x < 0.0) return vec4(0.0);
+  float px = max(footL, 1e-3) / SH_UPP;
+  vec2 uv = vec2(x, ${SHEET_SRC.y.toFixed(1)} + (SH_O.y + SH_HALF - pb.y) / SH_UPP) / vec2(${SHEET_SRC.w.toFixed(1)}, ${SHEET_SRC.h.toFixed(1)});
+  vec3 pic = textureLod(uSheetTex, uv, clamp(log2(px), 0.0, 6.0)).rgb;
+  // (Seen larger than it was drawn, its letters keep their edge: what is round each point is taken a little out of it.)
+  if (px < 0.8) {
+    vec2 e = vec2(0.9 / ${SHEET_SRC.w.toFixed(1)}, 0.9 / ${SHEET_SRC.h.toFixed(1)});
+    vec3 soft = (textureLod(uSheetTex, uv + vec2(e.x, 0.0), 0.0).rgb + textureLod(uSheetTex, uv - vec2(e.x, 0.0), 0.0).rgb + textureLod(uSheetTex, uv + vec2(0.0, e.y), 0.0).rgb + textureLod(uSheetTex, uv - vec2(0.0, e.y), 0.0).rgb) * 0.25;
+    pic = clamp(pic + (pic - soft) * 1.1 * (1.0 - px / 0.8), 0.0, 1.0);
+  }
+  return vec4(pic * pic, smoothstep(0.0, 1.0 + px, seam));
 }
 /** The mean colour of the picture: the light it gives off before dawn. */
 vec3 sheetGlow() {
-  vec3 m = textureLod(uSheetTex, vec2(${((SHEET_CROP.x + SHEET_CROP.w / 2) / SHEET_CROP.srcW).toFixed(4)}, ${((SHEET_CROP.y + SHEET_CROP.h / 2) / SHEET_CROP.srcH).toFixed(4)}), 6.0).rgb;
+  vec3 m = textureLod(uSheetTex, vec2(0.5, ${((SHEET_SRC.y + SHEET_SRC.rows / 2) / SHEET_SRC.h).toFixed(4)}), 6.0).rgb;
   return m * m + vec3(0.03, 0.075, 0.09);
 }
 /**
- * The pool's bed round the picture: pale glacial silt drawn into ripple
- * marks by the slow current, and stones lying on it, each lit from the
- * sun's side with its shade on the silt beside it.
+ * The pool's bed. Round the shore pale glacial silt drawn into ripple marks,
+ * with stones lying on it, each lit from the sun's side with its shade
+ * beside it; toward the middle the silt gives way to the dark rock of the
+ * deep. deep: 0 in the shallows, 1 over the deep.
  */
-vec3 poolBed(vec2 pb, float footL, vec3 L) {
+vec3 poolBed(vec2 pb, float footL, vec3 L, float deep) {
   vec4 g = textureLod(uGrain, pb / 300.0, lodFor(footL, 300.0, 256.0));
-  vec3 silt = vec3(0.4, 0.63, 0.67) * (0.88 + 0.24 * g.g);
+  vec3 silt = mix(vec3(0.42, 0.64, 0.67), vec3(0.035, 0.06, 0.075), deep) * (0.88 + 0.24 * g.g);
   // Ripple marks: long wandering ridges across the current, each with a lit face and a shaded one.
   float warp = textureLod(uGrain, pb / 2600.0 + 0.4, 0.0).g;
   float ph = (pb.y * 0.92 + pb.x * 0.38) / 9.5 + warp * 9.0;
   float rip = sin(ph) + 0.35 * sin(ph * 2.0 + 1.0);
   float ripK = smoothstep(0.35, 0.6, textureLod(uGrain, pb / 1700.0 + 0.7, 0.0).g) * (1.0 - smoothstep(1.5, 5.0, footL));
   silt *= 1.0 + 0.11 * rip * ripK;
-  // Stones, two sizes: a rounded dome to a cell, most cells empty.
+  // Stones, two sizes: a broken piece to a cell, most cells empty.
   float off = sheetEdge(pb);
   vec2 sun2 = normalize(L.xy + 1e-4);
   for (int k = 0; k < 2; k++) {
@@ -1331,7 +1428,7 @@ vec3 poolBed(vec2 pb, float footL, vec3 L) {
     vec2 id = floor(q);
     vec2 h = hash2(id + float(k) * 31.0);
     // (They lie in drifts, thickest toward the banks, and most of them are small.)
-    float drift = textureLod(uGrain, id / (k == 0 ? 9.0 : 23.0) + 0.3, 0.0).g + 0.25 * smoothstep(40.0, 150.0, off);
+    float drift = textureLod(uGrain, id / (k == 0 ? 9.0 : 23.0) + 0.3, 0.0).g + 0.25 * smoothstep(40.0, 150.0, off) - 0.16 * deep;
     float there = step(k == 0 ? 0.6 : 0.5, fract(h.x * 17.3 + h.y * 5.1)) * step(0.52, drift);
     float rad = cell * (0.12 + 0.24 * h.y * h.y);
     vec2 c = (id + 0.5 + (h - 0.5) * 0.44) * cell - (k == 0 ? vec2(0.0) : vec2(13.7 * cell));
@@ -1341,16 +1438,18 @@ vec3 poolBed(vec2 pb, float footL, vec3 L) {
     vec2 d = pb - c;
     float ang = h.x * 6.283;
     vec2 dl = vec2(cos(ang) * d.x + sin(ang) * d.y, (-sin(ang) * d.x + cos(ang) * d.y) * (1.25 + 0.5 * h.y));
-    float rr = length(dl) / rad;
+    // (Its outline has corners: a stone is a broken piece, not a pebble.)
+    float rr = (length(dl) + 0.34 * rad * (abs(dl.x) * (0.4 + h.x) - abs(dl.y) * (0.3 + h.y)) / max(length(dl), 1e-3) * 0.5) / rad;
     // Its shade on the silt, away from the light.
     vec2 ds = d + sun2 * rad * 0.55;
     silt *= 1.0 - 0.42 * (1.0 - smoothstep(0.55, 1.25, length(ds) / rad));
     float aS = 1.0 - smoothstep(1.0 - 1.5 * footL / rad, 1.0 + 0.5 * footL / rad, rr);
     if (aS > 0.0) {
       float dome = sqrt(max(1.0 - rr * rr, 0.0));
-      vec3 nS = normalize(vec3(d / rad * 0.9, 0.35 + dome));
+      // (Flat faces, turned each its own way.)
+      vec3 nS = normalize(vec3(floor(d / rad * 1.7 + h * 3.0 + 0.5) / 1.7 * 0.9, 0.35 + dome));
       float tone = fract(h.x * 9.7 + h.y * 3.3);
-      vec3 stone = mix(vec3(0.14, 0.16, 0.18), vec3(0.5, 0.53, 0.53), tone) * (0.75 + 0.5 * textureLod(uGrain, pb / 37.0 + h, lodFor(footL, 37.0, 256.0)).g);
+      vec3 stone = mix(vec3(0.1, 0.115, 0.13), vec3(0.46, 0.5, 0.5), tone) * (0.75 + 0.5 * textureLod(uGrain, pb / 37.0 + h, lodFor(footL, 37.0, 256.0)).g) * (1.0 - 0.6 * deep);
       stone *= 0.5 + 0.95 * max(dot(nS, normalize(vec3(L.xy, max(L.z, 0.35)))), 0.0);
       silt = mix(silt, stone, aS);
     }
@@ -1374,7 +1473,7 @@ float poolNet(vec2 pb, float footL) {
  */
 vec4 poolRim(vec2 pw, float inside, float footL, vec3 sky) {
   vec4 g = textureLod(uGrain, pw / 420.0 + 0.2, lodFor(footL, 420.0, 256.0));
-  float reach = 15.0 + 20.0 * g.g + 7.0 * g.b;
+  float reach = 9.0 + 20.0 * g.g * g.g + 7.0 * g.b;
   float px = max(footL, 0.3);
   float a = 1.0 - smoothstep(reach - px, reach + px, inside);
   if (a <= 0.0) return vec4(0.0);
@@ -1388,6 +1487,91 @@ vec4 poolRim(vec2 pw, float inside, float footL, vec3 sky) {
   float dS = max(sheetEdge(pw), 0.0);
   col += sheetGlow() * (0.5 + 1.2 * edge) * exp(-dS / 150.0) * uNight * uSheetOn;
   return vec4(col, a * (0.82 + 0.18 * edge));
+}
+// The boulders that stand in the pool. xy: where, z: a sphere round each that holds all of it above the water.
+const vec3 RK[${ROCKS.length}] = vec3[${ROCKS.length}](${ROCKS.map((r) => `vec3(${r.x.toFixed(1)}, ${r.y.toFixed(1)}, ${(Math.hypot(r.a, r.h) * 1.08).toFixed(1)})`).join(', ')});
+// Each one's faces: the way the face looks, and how far it is from the boulder's middle at the waterline.
+const vec4 RKF[${ROCKS.length * ROCK_FACES}] = vec4[${ROCKS.length * ROCK_FACES}](${ROCKS.map((_, i) =>
+  rockFaces(i)
+    .map((f) => `vec4(${f.map((v) => v.toFixed(4)).join(', ')})`)
+    .join(', '),
+).join(', ')});
+// How much of the pixel the boulder last met covers (its outline is blended over a pixel), and how near an arris it was met.
+float gRockA = 0.0;
+float gRockE = 1e3;
+/**
+ * A ray against the boulders: each a solid cut by flat faces, standing in
+ * the water. Returns the distance to the nearest (or -1), and its face's
+ * normal there.
+ */
+float rockHit(vec3 ro, vec3 rd, out vec3 n) {
+  float best = 1e9;
+  n = vec3(0.0, 0.0, 1.0);
+  for (int i = 0; i < ${ROCKS.length}; i++) {
+    vec3 o = ro - vec3(RK[i].xy, -FREEBOARD);
+    float b = dot(o, rd);
+    if (b * b - dot(o, o) + RK[i].z * RK[i].z < 0.0) continue;
+    float tN = -1e9;
+    float tN2 = -1e9;
+    float tF = 1e9;
+    vec3 nn = vec3(0.0, 0.0, 1.0);
+    vec3 nn2 = nn;
+    for (int j = 0; j < ${ROCK_FACES}; j++) {
+      vec4 pl = RKF[i * ${ROCK_FACES} + j];
+      float den = dot(rd, pl.xyz);
+      float num = pl.w - dot(o, pl.xyz);
+      if (den < -1e-5) { float t = num / den; if (t > tN) { tN2 = tN; nn2 = nn; tN = t; nn = pl.xyz; } else if (t > tN2) { tN2 = t; nn2 = pl.xyz; } }
+      else if (den > 1e-5) tF = min(tF, num / den);
+      else if (num < 0.0) tF = -1e9;
+    }
+    if (tN < tF && tN > 0.0 && tN < best) {
+      best = tN;
+      gRockA = clamp((tF - tN) / (3.0 * tN * uPxAng), 0.0, 1.0);
+      gRockE = tN - tN2;
+      // (Its arrises are worn round: near one the face turns toward its neighbour.)
+      n = normalize(mix(nn + nn2, nn * 2.0, smoothstep(0.0, 9.0, gRockE)));
+    }
+  }
+  return best < 1e8 ? best : -1.0;
+}
+/**
+ * A boulder: frost-broken granite in flat faces, each turned its own way to
+ * the light, its arrises worn pale; dark and wet where the water laps it,
+ * with a collar of ice there; and snow lying on every face level enough to
+ * hold it.
+ */
+vec3 rockColor(vec3 hp, vec3 n, float t) {
+  vec3 L = keyDir();
+  float foot = t * uPxAng;
+  // (The stone's grain lies in the face's own plane.)
+  vec3 tu = normalize(vec3(-n.y, n.x, 1e-3));
+  vec2 q = vec2(dot(hp, tu), dot(hp, cross(n, tu)));
+  vec4 g = textureLod(uGrain, q / 110.0 + n.xy * 3.0, lodFor(foot, 110.0, 256.0));
+  vec4 g2 = textureLod(uGrain, q / 31.0 + n.yx * 5.0, lodFor(foot, 31.0, 256.0));
+  vec3 nf = normalize(n + (g2.gbr - 0.5) * 0.5 + (g.gbr - 0.5) * 0.3);
+  float up = hp.z + FREEBOARD;
+  // (Each face has weathered to its own tone; the stone is speckled, and cracked along its grain.)
+  float tone = fract(n.x * 5.3 + n.y * 8.1 + n.z * 2.7);
+  vec3 stone = mix(vec3(0.05, 0.052, 0.058), vec3(0.2, 0.2, 0.2), 0.2 + 0.55 * tone) * (0.66 + 0.5 * g.g + 0.34 * g2.a);
+  // (Darker toward the water, where it is seldom dry.)
+  stone *= 0.62 + 0.38 * smoothstep(0.0, 34.0, up + 14.0 * (g.a - 0.5));
+  vec3 c = stone * mix(lightOn(nf, 1.0) * 1.3 + S.amb * 0.34, S.amb * 0.95 + uAurora * 0.1 * (0.4 + 0.6 * nf.z), uNight);
+  // (An arris is worn a shade paler: no more.)
+  c += mix(vec3(0.3, 0.31, 0.33) * (S.amb * 0.5 + S.key * 0.1), uAurora * 0.06, uNight) * (1.0 - smoothstep(0.2 + foot, 1.4 + 1.5 * foot, gRockE)) * (0.3 + 0.7 * g2.g);
+  // Wet at the waterline, and a collar of ice round it.
+  c *= 1.0 - 0.55 * (1.0 - smoothstep(2.0, 9.0 + 6.0 * g.b, up));
+  c = mix(c, mix(vec3(0.72, 0.88, 0.95) * (S.amb * 0.95 + S.key * 0.16), vec3(0.2, 0.42, 0.5) * (S.amb * 2.0 + uAurora * 0.2), uNight), (1.0 - smoothstep(1.0, 2.6 + 2.0 * g.g, up)) * 0.85);
+  // Snow on what is level enough to hold it: whole on the crown, broken toward a face's foot.
+  // (Its edge is the drift's own: soft lobes, never a speckle.)
+  float lobe = textureLod(uGrain, q / 420.0 + n.xy * 2.0, 0.0).g;
+  float snowK = smoothstep(0.42, 0.56, n.z + (lobe - 0.5) * 0.7 + 0.003 * up) * smoothstep(4.0, 10.0, up);
+  vec3 nS = normalize(n + vec3((g.gb - 0.5) * 0.4, 0.5));
+  float toSun = dot(normalize(nS.xy + 1e-4), normalize(L.xy));
+  vec3 snow = mix(vec3(0.93, 0.94, 0.96), vec3(0.74, 0.8, 0.9), uNight) * (S.key * mix(0.24, max(L.z, 0.05), uNight) * (0.86 + 0.6 * toSun * (1.0 - nS.z)) + S.amb * mix(0.8, 1.0, uNight) * (0.62 + 0.38 * nS.z) + uAurora * 0.05);
+  c = mix(c, snow * (0.94 + 0.12 * g.r), snowK);
+  // Before dawn the picture's light reaches the faces turned to it.
+  c += sheetGlow() * stone * 3.0 * exp(-max(sheetEdge(hp.xy), 0.0) / 200.0) * (1.0 - snowK * 0.6) * uNight * uSheetOn;
+  return c;
 }
 
 /* ---------- water ---------- */
@@ -2182,7 +2366,8 @@ const vec4 SH1 = vec4(${SHARDS[1].x.toFixed(1)}, ${SHARDS[1].y.toFixed(1)}, ${SH
 vec4 pulseAt() {
   float c = mod(uTime, 7.0);
   float k = c < 3.5 ? clamp(c / 3.0, 0.0, 1.0) : 1.0 - clamp((c - 3.5) / 3.0, 0.0, 1.0);
-  float on = c < 3.5 ? step(c, 3.0) : step(c, 6.5);
+  // (Between crossings it rests at the foot of the shard it has reached, dimmer: it is never nowhere.)
+  float on = c < 3.5 ? mix(0.45, 1.0, step(c, 3.0)) : mix(0.45, 1.0, step(c, 6.5));
   return vec4(k, exp(-mod(c + 0.5, 7.0) * 1.1), c >= 3.0 ? exp(-(c - 3.0) * 1.1) : 0.0, on);
 }
 /**
@@ -2227,14 +2412,16 @@ float shardHit(vec3 ro, vec3 rd, vec4 s, float turn, out vec3 n, out float tF) {
   tF = 1e9;
   n = vec3(0.0, 0.0, 1.0);
   vec3 o = ro - vec3(s.xy, -FREEBOARD - 6.0);
-  for (int k = 0; k < 6; k++) {
+  for (int k = 0; k < 8; k++) {
     vec3 pn = vec3(0.0, 0.0, -1.0);
     float d = 30.0;
-    if (k < 5) {
+    if (k != 5) {
+      // (Five faces that lean together, and two shoulders broken away below the point: lower, steeper planes that cut an arris each.)
       float fk = float(k);
-      float a = turn + fk * 1.2566 + 0.34 * sin(fk * 2.7 + turn * 5.0);
-      float rr = s.w * (0.78 + 0.5 * fract(sin(fk * 12.9 + turn * 7.0) * 43.7));
-      float hk = s.z * (0.72 + 0.28 * fract(sin(fk * 5.3 + turn * 3.0) * 91.3));
+      bool sh = k > 5;
+      float a = sh ? turn + 0.63 + (fk - 6.0) * 2.6 : turn + fk * 1.2566 + 0.34 * sin(fk * 2.7 + turn * 5.0);
+      float rr = s.w * (sh ? 0.9 + 0.12 * (fk - 6.0) : 0.78 + 0.5 * fract(sin(fk * 12.9 + turn * 7.0) * 43.7));
+      float hk = s.z * (sh ? 0.56 + 0.2 * (fk - 6.0) : 0.72 + 0.28 * fract(sin(fk * 5.3 + turn * 3.0) * 91.3));
       float len = sqrt(hk * hk + rr * rr);
       pn = vec3(cos(a) * hk, sin(a) * hk, rr) / len;
       d = rr * hk / len;
@@ -2249,12 +2436,14 @@ float shardHit(vec3 ro, vec3 rd, vec4 s, float turn, out vec3 n, out float tF) {
   return tN < tF && tN > 0.0 ? tN : -1.0;
 }
 /**
- * A shard's ice: the block's own. Pale and white where it is thin (its
- * edges, its point), deep blue through its thick foot; a frosted, fluted
- * skin on some faces and clear ice on others, with the veils and fractures
- * inside. Its light is in the ice, not on it: a white-hot thread up the
- * heart, a blue glow in the ice round it that the veils and every fracture
- * catch, and the frosted faces glowing through.
+ * A shard's ice: the block's own. Clear, and so dark and blue-green through
+ * its thick foot, pale only where it is thin (its edges, its point); every
+ * face a break, scalloped where the ice parted, weathered to its own tone,
+ * frosted on some and clear on others, with the veils and fractures inside.
+ * Its light is in the ice, not on it: a thread up the heart that every
+ * face bends its own way, so it is seen in broken lengths that do not meet
+ * at an arris, a blue glow in the ice round it that the veils and every
+ * fracture catch, and the frosted faces glowing through.
  */
 vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow) {
   vec3 L = keyDir();
@@ -2271,32 +2460,41 @@ vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow)
   float edgeK = 1.0 - smoothstep(0.5 + foot, 4.0 + 3.0 * foot, gShardEdge);
   // (A shard is a smaller piece than the block: what is in it is finer.)
   vec3 in_ = iceInside(q * 1.8, across, thick * 1.8, foot * 1.8, 3.0 + faceId * 5.0);
-  float deepK = 1.0 - exp(-thick / (s.w * 0.9));
-  vec3 body = mix(vec3(0.42, 0.7, 0.84), vec3(0.02, 0.12, 0.27), deepK);
+  float deepK = 1.0 - exp(-thick / (s.w * 0.4));
+  // (Each face has its own tone: one is a clean break, the next has weathered.)
+  float tone = 0.74 + 0.52 * fract(faceId * 5.7 + 0.3);
+  vec3 body = mix(vec3(0.3, 0.62, 0.76), vec3(0.008, 0.075, 0.12), deepK) * tone;
   float thru = 0.55 + 0.45 * max(dot(n, L), 0.0) + 0.5 * max(dot(-n, L), 0.0);
-  vec3 light = mix(S.key * 0.2 * thru + S.amb * 0.92, S.amb * 1.3 + uAurora * 0.06, uNight);
+  vec3 light = mix(S.key * 0.2 * thru + S.amb * 0.92, S.amb * 0.9 + uAurora * 0.05, uNight);
   vec3 airC = mix(vec3(0.82, 0.91, 0.96), vec3(0.42, 0.62, 0.7), uNight);
-  vec3 col = mix(body, airC, in_.x * 0.34) * light;
-  col += mix(vec3(0.85, 0.95, 1.0) * (S.key * 0.2 + S.amb * 0.5), uAurora * 0.5 + vec3(0.02, 0.04, 0.05), uNight) * in_.y * 0.8;
-  // The skin: frosted and fluted on some faces, nearly clear on others.
+  vec3 col = mix(body, airC, in_.x * 0.2) * light;
+  col += mix(vec3(0.85, 0.95, 1.0) * (S.key * 0.24 + S.amb * 0.56), uAurora * 0.5 + vec3(0.02, 0.04, 0.05), uNight) * in_.y * 0.8;
+  // The skin: the break's own shells, frosted and fluted on some faces, nearly clear on others.
   vec4 gr = textureLod(uGrain, q / vec2(380.0, 4200.0) + faceId, lodFor(foot, 380.0, 256.0));
   vec4 gr2 = textureLod(uGrain, q / vec2(110.0, 2100.0) + faceId * 3.0, lodFor(foot, 110.0, 256.0));
-  float frost = clamp(0.06 + 1.5 * (gr.g - 0.46) + 0.6 * (faceId - 0.5), 0.0, 1.0) * 0.5 * (1.0 - gSlabSoft * 0.4);
-  vec3 nF = normalize(n + tu * (gr2.g - 0.5) * 0.45);
-  vec3 skin = mix(vec3(0.84, 0.9, 0.95), vec3(0.4, 0.52, 0.62), uNight) * (S.key * mix(0.3, 0.12, uNight) * (0.25 + 0.75 * max(dot(nF, L), 0.0)) + S.amb * mix(0.8, 1.6, uNight) + uAurora * 0.06);
+  vec3 shell = gSlabSoft > 0.5 ? vec3(1.0, 0.5, 0.5) : fracture(q / vec2(58.0, 150.0) + faceId * 9.0);
+  float frost = clamp(0.06 + 1.5 * (gr.g - 0.46) + 0.6 * (faceId - 0.5), 0.0, 1.0) * 0.34 * (1.0 - gSlabSoft * 0.4);
+  vec3 nF = normalize(n + tu * ((gr2.g - 0.5) * 0.45 + (shell.y - 0.5) * 0.42) + tv * (shell.z - 0.5) * 0.34);
+  vec3 skin = mix(vec3(0.84, 0.9, 0.95), vec3(0.4, 0.52, 0.62), uNight) * (S.key * mix(0.3, 0.12, uNight) * (0.25 + 0.75 * max(dot(nF, L), 0.0)) + S.amb * mix(0.8, 1.0, uNight) + uAurora * 0.06) * tone;
   col = mix(col, skin * (0.88 + 0.24 * gr2.g), frost);
+  // (The lip of each shell is a thin bright line.)
+  col += mix(vec3(0.8, 0.92, 1.0) * (S.amb * 0.3 + S.key * 0.1), uAurora * 0.12, uNight) * (1.0 - smoothstep(0.0, 0.035 + 0.03 * foot, shell.x)) * (1.0 - smoothstep(1.5, 4.0, foot)) * 0.16 * (0.3 + 0.7 * gr.b);
   // The light inside. The ray's nearest approach to the heart's line says how much of the glow it crosses.
   vec3 mp = ro + rd * (t + tF) * 0.5 - vec3(s.xy, -FREEBOARD);
   float up = clamp(mp.z / s.z, 0.0, 1.0);
   float rise = smoothstep(-0.04, 0.1, mp.z / s.z) * (1.0 - smoothstep(0.42, 0.82, up));
-  float axis = length(mp.xy) / s.w;
-  // (The thread is not even: brighter beads climb it slowly.)
-  float thread = exp(-axis * axis / 0.007) * rise * (0.4 + 0.6 * smoothstep(0.3, 0.7, n1(mp.z / 13.0 - uTime * 0.35 + s.x)));
-  float halo = exp(-axis / 0.34) * rise;
+  // (Each face bends the thread its own way, and each shell on it a little more: it is seen broken, never as a tube.)
+  vec2 bent = mp.xy + (tu.xy * (faceId - 0.5) * 0.5 + tu.xy * (shell.y - 0.5) * 0.3) * s.w + n.xy * (gr2.g - 0.5) * 0.16 * s.w;
+  float axis = length(bent) / s.w;
+  float axis0 = length(mp.xy) / s.w;
+  // (It is not even: brighter lengths climb it slowly, with dark between them where a fracture stands in the way.)
+  float lengths = smoothstep(0.3, 0.7, n1(mp.z / 13.0 - uTime * 0.35 + s.x)) * smoothstep(0.25, 0.5, textureLod(uGrain, vec2(faceId, mp.z / 700.0 + shell.z * 0.05), 0.0).g + 0.2);
+  float thread = exp(-axis * axis / 0.006) * rise * (0.2 + 0.8 * lengths) * (1.0 - 0.7 * gSlabSoft);
+  float halo = exp(-axis0 / 0.34) * rise;
   float lamp = glow * mix(0.9, 1.0, uNight);
-  vec3 hot = vec3(0.9, 1.0, 1.0) * thread * 2.6 + vec3(0.2, 0.72, 0.95) * halo * (0.3 + 1.7 * in_.x + 2.4 * in_.y) * mix(1.5, 0.9, uNight);
+  vec3 hot = vec3(0.9, 1.0, 1.0) * thread * 2.4 + vec3(0.2, 0.72, 0.95) * halo * (0.3 + 1.7 * in_.x + 2.4 * in_.y + 0.2 * (1.0 - smoothstep(0.0, 0.1, shell.x))) * mix(0.32, 0.9, uNight);
   // (Frost hides the thread and keeps the glow; clear ice shows both.)
-  col += hot * lamp * (1.0 - 0.75 * frost) + vec3(0.2, 0.7, 0.92) * halo * frost * lamp * 0.55;
+  col += hot * lamp * (1.0 - 0.75 * frost) + vec3(0.2, 0.7, 0.92) * halo * frost * lamp * mix(0.25, 0.55, uNight);
   // The sky on it, and the sun on a face turned its way.
   float cosi = max(dot(-rd, n), 0.0);
   float fr = 0.04 + 0.96 * pow(1.0 - cosi, 5.0);
@@ -2312,7 +2510,10 @@ vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow)
   float wl = hp.z;
   col = mix(col, col * vec3(0.3, 0.48, 0.6), (1.0 - smoothstep(4.0, 11.0, wl)) * 0.7);
   col += mix(vec3(0.82, 0.93, 1.0) * S.amb * 0.8, uAurora * 0.25, uNight) * (1.0 - smoothstep(0.0, 2.2, abs(wl - 12.0))) * 0.6;
-  return col;
+  // (Seen from far off it stands in the valley's air, as the land round it does.)
+  float thin = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
+  vec3 air = airAt(rd.xy);
+  return mix(col, mix(air, mix(S.hor, air, 0.45), uNight), (1.0 - exp(-t * 0.00021 * S.haze * thin)) * (1.0 - gSlabSoft));
 }
 
 void main() {

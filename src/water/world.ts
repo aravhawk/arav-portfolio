@@ -96,6 +96,38 @@ export const SLAB = {
 };
 
 /**
+ * The block's faces. It is a piece calved from a glacier's face, not a cut
+ * box: a solid bounded by flat planes, in its own frame (x across its
+ * front, y into it, z up from the water). The front is the one polished
+ * face; the sides lean, the top slopes, two corners of the top and two
+ * arrises have broken away. Each face is its outward normal and its
+ * distance from the middle of the front's foot. None cuts into the picture.
+ */
+export function slabFaces(): [number, number, number, number][] {
+  const hw = SLAB.w / 2;
+  const { h, thick } = SLAB;
+  const face = (n: [number, number, number], p: [number, number, number]): [number, number, number, number] => {
+    const l = Math.hypot(n[0], n[1], n[2]);
+    const u = n.map((v) => v / l);
+    return [u[0], u[1], u[2], u[0] * p[0] + u[1] * p[1] + u[2] * p[2]];
+  };
+  return [
+    face([0, -1, 0], [0, 0, 0]), // 0: the polished front
+    face([0.04, 1, 0.1], [0, thick, 0]), // 1: the back, leaning in
+    face([-1, 0.03, 0.055], [-hw, 0, 0]), // 2: the left side
+    face([1, -0.04, 0.03], [hw, 0, 0]), // 3: the right side
+    face([0.08, 0.1, 1], [-hw, 0, h]), // 4: the top, sloping
+    face([0, 0, -1], [0, 0, 0]), // 5: the foot
+    face([-0.62, -0.05, 0.78], [-hw, 0, h - 72]), // 6: the top's left corner, broken away
+    face([0.45, 0.1, 0.89], [hw - 11, 0, h - 64]), // 7: its right corner
+    face([-0.8, -0.6, 0.02], [-hw + 15, 0, 0]), // 8: the front's left arris
+    face([0.7, -0.55, -0.45], [hw - 30, 0, 0]), // 9: the front's right arris, at the foot
+    face([-0.1, 0.62, 0.78], [0, thick - 40, h - 34]), // 10: the back of the top
+    face([-0.85, 0.5, 0.15], [-hw + 34, thick, 0]), // 11: the back's left corner
+  ];
+}
+
+/**
  * The delta. Out of the glacier the river turns toward the light, slows, and
  * braids out into the sea: distributaries that part round bars of snow and
  * meet again. West of it a broad bank runs on to a cape; that bank is where
@@ -145,16 +177,102 @@ export const confRiverWidth = (x: number, widths: number[]) =>
   }, 0);
 
 /**
- * Station 3, the clear pool beside the river, and the picture on its bed.
- * The picture is shown cropped to the part of it that is read: the
- * leaderboard's table (CROP, in the picture's own pixels). It lies across
- * the pool as a long sheet, so its rows are as large as the frame allows.
+ * Station 3, the rock pool beside the river, and the results on its bed.
+ *
+ * The picture is the leaderboard's table, shown as plates lying side by
+ * side on the bed: one plate to a column of the table, each a crop of the
+ * picture's own pixels (SHEET_COLS, in the picture's pixels: x, width),
+ * every row at the same height in all of them. A narrow frame is shown
+ * the first plates (the models and their scores), a wide one all five, so
+ * the rows are always large enough to be read.
  */
-export const SHEET_CROP = { x: 110, y: 242, w: 1690, h: 206, srcW: 2000, srcH: 1088 };
-/** On an upright screen the sheet is the table's first columns (the models and their scores), so the rows stay as large. */
-export const SHEET_CROP_TALL = { x: 150, w: 810 };
-export const POOL: Rect = { x: 1240, y: 9030 + DY, w: 1080, h: 430 };
-export const SHEET = { x: 1780, y: 9245 + DY, w: 900, h: (900 * SHEET_CROP.h) / SHEET_CROP.w };
+export const SHEET_SRC = { w: 2000, h: 1088, y: 246, rows: 198 };
+export const SHEET_COLS: [number, number][] = [
+  [162, 237],
+  [875, 87],
+  [1133, 90],
+  [1378, 80],
+  [1610, 78],
+];
+/** The seam between two plates, in the picture's pixels. */
+export const SHEET_GAP = 9;
+/** How many plates a frame of this shape is shown. */
+export const sheetCols = (aspect: number) => (aspect < 0.62 ? 2 : aspect < 1.72 ? (aspect < 0.9 ? 3 : 2) : aspect < 2.2 ? 3 : aspect < 2.7 ? 4 : 5);
+/** How wide n plates lie, in the picture's pixels. */
+export const sheetSpan = (n: number) => SHEET_COLS.slice(0, n).reduce((w, c) => w + c[1], 0) + SHEET_GAP * (n - 1);
+/** The plates: where their west edge and their middle row lie, and how many world units one of the picture's pixels is. */
+export const SHEET = { x0: 1800, y: 9330 + DY, upp: 0.95 };
+/** The pool's shore, a closed line: bays and points, no ruled side. (POOL is the box round it.) */
+export const POOL_SHORE: [number, number][] = [
+  [1712, 9250],
+  [1750, 9160],
+  [1840, 9128],
+  [1930, 9150],
+  [2040, 9112],
+  [2150, 9136],
+  [2262, 9104],
+  [2372, 9140],
+  [2452, 9214],
+  [2440, 9330],
+  [2476, 9450],
+  [2462, 9560],
+  [2380, 9640],
+  [2270, 9612],
+  [2170, 9668],
+  [2060, 9650],
+  [1960, 9700],
+  [1846, 9668],
+  [1760, 9590],
+  [1790, 9500],
+  [1728, 9420],
+  [1745, 9330],
+];
+export const POOL: Rect = { x: 1712, y: 9104 + DY, w: 764, h: 596 };
+/**
+ * The boulders that stand in the pool: where, how wide (two half-widths
+ * and the way the long one lies), and how high above the water. None
+ * stands where its image would lie across the plates.
+ */
+export const ROCKS: { x: number; y: number; a: number; b: number; turn: number; h: number }[] = [
+  { x: 1742, y: 9486, a: 44, b: 30, turn: 0.5, h: 40 },
+  { x: 1850, y: 9604, a: 60, b: 40, turn: -0.3, h: 58 },
+  { x: 2060, y: 9588, a: 34, b: 24, turn: 0.9, h: 26 },
+  { x: 2210, y: 9566, a: 74, b: 48, turn: 0.2, h: 70 },
+  { x: 2350, y: 9524, a: 40, b: 30, turn: -0.7, h: 34 },
+  { x: 2150, y: 9178, a: 32, b: 20, turn: 0.2, h: 22 },
+  { x: 2452, y: 9480, a: 46, b: 32, turn: 1.2, h: 48 },
+].map((r) => ({ ...r, y: r.y + DY }));
+/** How many flat faces a boulder is cut by. */
+export const ROCK_FACES = 9;
+/**
+ * A boulder's faces: frost breaks granite along planes, so each is a solid
+ * cut by a few of them (five round its sides, leaning in, and two across
+ * its top). Each face is its outward normal and its distance from the
+ * boulder's middle at the waterline.
+ */
+export function rockFaces(i: number): [number, number, number, number][] {
+  const r = ROCKS[i];
+  const rnd = (k: number) => {
+    const v = Math.sin(i * 127.1 + k * 311.7 + 4.3) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  const out: [number, number, number, number][] = [];
+  for (let j = 0; j < ROCK_FACES; j++) {
+    // Five round its sides, two shoulders, two across its crown.
+    const side = j < 5;
+    const az = side ? (j * Math.PI * 2) / 5 + (rnd(j) - 0.5) * 0.85 : rnd(j) * 6.283 + (j % 2 ? Math.PI : 0);
+    const lean = side ? 0.08 + 0.5 * rnd(j + 10) : j < 7 ? 0.55 + 0.3 * rnd(j + 10) : 1.05 + 0.4 * rnd(j + 10);
+    // (In the boulder's own frame, then turned the way it lies.)
+    const lx = Math.cos(az) * Math.cos(lean);
+    const ly = Math.sin(az) * Math.cos(lean);
+    const lz = Math.sin(lean);
+    const d = Math.hypot(r.a * lx, r.b * ly, r.h * lz) * (0.74 + 0.26 * rnd(j + 20));
+    const c = Math.cos(r.turn);
+    const sn = Math.sin(r.turn);
+    out.push([c * lx - sn * ly, sn * lx + c * ly, lz, d]);
+  }
+  return out;
+}
 
 /** Station 4, the tarn, and the two shards of ice that stand in it. */
 export const TARN = { x: 1300, y: 10800 + DY, rx: 820, ry: 640 };
@@ -276,7 +394,7 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
     [450, 220, 190],
     [0, 470, 190],
   ]) {
-    b.agitate(pt(SLAB.x + dx, SLAB.y + dy), r, 0.6);
+    b.agitate(pt(SLAB.x + dx, SLAB.y + dy), r, 0.22);
   }
 
   // Below the basin the river narrows, bends east, and comes round to the foot of the cliff.
@@ -308,14 +426,20 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
     width: [below, below * 0.98, below * 0.94, below * 0.88, 400, 360, 340, 340, 420],
   });
 
-  // The clear pool: fed by a thin spill at its head, drained by another at its foot.
-  b.pool(POOL, 190);
-  b.disc(pt(POOL.x + 150, POOL.y + 150), 150);
-  b.disc(pt(POOL.x + POOL.w - 170, POOL.y + POOL.h - 150), 160);
-  b.disc(pt(POOL.x + POOL.w - 330, POOL.y + 70), 120);
-  b.channel([pt(700, 8980 + DY), pt(960, 9090 + DY), pt(1130, 9200 + DY), pt(POOL.x + 30, 9230 + DY)], { width: [46, 40, 44, 60], speed: 0.7 });
-  b.channel([pt(POOL.x + 60, 9420 + DY), pt(1220, 9560 + DY), pt(1140, 9680 + DY), pt(1070, 9790 + DY)], { width: [60, 44, 40, 46], speed: 0.7 });
-  b.channel([pt(POOL.x + 40, 9230 + DY), pt(SHEET.x, SHEET.y), pt(POOL.x + POOL.w - 60, 9300 + DY)], { width: 380, speed: 0.1, flowOnly: true });
+  // The rock pool: an irregular shore, fed by its own melt and drained by a brook that runs on to the tarn.
+  const shore = new Path2D();
+  POOL_SHORE.forEach(([x, y], i) => {
+    const [nx, ny] = POOL_SHORE[(i + 1) % POOL_SHORE.length];
+    const mx = (x + nx) / 2;
+    const my = (y + ny) / 2 + DY;
+    if (i === 0) shore.moveTo(mx, my);
+    else shore.quadraticCurveTo(x, y + DY, mx, my);
+  });
+  shore.quadraticCurveTo(POOL_SHORE[0][0], POOL_SHORE[0][1] + DY, (POOL_SHORE[0][0] + POOL_SHORE[1][0]) / 2, (POOL_SHORE[0][1] + POOL_SHORE[1][1]) / 2 + DY);
+  shore.closePath();
+  b.fill(shore);
+  b.channel([pt(1800, 9620 + DY), pt(1720, 9760 + DY), pt(1640, 9900 + DY), pt(1700, 10080 + DY), pt(1800, 10260 + DY), pt(1860, 10420 + DY)], { width: [56, 40, 44, 40, 46, 60], speed: 0.7 });
+  b.channel([pt(1740, 9250 + DY), pt(2080, 9400 + DY), pt(1830, 9610 + DY)], { width: 300, speed: 0.08, flowOnly: true });
 
   // The tarn: wide, dark and still.
   const tarn = new Path2D();
