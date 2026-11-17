@@ -63,8 +63,13 @@ export function heroDesign(aspect: number): Hero {
   const fov = tall ? 64 : aspect >= 1.2 ? 50 : 56;
   // (A phone's frame is tall: it keeps a real band of sky and ranges over the lake.)
   const horizon = tall ? 0.235 : 0.21;
-  const middle = tall ? 0.565 : 0.585;
-  const share = tall ? 0.72 : Math.min(0.62, Math.max(0.56, 0.3 + 0.19 * aspect));
+  // (Two shapes of screen leave the first frame's words no room under the letters: a phone that is squat for its width,
+  // and a frame far wider than it is tall. On both the name stands a little higher, and on the wide one a little
+  // smaller, so bare ice lies under the letters' feet and snow under the words.)
+  const squat = tall ? Math.min(1, Math.max(0, (aspect - 0.465) / 0.035)) : 0;
+  const shallow = Math.min(1, Math.max(0, (aspect - 2.1) / 0.7));
+  const middle = tall ? 0.565 - 0.034 * squat : 0.585 - 0.03 * shallow;
+  const share = tall ? 0.72 : Math.min(0.62, Math.max(0.56, 0.3 + 0.19 * aspect)) - 0.1 * shallow;
   const width = tall ? 860 : 1500;
   const th = Math.tan(rad(fov / 2));
   const pitch = Math.atan((1 - 2 * horizon) * th);

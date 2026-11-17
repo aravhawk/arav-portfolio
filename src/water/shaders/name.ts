@@ -243,39 +243,52 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
     float cloud = smoothstep(-0.12, 0.5, sm.r * 0.85 + streak * 0.6 + band * 0.5 + 0.4 * (core - 0.5)) * (1.0 - 0.6 * melt);
     // Clear ice a hand deep is pale blue; through the block's whole depth it is a deeper blue; air in it is white.
     vec3 body = mix(vec3(0.4, 0.62, 0.84), vec3(0.16, 0.38, 0.66), smoothstep(0.35, 1.1, dK) * 0.6 * whole);
+    // (A block is clearest low down, where its own weight has pressed the air out of it, and frosted toward its top: the
+    // eye goes into the lower half of a letter and stops on the upper.)
+    float clearK = smoothstep(0.8, 0.12, hK) * (1.0 - cloud) * whole;
+    body = mix(body, vec3(0.17, 0.4, 0.7), 0.5 * clearK + 0.22 * core * (1.0 - cloud) * whole);
     body = mix(body, vec3(0.82, 0.91, 0.98), 0.08 + 0.6 * cloud);
     // (Before dawn it is palest under the tops, and darker and clearer toward its foot.)
     col = mix(body, vec3(0.8, 0.87, 0.93), 0.55 * uNight) * lit * mix(0.9 + 0.24 * hK, 0.6 + 1.9 * pow(min(hK, 1.0), 1.2), uNight);
     // Where there is no air in it the eye goes through to the dark ice beyond.
-    float win = (1.0 - cloud) * smoothstep(0.1, -0.3, sm.g) * (0.45 + 0.3 * uNight) * whole;
+    float win = (1.0 - cloud) * smoothstep(0.16, -0.3, sm.g) * (0.62 + 0.13 * uNight) * (0.7 + 0.6 * clearK) * whole;
     col = mix(col, lake * exp(-vec3(1.6, 0.7, 0.3) * dK) + col * 0.3, win);
     vec2 across_ = vec2(dot(rd, tu), dot(rd, tv)) / max(-dot(rd, n), 0.3) / 1.31;
     if (soft < 0.5) {
       // What is in it: veils of air, and fracture planes at three depths, each a hairline and a flash where it lies to the light.
       vec2 across = across_;
       vec3 in_ = iceInside(q * 1.7 + 31.0, across, thick * 1.7, px * 1.7, 2.0);
-      col = mix(col, mix(vec3(0.9, 0.95, 0.99), vec3(0.6, 0.8, 0.86), uNight) * lit * mix(1.0, 1.6, uNight), in_.x * 0.3);
+      col = mix(col, mix(vec3(0.9, 0.95, 0.99), vec3(0.6, 0.8, 0.86), uNight) * lit * mix(1.0, 1.6, uNight), in_.x * 0.36);
       // (The light in the fractures shifts: by day as the sun's glitter does, before dawn with the curtain.)
       float shift = 0.55 + 0.9 * n1(uTime * 0.45 + g.x / 170.0 + g.y / 90.0);
-      col += mix(vec3(0.92, 0.97, 1.0) * (S.key * 0.2 + S.amb * 0.5), vec3(0.7, 1.0, 0.95) * (litN * 0.35 + uAurora * 0.16), uNight) * in_.y * shift * 0.8;
+      col += mix(vec3(0.92, 0.97, 1.0) * (S.key * 0.2 + S.amb * 0.5), vec3(0.7, 1.0, 0.95) * (litN * 0.35 + uAurora * 0.16), uNight) * in_.y * shift * 1.15;
       // The broad planes of cleavage: the ice either side of one takes the light a little differently.
       vec3 f3 = fracture(q / vec2(118.0, 176.0) + 5.3);
-      col *= 0.86 + 0.26 * f3.y + 0.05 * sin(uTime * 0.5 + f3.z * 40.0);
+      col *= 0.8 + 0.36 * f3.y + 0.05 * sin(uTime * 0.5 + f3.z * 40.0);
       float fl = (1.0 - smoothstep(0.0, 0.012 + 1.3 * px / 118.0, f3.x)) * step(0.3, f3.z);
-      col += mix(vec3(0.9, 0.97, 1.0) * (S.key * 0.1 + S.amb * 0.5), vec3(0.7, 1.0, 0.95) * (litN * 0.3 + uAurora * 0.08), uNight) * fl * 0.32 * shift * (0.4 + 0.6 * f3.y);
+      col += mix(vec3(0.9, 0.97, 1.0) * (S.key * 0.1 + S.amb * 0.5), vec3(0.7, 1.0, 0.95) * (litN * 0.3 + uAurora * 0.08), uNight) * fl * 0.5 * shift * (0.4 + 0.6 * f3.y);
     }
     // The edges. The ice is thin at an arris and the light pours through it: brightest on the edges turned to the sun.
     // Just inside, the ice turns the light away. (Before dawn nothing outlines a letter: the upper edges only catch the sky.)
     float rim = exp(-e / 2.6);
     float sunE = toSun * toSun * toSun;
     col += mix(vec3(1.0, 0.95, 0.88) * (S.key * 0.2 + S.amb * 0.45) * (0.05 + 0.95 * sunE), vec3(0.9, 1.0, 1.05) * litN * 0.5 * smoothstep(0.1, 0.8, gd.y), uNight) * rim;
+    // (And the light does not stop at the arris: it comes on into the ice a hand's breadth, so a thin stroke is lit
+    // right through and a broad one has a darker, clearer heart.)
+    col += mix(vec3(0.86, 0.95, 1.0) * (S.key * 0.11 + S.amb * 0.22) * (0.35 + 0.65 * toSun), vec3(0.8, 0.95, 1.0) * litN * 0.16, uNight) * exp(-e / (0.032 * cap)) * 0.8 * whole;
     // (An edge turned from the sun gives back the dark ice it stands on instead: a deeper line, not a bright one.)
     col *= 1.0 - (0.3 * exp(-e / 4.0) * (1.0 - toSun) * (1.0 - toSun) + 0.13 * smoothstep(3.0, 7.0, e) * (1.0 - smoothstep(8.0, 20.0, e))) * (1.0 - uNight);
     // (The side of each stroke the sun comes in by is the lighter.)
     col *= mix(1.0 + 0.16 * (toSun - 0.5) * exp(-e / (0.14 * cap)), 1.0, uNight);
-    if (px < 1.1 && soft < 0.5) {
+    // And the whole block is clearer the lower the eye goes in it: frosted and white under its top, and toward its foot
+    // a deep clear blue that the dark lake shows through, in long soft tongues that reach higher here than there. (Its
+    // edges stay lit: the light that comes in by an arris is what draws the letter.)
+    float tongue = sm.b * 0.5 + streak * 0.35;
+    float seeK = smoothstep(0.86 + 0.3 * tongue, 0.04, hK) * (0.58 - 0.2 * uNight) * whole * (1.0 - 0.55 * exp(-e / 3.0));
+    col = mix(col, (vec3(0.1, 0.27, 0.56) * lit * mix(1.0, 2.2, uNight) + lake * 0.6) * (0.85 + 0.3 * sm.r), seeK);
+    if (px < 1.6 && soft < 0.5) {
       // Bubbles strung in the strata: only from close by.
-      float bead = smoothstep(0.955, 1.0, textureLod(uGrain, (q + across_ * 14.0) / 300.0 + 0.43, 0.0).r) * smoothstep(0.1, 0.45, band) * (1.0 - smoothstep(0.6, 1.1, px));
+      float bead = smoothstep(0.955, 1.0, textureLod(uGrain, (q + across_ * 14.0) / 300.0 + 0.43, 0.0).r) * smoothstep(0.1, 0.45, band) * (1.0 - smoothstep(0.9, 1.6, px));
       col += mix(vec3(0.95, 0.98, 1.0) * (S.key * 0.2 + S.amb * 0.5), litN * 0.8, uNight) * bead;
     }
     // Frost: rime on the face, most under the tops and at the shoulders.
@@ -671,7 +684,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
       float sdm = nameSd(i, from.x + rf.x * s2, z2, 0.0, g);
       float blur = mix(0.05, 0.13, onWater * (1.0 - onIce));
       // (It is short: the image of a letter's foot and a little more, never a second word under the first.)
-      float m = (1.0 - smoothstep(-1.0 - s2 * 0.4 * blur, 1.0 + s2 * blur, sdm)) * (1.0 - smoothstep(0.08 * uNameB.z, mix(0.72, 0.4, onWater * (1.0 - onIce)) * uNameB.z, z2));
+      float m = (1.0 - smoothstep(-1.0 - s2 * 0.4 * blur, 1.0 + s2 * blur, sdm)) * (1.0 - smoothstep(0.05 * uNameB.z, mix(i == 0 && uNameG.z > -5e3 ? 0.34 : 0.56, 0.4, onWater * (1.0 - onIce)) * uNameB.z, z2));
       if (m > mir) {
         mir = m;
         mc = nameLook(vec3(from.x + rf.x * s2, y0, z2), rf, s2 + length(from - uCamPos), i, g, sdm, gNmGrad, 1.0, uNameM.y, 1.0);
@@ -680,7 +693,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
     float cosw = clamp(-dir.z, 0.0, 1.0);
     // (Water is a poorer mirror than black ice from here, and what stands under it shows through: the image there is faint.)
     // (Once the sheet has opened under them their image in the ice beyond the water is let go: the water is the picture now.)
-    float strength = mix(mix(0.26, 0.36, pond) * (1.0 - 0.8 * uNameP.z), mix(0.16, 0.1, smoothstep(0.1, 0.6, cosw)) * (1.0 - 0.7 * smoothstep(0.0, 0.2 * uNameB.z, uNameM.z)), onWater * (1.0 - onIce));
+    float strength = mix(mix(0.21, 0.32, pond) * (1.0 - 0.8 * uNameP.z), mix(0.16, 0.1, smoothstep(0.1, 0.6, cosw)) * (1.0 - 0.7 * smoothstep(0.0, 0.2 * uNameB.z, uNameM.z)), onWater * (1.0 - onIce));
     col = mix(col, mc * mix(vec3(0.6, 0.76, 0.96), vec3(0.5, 0.7, 0.9), uNight), mir * strength * mirK);
   }
   // The pieces that have come away from the letters, afloat.
