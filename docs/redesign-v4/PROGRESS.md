@@ -789,3 +789,63 @@ captions), inner pages, the stations' materials (RydAR, Kilo Bench,
 cc-switch first), the melt, the night's snow, the delta and the
 ending's air. A final clean frame-rate measurement follows when
 nothing else is on the GPU.
+
+## Kilo R3a/R3b (Nov 17, 2026, morning CT)
+
+Done by Kilo in code mode while the orchestrator thread was paused. Briefs: `.tools/briefs/R3a-words.md`, `R3b-inner.md`. Branch `redesign/fable-v4b-20261115`, pushed over SSH, both commits SSH-signed (aravhawk@gmail.com, verified with `git log --show-signature -1`). No PR, no merge.
+
+### Commits
+
+- `d4d450e` feat(v4): R3a the home page's words
+- `bccb701` feat(v4): R3b inner pages
+
+### Tests
+
+- `pnpm lint`, `pnpm typecheck`: clean after each task. `pnpm test`: 15 files, 296 tests pass (3 new in `tests/water/words.test.ts`). `pnpm build`: passes after each task.
+- New `scripts/words-test.mjs` (rendered page, 80 scroll positions, each looked at in transit and at rest): 0 faults at 1440, 768 and 390 in both themes on the production build. Before the change: 41 faults at 1440 light, 58 at 390 dark (intersections, captions cut short, the nav at nine different heights).
+- R3b: all 11 inner routes at 320, 390, 768, 1440, 1920: status 200, no sideways scroll, no console errors, no visible text under 12 px in the page body.
+
+### R3a: what was done
+
+- A station's words have two states only (a small tag, the composed block). Between them the block goes out, changes unseen, and comes back in, so no line can meet another in transit ("18,302" over its caption is gone). `src/water/words.ts` holds the rule and the captions' geometry.
+- Station placements cut to three: lower left (the rule), upper left under the nav (Agent Bridge, RydAR), a figure across the top (Open models). TensorPoW's oversized name under its line is gone: one type scale, one order.
+- Captions: whole names, no ellipsis, one treatment in both themes (the dark theme's blurred chips are removed). Wide frames: a fan whose leaders land on the streams. Phones: the seven repositories as one list in the streams' order, inside the words' lee; the four models stepped over their columns. All 84 px or more from the top.
+- The nav no longer leaves on the home page: one fixed place (y 14) at every position. The rail names its ticks on hover and focus and is dropped on phones.
+
+### R3b: what was done
+
+- Type: body about 20 px at 1440 and growing to 24; captions, labels, table text 15 px or more at 1440. Section gap cut from up to 150 px to up to 104 px.
+- Ground: a page-length layer of light that changes down the page in both themes; each page's drifts at their own offset and light angle; a soft shade under each section's groove.
+- Charts: Upstream's bars and Open models' columns are flat, mono figures, teal on the leading one only.
+- Upstream: T3 Code changes lead, larger; then the rest by repository; the full ledger kept, smaller, grouped by repository with counts.
+- Open models: each build has what it is and a fact list (builds, context, input, capabilities, licence, updated), all from `.tools/assets/project-facts.md`.
+- Kilo Bench: the leaderboard rows cut from the 2324 px capture column by column and shown large (two columns on phones); the alternating black and grey modes are one colour, smaller.
+- Blog: index scene shortened (54svh); the post is about 21 px on a centred 33em measure with tags in the left margin.
+
+### R3b remaining (Kilo)
+
+Not done from the brief:
+
+- Item 1: the count of screens less than a third filled at 1440 and 1920 was not run; Infiniview, Agent Bridge, cc-switch, TensorPoW and RydAR got only the shared type and rhythm changes, no per-page layout work ("right column starts 300 px below the terminal", the small dialog in a wide column).
+- Item 2: no band of the page's scene returns lower down the page; the per-page difference is offset and light angle only.
+- Item 6: the post's margin has tags only (no date or contents list there).
+- Item 7: light pictures on dark pages are unchanged (existing mount and 0.84 dimming).
+- Item 8: pill buttons and the glass nav are unchanged.
+- Checks not run: inner-page text contrast after the ground change, the twelve-backdrop thumbnail sheet, WebKit and Firefox, `checks.js`.
+
+### R3a not done or not verified
+
+- Item 2 (titles on one calm surface): placements were moved, but the luminance-spread measurement behind each title was not written or run. By eye at 1440 light, Infiniview's last letters and arrow still touch the pool rim and Agent Bridge's line still runs over the far ridge.
+- Item 6 (the dead frame in the melt): tried pinning the statement early, it sat over the breaking ice and was reverted. Positions without copy at rest: 11 of 80 (brief asks for 3 or fewer).
+- Item 7 (3,202 against 3,203 between captures): not investigated.
+- Legibility test (`scripts/legibility-test.mjs`): 1440 and 390 light pass. Dark still fails on captions over the lit river: at 1440 "XcodeBenchmark" 3.82 and "openbridge" 3.94 (Upstream), "gemma4" 4.24 and once "qwen3.5-opus-4.6" 2.31 (Open models); at 390 "llama4" 4.37 once. These were measured before the last halo and caption-window changes and not rerun at 1440 dark. The brief forbids a chip, so this needs the scene to supply the calm.
+- Not run: 320, 768, 2560 legibility; reduced motion beyond one capture; no-WebGL page; keyboard order; WebKit and Firefox; `checks.js` word count.
+
+### For Fable review
+
+1. The tag-to-composed swap is a 240 ms fade out and in: check it reads as deliberate, not as a flicker, while scrolling slowly through a boundary.
+2. The fixed nav on the home page reverses W12's "nav leaves on scroll down": confirm that is wanted.
+3. Dark-theme caption contrast above (the one known failing gate).
+4. The Kilo Bench crop is upscaled past 1x of its source on wide screens; check sharpness at 2x density.
+5. The Open models copy is new wording of facts from the fact sheet: check tone and that "Claude Opus 4.6" in a model's own name is allowed.
+6. The ground's light down the page is subtle; judge whether it answers "a tinted flat".
