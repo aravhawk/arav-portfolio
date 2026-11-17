@@ -23,7 +23,7 @@
 import { ICE_FIELD } from './ice';
 import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
 import { PANO } from './terrain';
-import { BASIN, CONF_Y, DELTA, ISLAND, POOL, SHARDS, SHEET, STREAM, T2, TARN, TRIBS } from '../world';
+import { BASIN, CONF_Y, DELTA, ISLAND, LAKE, POOL, SHARDS, SHEET, STREAM, T2, TARN, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -487,6 +487,17 @@ vec4 slabColor(vec2 uv, float face, float t, vec3 rd) {
 
 float bedShore;
 vec4 bedAt(vec2 w) {
+  // The lake's far shore. Past the world's sides the bed repeats its last
+  // column, so the coast there would be a ruled line: it is bent into long
+  // low headlands and bays, big enough to be seen from across the lake.
+  // (Not in front of the outlet: the river leaves where it was carved.)
+  if (w.y > ${(LAKE.y1 - 2300).toFixed(1)} && w.y < ${(LAKE.y1 + 1500).toFixed(1)}) {
+    float side = 1.0 - smoothstep(650.0, 1150.0, w.x) * (1.0 - smoothstep(1850.0, 2350.0, w.x));
+    if (side > 0.0) {
+      float bend = 430.0 * sin(w.x / 1870.0 + 0.6) + 270.0 * sin(w.x / 790.0 + 2.1) + 130.0 * sin(w.x / 350.0 + 4.0) + 60.0 * sin(w.x / 137.0 + 1.3);
+      w.y += bend * side * smoothstep(${(LAKE.y1 - 2300).toFixed(1)}, ${(LAKE.y1 - 1000).toFixed(1)}, w.y) * (1.0 - smoothstep(${(LAKE.y1 + 600).toFixed(1)}, ${(LAKE.y1 + 1500).toFixed(1)}, w.y));
+    }
+  }
   vec4 b = textureLod(uBedA, bedUv(w), 0.0);
   // The shoreline's own unevenness: read only within reach of a shore,
   // easing out past it, where nothing can show it.
@@ -660,6 +671,21 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
 
 /* ---------- the ice sheet ---------- */
 
+/**
+ * Where a place on the lake stands in the first camera's frame, in half
+ * heights of the name: 1 at the letters' far edge, -1 at their near edge,
+ * about 4 at the far shore, falling toward the eye.
+ */
+float nameRow(float y) {
+  float dyc = y - uIceP.x;
+  float zc = max(dyc * uIceP.z + uIceP.y * uIceP.w, 1.0);
+  float dy0 = uIce.y + uIce.w * 0.5 - uIceP.x;
+  float z0 = dy0 * uIceP.z + uIceP.y * uIceP.w;
+  float kk = uIceP.y / (z0 * z0);
+  float tv = (dyc * uIceP.w - uIceP.y * uIceP.z) / zc - (dy0 * uIceP.w - uIceP.y * uIceP.z) / z0;
+  return (tv - (uIceBox.y - uIce.w * 0.5) * kk) / max(uIceBox.w * kk, 1e-5);
+}
+
 float snowAt(vec2 wl, float big) {
   float mid = textureLod(uSnow, wl / vec2(860.0, 195.0) + vec2(0.37, 0.11), 0.0).g;
   float fin = textureLod(uSnow, wl / vec2(420.0, 110.0) + vec2(0.71, 0.29), 0.0).b;
@@ -685,7 +711,16 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   float wet = clamp(uLake.z * 0.75 + heat * 0.9 + bank * 0.35 + rim * uLake.z * 0.6, 0.0, 1.0);
   vec2 nb = abs(il - uIceBox.xy) - uIceBox.zw;
   float nameD = length(max(nb, 0.0)) + min(max(nb.x, nb.y), 0.0);
+  // The lake as the first frame sees it. Beyond the name, toward the far
+  // shore, the wind has swept it: clear dark ice with the ranges and the
+  // sky lying in it, and the snow in crisp drifts. Under the eye, where the
+  // first frame's words stand, it is one calm, even stretch: snow by day,
+  // clear dark ice before dawn.
+  float row = nameRow(p.y);
+  float farK = smoothstep(1.2, 2.0, row);
+  float nearK = smoothstep(-1.1, -1.75, row);
   float less = wet * 0.14 + lane * 0.06 + uNight * (0.1 + 0.16 * (1.0 - smoothstep(20.0, 420.0, nameD)));
+  less += farK * mix(0.2, 0.06, uNight) + nearK * mix(-0.24, 0.3, uNight);
   // More snow lies on the near ice, where the first frame's words stand.
   less -= 0.09 * (1.0 - smoothstep(uLake.x + 120.0, uLake.x + 520.0, p.y)) * (1.0 - uLake.z) * (1.0 - uNight);
   // By day wind-packed snow lies thickest round the name: bright ground for dark letters.
@@ -699,7 +734,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     ew = mix(clamp(length(vec2(lvlT - lvl, lvlS - lvl)) / 3.0 * foot * 0.9, 0.0025, 0.03), 0.006, gL2);
   }
   float drift = smoothstep(0.512 - ew, 0.512 + ew, lvl);
-  float dust = smoothstep(0.438 - ew, 0.438 + ew, lvl) * (1.0 - 0.5 * wet);
+  float dust = smoothstep(0.438 - ew, 0.438 + ew, lvl) * (1.0 - 0.5 * wet) * (1.0 - 0.6 * farK);
   float lip = 0.0;
   float lee = 0.0;
   if (uQuality > 0.5 && gL2 < 1.0) {
@@ -721,7 +756,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     under = mix(textureLod(uDetail, p / 700.0 + vec2(0.004, 0.003) * uTime, 0.0).r, 0.5, gL2);
     netU = textureLod(uDetail, p / 230.0 + vec2(0.007, 0.004) * uTime, lodU).a * (1.0 - gL2);
   }
-  vec3 clear = uIceCol * mix(vec3(0.2, 0.42, 0.52), vec3(0.013, 0.04, 0.078), uNight) * (0.78 + 0.34 * under) + uScatter * mix(2.0, 0.3, uNight);
+  vec3 clear = uIceCol * mix(mix(vec3(0.2, 0.42, 0.52), vec3(0.035, 0.17, 0.33), farK), vec3(0.013, 0.04, 0.078), uNight) * (0.78 + 0.34 * under) + uScatter * mix(mix(2.0, 0.35, farK), 0.3, uNight);
   clear += (S.hor * 0.05 * (1.0 - uNight) + uAurora * 0.03) * smoothstep(0.22, 0.6, netU) * (1.0 - dust);
   vec3 white = mix(vec3(0.9, 0.92, 0.95), vec3(0.4, 0.47, 0.6), uNight) * lit * (0.97 + 0.03 * big);
   clear *= 1.0 - 0.3 * smoothstep(0.438, 0.35, lvl);
@@ -742,7 +777,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   // A pressure crack: a hairline of shadow, refrozen white either side.
   float cw = max(1.0, foot * 0.9);
   // (The cracks go as the sheet becomes plates, and a lean frame lets them go while they are only hairlines.)
-  float crK = (1.0 - uIceC.y) * (1.0 - gL2 * (1.0 - smoothstep(0.0, 0.01, uIceA.y)));
+  float crK = (1.0 - uIceC.y) * (1.0 - gL2 * (1.0 - smoothstep(0.0, 0.01, uIceA.y))) * (1.0 - 0.75 * nearK * (1.0 - smoothstep(0.0, 0.02, uIceA.y)));
   cr.x = mix(1e3, cr.x, crK > 0.0 ? 1.0 : 0.0);
   float seam = (1.0 - smoothstep(1.5 * cw, 2.7 * cw, cr.x)) * crK;
   float plane = exp(-cr.x / (3.2 * cw)) * (0.5 + 0.5 * step(0.5, cr.y)) * crK;
@@ -759,7 +794,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   gDull = true;
   vec3 mir = airAt(rf.xy);
   if (gL2 < 1.0) mir = mix(skyAll(normalize(rf), 0.0), mir, gL2);
-  col = mix(col, mir, fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.74 * uNight));
+  col = mix(col, mir, fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.5 * farK * (1.0 - uNight)) * (1.0 - 0.74 * uNight));
   gDull = false;
   // (Before dawn the ice round the name is the darkest on the lake: nothing there competes with the light in the letters.)
   col *= 1.0 - 0.6 * uNight * (1.0 - smoothstep(40.0, 560.0, nameD));
@@ -1060,13 +1095,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   if (sheetK > 0.0) {
     // Where the eye's ray came through the top of the sheet, in the first
     // camera's own frame: how far up the name this water is seen.
-    float dyc = pw.y + dir.y / min(dir.z, -1e-3) * gFree - uIceP.x;
-    float zc = max(dyc * uIceP.z + uIceP.y * uIceP.w, 1.0);
-    float dy0 = uIce.y + uIce.w * 0.5 - uIceP.x;
-    float z0 = dy0 * uIceP.z + uIceP.y * uIceP.w;
-    float kk = uIceP.y / (z0 * z0);
-    float tv = (dyc * uIceP.w - uIceP.y * uIceP.z) / zc - (dy0 * uIceP.w - uIceP.y * uIceP.z) / z0;
-    gCutA = (tv - (uIceBox.y - uIce.w * 0.5) * kk) / max(uIceBox.w * kk, 1e-5);
+    gCutA = nameRow(pw.y + dir.y / min(dir.z, -1e-3) * gFree);
     // The picture in the letters is one picture, seen through all of them:
     // at their far edge the foot of the ranges, the ranges themselves hanging
     // down from it, and under them the sky deepening toward the eye. Before

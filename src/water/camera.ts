@@ -61,8 +61,9 @@ export interface Hero {
 export function heroDesign(aspect: number): Hero {
   const tall = aspect < 0.7;
   const fov = tall ? 64 : aspect >= 1.2 ? 50 : 56;
-  const horizon = tall ? 0.19 : 0.21;
-  const middle = tall ? 0.55 : 0.585;
+  // (A phone's frame is tall: it keeps a real band of sky and ranges over the lake.)
+  const horizon = tall ? 0.235 : 0.21;
+  const middle = tall ? 0.565 : 0.585;
   const share = tall ? 0.72 : Math.min(0.62, Math.max(0.56, 0.3 + 0.19 * aspect));
   const width = tall ? 860 : 1500;
   const th = Math.tan(rad(fov / 2));
