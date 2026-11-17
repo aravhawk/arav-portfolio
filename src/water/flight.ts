@@ -632,6 +632,9 @@ export class FlightEngine extends WaterEngine {
     // (Past the world's last row the bed repeats, which is open sea: the window follows the camera out over it.)
     const top = Math.min(REST.y + SPAN * 0.5, Math.max(-SPAN * 0.5, near.y - SPAN * 0.14));
     this.runDawn(at.rest);
+    // (A still picture is drawn only when something changes. The sea's variant of the pass arriving is such a change:
+    // without this a reader who has asked for no motion and reaches the sea before it is ready keeps the river's water.)
+    if (this.still && this.seaPending && compileDone(gl, this.seaPending)) this.dirty = true;
 
     if (this.still) {
       if (!this.dirty) return;
