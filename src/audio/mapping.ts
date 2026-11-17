@@ -104,7 +104,7 @@ export function mixOf(sc: Scene, t: number): Mix {
   // The pointer through water: faster is louder and brighter; farther is softer and duller.
   const pN = sat(sc.pv / 2.4);
   const wake = sc.over ? Math.pow(pN, 0.8) * (0.35 + 0.65 / (1 + sc.far / 40)) * (sc.calm ? 0.5 : 1) : 0;
-  const wakeHz = 500 + 2600 * pN - 600 * sat(sc.far / 70);
+  const wakeHz = Math.max(300, 500 + 2600 * pN - 600 * sat(sc.far / 70));
   const wakePan = clamp((sc.px - 0.5) * 1.7, -0.9, 0.9);
 
   // The bed: brighter as the ice goes and the day comes round, darker before dawn and between walls.

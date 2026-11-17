@@ -687,7 +687,7 @@ async function sync(base) {
     return s.length ? { n: s.length, min: s[0], med: s[Math.floor(s.length / 2)], max: s[s.length - 1] } : { n: 0, min: NaN, med: NaN, max: NaN };
   };
   const f = (x) => (Number.isFinite(x) ? x.toFixed(1) : 'n/a');
-  const lines = ['| moment | count | cause to request, ms (min / median / max) | cause to start on the audio clock, ms (min / median / max) | start asked for to onset found in the stream, ms (median / max) | within a frame |', '| --- | --- | --- | --- | --- | --- |'];
+  const lines = ['| moment | count | cause to request, ms (min / median / max) | cause to start on the audio clock, ms (min / median / max) | start asked for to onset found in the stream, ms (median / max) | within a frame (17 ms) |', '| --- | --- | --- | --- | --- | --- |'];
   let bad = 0;
   for (const type of ['press', 'switch', 'gate-up', 'gate-down', 'crack', 'pulse', 'landing', 'lattice', 'drip', 'dawn', 'ray', 'melt', 'tap', 'hover']) {
     const ev = by[type];
@@ -699,9 +699,9 @@ async function sync(base) {
     const req = stat(ev.map((e) => e.made - e.cause));
     const start = stat(ev.map((e) => perfOf(e.audio) - e.cause));
     const on = stat(ev.map((e) => (onsetOf(e.audio) - e.audio) * 1000));
-    const ok = start.max <= 17;
-    if (!ok) bad++;
-    lines.push(`| ${type} | ${ev.length} | ${f(req.min)} / ${f(req.med)} / ${f(req.max)} | ${f(start.min)} / ${f(start.med)} / ${f(start.max)} | ${f(on.med)} / ${f(on.max)} (${on.n} found) | ${ok ? 'yes' : 'NO'} |`);
+    const late = ev.filter((e) => perfOf(e.audio) - e.cause > 17).length;
+    if (late) bad++;
+    lines.push(`| ${type} | ${ev.length} | ${f(req.min)} / ${f(req.med)} / ${f(req.max)} | ${f(start.min)} / ${f(start.med)} / ${f(start.max)} | ${f(on.med)} / ${f(on.max)} (${on.n} found) | ${late ? `${ev.length - late} of ${ev.length}` : 'all'} |`);
   }
   const lead = stat(data.pairs.filter((p) => p[3] > 0).map((p) => (p[1] - p[2]) * 1000));
   const note = `\nThe listening node's own delay, measured with ticks asked for at known times and taken off the last column: ${(tapDelay * 1000).toFixed(2)} ms. An onset is found where the effects bus first rises clear of the 21 ms before it, so a moment that begins under another sound, or swells in slowly, is not found.\nAudio context: ${data.sr} Hz, base latency ${(data.base * 1000).toFixed(1)} ms, output latency ${(data.outLat * 1000).toFixed(1)} ms; the audio clock runs ${f(lead.med)} ms (median) ahead of what the output device is playing. Sound loaded before the click: ${before}. Console errors: ${errors.length}.\n`;

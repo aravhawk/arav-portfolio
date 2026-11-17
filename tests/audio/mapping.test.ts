@@ -51,7 +51,7 @@ const pc = (m: number) => ((m % 12) + 12) % 12;
 
 describe('the mix follows the scene', () => {
   it('keeps every level between nothing and full, whatever the scene', () => {
-    const extremes: Partial<Scene>[] = [{}, { sv: 40, camV: 1e5, water: 1, near: 1, flow: 1, white: 1, ice: 1, sea: 1, pv: 50, over: true, far: 12, meltRate: 9, melt: 0.5, walls: 1, tarn: 1, surge: [0.5, 0.5, 0.5], dam: 1 }, { home: false }, { calm: true, sv: 9 }];
+    const extremes: Partial<Scene>[] = [{}, { over: true, far: 70, pv: 0 }, { sv: 40, camV: 1e5, water: 1, near: 1, flow: 1, white: 1, ice: 1, sea: 1, pv: 50, over: true, far: 12, meltRate: 9, melt: 0.5, walls: 1, tarn: 1, surge: [0.5, 0.5, 0.5], dam: 1 }, { home: false }, { calm: true, sv: 9 }];
     for (const e of extremes) {
       for (const t of [0, 3.7, 100.2]) {
         const m = mixOf(scene(e), t);
