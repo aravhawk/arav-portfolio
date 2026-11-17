@@ -280,9 +280,10 @@ vec3 skyColor(vec3 d, float clouds) {
     float de = d.z - S.sun.z;
     if (rise > 0.0 && dot(dn, sn) > 0.9 && de > -0.03) {
       float da = dn.x * sn.y - dn.y * sn.x;
-      float top = 0.34 * rise;
+      // (It ends inside the frame, thinning into the sky: it is a column of light, not a beam that leaves the picture.)
+      float top = 0.2 * rise;
       float wid = 0.0075 + 0.034 * max(de, 0.0);
-      float prof = smoothstep(-0.02, 0.006, de) * exp(-max(de, 0.0) / 0.16) * (1.0 - smoothstep(top * 0.45, top, de));
+      float prof = smoothstep(-0.02, 0.006, de) * exp(-max(de, 0.0) / 0.16) * (1.0 - smoothstep(top * 0.3, top, de));
       float shim = 0.86 + 0.14 * n1(de * 90.0 - uTime * 0.35);
       vec3 pc = mix(S.band, vec3(1.7, 1.5, 1.25), 0.55);
       col += pc * (exp(-da * da / (wid * wid)) * 0.42 + exp(-da * da / (wid * wid * 30.0)) * 0.09) * prof * shim * gDusk * uRay.w * gSunK;
