@@ -58,7 +58,7 @@ export const signals = {
   tribs: null as ArrayLike<number> | null,
 };
 
-export type SignalListener = (type: string, a: number, b: number, c: number, at: number) => void;
+export type SignalListener = (type: string, a: number, b: number, c: number, at: number, d: number) => void;
 
 let hear: SignalListener | null = null;
 
@@ -78,9 +78,9 @@ export function onFlightFrame(fn: ((at: number) => void) | null) {
   turn = fn;
 }
 
-/** A moment, with up to three numbers that say where or which. */
-export function emit(type: string, a = 0, b = 0, c = 0) {
-  if (hear) hear(type, a, b, c, performance.now());
+/** A moment, with up to four numbers that say where or which. */
+export function emit(type: string, a = 0, b = 0, c = 0, d = 0) {
+  if (hear) hear(type, a, b, c, performance.now(), d);
 }
 
 /** The flight's frame: where the camera is and how far the page has come. */
