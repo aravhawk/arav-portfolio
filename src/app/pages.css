@@ -16,7 +16,7 @@
    first warmth at the foot). */
 .pg-ground {
   /* Small labels stand on a textured ground: the third ink is a shade stronger here than on the home page's glass. */
-  --ink-3: #3a4349;
+  --ink-3: #323a40;
   --ink-dim: #6a7379;
   --pg-body: clamp(1.0625rem, 0.46vw + 0.86rem, 1.5rem);
   --pg-lead: clamp(1.25rem, 0.9vw + 0.95rem, 2rem);
