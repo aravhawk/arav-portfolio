@@ -53,15 +53,18 @@ export function stationsNear(pos: ArrayLike<number>): [number, number, number, n
 }
 
 /**
- * The next drip from the columns, chosen ahead of its time: when it falls
- * and from which column (the taller, the more often).
+ * The next drip from the columns, chosen ahead of its time: when it falls,
+ * from which column (the taller, the more often) and where it lands.
  * @param time the picture's clock now
  * @param colH each column's height
  */
-export function nextDrip(time: number, colH: ArrayLike<number>, rnd: () => number): { at: number; i: number } {
+export function nextDrip(time: number, colH: ArrayLike<number>, rnd: () => number): { at: number; i: number; x: number; y: number } {
   const at = time + 0.22 + 0.3 * rnd();
   let pick = rnd() * (colH[0] + colH[1] + colH[2] + colH[3]);
   let i = 0;
   while (i < 3 && pick > colH[i]) pick -= colH[i++];
-  return { at, i };
+  const a = rnd() * Math.PI * 2;
+  // (Each serac is as wide as it is tall, in proportion: the drop lands at its own foot, clear of its shoulder and its fallen block.)
+  const r = COLS.r * (colH[i] / COLS.hMax) * 2.0;
+  return { at, i, x: COLS.xs[i] + Math.cos(a) * r, y: COLS.y + 26 * Math.sin(i * 2.3) + Math.sin(a) * r };
 }

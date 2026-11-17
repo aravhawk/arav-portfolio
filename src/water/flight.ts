@@ -468,7 +468,7 @@ export class FlightEngine extends WaterEngine {
   private gateNow = new Float32Array([1, 0, 0]);
   private surge = new Float32Array(3);
   private dripAt = 0;
-  private drip: { at: number; i: number } | null = null;
+  private drip: { at: number; i: number; x: number; y: number } | null = null;
   private gateT = 0;
   private latLap = -1;
   /** The sluices follow the chosen gate: one lifts, the others drop, and a surge runs down the opened channel. */
@@ -791,16 +791,13 @@ export class FlightEngine extends WaterEngine {
       // (Each is chosen ahead of its time and published then, so its sound can be set for the frame that shows it.)
       if (!this.drip) {
         this.drip = nextDrip(Math.max(this.time, this.dripAt), this.colH, Math.random);
-        emit('drip', this.drip.i, this.colH[this.drip.i] / COLS.hMax, this.drip.at);
+        emit('drip', this.drip.x, this.drip.y, this.drip.at, this.colH[this.drip.i] / COLS.hMax);
       }
       if (this.time >= this.drip.at) {
-        const i = this.drip.i;
+        const { x, y } = this.drip;
         this.dripAt = this.time;
         this.drip = null;
-        const a = Math.random() * Math.PI * 2;
-        // (Each serac is as wide as it is tall, in proportion: the drop lands at its own foot, clear of its shoulder and its fallen block.)
-        const r = COLS.r * (this.colH[i] / COLS.hMax) * 2.0;
-        this.splash(COLS.xs[i] + Math.cos(a) * r, COLS.y + 26 * Math.sin(i * 2.3) + Math.sin(a) * r, 12 + 8 * Math.random(), 0.5);
+        this.splash(x, y, 12 + 8 * Math.random(), 0.5);
       }
     } else this.drip = null;
     if (st[2] > 0.5 && !this.still) {
