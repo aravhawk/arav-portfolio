@@ -688,3 +688,41 @@ onto the branch, re-runs the gates and pushes.
 After the wave, in order: integrate; the frame-rate task alone on the
 GPU (a compiled variant per stretch); haptics and metrics checks; full
 gates; a panel of three fresh critics; rounds until the bar.
+
+### The wave, first passes integrated (2026-11-17, 00:20 to 01:45)
+
+Each helper worked in its own worktree; this thread cherry-picked its
+commits onto the branch (every one re-signed and verified), resolved
+the overlaps in `src/water/shaders/flight.ts` by hand, re-ran lint,
+typecheck and tests, ran the merged build in a browser, and pushed.
+
+| helper | commits on the branch | what landed | what its author says is still short |
+| --- | --- | --- | --- |
+| W6 cards | `e3f6792` to `a52c801` | every route's sharing card is its words over the real picture (photographed by `scripts/capture-og.mjs`); arav.pro in every canonical, `og:url`, sitemap, robots, feed and JSON-LD through one constant; 308s from the old domains; favicon, apple-touch-icon, `theme-color` | cards must be re-photographed after the picture settles; two cards set words over their subject |
+| W1 hero | `b6bbabe` to `0c951d5` | the name's water mirrors sky and ranges with a glitter path and plates afloat; thicker sheet; swept ice toward the far shore; a bent far coast; the sheet breaks along wandering fractures into plates of every size; torn foam and white water on the river | at 320 px the name can still be read as lettering; the name's pool becomes a clean capsule in the melt; square shallows at the outlet |
+| W5 sound | `103ee05` to `e3b23af` | a study of igloo.inc, lusion.co, activetheory.net and unseen.co by instrumenting Web Audio; a generative piece in one key (B minor to D major at the dawn) with voice-leading; wind, water, cracks, drips, the shards' call and answer, the lattice's arpeggio, the gates and the dawn bells all steered from the picture's state each frame through `src/lib/signals.ts`; no audio files; nothing loads until turned on; 26 rendered scenes measured; 41 new tests | nobody has listened; 16 of 235 frame-driven moments later than one frame; a long task at turn-on; water is a loop |
+| W2 stations 1 to 4 | `3a27146` to `8819d8d` | the block stands in its basin's water with an interior and breaking waves; seven falls over an ice cliff sized by merged pull requests; the leaderboard cropped and larger in a pool with stones and an ice rim; shards in real ice with a bent mirror image | the block is a clean box; the cliff is one plane; Kilo Bench's table text is 9 px; day shards are pastel |
+| W3 stations 5 to 8, delta, ending | `6d3a664` to `903429e`, then `71debe9` | one ice material for all four; columns whose volume is the pulls; a dam seen from downstream, with no hitch on a switch change (it was 74 to 94 ms); a wider canyon with a hall for the app; more braids and drift ice; the ending's hard sun limb, true line of light, a sun pillar, the foot row joined to the links | prisms, not seracs; the canyon's first bend is one wall and a third dearer per frame; the delta is not a blaze |
+| W4 inner pages | `07d11ab`'s picks to `106d403` | every inner page opens on a live frame of the home page's world (`src/water/scene-band.ts`) and continues over lit snow; project pages are case studies led by large real media, with numbers at scale; work index, blog, post, 404, error, loading in the same world; the footer as one row; 22,516 lines of text measured for contrast, 0 failures; no horizontal scroll on 12 pages at 11 widths | 44 scene stills to retake after the picture settles; the ground "good, not great"; blog pages now revalidate hourly |
+
+State at `106d403`: lint and typecheck clean, 237 tests, production
+build, 197 visible words on the home page, 0 dashes, 0 console errors.
+
+### Second passes (running) and critic panel 8
+
+Launched as each first pass landed, each from the merged head:
+**W7** hero pass 2 (the name as a melt pond: a pale shallow margin
+deepening to dark water, no wall or bevel, one sky mirrored across all
+the letters; the outlet's square shallows; the capsule; the empty
+frames), **W8** sound pass 2 (clocked moments scheduled ahead on the
+audio clock so they cannot be late; a live bubble model for water; ice
+that sings; a returning motif; three rooms; a phone tier), **W9**
+stations 1 to 4 pass 2 (Kilo Bench as a real rock pool with readable
+results first), **W10** stations 5 to 8 and delta pass 2.
+
+**Critic panel 8** (three fresh critics, Medium effort, captures only,
+same rubric a to j, proofs required) is judging `106d403`: package at
+`~/.t3/portfolio-redesign-v4/critic/package8/` (58 images: the home
+page in 24 positions at 1440 and 390 in both themes, 13 full frames a
+theme at 2x, phone frames, every inner page top to bottom, three
+project pages' first screens). Sound is not judged this round.
