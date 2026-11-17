@@ -15,7 +15,7 @@
 import { onFrame } from '@/lib/frame';
 import { BedPainter } from './bed';
 import { type Basis, type Key, type Pose, basisOf, dayAt, flightKeys, groundUnder, poseAt, stillStops } from './camera';
-import { FlightEngine } from './flight';
+import { FlightEngine, scenePicture } from './flight';
 import { freeboardAt } from './shaders/flight';
 import { makeSolver } from './stage';
 import { LAKE, NAME, OUTLET, SHOAL_Y, TRIBS, WORLD, paintWorld, tribWidth } from './world';
@@ -351,7 +351,8 @@ function picture(kind: 'slab' | 'sheet' | 'face', src: string | undefined, engin
     else if (kind === 'sheet') engine.setSheet(img);
     else engine.setFace(img);
   };
-  img.src = src;
+  // (The scene has its own cut of each picture, made for the size it is seen at.)
+  img.src = scenePicture(src);
 }
 
 /**
