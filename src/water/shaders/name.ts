@@ -24,7 +24,7 @@
  * lodFor, keyDir, simUv declared before it.
  */
 export const NAME_ICE = `
-uniform vec4 uNameP;       // x: how far from the blocks' feet meltwater lies on the sheet px, y: 0..1 how wet the blocks are, z: 0..1 the sheet has opened under them
+uniform vec4 uNameP;       // x: how far from the blocks' feet meltwater lies on the sheet px, y: 0..1 how wet the blocks are, z: 0..1 the sheet has opened under them, w: 0..1 the pool has opened behind them
 
 // The first camera, for which the outlines are laid: where it is, how deep the name's middle lies from it, and the slope of its line of sight to that middle.
 vec3 gNmC = vec3(0.0);
@@ -181,7 +181,10 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
   // the ice is clear of air the dark lake shows through.
   float clearN = smoothstep(0.6, 0.36, textureLod(uGrain, q / vec2(1100.0, 1700.0) + 0.7, 0.0).g * 0.85 + g0.r * 0.15 + 0.3 * hK);
   vec3 deepN = mix(vec3(0.44, 0.62, 0.76), vec3(1.9, 1.92, 1.95), pow(hK, 1.2)) * litN * (1.0 - 0.6 * clearN) * (front > 0.5 ? 1.0 : 0.5);
-  vec3 col = bey * tr + mix(deepD, deepN, uNight) * (1.0 - tr.g);
+  // (Once the pool has opened behind them the water there is the brightest thing on the lake before dawn: against it
+  // the thinning blades are clear, dark ice, and still letters.)
+  deepN *= 1.0 - 0.88 * uNameP.w;
+  vec3 col = bey * tr * (1.0 - 0.6 * uNight * uNameP.w) + mix(deepD, deepN, uNight) * (1.0 - tr.g);
   // Strata of trapped air: bands that run through every letter alike, a little out of level, seen at their own depth.
   vec2 par = vec2(dot(ri, tu), dot(ri, tv)) / max(-dot(ri, n), 0.35);
   float heart = dK / (dK + 0.8);
@@ -197,7 +200,7 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
     float thin = smoothstep(-0.5, 5.0, sBack) * (1.0 - melt);
     float back = (1.0 - smoothstep(0.0, 0.9 + px, abs(sBack))) * (1.0 - melt);
     col += mix(vec3(0.004, 0.026, 0.07) * litD, -col * 0.35, uNight) * thin;
-    col += mix(vec3(0.5, 0.8, 1.0) * (S.key * 0.024 + S.amb * 0.16), vec3(0.9, 1.0, 1.05) * litN * 0.35, uNight) * back;
+    col += mix(vec3(0.5, 0.8, 1.0) * (S.key * 0.014 + S.amb * 0.1), vec3(0.9, 1.0, 1.05) * litN * 0.3, uNight) * back;
   }
   // Fracture planes inside, at three depths: each set runs its own way, in short lengths. A plane is a hairline
   // where it is seen edge on and a veil on one side of that line, where it turns the light back to the eye.
@@ -245,7 +248,10 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
     vec3 sn = mix(snowOn(n, (g1.r - 0.5) * 0.5), vec3(1.45, 1.5, 1.55) * litN, uNight) * (0.9 + 0.2 * g1.a);
     // (Thin, lit ice under it: the palest ice of the block.)
     vec3 ledge = mix(vec3(0.3, 0.62, 0.84) * litD, vec3(0.6, 0.78, 0.9) * litN, uNight);
-    col = mix(col, mix(sn, ledge, bare * (1.0 - 0.6 * uNight)), top);
+    // (Before dawn the tops are wind-swept: clear ice, dark as the sheet is, with frost only in patches. So the pale
+    // faces alone are the letters, and the dot of the i stands clear of its stem.)
+    vec3 topN = mix(vec3(0.16, 0.25, 0.34), vec3(0.8, 0.86, 0.92), smoothstep(0.62, 0.8, g0.b * 0.7 + g1.g * 0.3)) * litN;
+    col = mix(col, mix(mix(sn, ledge, bare), topN, uNight), top);
     // (The top's own front arris, where it meets the sawn face.)
     col += arC * (1.0 - smoothstep(0.5, 2.0 + px, p.y - y0)) * 0.5 * top * (1.0 - uNight);
   }
@@ -333,7 +339,7 @@ vec3 nameGround(vec3 col, vec2 p, vec3 dir, float foot, float onIce) {
     vec3 rf = normalize(vec3(dir.xy + slope, -dir.z));
     float s2 = (y0 - p.y) / max(rf.y, 0.05);
     float z2 = rf.z * s2;
-    if (z2 < uNameB.z * 1.3) mir = max(mir, (1.0 - smoothstep(-1.0, 1.0 + s2 * 0.02, nameSd(i, p.x + rf.x * s2, z2, g))) * (1.0 - 0.5 * smoothstep(0.0, uNameB.z, z2)));
+    if (z2 < uNameB.z * 1.3) mir = max(mir, (1.0 - smoothstep(-1.0, 1.0 + s2 * 0.02, nameSd(i, p.x + rf.x * s2, z2, g))) * (1.0 - smoothstep(0.0, mix(1.6, 0.7, uNight) * uNameB.z, z2)));
   }
   // Meltwater on ice: the snow under it is gone, the ice shows dark and blue through it, and the sky lies on it.
   vec3 wetC = mix(vec3(0.13, 0.4, 0.56) * (S.amb * 1.2 + S.key * 0.1), vec3(0.2, 0.34, 0.42) * S.amb * 1.5, uNight);
@@ -346,7 +352,7 @@ vec3 nameGround(vec3 col, vec2 p, vec3 dir, float foot, float onIce) {
   col *= 1.0 - shade * vec3(0.4, 0.3, 0.17) * (1.0 - uNight) * onIce * (1.0 - 0.5 * pond);
   // The blocks' image: clear in the meltwater, faint in the polished ice beyond it.
   vec3 img = mix(vec3(0.012, 0.07, 0.19) * (S.amb * 1.3 + S.key * 0.2), vec3(0.5, 0.64, 0.74) * (S.amb * 6.0 + uAurora * 0.22), uNight);
-  col = mix(col, img, mir * mix(0.1 + 0.62 * pond, 0.03 + 0.08 * pond, uNight) * onIce * uNameM.w);
+  col = mix(col, img, mir * mix(0.1 + 0.62 * pond, 0.025 + 0.06 * pond, uNight) * onIce * uNameM.w);
   // A dark wet line where each block meets the sheet.
   col *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 5.0, fd)) * onIce;
   return col;
