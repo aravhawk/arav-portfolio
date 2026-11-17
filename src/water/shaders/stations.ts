@@ -1620,7 +1620,7 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
     vec3 c0 = glacierColor(uCamPos, dir, t, wall, 1.0);
     // (At its foot the glacier's front lies down into the land's own snow: no line is drawn where it begins.)
     // (From between the walls nothing was drawn behind it: there it is drawn whole.)
-    float foot = wall < 0.5 && gWallT < -1.5 ? smoothstep(6.0, 44.0, glacierTop((uCamPos + dir * t).xy)) : 1.0;
+    float foot = wall < 1.5 && gWallT < -1.5 ? smoothstep(6.0, 44.0, glacierTop((uCamPos + dir * t).xy)) : 1.0;
     // (The picture is a few steps off through clear cold air: by day almost none of the valley's haze lies over it.)
     float veil = 1.0 - 0.85 * gFaceK;
     vec3 c = mix(c0, inAir(c0, dir, t), veil);
