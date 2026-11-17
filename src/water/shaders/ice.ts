@@ -9,7 +9,7 @@
  * shrink, round off and gather toward the lake's outlet until none is left.
  * Every term is a function of the melt alone, so it reverses exactly.
  *
- * Needs: uIce, uIceA, uIceB, uIceC, uIceK, uIceL, uIceW, uIceBox, uLake, uIceSdf, uDetail, uSnow, and
+ * Needs: uIce, uIceA, uIceB, uIceC, uIceK, uIceL, uIceN, uIceW, uIceBox, uLake, uIceSdf, uDetail, uSnow, and
  * the bed (uBedA, bedUv) declared before this block.
  */
 export const ICE_FIELD = `
@@ -24,10 +24,14 @@ uniform vec4 uIceBox;      // the letters' own box in the sheet's frame: centre 
 uniform vec4 uIceP;        // the camera the name is cut for: its y, its height, the cosine and sine of its pitch (all 0: the name lies flat and true)
 uniform float uIceRim;     // the flight: how far the opening is carried on past the far side of each stroke, so the cut's far wall stands outside the letter and the water seen is the letter itself (0 everywhere else)
 uniform float uIceLean;    // the flight's governor: at 2 the cracks are let go while they are only hairlines (0 everywhere else)
+uniform vec4 uIceN;        // the name as a melt pond (the flight): x: half its broadest stroke px, y: 0..1 how much of a pond it still is, z: how far each letter's pond has spread past its outline px, w: the even growth the page's pool would add px (left out here)
 uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet is 0..1, w: 1 while the sheet is whole, 0 once it is gone
 uniform sampler2D uIceSdf; // signed distance to the letters px (negative inside), _, gradient
 uniform sampler2D uDetail;
 uniform sampler2D uSnow;   // three draws of one smooth field, in half floats: about -0.7..0.7
+
+// How far the last place asked about lies from the letters' own box, in the name's frame px (the first camera's picture).
+float gIceBoxD = 1e4;
 
 vec2 ih2(vec2 p) {
   p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
@@ -108,6 +112,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // letters' own box carries on, so no opening ever ends on the raster's edge.
   vec2 bq = abs(nl - uIceBox.xy) - uIceBox.zw;
   float boxD = length(max(bq, 0.0)) + min(max(bq.x, bq.y), 0.0);
+  gIceBoxD = boxD;
   float lsd = boxD;
   // (Seen from the ground most of the lake is far from the name: there the
   // box's distance is the whole answer and the raster is not read.)
@@ -128,7 +133,17 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // together into one pool with an uneven, rounded edge. Nothing of their
   // outlines is left to notch the floes around them.
   float open = lsd;
-  if (uIceC.z > 0.0) {
+  if (uIceP.y > 0.0) {
+    // Seen from the ground the letters are melt ponds, and a pond does not
+    // spread evenly: it eats the ice quickly here and slowly there. So each
+    // letter's pond widens at its own pace, the bridges of ice between two
+    // letters thin and break one after another, and the opening they make
+    // together has no ruled side anywhere.
+    if (uIceN.z > 0.0) {
+      float un = textureLod(uSnow, il / vec2(760.0, 1650.0) + 0.23, 0.0).r + 0.4 * textureLod(uSnow, il / vec2(420.0, 900.0) + 0.61, 0.0).g;
+      open = lsd - uIceN.z * clamp(0.8 + 3.4 * un, 0.05, 2.4) + uIceN.w;
+    }
+  } else if (uIceC.z > 0.0) {
     float pn = textureLod(uDetail, il / (cell * 0.9) + 0.17, 0.0).r - 0.5
              + 0.5 * (textureLod(uDetail, il / (cell * 0.31) + 0.58, 0.0).g - 0.5);
     open = mix(lsd, poolSd(il) + pn * uIceC.w, uIceC.z);
@@ -224,10 +239,30 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
       // gone while their neighbours still ride, and the last few are the
       // largest. (They gather toward the outlet with the sheet's frame.)
       float g = smoothstep(0.5, 0.9, uIceA.z);
-      lead += cellA * (g * g * (0.16 + 0.8 * cr.y * cr.y) + 1.5 * smoothstep(0.8, 0.9, uIceA.z) * smoothstep(0.8, 0.9, uIceA.z));
+      // (The big plates ride on almost to the end: there is ice afloat in every frame until the last sweep.)
+      lead += cellA * (g * g * (0.07 + 0.62 * cr.y * cr.y) + 1.5 * smoothstep(0.84, 0.9, uIceA.z) * smoothstep(0.84, 0.9, uIceA.z));
       // (A melting edge is not ruled.)
       lead += (textureLod(uDetail, il / 150.0 + 0.6, 0.0).r - 0.5) * 16.0 * g;
       kS *= 0.35;
+      // The name's own plate breaks too, once its ponds have begun to run
+      // together: a few fractures wander out from that water to the leads
+      // round it and widen as the others do, so the opening the name leaves
+      // has bays and points, and the ice beside it goes as plates.
+      if (uIceN.z > 0.0 && gIceBoxD < cellA) {
+        vec2 q2 = nl - uIceBox.xy + textureLod(uSnow, il / vec2(900.0, 2000.0) + 0.37, 0.0).rg * 110.0;
+        float sp = 1e4;
+        for (int i = 0; i < 6; i++) {
+          float fi = float(i);
+          float hx = ih2(vec2(fi * 3.7 + 1.3, 9.1)).x;
+          vec2 a = vec2((fi / 5.0 * 2.0 - 1.0) * uIceBox.z * 0.84, 0.0);
+          float ang = (fi / 5.0 * 2.0 - 1.0) * 0.8 + (hx - 0.5) * 0.9;
+          vec2 d = vec2(sin(ang), (mod(fi, 2.0) < 0.5 ? 1.0 : -1.0) * cos(ang));
+          float t = clamp(dot(q2 - a, d), 0.0, cellA * 0.75);
+          sp = min(sp, length(q2 - a - d * t) + t * 0.02);
+        }
+        float sw = (18.0 + 52.0 * un) * smoothstep(0.0, 1.0, uIceN.z / (uIceN.x * 1.6)) + cellA * g * g * 0.16;
+        f = smax(f, sw - sp, kS + 6.0);
+      }
     } else {
       lead *= 1.0 - uIceC.y;
     }
@@ -303,7 +338,16 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // The bank, with a lead of open water along the north shore, and the
   // lake's south end, where the stream leaves.
   f = max(f, shore + gap + uIceC.x * (0.35 + 1.3 * along) * north);
-  f = max(f, w.y - uLake.y + gap);
+  if (uIceP.y > 0.0) {
+    // Seen from the ground: the river draws the lake's water out, so the ice
+    // goes first round the outlet, in a bay that widens with the melt and has
+    // no ruled side. No plate is ever left cut square along the lake's end.
+    float on = textureLod(uSnow, w / 900.0 + 0.7, 0.0).b + 0.4 * (textureLod(uDetail, w / 330.0 + 0.15, 0.0).r - 0.5);
+    f = max(f, 420.0 * smoothstep(0.3, 0.8, uIceA.z) * (0.8 + 0.8 * on) - length((w - vec2(uIceB.x, uLake.y)) * vec2(0.8, 1.0)));
+    f = max(f, w.y - uLake.y + gap + 90.0 * on);
+  } else {
+    f = max(f, w.y - uLake.y + gap);
+  }
   return f;
 }
 `;

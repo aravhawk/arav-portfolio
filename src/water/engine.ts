@@ -522,7 +522,7 @@ export class WaterEngine {
    */
   protected iceUniforms(scrollY: number) {
     const ice = this.iceMeta;
-    const none = { rect: [0, 0, 0, 0], a: [0, 0, 0, 0], b: [0, 0, 1, 1], c: [0, 0, 0, 0], l: [1, 0, 0, 0], k: 1, box: [0, 0, 1, 1], lake: [this.lake.y0, this.lake.y1, 0, 0], h: 1, shed: 0 };
+    const none = { rect: [0, 0, 0, 0], a: [0, 0, 0, 0], b: [0, 0, 1, 1], c: [0, 0, 0, 0], l: [1, 0, 0, 0], k: 1, box: [0, 0, 1, 1], lake: [this.lake.y0, this.lake.y1, 0, 0], h: 1, shed: 0, n: [1, 0, 0, 0] };
     const m = this.melt;
     if (!ice || !this.iceTex || m >= ICE_GONE) return none;
     // The sheet rides with the camera while it melts, so the melt stays in view.
@@ -579,7 +579,14 @@ export class WaterEngine {
       lake: [this.lake.y0, this.lake.y1, wet, 1],
       h: narrow ? 13 : 19,
       shed,
-
+      // The name as a melt pond (the flight): half its broadest stroke; how
+      // much of a pond it still is (it lies flush with the sheet until the
+      // letters have run together, then it has melted through and the sheet's
+      // thickness stands round it); and how far each letter's pond has spread
+      // past its outline, which the ice field makes uneven, so the ponds join
+      // across thinning bridges and never into one ruled shape (the even
+      // growth of the page's pool is handed over too, to be left out).
+      n: [half, 1 - smooth(0.5, 0.63, m), half * 1.8 * smooth(0.2, 0.62, m) ** 1.7, pool],
     };
   }
 
@@ -594,6 +601,7 @@ export class WaterEngine {
     gl.uniform1f(prog.u.uIceK, ice.k);
     gl.uniform4fv(prog.u.uIceL, ice.l);
     gl.uniform4fv(prog.u.uLake, ice.lake);
+    if (prog.u.uIceN) gl.uniform4fv(prog.u.uIceN, ice.n);
     bindTex(gl, sdfUnit, (this.iceTex ?? this.grain).tex, prog.u.uIceSdf);
     bindTex(gl, snowUnit, this.snow.tex, prog.u.uSnow);
   }
