@@ -933,3 +933,37 @@ Order from here, one at a time: R3c (running), R3e (the melt), R3d
 (stations 1 to 4), R3f (night snow, delta, ending), the rest of R3b,
 the frame-rate task (resumed from the work left in its checkout),
 stills and cards retaken, full gates, then panel 10.
+
+### R3c (stations 5 to 8, round 3), integrated 4:50 PM CT
+
+Five signed commits, `749d395` to `5028e35` in its checkout, on the
+branch as the five ending at `8e730cc`; then this thread's review
+commit `cae66f6`.
+
+- **RydAR's canyon**, the weakest frame in panel 9: the white smears
+  and torn snow were a bug in the march (a long step could end inside a
+  wall and be painted as snow). Fixed; the walls are glacier ice drawn
+  at every size (strata, ledges, fracture planes, melt cups, threads of
+  meltwater), one clean cornice with icicles; the app's page lies under
+  a pane of clear ice, at full contrast by day and as a lamp before
+  dawn; the walls stand mirrored in the water.
+- **One glacier ice for all four stations** by day and before dawn.
+  cc-switch's shut channels are bare wet ice with washed stones and one
+  thread of water (no stipple); the open one is clear fast water with
+  depth, standing waves and foam in lines; the approach clears the
+  dam's end. The seracs are clear ice and their pool has depth. The
+  brown patch at the lattice's horizon was the glacier's front seen
+  from far off: fixed at its cause.
+- Review here: the titles test still had TensorPoW at 2.66 and RydAR
+  at 1.83 by day. The lattice's wide camera turns a little left and
+  the hall's words stand below the wall's crest: both now 1.15 to 1.35
+  at 1440, 1920 and 2560 in both themes.
+- Its own shortfalls: geometry not rebuilt (planes, a prism, chamfered
+  boxes: "low-poly" is answered by material only); cc-switch had three
+  fix rounds, not five; the canyon's march is dearer (for the
+  frame-rate task); the page before dawn is still the brightest thing
+  in its frame; the standing waves and the thread are drawn patterns.
+
+Gates at `cae66f6`: lint, typecheck, 309 tests; 200 words; 0 console
+errors; legibility over stations 7 and 8 at 1440 and 390, 0 failures.
+Next, alone: R3e (the melt), started 4:52 PM.
