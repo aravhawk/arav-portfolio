@@ -621,7 +621,9 @@ export class FlightEngine extends WaterEngine {
       let i = 0;
       while (i < 3 && pick > this.colH[i]) pick -= this.colH[i++];
       const a = Math.random() * Math.PI * 2;
-      this.splash(COLS.xs[i] + Math.cos(a) * COLS.r * 1.15, COLS.y + Math.sin(a) * COLS.r * 1.15, 12 + 8 * Math.random(), 0.5);
+      // (Each column is as wide as it is tall, in proportion: the drop lands at its own foot.)
+      const r = COLS.r * (this.colH[i] / COLS.hMax) * 1.15;
+      this.splash(COLS.xs[i] + Math.cos(a) * r, COLS.y + 26 * Math.sin(i * 2.3) + Math.sin(a) * r, 12 + 8 * Math.random(), 0.5);
       emit('drip', i, this.colH[i] / COLS.hMax);
     }
     if (st[2] > 0.5 && !this.still) {
