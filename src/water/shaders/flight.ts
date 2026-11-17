@@ -1459,7 +1459,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 
   vec2 slope = wv.ba * 9.0 + dgrad + swell;
   // (In the basin the waves run in on the block.)
-  if (slabOn > 0.0) slope += blockSwell(pw);
+  if (slabOn > 0.0) slope = blockSwell(pw, slope);
   // (The clear pool is measuring-still: what lies on its bed is read.)
   slope *= 1.0 - 0.72 * poolAt(pw);
   float men = smoothstep(-5.0, -0.5, bw.r);
@@ -1501,13 +1501,17 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // The clear pool: a foot of still water over a pale bed, and the picture lying on it.
   float poolK = poolAt(pb);
   float picK = 0.0;
+  float deepP = 0.0;
   vec3 sheetC = vec3(0.0);
   if (poolK > 0.0) {
-    depth = mix(depth, min(depth, 14.0), poolK);
+    // (It shelves from a hand of water at the rim to the dark of its middle; the plates lie on a ledge a little way down.)
+    deepP = smoothstep(14.0, 80.0, -bb.r + 24.0 * (textureLod(uGrain, pb / 900.0 + 0.6, 0.0).g - 0.5));
     float se = sheetEdge(pb);
+    depth = mix(depth, mix(8.0 + 84.0 * deepP, 32.0, 1.0 - smoothstep(0.0, 46.0, se)), poolK);
     if (se < 2.0 && uSheetOn > 0.5) {
-      sheetC = sheetPic(pb, footL);
-      picK = (1.0 - smoothstep(-1.5, 1.5, se)) * poolK;
+      vec4 sp = sheetPic(pb, footL);
+      sheetC = sp.rgb;
+      picK = (1.0 - smoothstep(-1.5, 1.5, se)) * sp.a * poolK;
     }
   }
   float dn = clamp(depth / DEEP, 0.0, 1.0);
@@ -1526,7 +1530,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   vec3 bed = uBed * (1.0 + (gb.r - 0.5) * 0.03 + (gs.b - 0.42) * 0.17 + (gb.a - 0.4) * 0.12);
   if (poolK > 0.0) {
     // Silt and stones; the picture's sheet with a hair of shade along its edge.
-    bed = mix(bed, poolBed(pb, footL, L), poolK * 0.92);
+    bed = mix(bed, poolBed(pb, footL, L, deepP), poolK * 0.92);
     bed *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 7.0, sheetEdge(pb))) * step(0.0, sheetEdge(pb)) * uSheetOn;
     bed = mix(bed, sheetC, picK);
   }
@@ -1583,6 +1587,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // In the pool the light is one broad net drifting over the bed; over the picture it is gentler, so it can be read.
   if (poolK > 0.0) {
     float netP = poolNet(pb, footL);
+    netP = mix(netP, 1.0 + (netP - 1.0) * 0.45, deepP);
     netP = mix(netP, 1.04 + (netP - 1.04) * 0.3, picK);
     lightOnBed = mix(lightOnBed, vec3(uLight.x * 0.9 + uLight.y * shadow * mix(netP, 0.9 + (netP - 0.9) * 0.35, uNight)), poolK);
     nfil *= 1.0 - poolK;
@@ -1592,8 +1597,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 
   float path = (depth + 7.0) * (1.0 + 1.0 / max(-r.z, 0.35));
   vec3 trans = exp(-uAbsorb * path);
-  float turbid = (1.0 - exp(-path * 0.011)) * (1.0 - 0.8 * poolK);
-  trans = mix(trans, vec3(0.8, 0.95, 0.97), poolK);
+  float turbid = (1.0 - exp(-path * 0.011)) * (1.0 - 0.8 * poolK) * (1.0 - 0.7 * picK);
+  trans = mix(trans, exp(-vec3(0.016, 0.0045, 0.0035) * depth) * vec3(0.9, 0.97, 0.98), poolK);
   vec3 body = uScatter * (0.5 + 0.5 * shadow) * (0.5 + 0.62 * min(caust, 3.0));
   vec3 water = (bed * trans + body * turbid * (1.0 - trans * 0.35)) * uSkyK.w;
   // Before dawn the water has no light of its own: a dark body, a little
@@ -1607,7 +1612,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 
     water = mix(water, pool, uNight * 0.93);
     // The picture glows softly up through the water.
-    water = mix(water, sheetC * 1.25 + vec3(0.016, 0.034, 0.044) + water * 0.3, picK * uNight * 0.9);
+    water = mix(water, sheetC * 2.3 + vec3(0.004, 0.011, 0.014) + water * 0.12, picK * uNight * 0.94);
     // (And lights the silt and the stones round it.)
     if (poolK > 0.0 && uSheetOn > 0.5) water += sheetGlow() * bed * 2.6 * exp(-max(sheetEdge(pb), 0.0) / 120.0) * (1.0 - picK) * poolK * uNight;
   }
@@ -1734,7 +1739,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   refl *= 1.0 + (0.5 * (df.r - 0.5) + 0.3 * (dw2.r - 0.5)) * uNight * streamK;
   // The slab stands in the water: its mirror image, broken by the ripples.
   if (slabOn > 0.0) {
-    vec2 suvS;
+    vec3 suvS;
     float faceS;
     // (Its image is held together: the ripples bend it a little, they do not scatter it.)
     vec3 rfS = reflect(dir, normalize(vec3(-slope * 0.7, 1.0)));
@@ -1943,8 +1948,22 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // The pool's own surface: the sky lies on its far side, and a shelf of ice stands out over it all round.
   float poolS = poolAt(pw);
   if (poolS > 0.0) {
-    float farK = smoothstep(${(POOL.y + POOL.h * 0.45).toFixed(1)}, ${(POOL.y + POOL.h + 30).toFixed(1)}, pw.y);
-    col = mix(col, refl, farK * farK * mix(0.34, 0.2, uNight) * poolS * (1.0 - 0.6 * picK));
+    // The sky lies on the far water, more of it the lower the eye looks across it; and each boulder stands over its own dark image.
+    float low = 1.0 - smoothstep(0.34, 0.8, -dir.z);
+    float mirK = low * low * mix(0.5, 0.16, uNight) * (1.0 - 0.75 * picK);
+    vec3 mir = refl;
+    vec3 nR;
+    vec3 rfR = reflect(dir, normalize(vec3(-slope * 2.2, 1.0)));
+    float tR = rockHit(vec3(pw, -FREEBOARD), rfR, nR);
+    if (tR > 0.0) {
+      mir = mix(mir, rockColor(vec3(pw, -FREEBOARD) + rfR * tR, nR, tR * 3.0) * 0.5, gRockA);
+      mirK = max(mirK, mix(0.42, 0.3, uNight) * gRockA * (1.0 - 0.5 * picK));
+    }
+    col = mix(col, mir, mirK * poolS);
+    // (Before dawn it is dark water round the lit table: it gives back less of the curtain than the river does.)
+    col = mix(col, water * 1.4 + refl * 0.012, 0.74 * uNight * poolS * (1.0 - picK));
+    // (Over the plates the sky's veil is thin by day and gone before dawn: their ground stays dark, their letters light.)
+    col = mix(col, water, picK * mix(0.4, 0.8, uNight) * poolS);
     vec4 rim = poolRim(pw, -bw.r, footL, refl);
     // (The shelf's shade on the bed under it.)
     col *= 1.0 - 0.22 * (1.0 - smoothstep(20.0, 54.0, -bw.r)) * poolS * (1.0 - uNight);
@@ -2313,8 +2332,8 @@ void main() {
     // Four rays to a pixel find how much of it the block covers (its edges
     // are geometry, so they are smoothed by counting). The ice itself is
     // worked out once for each face the pixel sees: one, or two at an arris.
-    vec2 uvA = vec2(0.0);
-    vec2 uvB = vec2(0.0);
+    vec3 uvA = vec3(0.0);
+    vec3 uvB = vec3(0.0);
     vec3 rdA = dir;
     vec3 rdB = dir;
     vec4 hA = vec4(0.0); // face, distance, thickness, how many rays
@@ -2323,7 +2342,7 @@ void main() {
       vec2 j = vec2(i == 0 || i == 3 ? 0.125 : -0.125, i < 2 ? 0.375 : -0.375);
       if (i == 1 || i == 3) j = j.yx;
       vec3 rd = normalize(dir + (uCamR * j.x + uCamU * j.y) * uPxAng);
-      vec2 suv;
+      vec3 suv;
       float face;
       float t = slabHit(uCamPos, rd, suv, face);
       if (t > 0.0) {
@@ -2450,7 +2469,7 @@ void main() {
       if (dd < reach * reach) {
         slabOn = 1.0;
         vec3 L = keyDir();
-        vec2 suv;
+        vec3 suv;
         float face;
         // Three rays toward the light, a little apart: a soft-edged shadow.
         float sh = 0.0;
@@ -2565,6 +2584,16 @@ void main() {
     col *= 1.0 - 0.56 * gLee;
 #endif
   }
+  // The boulders of the rock pool stand in front of its water and its far bank.
+  if (poolNear()) {
+    vec3 nR;
+    float tR = rockHit(uCamPos, dir, nR);
+    if (tR > 0.0) {
+      vec3 hp = uCamPos + dir * tR;
+      float aR = gRockA * smoothstep(0.0, 1.5 * tR * uPxAng, hp.z + FREEBOARD);
+      if (aR > 0.0) col = mix(col, rockColor(hp, nR, tR), aR);
+    }
+  }
   if (uShardOn > 0.5) {
     vec4 pl = pulseAt();
     vec3 L = keyDir();
@@ -2579,27 +2608,26 @@ void main() {
     vec3 rings = vec3(0.0);
     if (onTarn > 0.0) {
       rings = pulseRings(pwp.xy) * onTarn;
-      // Each shard's shade lies long across the water, away from the low sun.
+      // Water takes no sharp shadow: where each shard keeps the low sun off it, the water only gives back a little less sky,
+      // in a long soft lane that widens and fades away from the shard's foot.
       if (uNight < 1.0 && L.z > 0.02) {
-        vec3 nS;
-        float tS;
+        vec2 away = -normalize(L.xy);
         float shd = 0.0;
         for (int i = 0; i < 2; i++) {
           vec4 s = i == 0 ? SH0 : SH1;
-          float tn = i == 0 ? ${SHARDS[0].turn.toFixed(2)} : ${SHARDS[1].turn.toFixed(2)};
-          // (Two rays a little apart: its edge is soft, and softer the further it lies.)
-          for (int e = 0; e < 2; e++) {
-            vec3 l2 = normalize(L + vec3(-L.y, L.x, 0.0) * (e == 0 ? -0.035 : 0.035));
-            float th = shardHit(pwp, l2, s, tn, nS, tS);
-            if (th > 0.0) shd = max(shd, shd + 0.5 * (1.0 - smoothstep(0.0, 1100.0, th)));
-          }
+          vec2 d = pwp.xy - s.xy;
+          float al = dot(d, away);
+          float reach = s.z / max(L.z, 0.08) * length(L.xy);
+          float wd = s.w * 0.9 + al * 0.16;
+          float sd = dot(d, vec2(-away.y, away.x)) / max(wd, 1.0);
+          shd += smoothstep(-s.w, s.w * 2.0, al) * (1.0 - smoothstep(reach * 0.25, reach, al)) * exp(-sd * sd * 1.4);
         }
-        col *= 1.0 - 0.34 * shd * (1.0 - uNight) * onTarn;
+        col *= 1.0 - 0.2 * min(shd, 1.0) * (1.0 - uNight) * onTarn;
       }
       // The rings: light on the faces turned to the sky, shade behind them.
       vec3 pc = mix(vec3(0.62, 0.86, 0.95), vec3(0.45, 1.0, 0.92), uNight);
-      col += pc * max(rings.z, 0.0) * mix(0.34, 0.3, uNight);
-      col *= 1.0 + min(rings.z, 0.0) * 0.3;
+      col += pc * max(rings.z, 0.0) * mix(0.5, 0.3, uNight);
+      col *= 1.0 + min(rings.z, 0.0) * mix(0.42, 0.3, uNight);
       // The pulse itself: a bead of light skimming the water, its tail behind it.
       vec2 A = SH0.xy;
       vec2 B = SH1.xy;
@@ -2609,9 +2637,14 @@ void main() {
       bool back = mod(uTime, 7.0) >= 3.5;
       float along = dot(rel, ab) * (back ? 1.0 : -1.0);
       float side = dot(rel, vec2(-ab.y, ab.x));
-      float bead = exp(-dot(rel, rel) / 150.0) * 3.2 + exp(-dot(rel, rel) / 1900.0) * 0.5;
-      float tail = along > 0.0 ? exp(-along / 150.0) * exp(-side * side / (30.0 + along * 0.9)) * 0.85 : 0.0;
-      col += pc * (bead + tail) * pl.w * onTarn * mix(0.8, 1.0, uNight);
+      float bead = exp(-dot(rel, rel) / 170.0) * 3.6 + exp(-dot(rel, rel) / 2400.0) * 0.6;
+      float tail = along > 0.0 ? exp(-along / 170.0) * exp(-side * side / (30.0 + along * 0.9)) * 0.9 : 0.0;
+      // (The way between the two is a hair of light on the water: it is there at every moment, and the message is the bright place on it.)
+      float span = dot(pwp.xy - A, ab);
+      float seam = exp(-side * side / (5.0 + 0.9 * tw * uPxAng * tw * uPxAng)) * smoothstep(0.0, 40.0, span) * (1.0 - smoothstep(length(B - A) - 40.0, length(B - A), span)) * (0.55 + 0.45 * sin(span * 0.09 - uTime * 2.4 * (back ? -1.0 : 1.0)));
+      // (By day it is white on the water, a dark ring of its own shade round it: it reads on a bright tarn as on a dark one.)
+      col *= 1.0 - 0.3 * exp(-dot(rel, rel) / 1500.0) * (1.0 - exp(-dot(rel, rel) / 260.0)) * pl.w * (1.0 - uNight) * onTarn;
+      col += mix(vec3(0.9, 0.97, 1.0) * 1.25, pc, uNight) * ((bead + tail) * pl.w + seam * mix(0.16, 0.22, uNight)) * onTarn;
     }
     for (int i = 0; i < 2; i++) {
       vec4 s = i == 0 ? SH0 : SH1;
