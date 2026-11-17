@@ -18,17 +18,17 @@ export const OG_TYPE = 'image/png';
 
 /** Which picture stands behind a card, and what it shows (for alt text). */
 export const PICTURES = {
-  home: 'A frozen lake runs out to snow-covered ranges under a low morning sun, and the name Arav Jain is cut through the ice as dark water.',
-  infiniview: 'A block of clear ice holding the Infiniview site stands on an island in a pool of teal meltwater, on a snowfield under far ranges.',
-  'open-source': 'A teal meltwater river winds across a snowfield, fed by a row of small streams.',
-  'kilo-bench': 'A dark sheet of benchmark results lies in a basin cut in the ice, beside a teal meltwater river.',
+  home: 'The name Arav Jain stands as letters of pale glacier ice on a frozen lake swept to dark clear ice, mirrored in it, with snow-covered ranges under a low morning sun beyond.',
+  infiniview: 'A rough block of clear ice holding the Infiniview card stands in a pool of teal meltwater, waves breaking at its foot, on a snowfield under far ranges.',
+  'open-source': 'Seven meltwater streams of different widths fall over a cliff of ice into a teal river that winds away across a snowfield.',
+  'kilo-bench': 'Benchmark results lie as dark plates on the bed of a clear rock pool, snow-capped boulders standing in it, on a snowfield with a tarn beyond.',
   'agent-bridge': 'Two shards of pale ice stand in a still tarn, with a frozen lake and snow-covered ranges beyond.',
-  ollama: 'Columns of ice of different heights stand in teal shallows on a snowfield.',
-  'cc-switch': 'A meltwater river parts into two channels and passes a row of ice gates.',
-  tensorpow: 'A lattice of ice blocks stands in a pool of teal meltwater on a snowfield.',
-  rydar: 'The RydAR site set in the end wall of a canyon of blue ice, over meltwater.',
-  work: 'A meltwater river parts into the channels of a delta and runs out to a calm sea under a low sun.',
-  blog: 'A still, dark tarn seen from above, two shards of pale ice standing in it, ringed by snow.',
+  ollama: 'Four pillars of glacier ice of different sizes stand in teal shallows on a snowfield under far ranges.',
+  'cc-switch': 'A dam of ice with three sluices holds back a dark pond; below it one channel runs white with meltwater and two lie dry.',
+  tensorpow: 'Sixteen cubes of ice stand four by four in a pool of teal meltwater on a snowfield.',
+  rydar: 'The RydAR page set in a wall of rimed blue ice at a bend of a canyon, over meltwater.',
+  work: 'A meltwater river parts round snow-covered bars in a delta and runs out to a deep blue sea under a low sun.',
+  blog: 'A still tarn with two shards of pale ice standing in it, a brook running from it across wind-cut snow to a rock pool.',
 } as const;
 export type Picture = keyof typeof PICTURES;
 
