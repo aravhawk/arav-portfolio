@@ -409,7 +409,8 @@ export class FlightEngine extends WaterEngine {
     if (ice.rect[2] > 0) this.gl.uniform4f(prog.u.uIceA, ice.a[0] + 3, ice.a[1], ice.a[2], ice.a[3]);
     if (prog.u.uIceP) this.gl.uniform4fv(prog.u.uIceP, this.nameCut);
     // (The far wall of a cut is seen across this much of the lake from the first camera.)
-    if (prog.u.uIceRim) this.gl.uniform1f(prog.u.uIceRim, ICE_H * this.nameStretch);
+    // (While the name is a pond no wall stands round it: the opening is the letter itself.)
+    if (prog.u.uIceRim) this.gl.uniform1f(prog.u.uIceRim, ICE_H * this.nameStretch * (1 - ice.n[1]));
     if (prog.u.uIceLean) this.gl.uniform1f(prog.u.uIceLean, this.leanNow);
   }
 
