@@ -258,8 +258,9 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s7 - 0.05, pos: [1620, T + 3560, 400], aim: [1120, T + 3840, 0], fov: 45 },
         { s: s7 + 0.45, pos: [820, T + 3640, 400], aim: [900, T + 4350, 10], fov: 44 },
         // The lattice from over its west bank, corner on: every cube and its mirror image.
-        { s: s7 + 1.15, pos: [500, T + 3800, 640], aim: [1215, T + 4500, 0], fov: 42 },
-        { s: s8 - 0.6, pos: [512, T + 3828, 630], aim: [1218, T + 4510, 0], fov: 42 },
+        // (Turned a little to the left, so the bank at lower left is wide enough for the name to stand on snow alone.)
+        { s: s7 + 1.15, pos: [500, T + 3800, 640], aim: [1085, T + 4625, 0], fov: 45 },
+        { s: s8 - 0.6, pos: [512, T + 3828, 630], aim: [1088, T + 4635, 0], fov: 45 },
         { s: s8 + 0.3, pos: [1300, T + 4960, 170], aim: [1300, T + 5700, 90], fov: 48 },
         ...canyonKeys(s8, 50),
       ];
@@ -395,9 +396,10 @@ function canyonAt(d: number): [number, number] {
  * between them, where the polished face is seen whole.
  */
 function canyonKeys(s8: number, fov: number): Key[] {
-  // (An upright screen keeps its words at the foot: the face is held above the middle, from further back so it is seen whole.)
+  // (An upright screen keeps its words at the foot: the face is held above the middle, from further back so it is seen whole.
+  // A wide one keeps them at upper left: the eye looks a little lower, so the wall's crest is over the frame and the name stands on the wall alone.)
   const tall = fov > 60;
-  const face: V3 = tall ? [FACE.x, FACE.y, FACE.z + FACE.h * 0.5 - 44] : [FACE.x, FACE.y + 105, FACE.z + FACE.h * 0.5 - 6];
+  const face: V3 = tall ? [FACE.x, FACE.y, FACE.z + FACE.h * 0.5 - 44] : [FACE.x, FACE.y + 105, FACE.z + FACE.h * 0.5 - 24];
   //            scroll, along, height, bank, looks at the face, how far left of the middle line (the outside of a bend sees furthest down the next reach)
   const run: [number, number, number, number, boolean, number][] = [
     [0.8, 40, 112, 0, false, 0],

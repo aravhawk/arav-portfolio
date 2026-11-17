@@ -681,6 +681,11 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     padding-top: 84px;
     padding-bottom: 0;
   }
+  /* (In the canyon's hall the left wall's crest crosses the frame under the nav: the words stand below it, on the
+     wall's own calm ice.) */
+  html[data-flight='on'] .fl-rydar-words {
+    padding-top: max(84px, 31vh);
+  }
 
   /* Open models: the figure across the top of the frame, in the sky over the columns it counts; its label, its
      words and its link in one column beside it. */
