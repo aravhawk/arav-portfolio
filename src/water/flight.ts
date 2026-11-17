@@ -20,7 +20,7 @@ import { type Pending, type Program, type Target, bindTex, compileBegin, compile
 import { DAWN, GATE, LAP, PULSE, dawnLight, nextDrip, stationsNear, stepGates } from './moments';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { flightSource, freeboardAt } from './shaders/flight';
-import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO } from './shaders/terrain';
+import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
 import { CANYON, COLS, DAM, DELTA, LAKE, LATTICE, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
@@ -89,6 +89,7 @@ export class FlightEngine extends WaterEngine {
     delete s.render;
     s.flight = flightSource(false);
     s.ground = GROUND;
+    s.snowH = SNOW_H;
     s.mountH = MOUNT_H;
     s.mountPano = MOUNT_PANO;
     s.mountEdge = MOUNT_EDGE;
@@ -117,9 +118,18 @@ export class FlightEngine extends WaterEngine {
     }
     super.bake();
     await tick();
-    this.ground = makeTarget(gl, 1024, 1024, { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, wrap: gl.REPEAT });
+    // The snow: its cut forms first, then (a task later) its slope and the shade those forms throw.
+    // Half floats: an edge is cut from these values in the picture, and eight bits would show as steps along it.
+    const cutH = makeTarget(gl, 1024, 1024, { ...this.f16(), wrap: gl.REPEAT });
+    gl.useProgram(this.p.snowH.prog);
+    drawTo(gl, cutH);
+    await tick();
+    this.ground = makeTarget(gl, 1024, 1024, { ...this.f16(), wrap: gl.REPEAT });
     gl.useProgram(this.p.ground.prog);
+    bindTex(gl, 0, cutH.tex, this.p.ground.u.uH);
+    gl.uniform4fv(this.p.ground.u.uDirs, SHADE_DIRS);
     drawTo(gl, this.ground);
+    freeTarget(gl, cutH);
     this.filterGround(this.ground);
     await tick();
     this.filterGround(this.grain);

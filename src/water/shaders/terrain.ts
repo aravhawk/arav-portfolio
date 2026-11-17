@@ -1,8 +1,8 @@
 /**
  * What the flight bakes once at start-up, so that nothing fine is computed
- * per pixel at a low angle: the snow's relief (a tileable height field with
- * its slope), read each frame through a full mip chain with anisotropic
- * filtering.
+ * per pixel at a low angle: the snow's relief (a tileable height field: its
+ * slope, and where each place lies in the shadow of another), read each
+ * frame through a full mip chain with anisotropic filtering.
  */
 
 const HEAD = `#version 300 es
@@ -31,36 +31,90 @@ float tgn(vec2 p, vec2 per) {
 float tgn(vec2 p, float per) { return tgn(p, vec2(per)); }
 `;
 
+/** The wind's heading across the snow: radians from +y toward +x. Every ridge on the land runs this way. */
+export const WIND = 0.96;
 /**
- * The snow. Broad smooth dunes, and across a part of them a few long drift
- * ridges the wind has cut: each a gentle windward ramp that ends in a crisp
- * lee edge. Most of the field is smooth on purpose, so the forms that are
- * there read. The wind blows along +x of the tile.
- *
- * Out: r height, gb its slope (packed), a a second smooth field for where
- * bare stone and ice show.
+ * The two bearings the snow's cast shadows are baked for: the morning's sun
+ * through the stations, and the low light before dawn (and late in the day).
+ * The picture leans between the two as the light comes round.
+ */
+export const SHADE_AZ = { a: -0.44, b: 0.3 };
+/** A bearing in the world, turned into the snow tile's own frame (x along the wind). */
+const inTile = (az: number): [number, number] => {
+  const w = [Math.sin(WIND), Math.cos(WIND)];
+  const l = [Math.sin(az), Math.cos(az)];
+  return [l[0] * w[0] + l[1] * w[1], -l[0] * w[1] + l[1] * w[0]];
+};
+export const SHADE_DIRS = [...inTile(SHADE_AZ.a), ...inTile(SHADE_AZ.b)];
+
+/**
+ * The snow, as a height field one tile wide, in units of the tile (so a
+ * slope here is a slope in the world at whatever size the tile is laid).
+ * The wind blows along +x. Four things, all cut by it:
+ *  - a low swell, too gentle ever to shade itself;
+ *  - drifts: long banks with a gentle windward ramp and a crisp lee edge;
+ *  - sastrugi: narrow ridges, many to a drift, sharp-crested, where the
+ *    wind has worked the surface, and calm snow between those places;
+ *  - a finer set riding on them.
+ * The edges are steep on purpose: under a sun five degrees up, a crest is a
+ * bright line with a clean shadow beside it.
+ */
+const SNOW_FIELD = `
+float tent(float n, float gentle, float steep) { return smoothstep(-gentle, 0.0, n) * (1.0 - smoothstep(0.0, steep, n)); }
+float swell(vec2 q) { return 0.0055 * (0.6 * tgn(q * vec2(2.0, 3.0), vec2(2.0, 3.0)) + 0.4 * tgn(q * vec2(3.0, 5.0) + 3.1, vec2(3.0, 5.0))); }
+float cut(vec2 q) {
+  float nd = tgn(q * vec2(2.0, 7.0) + 7.7, vec2(2.0, 7.0)) + 0.3 * tgn(q * vec2(4.0, 15.0) + 1.3, vec2(4.0, 15.0));
+  float drift = tent(nd - 0.1, 0.4, 0.05);
+  float worked = smoothstep(-0.02, 0.26, tgn(q * 3.0 + 9.3, 3.0));
+  float ns = tgn(q * vec2(3.0, 25.0) + 2.2, vec2(3.0, 25.0)) + 0.22 * tgn(q * vec2(5.0, 47.0) + 4.4, vec2(5.0, 47.0));
+  float sast = tent(ns - 0.04, 0.3, 0.06) * worked;
+  float worked2 = smoothstep(0.0, 0.28, tgn(q * 5.0 + 3.9, 5.0));
+  float nf = tgn(q * vec2(5.0, 59.0) + 6.1, vec2(5.0, 59.0));
+  float fine = tent(nf - 0.05, 0.3, 0.12) * worked2;
+  return 0.0026 * drift + 0.0011 * sast + 0.00045 * fine;
+}
+vec2 bent(vec2 p) { return p + 0.035 * vec2(tgn(p * 2.0 + 1.7, 2.0), tgn(p * 2.0 + 5.2, 2.0)); }
+`;
+
+/** The cut forms alone (drifts, sastrugi), kept in half floats: what the shadows are marched through. */
+export const SNOW_H = `${HEAD}
+${PNOISE}
+${SNOW_FIELD}
+void main() { o = vec4(cut(bent(vUv)), 0.0, 0.0, 1.0); }`;
+
+/**
+ * The snow as the picture reads it. rg: the slope of the whole field.
+ * b, a: for each of the two baked bearings, the horizon toward the light
+ * (the steepest rise to any snow that way, as a tangent): where it stands
+ * above the sun, the place is in shade. Kept as a tangent and not as a
+ * shadow, so the edge is cut in the picture at whatever size the tile is
+ * seen, and stays an edge when the tile is laid large.
  */
 export const GROUND = `${HEAD}
 ${PNOISE}
-float snowH(vec2 p) {
-  vec2 w = vec2(tgn(p * 2.0 + 1.7, 2.0), tgn(p * 2.0 + 5.2, 2.0));
-  vec2 q = p + w * 0.07;
-  // Dunes.
-  float h = 0.62 * tgn(q * 3.0, 3.0) + 0.3 * tgn(q * 5.0 + 3.1, 5.0) + 0.1 * tgn(q * 9.0 + 7.9, 9.0);
-  // Drift ridges: long along the wind, in the places the wind worked.
-  float worked = smoothstep(0.02, 0.32, tgn(q * 2.0 + 9.3, 2.0));
-  float s = fract(q.y * 7.0 + 1.6 * tgn(q * vec2(2.0, 4.0) + 2.2, vec2(2.0, 4.0)));
-  float ramp = smoothstep(0.0, 0.82, s) * (1.0 - smoothstep(0.82, 1.0, s));
-  float len = smoothstep(-0.1, 0.25, tgn(q * vec2(3.0, 7.0) + 4.4, vec2(3.0, 7.0)));
-  return h + 0.16 * ramp * worked * len;
+${SNOW_FIELD}
+uniform sampler2D uH;
+uniform vec4 uDirs;
+float whole(vec2 p) { vec2 q = bent(p); return swell(q) + cut(q); }
+float horizon(vec2 d, float h0, float lean) {
+  const float E = 1.0 / 1024.0;
+  float m = -1.0;
+  for (int i = 2; i <= 46; i++) {
+    float s = E * (float(i) + 0.055 * float(i * i));
+    m = max(m, (textureLod(uH, vUv + d * s, 0.0).r - h0) / s);
+  }
+  return m + lean;
 }
 void main() {
-  float e = 1.0 / 1024.0;
-  float c = snowH(vUv);
-  vec2 g = vec2(snowH(vUv + vec2(e, 0.0)) - snowH(vUv - vec2(e, 0.0)), snowH(vUv + vec2(0.0, e)) - snowH(vUv - vec2(0.0, e))) / (2.0 * e);
-  float m = 0.6 * tgn(vUv * 4.0 + 6.1, 4.0) + 0.3 * tgn(vUv * 9.0 + 2.3, 9.0) + 0.14 * tgn(vUv * 23.0 + 8.8, 23.0);
-  // Packed for RGBA8: slopes of the field run to about 8 either way.
-  o = vec4(c * 0.5 + 0.5, clamp(g / 16.0 + 0.5, 0.0, 1.0), m * 0.5 + 0.5);
+  const float e = 0.5 / 1024.0;
+  vec2 g = vec2(whole(vUv + vec2(e, 0.0)) - whole(vUv - vec2(e, 0.0)), whole(vUv + vec2(0.0, e)) - whole(vUv - vec2(0.0, e))) / (2.0 * e);
+  // (The swell is a plane over the length of any shadow: its own lean toward the light is added to the cut forms' horizon.)
+  vec2 q = bent(vUv);
+  vec2 gs = vec2(swell(bent(vUv + vec2(e, 0.0))) - swell(bent(vUv - vec2(e, 0.0))), swell(bent(vUv + vec2(0.0, e))) - swell(bent(vUv - vec2(0.0, e)))) / (2.0 * e);
+  float h0 = cut(q);
+  float ha = max(horizon(uDirs.xy, h0, dot(gs, uDirs.xy)), dot(g, uDirs.xy));
+  float hb = max(horizon(uDirs.zw, h0, dot(gs, uDirs.zw)), dot(g, uDirs.zw));
+  o = vec4(g, ha, hb);
 }`;
 
 /** Where the morning sun stands: bearing from +y toward +x, and height, radians. */

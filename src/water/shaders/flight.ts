@@ -23,11 +23,18 @@
 import { ICE_FIELD } from './ice';
 import { NAME_ICE } from './name';
 import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
-import { PANO } from './terrain';
+import { PANO, SHADE_AZ, WIND } from './terrain';
 import { BASIN, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, SHEET_COLS, SHEET_GAP, SHEET_SRC, sheetSpan, slabFaces, STREAM, T2, TARN, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
+
+/** The way from the snow's first baked bearing to its second, over its own length squared: what a bearing between them is measured along. */
+const shD = (() => {
+  const d = [Math.sin(SHADE_AZ.b) - Math.sin(SHADE_AZ.a), Math.cos(SHADE_AZ.b) - Math.cos(SHADE_AZ.a)];
+  const l = d[0] * d[0] + d[1] * d[1];
+  return [d[0] / l, d[1] / l];
+})();
 
 const smoothJs = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -98,7 +105,7 @@ uniform sampler2D uSheetTex; // the picture on the pool's bed
 uniform float uSheetOn;
 uniform float uShardOn;    // 1 when the tarn's two shards are near enough to be seen
 uniform sampler2D uPano;   // the ranges: sun, sky, snow, distance
-uniform sampler2D uGround; // the baked snow: height, slope, a second field
+uniform sampler2D uGround; // the baked snow: its slope, and its horizon toward each of two lights
 uniform sampler2D uGlowTex; // the last frame's highlights, small and soft
 uniform float uBloom;
 uniform float uIceH;
@@ -815,65 +822,130 @@ vec3 fracture(vec2 x) {
   return vec3(md, hash2(n + mg));
 }
 
-/* ---------- the ground: wind-packed snow over pale stone ---------- */
+/* ---------- the ground: wind-cut snow ---------- */
 
 const mat2 RW = mat2(0.9563, -0.2924, 0.2924, 0.9563);
-// The baked snow is laid down three times, at scales and headings that do
-// not line up, so no tile is ever seen.
-const mat2 GA = mat2(0.9063, 0.4226, -0.4226, 0.9063);
-const mat2 GB = mat2(0.7547, -0.6561, 0.6561, 0.7547);
-const mat2 GC = mat2(0.9816, 0.1908, -0.1908, 0.9816);
+// The world, turned so that x runs with the wind: the baked snow's own frame.
+const mat2 GS = mat2(${Math.sin(WIND).toFixed(5)}, ${(-Math.cos(WIND)).toFixed(5)}, ${Math.cos(WIND).toFixed(5)}, ${Math.sin(WIND).toFixed(5)});
+// The two bearings its shadows were baked for, and the way from the first to the second.
+const vec2 SH_A = vec2(${Math.sin(SHADE_AZ.a).toFixed(5)}, ${Math.cos(SHADE_AZ.a).toFixed(5)});
+const vec2 SH_D = vec2(${shD[0].toFixed(5)}, ${shD[1].toFixed(5)});
 
 /** The size of a pixel on the ground, as two vectors: set once per pixel. */
 vec2 gGx;
 vec2 gGy;
 
-/** The baked snow at one scale: height, the slope in world terms, the second field. */
-vec4 snowTile(vec2 p, mat2 R, float scale, float amp, vec2 off) {
-  vec4 t = textureGrad(uGround, R * p / scale + off, R * gGx / scale, R * gGy / scale);
-  vec2 g = (t.gb - 0.5) * 16.0 * (amp / scale);
-  return vec4(t.r, g * R, t.a);
+/**
+ * The baked snow at one size: its slope (along the wind, across it) and
+ * its horizon toward each baked light. It is laid at three sizes, one
+ * heading: the wind blows one way over all of it.
+ */
+vec4 snowTile(vec2 p, float scale, vec2 off) {
+  return textureGrad(uGround, GS * p / scale + off, GS * gGx / scale, GS * gGy / scale);
+}
+
+/** 0..1: how near the words now showing this pixel is. The ground is quiet under them. */
+float wordsNear() {
+  if (uCalmK.x <= 0.0 || uCalmK.y > 0.5) return 0.0;
+  if (vUv.y > uCalmBox.w + 0.2 || vUv.y < uCalmBox.y - 0.2 || vUv.x > uCalmBox.z + 0.2 || vUv.x < uCalmBox.x - 0.2) return 0.0;
+  vec2 cq = abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5;
+  cq.x *= uLens.y;
+  float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);
+  return (1.0 - smoothstep(-0.01, 0.2, cd)) * uCalmK.x;
+}
+
+/**
+ * Sparkle: single crystals whose faces happen to be turned to throw the
+ * light at the eye. Each is fixed to the ground, a pixel or so across at
+ * any distance (two sizes of cell, cross-faded, so none appears at once),
+ * and each flashes over a narrow range of the eye's bearing: as the eye
+ * moves, one goes out and another lights. Still, they are still.
+ */
+float sparkle(vec2 p, float foot, vec3 dir) {
+  float lv = log2(max(foot, 0.04) * 3.4);
+  float l0 = floor(lv);
+  float f = lv - l0;
+  float det = gGx.x * gGy.y - gGx.y * gGy.x;
+  float s = 0.0;
+  for (int i = 0; i < 2; i++) {
+    float cell = exp2(l0 + float(i));
+    vec2 g = p / cell;
+    vec2 id = floor(g);
+    float r = hash21(id + 31.7 * (l0 + float(i)));
+    if (r < 0.9) continue;
+    vec2 at = id + 0.25 + 0.5 * vec2(hash21(id + 3.7), hash21(id + 9.1));
+    // (How far off its middle, in pixels of the screen: it is a round point however low the eye.)
+    vec2 dw = (g - at) * cell;
+    vec2 px = vec2(dw.x * gGy.y - dw.y * gGy.x, dw.y * gGx.x - dw.x * gGx.y) / (abs(det) + 1e-9);
+    float spot = 1.0 - smoothstep(0.55, 1.35, length(px));
+    if (spot <= 0.0) continue;
+    float ph = fract(r * 97.0 + dot(dir.xy, vec2(5.3, 3.9)) * 7.0 + dir.z * 11.0);
+    float flash = smoothstep(0.55, 1.0, 1.0 - abs(ph * 2.0 - 1.0));
+    s += spot * flash * (i == 0 ? 1.0 - f : f);
+  }
+  return s;
 }
 
 vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShade) {
-  // Dunes, the forms on them, and the wind's fine work close by.
-  vec4 a = snowTile(p, GA, 3400.0, 270.0, vec2(0.13, 0.57));
-  // (A layer whose whole tile is smaller than a few pixels has eased to
-  // its mean: it is not read. Each fades out before it is dropped.)
-  float fb = 1.0 - smoothstep(40.0, 80.0, foot);
-  float fc = (1.0 - smoothstep(9.0, 18.0, foot)) * (1.0 - gL2);
-  vec4 b = vec4(0.5, 0.0, 0.0, 0.5);
-  vec4 c = b;
-  if (fb > 0.0) b = mix(b, snowTile(p, GB, 1130.0, 52.0, vec2(0.71, 0.29)), fb);
-  if (fc > 0.0) c = mix(c, snowTile(p, GC, 263.0, 3.2, vec2(0.37, 0.11)), fc);
-  vec2 rel = a.yz + b.yz + c.yz;
+  vec3 L = keyDir();
+  vec2 Lxy = normalize(L.xy + 1e-5);
+  float tanEl = L.z / max(length(L.xy), 0.05);
+  // How far the light has come round from the first baked bearing to the second.
+  float kAz = clamp(dot(Lxy - SH_A, SH_D), 0.0, 1.0);
+  float calm = wordsNear();
+
+  // Three sizes of the same wind-cut field: the valley's long drifts, the
+  // drifts and ridges of the middle distance, the sastrugi under the eye.
+  // (A size whose ridges have come down to a pixel is let go, and its shade
+  // eases to its mean: nothing is read that cannot be drawn.)
+  vec4 a = snowTile(p, 6200.0, vec2(0.13, 0.57));
+  float fb = 1.0 - smoothstep(15.0, 38.0, foot);
+  float fc = 1.0 - smoothstep(3.0, 7.6, foot);
+  vec2 sA = a.xy * GS;
+  float mA = dot(sA, Lxy);
+  float shade = smoothstep(0.0, 0.07, mix(a.z, a.w, kAz) - tanEl);
+  vec2 rel = sA;
+  float lit = 1.0 - 0.6 * shade;
+  if (fb > 0.0) {
+    vec4 b = snowTile(p, 1330.0, vec2(0.71, 0.29));
+    vec2 sB = b.xy * GS;
+    // (A ridge on a drift that leans from the light throws a longer shade: the drift's own lean is added to its horizon.)
+    lit *= 1.0 - 0.8 * mix(0.14, smoothstep(0.0, 0.07, mix(b.z, b.w, kAz) + mA - tanEl), fb);
+    rel += sB * fb;
+    mA += dot(sB, Lxy) * fb;
+  } else lit *= 0.888;
+  if (fc > 0.0) {
+    vec4 c = snowTile(p, 286.0, vec2(0.37, 0.11));
+    lit *= 1.0 - 0.88 * mix(0.14, smoothstep(0.0, 0.07, mix(c.z, c.w, kAz) + mA - tanEl), fc);
+    rel += (c.xy * GS) * fc;
+  } else lit *= 0.877;
   // (Rock is rougher than snow, and it breaks in blocks: each block has its own tilt.)
   vec3 blockR = vec3(1.0, 0.5, 0.5);
+  float lvl = 0.5;
   if (gRock > 0.0) {
-    blockR = fracture(p / 86.0 + (a.yz + b.yz) * 0.4);
-    rel += ((b.yz * 1.6 + c.yz * 5.0) + (blockR.yz - 0.5) * 0.9 * (1.0 - smoothstep(3.0, 9.0, foot))) * gRock;
+    blockR = fracture(p / 86.0 + rel * 0.4);
+    rel += (rel * 0.6 + (blockR.yz - 0.5) * 0.9 * (1.0 - smoothstep(3.0, 9.0, foot))) * gRock;
+    lvl = textureLod(uGrain, p / 1100.0, 0.0).g;
   }
+  // (Under the words the ground is calm: its forms are still there, low, and their shade is thin.)
+  rel *= 1.0 - 0.72 * calm;
   vec3 n = normalize(vec3(-rel, 1.0));
   // The bank rolls over into the cut.
   float ch = 1.0 - smoothstep(0.0, 26.0, sd);
   n = normalize(n + vec3(-grad * ch * ch * 0.9, 0.0));
 
-  // Near the water the snow thins: bare dark stone, and old blue ice at the edge.
-  float nearW = 1.0 - smoothstep(14.0, 190.0, sd);
-  float lvl = b.w * 0.62 + c.w * 0.38;
   float ew = clamp(foot * 0.004, 0.004, 0.1);
-  float cut = mix(0.9, 0.52, nearW * nearW);
-  float bare = smoothstep(cut - ew, cut + ew, lvl);
-  float glaze = (1.0 - smoothstep(4.0, 30.0, sd)) * smoothstep(0.38 - ew, 0.38 + ew, b.w);
+  float bare = 0.0;
 
-  vec3 L = keyDir();
   float ndl = dot(n, L);
   // Snow is lit through as much as onto: a face turned from a low sun still
-  // glows a little, in the sky's blue. Level snow is the reference.
+  // glows a little, in the sky's blue. Level snow is the reference. What is
+  // crisp in it is the shade one form throws on the next.
   float sun = clamp(ndl / max(L.z, 0.05), 0.0, 2.4);
-  sun = mix(sun, 1.0, 0.1) * slabShade;
+  // (Under the words the ridges' shade is thin: the ground there is calm.)
+  sun = mix(1.0, sun, 0.4) * mix(1.0, lit, 1.0 - 0.9 * calm) * slabShade;
   vec4 gr = textureLod(uGrain, p / 150.0, lodFor(foot, 150.0, 256.0));
-  vec3 snow = mix(vec3(0.93, 0.94, 0.95), vec3(0.74, 0.8, 0.9), uNight);
+  vec3 snow = mix(vec3(0.93, 0.94, 0.95), vec3(0.74, 0.8, 0.9), uNight) * (0.965 + 0.07 * gr.g);
   vec3 stone = mix(vec3(0.085, 0.09, 0.1), vec3(0.05, 0.055, 0.07), uNight) * (0.7 + 0.7 * gr.g);
   vec3 blue = mix(vec3(0.3, 0.52, 0.62), vec3(0.2, 0.36, 0.46), uNight);
   // The outcrop: dark bedded rock, wet at its foot, snow only in its hollows.
@@ -883,34 +955,43 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
     stone = (stone * 2.1 + vec3(0.012, 0.014, 0.018)) * (0.7 + 0.6 * blockR.y);
     // A joint between two blocks is a dark seam.
     stone *= 1.0 - 0.7 * (1.0 - smoothstep(0.0, 0.035 + foot * 0.012, blockR.x)) * (1.0 - smoothstep(3.0, 9.0, foot));
-    bare = max(bare, gRock * smoothstep(0.45 - ew, 0.55 + ew, lvl + 0.3 * (1.0 - smoothstep(10.0, 70.0, sd))));
-    glaze *= 1.0 - gRock;
+    bare = gRock * smoothstep(0.45 - ew, 0.55 + ew, lvl + 0.3 * (1.0 - smoothstep(10.0, 70.0, sd)));
   }
   vec3 alb = mix(snow, stone, bare);
-  alb = mix(alb, blue, glaze * 0.8);
+
+  // Scoured ice: where the wind has taken the snow off, old blue ice shows,
+  // hard and glassy, in long patches that end at a drift's edge.
+  float low = 0.5 + 0.22 * (sin(dot(p, vec2(0.00083, 0.00047)) + 1.3) + sin(dot(p, vec2(-0.00041, 0.00102)) + 4.1)) + 0.1 * sin(dot(p, vec2(0.0027, -0.0016)) + 2.2);
+  float scour = smoothstep(0.8 - ew, 0.8 + ew + 0.01, low + 2.6 * a.x) * (1.0 - calm) * (1.0 - smoothstep(0.0, 0.1, gRock));
+  if (scour > 0.0) {
+    alb = mix(alb, mix(vec3(0.42, 0.63, 0.76), vec3(0.2, 0.36, 0.46), uNight) * (0.9 + 0.2 * gr.b), scour * 0.86);
+    sun = mix(sun, clamp(sun, 0.0, 1.0) * 0.82, scour);
+  }
+
   // The bank's lip is wet ice all along the water: a blue edge under the white.
-  float lipK = 1.0 - smoothstep(2.0, 13.0 + 6.0 * b.w, sd);
+  float lipK = 1.0 - smoothstep(2.0, 13.0 + 6.0 * gr.b, sd);
   alb = mix(alb, blue * 1.15, lipK * 0.85 * (1.0 - gRock));
   // The shelf's own top edge: a hair of bright refrozen ice over the water.
   alb = mix(alb, mix(vec3(0.86, 0.95, 1.0), vec3(0.62, 0.8, 0.9), uNight), (1.0 - smoothstep(0.5, 3.0 + foot, sd)) * 0.8);
   // (Level snow is held at one brightness whatever the sun's height; the
-  // low sun is in how strongly every slope answers it. Before dawn the
-  // aurora lends the snow a faint green.)
-  vec3 col = alb * (S.key * mix(0.24, L.z, uNight) * sun + (S.amb * 0.8 + uAurora * 0.035) * (0.62 + 0.38 * n.z));
-  // Hollows hold a little more of the sky's shade than crowns.
-  col *= 1.0 + (a.x - 0.5) * 0.1 + (b.x - 0.5) * 0.05;
-  // Sparkle: single crystals turned to the sun, only close to the eye.
-  float near = (1.0 - smoothstep(0.25, 0.9, foot)) * (1.0 - gL2);
-  if (near > 0.0) {
-    float glint = smoothstep(0.972, 1.0, gr.r) * smoothstep(0.4, 0.9, fract(gr.a * 7.0 + dot(dir.xy, vec2(3.1, 2.3)) * 6.0));
-    col += S.key * 0.5 * glint * near * (1.0 - bare) * step(0.3, sun) * (1.0 - uNight);
+  // low sun is in how strongly every slope answers it, and in the shade.
+  // Before dawn the aurora lends the snow a faint green, most on what faces it.)
+  vec3 sky = (S.amb * 0.8 + uAurora * 0.035) * (0.62 + 0.38 * n.z);
+  // (Before dawn snow is still the palest ground there is: it gathers the whole sky's light.)
+  if (uNight > 0.0) sky *= (1.0 + 0.32 * uNight) * (1.0 + uNight * (0.5 * (lit - 0.72) * (1.0 - 0.9 * calm) + 1.3 * clamp(rel.y, -0.2, 0.2)));
+  vec3 col = alb * (S.key * mix(0.24, L.z, uNight) * sun + sky);
+  // Sparkle, only on snow the sun reaches.
+  float glintK = (1.0 - smoothstep(2.0, 9.0, foot)) * (1.0 - bare) * (1.0 - scour) * (1.0 - calm);
+  if (glintK > 0.0) {
+    float sp = sparkle(p, foot, dir);
+    col += (S.key * 0.55 * lit * step(0.3, sun) * (1.0 - uNight) + (vec3(0.5, 0.74, 1.0) * 0.05 + uAurora * 0.3) * uNight) * sp * glintK;
   }
   // Wet shore: dark and glossy at the water.
   float wet = 1.0 - smoothstep(1.0, 16.0, sd);
   col = mix(col, col * vec3(0.62, 0.74, 0.82), wet * 0.6 * smoothstep(1.5, 5.0, sd));
-  // A cold sheen: snow is a little glossy at a glancing angle.
+  // A cold sheen: snow is a little glossy at a glancing angle, and bare ice a good deal more.
   float cosi = clamp(dot(-dir, n), 0.0, 1.0);
-  col += S.hor * pow(1.0 - cosi, 4.0) * mix(0.08, 0.2, uNight) * (1.0 - 0.6 * bare);
+  col += S.hor * pow(1.0 - cosi, 4.0) * mix(0.08, 0.2, uNight) * (1.0 - 0.6 * bare) * (1.0 + 2.4 * scour);
   return col;
 }
 
