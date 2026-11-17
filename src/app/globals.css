@@ -599,7 +599,7 @@ html[data-measuring] [data-reveal] {
   .btn {
     border: 1px solid ButtonText;
   }
-  html[data-water='on'] [data-ice] [data-ice-line] {
+  html[data-flight='on'] [data-ice] [data-ice-line] {
     opacity: 1 !important;
   }
 }
@@ -607,7 +607,6 @@ html[data-measuring] [data-reveal] {
 @media print {
   .water-root,
   .nav,
-  .ending-canvas,
   video {
     display: none !important;
   }

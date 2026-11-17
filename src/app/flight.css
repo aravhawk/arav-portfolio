@@ -136,6 +136,32 @@ html[data-flight='on'] .flight-canvas {
   position: absolute;
   inset: 0;
 }
+/* Until the canvas is running (and for good where it cannot run) the lake
+   is a still sheet of pale ice with the name set in it as deep water. It
+   fades out as the picture fades in. */
+.fl-lake::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.5) 46%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #e3eef3, #edf5f8 40%, #dcebf1);
+  box-shadow: inset 0 10px 24px -14px rgba(20, 60, 75, 0.45);
+  transition: opacity 900ms var(--ease-out);
+}
+:root[data-theme='dark'] .fl-lake::before {
+  background:
+    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.22) 46%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #a9c0ca, #b6cbd3 40%, #9fb9c4);
+}
+html[data-flight='on'] .fl-lake::before {
+  opacity: 0;
+}
+/* (Over that pale ground the first frame's words are dark in both themes, until the picture is there.) */
+html:not([data-flight='on']) .fl-hero-words,
+html:not([data-flight='on']) .fl-hero-words .fl-intro {
+  color: #0a0c0e;
+}
 .fl .fl-name {
   top: 50%;
   transform: translateY(-50%);
@@ -143,11 +169,6 @@ html[data-flight='on'] .flight-canvas {
 }
 html[data-flight='on'] .fl-name [data-ice-line] {
   opacity: 0;
-}
-html[data-flight='on'] .fl-lake[data-basin],
-html:not([data-flight]) .fl-lake[data-basin] {
-  background: none;
-  box-shadow: none;
 }
 .fl .fl-still {
   display: none;
@@ -182,62 +203,6 @@ html:not([data-flight]) .fl-lake[data-basin] {
   .fl-view-words {
     gap: var(--s-3);
   }
-}
-
-/* ---------- without the canvas: a plain, designed page ---------- */
-
-html[data-flight='off'] .fl-sec {
-  height: auto;
-  margin-top: 0;
-  pointer-events: auto;
-}
-html[data-flight='off'] .fl-pin {
-  position: relative;
-  height: auto;
-  min-height: 72svh;
-  display: grid;
-  align-content: center;
-  gap: var(--s-7);
-  padding-block: var(--beat-pad);
-}
-html[data-flight='off'] .fl-hero .fl-pin {
-  min-height: 100svh;
-  padding-block: 0;
-}
-html[data-flight='off'] .fl-words {
-  position: relative;
-  inset: auto;
-}
-html[data-flight='off'] .fl-words > * {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-}
-html[data-flight='off'] .fl-lake {
-  border-radius: 0;
-  background:
-    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.5) 46%, rgba(255, 255, 255, 0) 62%),
-    linear-gradient(180deg, #e3eef3, #edf5f8 40%, #dcebf1);
-  box-shadow: inset 0 10px 24px -14px rgba(20, 60, 75, 0.45);
-}
-:root[data-theme='dark'][data-flight='off'] .fl-lake {
-  background:
-    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.22) 46%, rgba(255, 255, 255, 0) 62%),
-    linear-gradient(180deg, #a9c0ca, #b6cbd3 40%, #9fb9c4);
-}
-html[data-flight='off'] .fl-hero-words {
-  position: absolute;
-  inset: 0;
-  color: #0a0c0e;
-}
-html[data-flight='off'] .fl-hero-words .fl-intro {
-  color: #0a0c0e;
-}
-html[data-flight='off'] .fl .fl-still {
-  display: grid;
-  margin-inline: var(--gutter);
-  padding: clamp(28px, 6vw, 90px);
-  border-radius: 28px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -330,27 +295,6 @@ html[data-flight='off'] .fl .fl-still {
   }
 }
 
-/* Without the canvas the captions are a plain list. */
-html[data-flight='off'] .fl-calls {
-  position: relative;
-  inset: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3) var(--s-5);
-  padding: 0 var(--gutter);
-  pointer-events: auto;
-}
-html[data-flight='off'] .fl-call {
-  opacity: 1;
-}
-html[data-flight='off'] .fl-call > * {
-  position: static;
-}
-html[data-flight='off'] .fl-call-ring,
-html[data-flight='off'] .fl-call-line {
-  display: none;
-}
-
 /* ---------- the later stations' words ---------- */
 
 /* Upstream: the figure and its words on the near bank, lower left. */
@@ -395,10 +339,6 @@ html[data-flight='off'] .fl-call-line {
   .fl-up-words {
     gap: var(--s-2);
   }
-}
-html[data-flight='off'] .fl-up-words,
-html[data-flight='off'] .fl-view-words {
-  display: flex;
 }
 
 /* ---------- the delta: what he is into ---------- */
@@ -540,13 +480,149 @@ html[data-flight='off'] .fl-view-words {
     opacity: 0;
   }
 }
-html[data-flight='off'] .fl-end-words .ending-line,
-html:not([data-flight]) .fl-end-words .ending-line {
-  clip-path: none;
+
+/* ---------- without the canvas: a plain, designed page ----------
+
+   Where WebGL2 cannot run, and for a reader whose scripts never ran, the
+   same sections stack as an ordinary page: each a block with its words and
+   its real image or film where it has one, standing in a still basin of the
+   site's water; the name in type on pale ice; the ending as the old
+   ending's sky and sea, held as a gradient. */
+
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-sec {
+  height: auto;
+  margin-top: 0;
+  pointer-events: auto;
 }
-html[data-flight='off'] .fl-end-words .ending-kicker,
-html[data-flight='off'] .fl-end-words .ending-links,
-html[data-flight='off'] .fl-end-words .fl-end-foot {
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-pin {
+  position: relative;
+  height: auto;
+  min-height: 70svh;
+  overflow: visible;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: center;
+  gap: var(--s-6) var(--s-7);
+  padding: var(--beat-pad) var(--gutter);
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-hero .fl-pin {
+  display: block;
+  min-height: 100svh;
+  padding: 0;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-say .fl-pin {
+  display: block;
+  min-height: 0;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-words {
+  position: relative;
+  inset: auto;
+  grid-column: 1;
+  grid-row: 1;
+  padding: 0;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-words > * {
   opacity: 1;
   transform: none;
+  pointer-events: auto;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-hero-words {
+  position: absolute;
+  inset: 0;
+  padding: 0 var(--gutter) max(clamp(22px, 5.2vh, 56px), env(safe-area-inset-bottom));
+}
+/* The right of each block: a still basin. It holds the project's picture, or its captions, or only water. */
+:is(html[data-flight='off'], html:not([data-scripted])) .fl .fl-still,
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-calls {
+  position: relative;
+  inset: auto;
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  height: auto;
+  min-height: min(46svh, 420px);
+  margin: 0;
+  padding: clamp(24px, 5vw, 76px);
+  border-radius: 28px;
+  background: radial-gradient(120% 120% at 30% 20%, var(--basin), var(--basin-2));
+  box-shadow:
+    inset 0 2px 0 rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
+    inset 0 24px 60px -20px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl .fl-still .slab {
+  width: 100%;
+  margin: 0;
+}
+/* Captions become a plain list in the basin. */
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-calls {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: flex-start;
+  gap: var(--s-3);
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-call {
+  opacity: 1;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-call > * {
+  position: static;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-call-ring,
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-call-line {
+  display: none;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-call-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-label);
+  pointer-events: auto;
+}
+/* The ending: the old ending's picture, still. Its sky, the far shore in its haze, the mist on the waterline, the dark near water. */
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-sea .fl-pin {
+  display: block;
+  min-height: 100svh;
+  padding: 0;
+  background: linear-gradient(to bottom, #6b7cb4 0%, #9b95be 15%, #dcc1c2 29%, #e2c8c4 33%, #9a7f95 34.5%, #886b80 37%, #d6b0a2 38%, #9e7472 40%, #906f7a 50%, #31365a 70%, #16203a 100%);
+}
+:root[data-theme='dark']:is(html[data-flight='off'], html:not([data-scripted])) .fl-sea .fl-pin {
+  background: linear-gradient(to bottom, #716874 0%, #a2877e 15%, #dcba7a 29%, #e6c682 33%, #9a7350 34.5%, #8c6344 37%, #d9a852 38%, #a47239 40%, #946941 50%, #362f32 70%, #171b22 100%);
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words {
+  position: absolute;
+  inset: 0;
+  padding: 0 var(--gutter) max(26px, env(safe-area-inset-bottom));
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-line {
+  clip-path: none;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-kicker,
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-links,
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .fl-end-foot {
+  opacity: 1;
+  transform: none;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words * {
+  pointer-events: auto;
+}
+@media (max-width: 859px) {
+  :is(html[data-flight='off'], html:not([data-scripted])) .fl-pin {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    padding-block: clamp(56px, 9vh, 96px);
+  }
+  :is(html[data-flight='off'], html:not([data-scripted])) .fl .fl-still,
+  :is(html[data-flight='off'], html:not([data-scripted])) .fl-calls {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+  :is(html[data-flight='off'], html:not([data-scripted])) .fl .fl-pool {
+    min-height: 120px;
+  }
 }

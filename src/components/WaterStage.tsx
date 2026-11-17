@@ -19,8 +19,8 @@ export function WaterStage() {
   const root = useRef<HTMLDivElement>(null);
   const handle = useRef<StageHandle | null>(null);
   const pathname = usePathname();
-  // The flight has its own world and its own canvas: this one stays out.
-  const away = pathname === '/flight';
+  // The home page is the flight, with its own world and its own canvas: this one stays out.
+  const away = pathname === '/';
 
   useEffect(() => {
     let cancelled = false;

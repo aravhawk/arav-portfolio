@@ -7,11 +7,17 @@
  * It reports frame intervals (p50, p95, p99), dropped frames, long tasks,
  * GPU time per frame from the trace, the quality tier the engine ended on,
  * and the canvas backing-store size on every frame, which is how a
- * resolution drop would show up. Traces are written outside the repo.
+ * resolution drop would show up. It also prints slow frames for each
+ * screen of scroll, so a costly stretch of the page can be found.
  *
- *   NODE_PATH=~/.t3/portfolio-redesign-v4/tools/node_modules \
- *     node scripts/perf-trace.mjs --base http://localhost:3133 \
- *       --out ~/.t3/portfolio-redesign-v4/traces/v4
+ * The scroll is driven by where the page actually is, not by how many
+ * wheel events were sent: every profile goes from the top to the very foot
+ * of the page at reading speed (about `--speed` screens a second).
+ *
+ *   NODE_PATH=.tools/node_modules node scripts/perf-trace.mjs \
+ *     --base http://localhost:3142 --out .tools/out/traces
+ *
+ * Options: --path /  --profile 1728 (a part of a profile's name)  --speed 0.8
  */
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -33,9 +39,11 @@ const arg = (name, def) => {
 };
 /** The page to trace: `--path /flight` for the flight, the home page by default. */
 const route = arg('path', '/');
-const base = arg('base', 'http://localhost:3133');
-const outDir = arg('out', join(homedir(), '.t3/portfolio-redesign-v4/traces/v4')).replace(/^~/, homedir());
+const base = arg('base', 'http://localhost:3142');
+const outDir = arg('out', '.tools/out/traces').replace(/^~/, homedir());
 const only = arg('profile', '');
+/** Screens of scroll a second: a reader's pace through a long page. */
+const speed = Number(arg('speed', '0.8'));
 mkdirSync(outDir, { recursive: true });
 
 const PROFILES = [
@@ -64,11 +72,15 @@ function summarise(intervals) {
 
 /** Installed before any page script: frame log, long tasks, backing size. */
 function instrument() {
-  const log = { frames: [], sizes: [], longTasks: [], marks: [] };
+  const log = { frames: [], at: [], sizes: [], longTasks: [], marks: [] };
   window.__perf = log;
   let last = 0;
   const tick = (t) => {
-    if (last) log.frames.push(t - last);
+    if (last) {
+      log.frames.push(t - last);
+      // Where the page was, in screens of scroll, when this frame was drawn.
+      log.at.push(scrollY / innerHeight);
+    }
     last = t;
     const c = document.querySelector('.water-canvas, .flight-canvas');
     if (c) log.sizes.push(c.width * 10000 + c.height);
@@ -123,24 +135,51 @@ for (const prof of PROFILES) {
 
   const mark = (name) => page.evaluate((n) => window.__perf.marks.push({ n, frame: window.__perf.frames.length }), name);
 
-  // 1. Full home scroll, top to bottom, at reading speed.
+  // 1. The whole page, top to foot, at reading speed. The loop watches
+  // where the page is: a wheel event moves a different distance at each
+  // device pixel ratio (and smooth scrolling lags it), so counting events
+  // would stop short.
   await mark('scroll-start');
   const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  const pxPerSec = speed * prof.viewport.height;
+  const t0 = Date.now();
+  let reached = 0;
   if (prof.touch) {
-    // Native momentum scrolling in steps, as a thumb would.
-    for (let y = 0; y < max; y += 48) {
-      await page.evaluate((yy) => window.scrollTo(0, yy), y);
+    // Native scrolling in small steps, as a thumb would.
+    for (;;) {
+      const want = Math.min(max, ((Date.now() - t0) / 1000) * pxPerSec);
+      await page.evaluate((yy) => window.scrollTo(0, yy), want);
       await page.waitForTimeout(16);
+      reached = want;
+      if (want >= max) break;
     }
   } else {
     await page.mouse.move(prof.viewport.width / 2, prof.viewport.height / 2);
-    for (let y = 0; y < max + 600; y += 70) {
-      await page.mouse.wheel(0, 70);
+    let stalled = 0;
+    for (;;) {
+      // Wheel toward where a reader would be by now; the page says where it really is.
+      const want = Math.min(max + 400, ((Date.now() - t0) / 1000) * pxPerSec);
+      const at = await page.evaluate(() => window.scrollY);
+      if (at >= max - 1) {
+        reached = at;
+        break;
+      }
+      stalled = at <= reached + 0.5 ? stalled + 1 : 0;
+      reached = Math.max(reached, at);
+      // (Nothing has moved for two seconds: report how far it got instead of spinning.)
+      if (stalled > 120) break;
+      const behind = want - at;
+      if (behind > 4) await page.mouse.wheel(0, Math.min(140, behind));
       await page.waitForTimeout(16);
     }
   }
   await page.waitForTimeout(1200);
   await mark('scroll-end');
+  const scrolled = await page.evaluate(() => ({ y: window.scrollY, max: document.documentElement.scrollHeight - innerHeight }));
+  // Hold at the foot: the ending at rest, and its light event.
+  await mark('end-start');
+  await page.waitForTimeout(4000);
+  await mark('end-end');
 
   // 2. The hero interaction: back to the lake, drag the pointer through it.
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -171,6 +210,17 @@ for (const prof of PROFILES) {
   const at = (n) => (perf.marks.find((m) => m.n === n) || { frame: 0 }).frame;
   const scroll = perf.frames.slice(at('scroll-start'), at('scroll-end'));
   const hero = perf.frames.slice(at('hero-start'), at('hero-end'));
+  const ending = perf.frames.slice(at('end-start'), at('end-end'));
+  // Slow frames for each screen of scroll: "screen: over 25 ms / frames".
+  const screens = [];
+  for (let i = at('scroll-start'); i < at('scroll-end'); i++) {
+    const k = Math.floor(perf.at[i]);
+    screens[k] = screens[k] || { frames: 0, over25: 0, worst: 0 };
+    screens[k].frames++;
+    if (perf.frames[i] > 25) screens[k].over25++;
+    screens[k].worst = Math.max(screens[k].worst, perf.frames[i]);
+  }
+  const perScreen = Array.from(screens, (v, k) => (v ? `${k}:${v.over25}/${v.frames}` : `${k}:-`)).join(' ');
   const sizes = [...new Set(perf.sizes)].map((v) => `${Math.floor(v / 10000)}x${v % 10000}`);
 
   // GPU time: sum of GPU task durations in the trace, per rendered frame.
@@ -188,6 +238,9 @@ for (const prof of PROFILES) {
     profile: prof.name,
     water: state,
     scroll: summarise(scroll),
+    scrolled: `${(scrolled.y / prof.viewport.height).toFixed(1)} of ${(scrolled.max / prof.viewport.height).toFixed(1)} screens${scrolled.y >= scrolled.max - 2 ? '' : ' (DID NOT REACH THE FOOT)'}`,
+    slowPerScreen: perScreen,
+    ending: summarise(ending),
     hero: summarise(hero),
     longTasks: { count: perf.longTasks.length, totalMs: perf.longTasks.reduce((a, b) => a + b.dur, 0), worstMs: Math.max(0, ...perf.longTasks.map((t) => t.dur)) },
     gpuMsPerFrame: +(gpuMicros / 1000 / frames).toFixed(2),

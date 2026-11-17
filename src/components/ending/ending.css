@@ -1,73 +1,14 @@
-/* The ending. Composition kept from v2: one picture, the headline set in
-   it, one row of links on a single left edge, chrome on the frame. No card,
-   no border, no blur. The words are light in both themes: they stand over
-   the near, dark reach of the water, which the shader keeps calm and in
-   shade for them. */
+/* The ending's words and the inner pages' footer. On the home page the
+   words stand in the last frame of the flight, over the near, dark reach of
+   the sea, which the picture keeps calm and in shade for them: they are
+   light in both themes. No card, no border, no blur. */
 
 .ending {
-  position: relative;
-  z-index: 2;
   --end-ink: #f4f7f8;
   --end-ink-2: #dfe6ea;
   --end-line: rgba(244, 247, 248, 0.34);
-  color: var(--end-ink);
-}
-.ending-full {
-  /* One extra screen of scroll drives the camera up. */
-  height: 165svh;
-}
-.ending-pin {
-  position: sticky;
-  top: 0;
-  height: 100svh;
-  overflow: hidden;
 }
 
-.ending-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  /* The top edge feathers into the page's own water while the camera is
-     coming down (the script closes it on arrival). */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather, 9%));
-  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather, 9%));
-}
-
-/* Without WebGL the picture is a still: the same sky, the far shore in
-   its haze, the mist on the waterline and the same dark near water, as
-   gradients. */
-.ending[data-gl='off'] .ending-canvas,
-html:not([data-js]) .ending-canvas {
-  -webkit-mask-image: none;
-  mask-image: none;
-  background: linear-gradient(to bottom, #6b7cb4 0%, #9b95be 15%, #dcc1c2 29%, #e2c8c4 33%, #9a7f95 34.5%, #886b80 37%, #d6b0a2 38%, #9e7472 40%, #906f7a 50%, #31365a 70%, #16203a 100%);
-}
-:root[data-theme='dark'] .ending[data-gl='off'] .ending-canvas {
-  background: linear-gradient(to bottom, #716874 0%, #a2877e 15%, #dcba7a 29%, #e6c682 33%, #9a7350 34.5%, #8c6344 37%, #d9a852 38%, #a47239 40%, #946941 50%, #362f32 70%, #171b22 100%);
-}
-
-.ending-copy {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding-bottom: max(26px, env(safe-area-inset-bottom));
-  pointer-events: none;
-}
-.ending-copy > * {
-  pointer-events: auto;
-}
-
-.ending-block {
-  display: grid;
-  gap: clamp(10px, 1.4vw, 20px);
-  justify-items: start;
-  /* The block keeps to the left; the sun and its path keep to the right. */
-  max-width: min(50vw, 800px);
-  margin-bottom: clamp(36px, 8vh, 96px);
-}
 .ending-kicker {
   color: var(--end-ink);
   font-size: 0.75rem;
@@ -226,43 +167,8 @@ html:not([data-js]) .ending-canvas {
   color: var(--ink-2);
 }
 
-/* Entrance: the headline wipes in, the links follow. It leaves fast. */
-html[data-js] .ending-full[data-gl='on'] .ending-line {
-  clip-path: inset(-10% 100% -10% 0);
-  transition: clip-path 180ms var(--ease-out);
-}
-html[data-js] .ending-full[data-gl='on'][data-arrived] .ending-line {
-  clip-path: inset(-10% -6% -10% 0);
-  transition: clip-path 900ms var(--ease-in-out);
-}
-html[data-js] .ending-full[data-gl='on'] .ending-kicker,
-html[data-js] .ending-full[data-gl='on'] .ending-links,
-html[data-js] .ending-full[data-gl='on'] .ending-foot {
-  opacity: 0;
-  transform: translate3d(0, 14px, 0);
-  transition:
-    opacity 180ms var(--ease-out),
-    transform 180ms var(--ease-out);
-}
-html[data-js] .ending-full[data-gl='on'][data-arrived] .ending-kicker,
-html[data-js] .ending-full[data-gl='on'][data-arrived] .ending-links,
-html[data-js] .ending-full[data-gl='on'][data-arrived] .ending-foot {
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity 700ms var(--ease-out) 420ms,
-    transform 700ms var(--ease-out) 420ms;
-}
-html[data-js] .ending-full[data-gl='on'][data-arrived] .ending-foot {
-  transition-delay: 560ms;
-}
-
 /* Narrow screens: the same picture, the words still in the near water. */
 @media (max-width: 719px) {
-  .ending-block {
-    max-width: 68vw;
-    margin-bottom: clamp(18px, 4vh, 40px);
-  }
   .ending-head {
     font-size: clamp(2.9rem, 14vw, 4.6rem);
   }
@@ -273,20 +179,5 @@ html[data-js] .ending-full[data-gl='on'][data-arrived] .ending-foot {
   .foot-meta {
     max-width: none;
     padding-right: 72px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ending-full {
-    height: 100svh;
-  }
-  .ending-line,
-  .ending-kicker,
-  .ending-links,
-  .ending-foot {
-    clip-path: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
   }
 }

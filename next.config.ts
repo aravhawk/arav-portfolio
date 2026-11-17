@@ -11,12 +11,16 @@ const nextConfig: NextConfig = {
   transpilePackages: ['next-mdx-remote'],
   agentRules: false,
   async redirects() {
-    return REDIRECT_HOSTS.map((host) => ({
-      source: '/:path*',
-      has: [{ type: 'host' as const, value: host }],
-      destination: `${CANONICAL}/:path*`,
-      permanent: true,
-    }));
+    return [
+      ...REDIRECT_HOSTS.map((host) => ({
+        source: '/:path*',
+        has: [{ type: 'host' as const, value: host }],
+        destination: `${CANONICAL}/:path*`,
+        permanent: true,
+      })),
+      // The flight was built at this address before it became the home page.
+      { source: '/flight', destination: '/', permanent: true },
+    ];
   },
 };
 

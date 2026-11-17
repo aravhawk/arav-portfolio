@@ -112,8 +112,9 @@ export const viewport: Viewport = {
 };
 
 /* Runs before first paint: the stored theme or the system's, so the wrong
-   theme never flashes. The type switch is for the bake-off only. */
-const boot = `(function(){var d=document.documentElement;try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}})()`;
+   theme never flashes. It also says that scripts run here at all: without
+   that mark the home page lays itself out as a plain page. */
+const boot = `(function(){var d=document.documentElement;d.setAttribute('data-scripted','');try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}})()`;
 
 const fontVars = [orbiter, mono, accent, ice].map((f) => f.variable).join(' ');
 

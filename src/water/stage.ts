@@ -1,18 +1,18 @@
 /**
- * Mounts the water engine on a page: measures the DOM, carves the bed from
- * it, builds the ice name, and feeds the engine scroll and pointer input.
+ * Mounts the water engine on an inner page: measures the DOM, carves the bed
+ * from it, and feeds the engine scroll and pointer input. (The home page is
+ * the flight: see flight.ts.)
  *
  * DOM registration: rects are read in one batch when the layout can have
  * changed (resize, fonts, images, content height) and cached. Nothing is
  * measured on scroll.
  *
  * Startup is spread out so it never blocks: shaders compile one per task,
- * the bed waits for fonts so it is carved once, and the distance transforms
- * run in a worker.
+ * the bed waits for fonts so it is carved once, and the distance transform
+ * runs in a worker.
  */
 
 import { onFrame } from '@/lib/frame';
-import { haptic } from '@/lib/haptics';
 import { BedPainter, type Rect } from './bed';
 import { WaterEngine } from './engine';
 import { SCENES, type Anchors } from './scenes';
@@ -134,15 +134,6 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
   let pulseAt = 0;
   let pulseIdx = 0;
 
-  // The melt finishing is a real event: the name has become the stream.
-  let meltFelt = false;
-  engine.onMelt = (done) => {
-    if (done && !meltFelt) {
-      meltFelt = true;
-      haptic('soft');
-    }
-  };
-
   function measureView() {
     viewW = html.clientWidth;
     // The large viewport height: the canvas must also cover the area a
@@ -155,66 +146,14 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
     engine.resize(viewW, cssH, margin, window.devicePixelRatio || 1);
   }
 
-  /** Raster of the name, drawn glyph by glyph where the DOM put it. */
-  function rasterIce(sx: number, sy: number) {
-    const host = document.querySelector<HTMLElement>('[data-ice]');
-    if (!host) return null;
-    const lines = Array.from(host.querySelectorAll<HTMLElement>('[data-ice-line]'));
-    if (!lines.length) lines.push(host);
-    const cs = getComputedStyle(lines[0]);
-    const fontSize = parseFloat(cs.fontSize);
-    const ls = parseFloat(cs.letterSpacing) || 0;
-    const font = `${cs.fontStyle} ${cs.fontWeight} ${fontSize}px ${cs.fontFamily}`;
-    const rects = lines.map((l) => docRect(l, sx, sy));
-    const pad = Math.round(fontSize * 0.22);
-    const x0 = Math.min(...rects.map((r) => r.x)) - pad;
-    const y0 = Math.min(...rects.map((r) => r.y)) - pad;
-    const x1 = Math.max(...rects.map((r) => r.x + r.w)) + pad;
-    const y1 = Math.max(...rects.map((r) => r.y + r.h)) + pad;
-    const w = x1 - x0;
-    const h = y1 - y0;
-    // About one texel per CSS px at desktop sizes: the field upsamples cleanly.
-    const tw = Math.min(1536, Math.max(256, Math.round(w)));
-    const scale = w / tw;
-    const th = Math.max(16, Math.round(h / scale));
-    const c = document.createElement('canvas');
-    c.width = tw;
-    c.height = th;
-    const ctx = c.getContext('2d', { willReadFrequently: true })!;
-    ctx.setTransform(1 / scale, 0, 0, 1 / scale, -x0 / scale, -y0 / scale);
-    ctx.font = font;
-    ctx.fillStyle = '#fff';
-    ctx.textBaseline = 'alphabetic';
-    lines.forEach((line, i) => {
-      const text = (line.textContent || '').trim();
-      const r = rects[i];
-      const m = ctx.measureText(text);
-      const asc = m.fontBoundingBoxAscent ?? fontSize * 0.8;
-      const desc = m.fontBoundingBoxDescent ?? fontSize * 0.2;
-      const baseline = r.y + (r.h - (asc + desc)) / 2 + asc;
-      // Centre the run in its box, then place glyph by glyph so tracking
-      // matches the DOM in every browser.
-      const run = m.width + ls * (text.length - 1);
-      const start = r.x + (r.w - run) / 2;
-      let x = start;
-      for (let k = 0; k < text.length; k++) {
-        ctx.fillText(text[k], x, baseline);
-        x = start + ctx.measureText(text.slice(0, k + 1)).width + ls * (k + 1);
-      }
-    });
-    return { alpha: ctx.getImageData(0, 0, tw, th).data, tw, th, scale, rect: { x: x0, y: y0, w, h } };
-  }
-
   async function build() {
     if (destroyed) return;
     const token = ++buildToken;
     // Measure text where it rests, not where a pending reveal has parked it.
     html.setAttribute('data-measuring', '');
     let painter: BedPainter;
-    let ice: ReturnType<typeof rasterIce>;
     let nextPulses: Rect[];
     let nextDocH: number;
-    let lake: Rect | null = null;
     try {
       const sx = window.scrollX;
       const sy = window.scrollY;
@@ -256,7 +195,7 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
       const seen = document.querySelectorAll<HTMLElement>(TEXT_SELECTOR);
       for (let i = 0; i < seen.length; i++) {
         const el = seen[i];
-        if (el.closest('[data-chrome],[data-ice],[data-nodry],.sr-only')) continue;
+        if (el.closest('[data-chrome],[data-nodry],.sr-only')) continue;
         if (!el.hasAttribute('data-dry') && !hasOwnText(el) && !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) continue;
         const r = docRect(el, sx, sy);
         if (r.w < 2 || r.h < 2) continue;
@@ -277,8 +216,6 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
         if (rev) r.h += rev.dataset.reveal === 'lead' ? 34 : rev.dataset.reveal === 'fade' ? 0 : 18;
         painter.dry(r, DRY_PAD, 10);
       }
-      ice = rasterIce(sx, sy);
-      lake = anchors.rect('lake');
       nextPulses = Array.from(document.querySelectorAll<HTMLElement>('[data-pulse]')).map((el) => docRect(el, sx, sy));
     } finally {
       html.removeAttribute('data-measuring');
@@ -286,28 +223,16 @@ export async function mountWater(root: HTMLElement, isCancelled: () => boolean =
 
     // The heavy part, off the main thread.
     const r = painter.rasters();
-    const [bedSd, iceSd] = await Promise.all([
-      solver.solve({ alpha: r.mask, w: painter.w, h: painter.h, clamp: r.clampTexels, scale: painter.div }),
-      ice ? solver.solve({ alpha: ice.alpha, w: ice.tw, h: ice.th, clamp: 400, scale: ice.scale }) : Promise.resolve(null),
-    ]);
+    const bedSd = await solver.solve({ alpha: r.mask, w: painter.w, h: painter.h, clamp: r.clampTexels, scale: painter.div });
     // A newer build started while this one was in the worker: drop it.
     if (destroyed || token !== buildToken) return;
 
     docH = nextDocH;
     pulses = nextPulses;
     engine.setBed(painter.assemble(bedSd.sd, r.flow));
-    engine.shoalY = painter.shoal ?? 1e9;
-    if (ice && iceSd && lake) {
-      engine.iceRect = ice.rect;
-      engine.lake = { y0: lake.y, y1: lake.y + lake.h };
-      engine.meltRange = Math.round(viewH * 0.56);
-      const out = painter.outlet;
-      engine.meltPath = out ? { x: out.x, y: out.y, reach: viewH * 0.9, w: out.w } : { x: 0, y: 0, reach: 0, w: 0 };
-      engine.setIce({ sd: iceSd.sd, w: ice.tw, h: ice.th, minSd: iceSd.min });
-    } else {
-      engine.lake = { y0: -1e6, y1: -1e6 };
-      engine.setIce(null);
-    }
+    // (These pages have no frozen lake: the name in ice is the home page's, which has its own stage.)
+    engine.lake = { y0: -1e6, y1: -1e6 };
+    engine.setIce(null);
     built = true;
     html.dataset.water = 'on';
   }

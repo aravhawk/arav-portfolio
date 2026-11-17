@@ -55,7 +55,8 @@ export function Runtime() {
     const off = onFrame(() => {
       const y = window.scrollY;
       const vh = window.innerHeight;
-      const nowMelted = !home || y > vh * 0.62;
+      // (On the home page the name is the hero: the mark waits until the lake's letters have run together into open water.)
+      const nowMelted = !home || y > vh * 1.25;
       if (nowMelted !== melted) {
         melted = nowMelted;
         html.toggleAttribute('data-melted', nowMelted);

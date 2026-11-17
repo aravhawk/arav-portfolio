@@ -88,26 +88,6 @@ function connect(c: Ctx, from: Pt, to: Pt, width = c.w) {
 
 /* ---------- features ---------- */
 
-/** Infiniview: the app sits on an island in a sealed basin, and gets hit. */
-const sandbox: Feature = (c, r) => {
-  const { b } = c;
-  const xin = c.narrow ? c.lane : r.x + r.w * 0.5;
-  b.pool(r, 30);
-  b.channel([pt(xin, r.y + 16), pt(lerp(xin, cx(r), 0.3), r.y + r.h * 0.08)], { width: c.w * 1.6, speed: 0.5, flowOnly: true });
-  // Attacks: the water around the island is never quite still.
-  for (const [tx, ty] of [
-    [0.06, 0.2],
-    [0.94, 0.3],
-    [0.08, 0.8],
-    [0.92, 0.82],
-    [0.5, 0.04],
-    [0.5, 0.96],
-  ]) {
-    b.agitate(pt(r.x + r.w * tx, r.y + r.h * ty), Math.min(70, r.w * 0.12), 0.55);
-  }
-  return { in: pt(xin, r.y), out: pt(xin, r.y + r.h) };
-};
-
 /** Upstream: tributaries merge into the main stream, wide as their count. */
 const tributaries: Feature = (c, r) => {
   const { b, a } = c;
@@ -405,7 +385,7 @@ const basin: Feature = (c, r) => {
   return { in: pt(x, r.y), out: pt(x, r.y + r.h) };
 };
 
-const FEATURES: Record<string, Feature> = { sandbox, tributaries, lanes, bridge, basins, fork, grid, bends, pass, basin };
+const FEATURES: Record<string, Feature> = { tributaries, lanes, bridge, basins, fork, grid, bends, pass, basin };
 
 /* ---------- scenes ---------- */
 
@@ -429,54 +409,9 @@ function run(c: Ctx, start: Pt | null) {
     if (from) connect(c, from, ports.in);
     from = ports.out;
   }
-  const delta = a.rect('delta');
-  if (delta) {
-    // The mouth: the stream opens out into the water of the ending.
-    if (from) connect(c, from, pt(c.narrow ? c.lane : from.x, delta.y + 8));
-    // It reaches well under the ending's picture, whose top edge dissolves
-    // into this water while the camera is still coming down.
-    const reach = delta.h + a.viewH * 0.75;
-    c.b.pool({ x: -120, y: delta.y, w: a.viewW + 240, h: reach }, 0);
-    // Out here the water is wide and shallow, and it keeps running: one
-    // broad current down the page, toward the ending.
-    for (const t of [0.2, 0.5, 0.8]) {
-      c.b.channel([pt(a.viewW * t, delta.y + 24), pt(a.viewW * t, delta.y + reach - 10)], { width: a.viewW * 0.42, speed: 0.6, flowOnly: true, straight: true });
-    }
-    c.b.shoal = delta.y;
-  } else if (from) {
-    c.b.channel([pt(from.x, from.y - 6), pt(from.x, a.docH + 40)], { width: c.w, straight: true });
-  }
+  // The stream runs on, off the foot of the page.
+  if (from) c.b.channel([pt(from.x, from.y - 6), pt(from.x, a.docH + 40)], { width: c.w, straight: true });
 }
-
-const home: Scene = (b, a) => {
-  const c = ctx(b, a);
-  const lake = a.rect('lake');
-  let from: Pt | null = null;
-  if (lake) {
-    // The lake runs off both sides of the page: only its north and south
-    // shores are land.
-    b.pool({ x: -120, y: lake.y, w: a.viewW + 240, h: lake.h }, 0);
-    // The outlet lines up with the first feature below, so the stream runs
-    // down beside the statement instead of through it.
-    const first = a.all('feat:').find((f) => f.rect.w > 2);
-    const outX = c.narrow ? c.lane : first ? cx(first.rect) : lake.x + lake.w * 0.78;
-    // A slow current gathers toward the outlet, so meltwater leaves the lake.
-    for (const t of [0.18, 0.5, 0.82]) {
-      b.channel(
-        [
-          pt(lake.x + lake.w * t, lake.y + lake.h * 0.1),
-          pt(lerp(lake.x + lake.w * t, outX, 0.45), lake.y + lake.h * 0.62),
-          pt(outX, lake.y + lake.h - 26),
-        ],
-        { width: lake.w * 0.36, speed: 0.34, flowOnly: true },
-      );
-    }
-    b.agitate(pt(outX, lake.y + lake.h - 10), c.w * 1.6, 0.7);
-    from = pt(outX, lake.y + lake.h);
-    b.outlet = { x: outX, y: lake.y + lake.h, w: c.w };
-  }
-  run(c, from);
-};
 
 /** Inner pages: a head pool if the page has one, then the stream. */
 const page: Scene = (b, a) => {
@@ -501,4 +436,4 @@ const page: Scene = (b, a) => {
   run(c, from);
 };
 
-export const SCENES: Record<string, Scene> = { home, page };
+export const SCENES: Record<string, Scene> = { page };
