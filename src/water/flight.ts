@@ -966,13 +966,64 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   let sNow = 0;
 
   const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-fl]'));
-  const words = Array.from(document.querySelectorAll<HTMLElement>('[data-fl-from]')).map((el) => ({
+  // The words. A block is on for a stretch of scroll (from, to). A block that
+  // travels (it has `in` and `out`) stands at its composed place between
+  // those two and, either side of them, is a small tag in a corner of the
+  // frame: its label, its name or figure and its line, set small. It grows
+  // from the one to the other with the scroll (transform only), so a
+  // station is named from the moment it is in view until the camera has
+  // left it.
+  type Box4 = [number, number, number, number];
+  interface Piece {
+    el: HTMLElement;
+    /** where it stands at rest, in the block: left, top, width, height */
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    /** as a tag: its scale, and how far its corner moves */
+    k: number;
+    dx: number;
+    dy: number;
+  }
+  interface Words {
+    el: HTMLElement;
+    from: number;
+    to: number;
+    inAt: number;
+    outAt: number;
+    moves: boolean;
+    on: boolean | null;
+    /** 0: the tag, 1: composed */
+    p: number;
+    pieces: Piece[];
+    /** the ink's bounds at rest and as a tag, px in the frame: x0, y0, x1, y1 */
+    rest: Box4 | null;
+    tag: Box4 | null;
+  }
+  const words: Words[] = Array.from(document.querySelectorAll<HTMLElement>('[data-fl-from]')).map((el) => ({
     el,
     from: Number(el.dataset.flFrom),
     to: Number(el.dataset.flTo),
-    on: false as boolean | null,
+    inAt: Number(el.dataset.flIn),
+    outAt: Number(el.dataset.flOut),
+    moves: el.dataset.flIn !== undefined,
+    on: null,
+    p: -1,
+    pieces: Array.from(el.querySelectorAll<HTMLElement>('[data-w]')).map((piece) => ({ el: piece, x: 0, y: 0, w: 0, h: 0, k: 1, dx: 0, dy: 0 })),
+    rest: null,
+    tag: null,
   }));
-  words.forEach((w) => (w.on = null));
+  /** How much scroll, in screens, a block takes to grow from its tag to its composed place, and to shrink back. */
+  const GROW = 0.55;
+  const SHRINK = 0.35;
+  const heroWords = document.querySelector<HTMLElement>('.fl-hero-words');
+
+  // The rail: one tick to a section, the current one marked.
+  const railEl = document.querySelector<HTMLElement>('.fl-rail');
+  const rail = Array.from(railEl?.querySelectorAll<HTMLAnchorElement>('a') ?? []).map((el) => ({ el, from: Number(el.dataset.from), at: Number(el.dataset.at) }));
+  let railNow = -1;
+  let railOff: boolean | null = null;
 
   const callouts = makeCallouts();
   const endBlock = document.querySelector<HTMLElement>('.fl-end-block');
@@ -988,7 +1039,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     let y0 = 1e9;
     let x1 = -1e9;
     let y1 = -1e9;
-    for (const el of host.querySelectorAll<HTMLElement>('p, h2, li, a, button, .fl-film, .switch')) {
+    for (const el of host.querySelectorAll<HTMLElement>('p, h2, li, a, button, .fl-film, .switch, .fl-gates')) {
       const r = el.getBoundingClientRect();
       if (r.width < 2 || r.height < 2) continue;
       x0 = Math.min(x0, r.left);
@@ -1004,29 +1055,96 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   let boxLight = false;
   let boxTimer = 0;
   let boxLast = 0;
-  const measureBox = () => {
-    // (The first frame's two lines stand at opposite ends of the near ice, which is calm already.)
-    const w = words.find((x) => x.on && !x.el.classList.contains('fl-hero-words'));
-    boxOn = !!w;
-    if (!w) return;
-    const u = inkOf(w.el);
-    if (!u) {
-      boxOn = false;
-      return;
-    }
-    // (A little room all round, and for the short rise the words arrive with.)
+  /** The block the lee now stands behind. It goes out behind one block before it comes in behind the next. */
+  let leeFor: Words | null = null;
+  const setBox = (x0: number, y0: number, x1: number, y1: number, rise: number) => {
+    // (A little room all round.)
     const pad = 12;
-    box[0] = (u.x0 - pad) / viewW;
-    box[1] = 1 - (u.y1 + pad) / viewH;
-    box[2] = (u.x1 + pad) / viewW;
-    box[3] = 1 - (u.y0 - pad - 16) / viewH;
-    boxLight = w.el.classList.contains('fl-end-words');
+    box[0] = (x0 - pad) / viewW;
+    box[1] = 1 - (y1 + pad) / viewH;
+    box[2] = (x1 + pad) / viewW;
+    box[3] = 1 - (y0 - pad - rise) / viewH;
+  };
+  /** A block that stays where it is set: its ink is read where it stands. */
+  const measureBox = () => {
+    const w = leeFor;
+    if (!w || w.moves) return;
+    const u = inkOf(w.el);
+    boxOn = !!u && w.on === true;
+    // (And room for the short rise such a block arrives with.)
+    if (u) setBox(u.x0, u.y0, u.x1, u.y1, 16);
   };
   const scheduleBox = () => {
     measureBox();
     window.clearTimeout(boxTimer);
     // Again once the words have arrived where they rest.
     boxTimer = window.setTimeout(measureBox, 760);
+  };
+  /** A block that travels: its ink is known at both ends of its travel, and it moves in a straight line between them. */
+  const leeOf = (w: Words) => {
+    const a = w.tag;
+    const b = w.rest;
+    if (!a || !b) return false;
+    const p = Math.max(0, w.p);
+    setBox(a[0] + (b[0] - a[0]) * p, a[1] + (b[1] - a[1]) * p, a[2] + (b[2] - a[2]) * p, a[3] + (b[3] - a[3]) * p, 0);
+    return true;
+  };
+  /** Put a travelling block's pieces where they stand at p (transform only). */
+  const place = (w: Words, p: number) => {
+    const k = 1 - p;
+    for (const it of w.pieces) {
+      it.el.style.transform = k < 0.0005 ? '' : `translate3d(${(it.dx * k).toFixed(1)}px,${(it.dy * k).toFixed(1)}px,0) scale(${(1 + (it.k - 1) * k).toFixed(4)})`;
+    }
+    w.el.toggleAttribute('data-tag', p < 0.5);
+    w.p = p;
+  };
+  /**
+   * Where every travelling block's pieces stand at rest, and where they
+   * stand as a tag: stacked in the corner the block names (`--tag-at`: bl,
+   * br, tl or tr), each at the size its `--tag` gives (px of type at the
+   * reader's own text size; none: as set). Read on resize, never per frame.
+   */
+  const measureWords = () => {
+    const root = parseFloat(getComputedStyle(html).fontSize) / 16 || 1;
+    const foot = (heroWords && parseFloat(getComputedStyle(heroWords).paddingBottom)) || 40;
+    for (const w of words) {
+      if (!w.moves) continue;
+      for (const it of w.pieces) it.el.style.transform = '';
+      const host = w.el.getBoundingClientRect();
+      const cs = getComputedStyle(w.el);
+      const gutter = parseFloat(cs.paddingLeft) || 16;
+      const at = cs.getPropertyValue('--tag-at').trim() || 'bl';
+      const top = at[0] === 't';
+      const right = at[1] === 'r';
+      const ink = inkOf(w.el);
+      w.rest = ink ? [ink.x0 - host.left, ink.y0 - host.top, ink.x1 - host.left, ink.y1 - host.top] : null;
+      // (Under the nav at the top; on the first frame's own foot at the bottom.)
+      let cursor = top ? 78 : host.height - foot;
+      const tag: Box4 = [1e9, 1e9, -1e9, -1e9];
+      for (const it of top ? w.pieces : w.pieces.slice().reverse()) {
+        const r = it.el.getBoundingClientRect();
+        const st = getComputedStyle(it.el);
+        const want = (parseFloat(st.getPropertyValue('--tag')) || 0) * root;
+        it.x = r.left - host.left;
+        it.y = r.top - host.top;
+        it.w = r.width;
+        it.h = r.height;
+        it.k = want > 0 ? Math.min(1, want / (parseFloat(st.fontSize) || 16)) : 1;
+        const tw = it.w * it.k;
+        const th = it.h * it.k;
+        const x = right ? host.width - gutter - tw : gutter;
+        const y = top ? cursor : cursor - th;
+        cursor = top ? y + th + 7 : y - 7;
+        it.dx = x - it.x;
+        it.dy = y - it.y;
+        tag[0] = Math.min(tag[0], x);
+        tag[1] = Math.min(tag[1], y);
+        tag[2] = Math.max(tag[2], x + tw);
+        tag[3] = Math.max(tag[3], y + th);
+      }
+      w.tag = tag[2] > tag[0] ? tag : null;
+      if (w.p >= 0) place(w, w.p);
+    }
   };
   // One light tick, once, when the camera settles and the sun's edge clears the ranges.
   engine.onDawn = () => {
@@ -1055,6 +1173,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     // (Each section but the last is one screen longer than its stretch of scroll, so its words can stay pinned to the end of it.)
     unit = first ? first.offsetHeight / (SECTIONS.hero + 1) : viewH;
     callouts.measure();
+    measureWords();
     scheduleBox();
     // The ending's words keep to the left (on a narrow screen, to the foot): the water there is kept calm for them.
     const b = endBlock ? inkOf(endBlock) : null;
@@ -1193,6 +1312,16 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   const forkWatch = new MutationObserver(onGate);
   if (fork) forkWatch.observe(fork, { attributes: true, attributeFilter: ['data-active'] });
 
+  // A tick of the rail takes the page to that section's composed frame.
+  const onRail = (e: MouseEvent) => {
+    const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a');
+    const hit = a && rail.find((r) => r.el === a);
+    if (!hit) return;
+    e.preventDefault();
+    window.scrollTo(0, Math.round(hit.at * unit));
+  };
+  railEl?.addEventListener('click', onRail);
+
   const ro = new ResizeObserver(onResize);
   ro.observe(document.body);
   window.addEventListener('resize', onResize);
@@ -1242,21 +1371,51 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     // stretch (they are set for that frame, so nothing is ever hidden).
     const s = mqStill.matches ? stillScroll(raw) : raw;
     sNow = s;
-    // Each block of words comes in and goes out with its stretch of scroll.
-    let changed = false;
+    // Each block of words comes in and goes out with its stretch of scroll,
+    // and a travelling block grows and shrinks with it.
+    let active: Words | null = null;
     for (const w of words) {
       const on = s >= w.from && s < w.to;
       if (on !== w.on) {
         w.on = on;
         w.el.toggleAttribute('data-on', on);
-        changed = true;
+      }
+      if (w.moves) {
+        const p = smooth(w.inAt - GROW, w.inAt, s) * (1 - smooth(w.outAt, w.outAt + SHRINK, s));
+        if (Math.abs(p - w.p) > 0.0008 || (p !== w.p && (p === 0 || p === 1))) place(w, p);
+      }
+      // (The first frame's two lines stand at opposite ends of the near ice, which is calm already.)
+      if (on && !active && w.el !== heroWords) active = w;
+    }
+    // The lee comes in with the words and goes out with them; between two
+    // blocks it goes out where the first stood before it comes in behind
+    // the second, so it is never seen to jump.
+    const dtBox = boxLast ? Math.min(0.1, (now - boxLast) / 1000) : 0;
+    boxLast = now;
+    if (active !== leeFor && (boxK <= 0.02 || !leeFor)) {
+      leeFor = active;
+      boxOn = false;
+      boxLight = !!active && active.el.classList.contains('fl-end-words');
+      if (active && !active.moves) scheduleBox();
+    }
+    if (leeFor && leeFor === active && leeFor.moves) boxOn = leeOf(leeFor);
+    else if (leeFor !== active) boxOn = false;
+    boxK = boxOn ? Math.min(1, boxK + dtBox / (mqStill.matches ? 0.001 : 0.35)) : Math.max(0, boxK - dtBox / (mqStill.matches ? 0.001 : 0.25));
+    // The rail: which section this is; out of the way on the first frame and at the ending.
+    if (rail.length) {
+      let i = 0;
+      while (i < rail.length - 1 && s >= rail[i + 1].from) i++;
+      if (i !== railNow) {
+        rail[railNow]?.el.removeAttribute('aria-current');
+        rail[i].el.setAttribute('aria-current', 'true');
+        railNow = i;
+      }
+      const off = s < 0.45 || s > SETTLE_AT - 0.6;
+      if (off !== railOff) {
+        railOff = off;
+        railEl?.toggleAttribute('data-off', off);
       }
     }
-    if (changed) scheduleBox();
-    // The lee comes in with the words and goes out with them.
-    const dtBox = boxLast ? Math.min(0.05, (now - boxLast) / 1000) : 0;
-    boxLast = now;
-    boxK = boxOn ? Math.min(1, boxK + dtBox / (mqStill.matches ? 0.001 : 0.35)) : Math.max(0, boxK - dtBox / (mqStill.matches ? 0.001 : 0.25));
     const pose = poseAt(keys, s);
     // (Nothing banks when motion is reduced.)
     if (mqStill.matches) pose.roll = 0;
@@ -1279,6 +1438,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       off();
       ro.disconnect();
       forkWatch.disconnect();
+      railEl?.removeEventListener('click', onRail);
+      for (const w of words) for (const it of w.pieces) it.el.style.transform = '';
       window.clearTimeout(boxTimer);
       window.clearTimeout(warm);
       solver.dispose();
