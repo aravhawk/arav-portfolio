@@ -119,8 +119,8 @@ export function flightKeys(aspect: number): Key[] {
         { s: s4 - 0.6, pos: [1770, 8440 + Y, 880], aim: [1770, 9095 + Y, 0], fov: 52 },
         { s: s4 + 0.3, pos: [1200, 9650 + Y, 360], aim: [1300, 10500 + Y, 0], fov: 58 },
         // The tarn: both shards, the far shore, the ranges.
-        { s: s4 + 1.2, pos: [1900, 9300 + Y, 500], aim: [1740, 10000 + Y, 0], fov: 58 },
-        { s: s5 - 0.6, pos: [1896, 9340 + Y, 490], aim: [1740, 10030 + Y, 0], fov: 58 },
+        { s: s4 + 1.2, pos: [1900, 9300 + Y, 500], aim: [1740, 9940 + Y, 0], fov: 58 },
+        { s: s5 - 0.6, pos: [1896, 9340 + Y, 490], aim: [1740, 9900 + Y, 0], fov: 58 },
         { s: s5 + 0.35, pos: [1300, 11300 + Y, 420], aim: [1300, 12100 + Y, 0], fov: 50 },
         { s: end, pos: [1300, 7300 + DY + EXT, 1300], aim: [1300, 7300 + 1300 / Math.tan(rad(57)) + DY + EXT, 0], fov: 40 },
       ]

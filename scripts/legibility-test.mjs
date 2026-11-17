@@ -125,7 +125,7 @@ for (const name of browsers) {
     for (const theme of themes) {
       const phone = width < 700;
       const ctx = await browser.newContext({
-        viewport: { width, height: phone ? 844 : 900 },
+        viewport: { width, height: { 390: 844, 768: 1024, 1920: 1080, 2560: 1440 }[width] ?? (phone ? 844 : 900) },
         deviceScaleFactor: 1,
         colorScheme: theme,
         hasTouch: phone,
@@ -149,7 +149,7 @@ for (const name of browsers) {
         for (let y = Number(arg('from', '0')) * vh; y <= Math.min(end, Number(arg('to', '1e9')) * vh); y += step * vh) {
           await page.evaluate((yy) => window.scrollTo(0, yy), Math.round(y));
           // Let words that have just come in finish arriving.
-          await page.waitForTimeout(820);
+          await page.waitForTimeout(Number(arg('settle', '820')));
           row.steps++;
           const boxes = await page.evaluate(linesOverPicture);
           if (!boxes.length) continue;

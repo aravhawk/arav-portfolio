@@ -105,7 +105,7 @@ export default async function Flight() {
                   at={[TRIBS[i].head.x, TRIBS[i].head.y, 0]}
                   href={r.url}
                   label={`${r.repo}: ${r.count} merged pull request${r.count === 1 ? '' : 's'}`}
-                  from={OUT + 1.3}
+                  from={OUT + 1.2}
                   to={BENCH - 1.05}
                   lift={i % 2 ? 78 : 44}
                 >
@@ -113,7 +113,7 @@ export default async function Flight() {
                 </Callout>
               ))}
             </div>
-            <div className="fl-words fl-up-words" data-fl-from={OUT + 1.3} data-fl-to={BENCH - 1.05}>
+            <div className="fl-words fl-up-words" data-fl-from={OUT + 1.2} data-fl-to={BENCH - 1.05}>
               <p className="label fl-label">Open source</p>
               <h2 className="beat-figure fl-figure">
                 <LiveNumber
@@ -175,7 +175,7 @@ export default async function Flight() {
         {/* ---------- 04 Agent Bridge ---------- */}
         <section className="fl-sec fl-bridge" data-fl style={len(SECTIONS.bridge)} aria-label="Agent Bridge">
           <div className="fl-pin">
-            <div className="fl-words fl-view-words fl-bridge-words" data-fl-from={BRIDGE + 0.95} data-fl-to={END - 0.85}>
+            <div className="fl-words fl-view-words fl-bridge-words" data-fl-from={BRIDGE + 1.1} data-fl-to={END - 0.85}>
               {BRIDGE_P.kicker ? <p className="label fl-label">{BRIDGE_P.kicker}</p> : null}
               <h2 className="display fl-view-name">
                 <Link className="beat-link" href={`/work/${BRIDGE_P.slug}`}>
