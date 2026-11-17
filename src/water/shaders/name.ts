@@ -357,7 +357,7 @@ vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, ve
   rf.z = abs(rf.z) + 0.01;
   vec3 sky = nameSky(normalize(rf), 1.0 - wet);
   // (In a block's shade a little less of it: the frost on the ice is unlit there.)
-  col = mix(col, sky, clamp(fres * mix(0.19, 0.3, uNight) * (1.0 + mix(0.9, 0.4, uNight) * wet) * (1.0 - 0.45 * shade), 0.0, 0.95));
+  col = mix(col, sky, clamp(fres * mix(0.15, 0.3, uNight) * (1.0 + mix(0.9, 0.4, uNight) * wet) * (1.0 - 0.45 * shade), 0.0, 0.95));
   return col;
 }
 
@@ -473,7 +473,8 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   float clearW = smoothstep(0.0, mix(0.008, 0.045, uNight), vUv.y - mix(uNameW.z + 0.004, 0.0, between) - clamp(0.012 + (lvl - 0.5) * 0.05 + fin * 0.025, 0.0, 0.04) * (1.0 - uNight));
   // (On a small or a very wide screen the words stand right under the letters' feet: the ice is bare as far as the feet all the same,
   // so no letter ever stands on snow.)
-  K *= max(clearW, smoothstep(-1.1, -1.03, nameSeat(p).y + (lvl - 0.5) * 0.08));
+  // (Never into the words themselves: where they stand that close, they win.)
+  K *= max(clearW, smoothstep(-1.035, -1.005, nameSeat(p).y) * smoothstep(0.004, 0.012, vUv.y - uNameW.z) * (1.0 - uNight));
   float fd = nameFoot(p);
   // The meltwater on the sheet at the blocks' feet: its edge wanders.
   float wob = (textureLod(uGrain, p / 310.0, 0.0).g - 0.5) * 22.0 + (textureLod(uGrain, p / 71.0 + 0.3, 0.0).b - 0.5) * 7.0;
