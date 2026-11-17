@@ -33,7 +33,7 @@ const CELL = [4, 5, 6, 8];
 /** How much of the world, along the flight, the simulation covers. */
 const SPAN = 2300;
 /** How thick the lake's sheet stands above the water, world units. */
-const ICE_H = 11;
+const ICE_H = 16;
 
 /** The light event at the ending happens once in a visit: after it, the sun stays up and the line of light holds. */
 let dawned = false;
@@ -809,11 +809,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const themeNow = () => (html.dataset.theme === 'dark' ? 1 : 0);
 
-  const t0 = performance.now();
-  const lap = (name: string, from: number) => performance.measure(`fl:${name}`, { start: from, end: performance.now() });
   const engine = new FlightEngine(canvas, { theme: themeNow(), still: mqStill.matches, coarse });
   await engine.prepare();
-  lap('prepare', t0);
   if (isCancelled()) {
     engine.destroy();
     return null;
@@ -940,24 +937,16 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const div = Math.max(3, WORLD.h / rows, Math.sqrt((WORLD.w * WORLD.h) / cells));
     const painter = new BedPainter(WORLD.w, WORLD.h, div);
     const tick = () => new Promise<void>((res) => setTimeout(res, 0));
-    let t = performance.now();
     paintWorld(painter, tribCounts.length ? tribCounts : undefined, engine.gate);
-    lap('paint', t);
     await tick();
-    t = performance.now();
     const r = painter.rasters();
-    lap('rasters', t);
     const sd = await solver.solve({ alpha: r.mask, w: painter.w, h: painter.h, clamp: r.clampTexels, scale: painter.div });
     if (destroyed) return false;
     await tick();
-    t = performance.now();
     const bed = painter.assemble(sd.sd, r.flow);
-    lap('assemble', t);
     await tick();
     if (destroyed) return false;
-    t = performance.now();
     engine.setBed(bed);
-    lap('setBed', t);
     engine.shoalY = SHOAL_Y;
     (tribCounts.length ? tribCounts : [9, 5, 3, 2, 1, 1, 1]).slice(0, TRIBS.length).forEach((n, i) => (engine.tribW[i] = tribWidth(n)));
     engine.lake = { y0: LAKE.y0, y1: LAKE.y1 };
