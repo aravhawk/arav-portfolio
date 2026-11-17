@@ -361,8 +361,8 @@ export class SceneReader {
       }
       // The tarn is where the frame is mostly its still water.
       tarn = wAll ? smooth(0.12, 0.5, tarn / wAll) : 0;
-      // Between the canyon's walls: inside its length and below its rim.
-      walls = smooth(CANYON.y0 - 500, CANYON.y0 + 150, cam.pos[1]) * (1 - smooth(CANYON.y1 - 100, CANYON.y1 + 500, cam.pos[1])) * (1 - smooth(CANYON.h - 20, CANYON.h + 220, cam.pos[2]));
+      // Between the canyon's walls: inside its length and below its rim (an eye above the rim is in open air).
+      walls = smooth(CANYON.y0 - 500, CANYON.y0 + 150, cam.pos[1]) * (1 - smooth(CANYON.y1 - 100, CANYON.y1 + 500, cam.pos[1])) * (1 - smooth(CANYON.h - 120, CANYON.h + 60, cam.pos[2]));
     }
 
     return {

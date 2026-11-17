@@ -369,15 +369,15 @@ describe('the scene is read from what the picture publishes', () => {
     for (const g of gates) expect(g.k).toBeGreaterThan(0.9);
     expect(gates[0].pan).toBeLessThan(gates[1].pan);
     expect(gates[1].pan).toBeLessThan(gates[2].pan);
-    // At the dam the columns are behind the lens: their drips are not heard there.
-    for (const x of COLS.xs) expect(seenAt(cam(7), 1.6, x, COLS.y, 0).k).toBe(0);
+    // The dam is seen from downstream, looking back: the columns stand far behind it, in frame but much further off than from their own station.
+    for (const x of COLS.xs) expect(seenAt(cam(7), 1.6, x, COLS.y, 0).far).toBeGreaterThan(seenAt(cam(6), 1.6, x, COLS.y, 0).far * 1.5);
     // At their own station the columns, the lattice and both shards are in frame.
     for (const x of COLS.xs) expect(seenAt(cam(6), 1.6, x, COLS.y, 0).k).toBeGreaterThan(0.9);
     expect(seenAt(cam(8), 1.6, LATTICE.x, LATTICE.y, 0).k).toBeGreaterThan(0.9);
     for (const sh of SHARDS) expect(seenAt(cam(5), 1.6, sh.x, sh.y, sh.h / 2).k).toBeGreaterThan(0.9);
-    // The lattice is far nearer from its own station than from the dam.
+    // The lattice is near from its own station. At the dam the eye stands over it looking back upstream: it is under the lens, out of frame, and not heard.
     expect(seenAt(cam(8), 1.6, LATTICE.x, LATTICE.y, 0).far).toBeLessThan(1500);
-    expect(seenAt(cam(7), 1.6, LATTICE.x, LATTICE.y, 0).far).toBeGreaterThan(2300);
+    expect(seenAt(cam(7), 1.6, LATTICE.x, LATTICE.y, 0).k).toBe(0);
     expect(seenAt(null, 1.6, 0, 0, 0).k).toBe(0);
   });
 
