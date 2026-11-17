@@ -7,12 +7,11 @@
  * whose it is.
  */
 
-/** Infiniview's own published counts (infiniview.dev). */
-export const INFINIVIEW_PUBLISHED = [
-  { value: '12', unit: 'runtime attack agents' },
-  { value: '4', unit: 'parallel code review agents' },
-  { value: '7', unit: 'interaction test types' },
-  { value: '0', unit: 'test cases to write' },
+/** Infiniview: the three passes that run against the live app, with the counts infiniview.dev publishes. */
+export const INFINIVIEW_PASSES = [
+  { n: '4', what: 'parallel code review agents', pass: 'Code review' },
+  { n: '12', what: 'runtime attack agents', pass: 'Runtime attack' },
+  { n: '7', what: 'interaction test types', pass: 'Interaction' },
 ];
 
 /** Merged in T3 Code: what each pull request changed, from its public description. */
@@ -75,30 +74,32 @@ export const T3_PRS: { n: number; title: string; merged: string; size: string; w
   },
 ];
 
-/** Kilo Bench: the five Kilo modes it covers, and its Devpost numbers. */
+/** Kilo Bench: the five Kilo modes it covers, what each run is judged on, and its dashboard's views (Devpost). */
 export const KILO_MODES = ['Architect', 'Code', 'Debug', 'Ask', 'Orchestrator'];
-export const KILO_NUMBERS = [
-  { value: '5', unit: 'Kilo modes covered' },
-  { value: '5', unit: 'dashboard views' },
-  { value: '0', unit: 'new npm dependencies' },
+export const KILO_MEASURES: { name: string; judged: boolean }[] = [
+  { name: 'Quality', judged: true },
+  { name: 'Relevance', judged: true },
+  { name: 'Speed', judged: false },
+  { name: 'Cost', judged: false },
 ];
 export const KILO_VIEWS = ['Leaderboard', 'Mode Breakdown', 'Radar Chart', 'Head-to-Head', 'Cost Optimizer'];
 
-/** Agent Bridge: the README's message flow, and its limits. */
-export const BRIDGE_FLOW: { who: string; title: string; note: string; ack?: boolean }[] = [
-  { who: 'Sender', title: 'Calls one tool', note: 'bridge_message_send' },
-  { who: 'Bridge', title: 'Stores the message', note: 'and an outbox job, in one transaction' },
-  { who: 'Bridge', title: 'Queues a wake', note: 'it carries the message ID only' },
-  { who: 'Recipient', title: 'Signs in', note: 'reads, claims and handles the message' },
-  { who: 'Recipient', title: 'Completes the receipt', note: 'and one correlated ACK, atomically', ack: true },
-  { who: 'Sender', title: 'Receives the ACK', note: 'terminal: never acknowledged in turn', ack: true },
+/** Agent Bridge: the README's message flow, who sends each step to whom, and its limits. */
+export type Peer = 'sender' | 'bridge' | 'recipient';
+export const BRIDGE_PEERS: { id: Peer; name: string }[] = [
+  { id: 'sender', name: 'Sender' },
+  { id: 'bridge', name: 'Bridge' },
+  { id: 'recipient', name: 'Recipient' },
 ];
-export const BRIDGE_NUMBERS = [
-  { value: '2', unit: 'peers' },
-  { value: '1', unit: 'owner' },
-  { value: '4 KiB', unit: 'of text in a message, at most' },
-  { value: '60 s', unit: 'claim lease' },
+export const BRIDGE_FLOW: { from: Peer; to: Peer; title: string; note: string; ack?: boolean }[] = [
+  { from: 'sender', to: 'bridge', title: 'Calls one tool', note: 'bridge_message_send' },
+  { from: 'bridge', to: 'bridge', title: 'Stores the message', note: 'and an outbox job, in one transaction' },
+  { from: 'bridge', to: 'recipient', title: 'Queues a wake', note: 'it carries the message ID only' },
+  { from: 'recipient', to: 'bridge', title: 'Signs in', note: 'reads, claims and handles the message' },
+  { from: 'recipient', to: 'bridge', title: 'Completes the receipt', note: 'and one correlated ACK, atomically', ack: true },
+  { from: 'bridge', to: 'sender', title: 'Receives the ACK', note: 'terminal: never acknowledged in turn', ack: true },
 ];
+export const BRIDGE_LIMITS = ['Exactly two peers and one owner', 'At most 4 KiB of text in a message', 'A 60 s claim lease'];
 
 /** Open models: what each build is, as its Ollama page says. */
 export const MODEL_NOTES: Record<string, { what: string; sizes: string; run: string }> = {
@@ -109,20 +110,17 @@ export const MODEL_NOTES: Record<string, { what: string; sizes: string; run: str
 };
 
 /** cc-switch: its real commands (README), and the provider templates it ships. */
-export const SWITCH_LINES: { cmd: string; note?: string }[] = [
-  { cmd: 'npm install -g @aravhawk/cc-switch' },
-  { cmd: 'cc-switch --create kimi --template kimi', note: 'new profile from a provider template' },
-  { cmd: 'cc-switch work', note: 'switch back to "work"' },
-  { cmd: 'cc-switch --test', note: 'one tiny request: endpoint, key, model' },
-  { cmd: 'cc-switch --list' },
-  { cmd: 'cc-switch --current' },
-  { cmd: 'cc-switch --providers' },
-];
+export const SWITCH_INSTALL = 'npm install -g @aravhawk/cc-switch';
+export const SWITCH_MORE = ['cc-switch --list', 'cc-switch --current', 'cc-switch --providers'];
 export const SWITCH_GROUPS: { n: number; name: string; who: string }[] = [
   { n: 2, name: 'Anthropic', who: '' },
-  { n: 12, name: 'Model labs', who: 'Z.ai GLM, Moonshot Kimi, MiniMax, DeepSeek, Alibaba Qwen and more' },
+  {
+    n: 12,
+    name: 'Model labs',
+    who: 'Z.ai GLM, Moonshot Kimi, Kimi Code, MiniMax, DeepSeek, Alibaba Qwen, Xiaomi MiMo, StepFun, Volcengine, Tencent, Baidu Qianfan, Meituan LongCat',
+  },
   { n: 6, name: 'Local', who: 'Ollama, LM Studio, llama.cpp, vLLM, SGLang, Docker Model Runner' },
-  { n: 9, name: 'Gateways and routers', who: 'OpenRouter, Vercel AI Gateway, Hugging Face, LiteLLM and more' },
+  { n: 9, name: 'Gateways and routers', who: 'OpenRouter, Vercel AI Gateway, Hugging Face, ZenMux, AIHubMix, Requesty, OpenCode, LiteLLM, custom' },
   { n: 8, name: 'Inference hosts', who: '' },
   { n: 4, name: 'Cloud platforms', who: 'Amazon Bedrock, Vertex AI, Microsoft Foundry, Claude Platform on AWS' },
 ];
@@ -150,9 +148,6 @@ export const TENSOR_GATES = [
 ];
 
 /** RydAR: the numbers on rydar.org and in its README, and the prompt it speaks. */
-export const RYDAR_NUMBERS = [
-  { value: '153,328', unit: 'curves mapped in Arkansas' },
-  { value: '75', unit: 'county pages' },
-  { value: '12 s', unit: 'of travel: the base warning lead' },
-];
+export const RYDAR_CURVES = { value: '153,328', unit: 'curves mapped in Arkansas' };
+export const RYDAR_MORE = ['75 county pages', 'A base warning lead of 12 s of travel'];
 export const RYDAR_QUOTE = { text: 'Slow to 25 mph for the curve ahead.', source: 'RydAR, spoken' };

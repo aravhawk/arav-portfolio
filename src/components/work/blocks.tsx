@@ -1,37 +1,41 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { VideoSlab } from '@/components/VideoSlab';
-import type { Project, ProjectLink, ProjectMedia } from '@/content/projects';
+import { PROJECTS, type Project, type ProjectLink, type ProjectMedia } from '@/content/projects';
 
 /**
- * The pieces a project page is built from. A page is a sequence of these,
- * chosen for what the project has: plates of real media, short statements,
- * numbers at scale, the steps, the facts, the ways out.
+ * The few pieces every project page shares. Each page is otherwise its own
+ * composition (cases.tsx): these are only the picture, the section, the
+ * quiet list of facts, the run-in note, the ways out and the way round the
+ * set. There are no eyebrows here: a section that needs a name gets a
+ * heading, and where a thing comes from is said in a sentence under it.
  */
 
-const PLATE_SIZES = '(max-width: 1720px) 96vw, 1640px';
-const HALF_SIZES = '(max-width: 859px) 94vw, (max-width: 1720px) 48vw, 820px';
+export const PLATE_SIZES = '(max-width: 1720px) 96vw, 1640px';
+export const HALF_SIZES = '(max-width: 859px) 94vw, (max-width: 1720px) 48vw, 820px';
 
-/** A piece of real media at full size, on the snow. */
-export function Plate({ media, caption, sizes = PLATE_SIZES, priority = false, className = '' }: { media: ProjectMedia; caption?: string; sizes?: string; priority?: boolean; className?: string }) {
+/** A piece of real media. A light capture is mounted, and dimmed on the dark theme. */
+export function Plate({ media, caption, sizes = PLATE_SIZES, priority = false, className = '' }: { media: ProjectMedia; caption?: React.ReactNode; sizes?: string; priority?: boolean; className?: string }) {
   if (media.kind === 'video') return <VideoSlab media={media} />;
   return (
-    <figure className={`plate ${className}`}>
+    <figure className={`plate${media.tone === 'light' ? ' plate-light' : ''} ${className}`}>
       <div className="plate-frame" data-dry>
         <Image className="plate-media" src={media.src} alt={media.alt} width={media.w} height={media.h} sizes={sizes} priority={priority} />
       </div>
-      {caption ? <figcaption className="label plate-cap">{caption}</figcaption> : null}
+      {caption ? <figcaption className="cap">{caption}</figcaption> : null}
     </figure>
   );
 }
 
-export function Sec({ children, className = '', label, id }: { children: React.ReactNode; className?: string; label?: string; id?: string }) {
+/** A section of a page. `title` is a real heading; most sections have none. */
+export function Sec({ children, className = '', title, id, label }: { children: React.ReactNode; className?: string; title?: string; id?: string; label?: string }) {
   return (
-    <section className={`sec wrap ${className}`} aria-labelledby={label && id ? id : undefined} aria-label={label && !id ? label : undefined}>
-      {label && id ? (
-        <h2 className="label sec-label" id={id}>
-          {label}
+    <section className={`sec wrap ${className}`} aria-labelledby={title && id ? id : undefined} aria-label={!title ? label : undefined}>
+      {title && id ? (
+        <h2 className="sec-h" id={id}>
+          {title}
         </h2>
       ) : null}
       {children}
@@ -39,45 +43,13 @@ export function Sec({ children, className = '', label, id }: { children: React.R
   );
 }
 
-/** One plate across the page. */
-export function PlateRow({ media, caption, priority }: { media: ProjectMedia; caption?: string; priority?: boolean }) {
+/** The project's facts, as a quiet two column list in the text face. */
+export function Spec({ facts, className = '' }: { facts: Project['facts']; className?: string }) {
   return (
-    <Sec className="sec-plate" label={media.kind === 'video' ? 'Video' : 'Picture'}>
-      <Plate media={media} caption={caption} priority={priority} />
-    </Sec>
-  );
-}
-
-/** Two plates side by side. `lean` gives the first one more of the width. */
-export function Pair({ a, b, caption, lean = false }: { a: ProjectMedia; b: ProjectMedia; caption?: string; lean?: boolean }) {
-  return (
-    <Sec className={`sec-pair${lean ? ' sec-pair-lean' : ''}`} label="Pictures">
-      <Plate media={a} sizes={HALF_SIZES} />
-      <Plate media={b} sizes={HALF_SIZES} />
-      {caption ? <p className="label plate-cap pair-cap">{caption}</p> : null}
-    </Sec>
-  );
-}
-
-/** The project's opening paragraph at reading scale, with its facts beside it. */
-export function Intro({ p, children }: { p: Project; children?: React.ReactNode }) {
-  return (
-    <Sec className="intro" label="What it is">
-      <p className="sum">{p.summary}</p>
-      <div className="intro-side">
-        <Facts facts={p.facts} />
-        {children}
-      </div>
-    </Sec>
-  );
-}
-
-export function Facts({ facts }: { facts: Project['facts'] }) {
-  return (
-    <dl className="facts">
+    <dl className={`spec ${className}`}>
       {facts.map((f) => (
-        <div key={f.label} className="fact">
-          <dt className="label">{f.label}</dt>
+        <div key={f.label} className="spec-row">
+          <dt>{f.label}</dt>
           <dd className={/^(npm |ollama |cc-switch )/.test(f.value) ? 'mono' : undefined}>{f.value}</dd>
         </div>
       ))}
@@ -85,41 +57,25 @@ export function Facts({ facts }: { facts: Project['facts'] }) {
   );
 }
 
-/** A short statement in someone's own words, at scale, with where it is from. */
-export function Quote({ text, source, wide = false }: { text: string; source: string; wide?: boolean }) {
+/** A point made in a paragraph that opens with its own name. Not a numbered step. */
+export function Note({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <figure className={`quote${wide ? ' quote-wide' : ''}`}>
-      <blockquote className="quote-text">{text}</blockquote>
-      <figcaption className="label">{source}</figcaption>
-    </figure>
+    <p className={`note ${className}`}>
+      <strong>{title}.</strong> {children}
+    </p>
   );
 }
 
-/** How it works. `row`: across the page under large numerals. `list`: one step to a line. */
-export function Steps({ p, variant = 'row', label = 'How it works' }: { p: Project; variant?: 'row' | 'list'; label?: string }) {
+/** The ways out: links, set as links. */
+export function Outs({ links }: { links: ProjectLink[] }) {
   return (
-    <Sec className={`sec-steps sec-steps-${variant}`} label={label} id="p-how">
-      <ol className="steps" style={{ '--n': p.how.length } as React.CSSProperties}>
-        {p.how.map((h) => (
-          <li key={h.title} className="step">
-            <h3 className="step-title">{h.title}</h3>
-            <p className="body">{h.body}</p>
-          </li>
-        ))}
-      </ol>
-    </Sec>
-  );
-}
-
-/** Numbers at scale. `value` is text or a live readout. */
-export function Figures({ items, label, id }: { items: { value: React.ReactNode; unit: string; key?: string }[]; label: string; id: string }) {
-  return (
-    <Sec className="sec-figs" label={label} id={id}>
-      <ul className="figs" style={{ '--n': items.length } as React.CSSProperties}>
-        {items.map((x) => (
-          <li key={x.key ?? x.unit} className="fig">
-            <span className="fig-value">{x.value}</span>
-            <span className="fig-unit">{x.unit}</span>
+    <Sec className="sec-outs" label="Links">
+      <ul className="outs">
+        {links.map((l) => (
+          <li key={l.href}>
+            <a className="out" href={l.href} target="_blank" rel="noopener noreferrer">
+              {l.label} <Arrow out />
+            </a>
           </li>
         ))}
       </ul>
@@ -127,29 +83,47 @@ export function Figures({ items, label, id }: { items: { value: React.ReactNode;
   );
 }
 
-export function Outs({ links }: { links: ProjectLink[] }) {
+/**
+ * The way round the set: the eight projects by name, this one marked, the
+ * one after it offered. Each name travels into the title of the page it opens.
+ */
+export function WorkStrip({ current }: { current: Project }) {
+  const next = PROJECTS[(PROJECTS.indexOf(current) + 1) % PROJECTS.length];
   return (
-    <Sec className="sec-outs" label="Links">
-      <div className="outs">
-        {links.map((l, k) => (
-          <a key={l.href} className={k === 0 ? 'btn btn-lg' : 'btn btn-lg btn-quiet'} href={l.href} target="_blank" rel="noopener noreferrer">
-            {l.label} <Arrow out />
-          </a>
-        ))}
-      </div>
-    </Sec>
-  );
-}
-
-export function NextProject({ next }: { next: Project }) {
-  return (
-    <nav className="next wrap" aria-label="Next project">
-      <Link className="next-link" href={`/work/${next.slug}`}>
-        <span className="label">Next</span>
-        <span className="display next-name">
-          {next.name} <Arrow />
+    <nav className="strip wrap" aria-label="Projects">
+      <ul className="strip-names">
+        {PROJECTS.map((p) =>
+          p.slug === current.slug ? (
+            <li key={p.slug}>
+              <span className="strip-name" aria-current="page">
+                {p.name}
+              </span>
+            </li>
+          ) : (
+            <li key={p.slug}>
+              <Link className="strip-name" href={`/work/${p.slug}`}>
+                {p.slug === next.slug ? (
+                  p.name
+                ) : (
+                  <ViewTransition name={`title-${p.slug}`} share="title" default="none">
+                    <span>{p.name}</span>
+                  </ViewTransition>
+                )}
+              </Link>
+            </li>
+          ),
+        )}
+      </ul>
+      <Link className="strip-next" href={`/work/${next.slug}`}>
+        <span className="strip-next-copy">
+          <ViewTransition name={`title-${next.slug}`} share="title" default="none">
+            <span className="strip-next-name">{next.name}</span>
+          </ViewTransition>
+          <span className="strip-next-line">{next.line}</span>
         </span>
-        <span className="next-line">{next.line}</span>
+        <span className="row-go" aria-hidden="true">
+          <Arrow />
+        </span>
       </Link>
     </nav>
   );

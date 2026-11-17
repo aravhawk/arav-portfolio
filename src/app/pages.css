@@ -133,22 +133,7 @@
   opacity: 0;
   transition: opacity 900ms var(--ease-out);
 }
-.band-view[data-band='on'] /* Until the engine is drawing (and for good where it cannot), the still has
-   no calm made for the words: a soft veil of the ground's own tone stands
-   behind them instead. The engine keeps its own picture readable, so the
-   veil leaves as the canvas arrives. */
-.band-view::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 78% 92% at 0% 100%, var(--veil) 0%, var(--veil) 34%, transparent 72%);
-  transition: opacity 900ms var(--ease-out);
-  pointer-events: none;
-}
-.band-view[data-band='on']::after {
-  opacity: 0;
-}
-.band-canvas {
+.band-view[data-band='on'] .band-canvas {
   opacity: 1;
 }
 
@@ -241,6 +226,37 @@
   background: var(--line);
 }
 
+/* ---------- type on the ground ---------- */
+
+/* One system for the small mono capitals: they name a category or head a
+   column (the way back, a row's kind and year on the index, a table's
+   columns, a post's date). They are never an eyebrow over a heading. Where a
+   thing comes from is said in a sentence (.cap), and a section that needs a
+   name has a heading (.sec-h). Never under 12px. */
+.pg-ground .label {
+  font-size: clamp(0.75rem, 0.1vw + 0.72rem, 0.8125rem);
+  letter-spacing: 0.06em;
+}
+/* At display sizes the tracking is open enough that no pair of letters touches. */
+.pg-ground .display {
+  letter-spacing: -0.028em;
+}
+/* A rule is a groove cut in the snow. */
+.pg-ground {
+  --rule: linear-gradient(var(--groove), var(--groove)) 0 0 / 100% 1px no-repeat, linear-gradient(var(--groove-lip), var(--groove-lip)) 0 1px / 100% 1px no-repeat;
+  --seq-bg: #e9edf0;
+}
+:root[data-theme='dark'] .pg-ground {
+  --seq-bg: #1b232e;
+}
+.cap {
+  margin-top: 14px;
+  max-width: 64ch;
+  font-size: clamp(0.875rem, 0.15vw + 0.84rem, 0.9375rem);
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
 /* ---------- sections ---------- */
 
 .sec {
@@ -257,35 +273,20 @@
 .pg-index > .sec:first-child {
   margin-top: 0;
 }
-.pg-index > .sec:first-child .sec-label {
-  margin-bottom: clamp(16px, 2.4vh, 24px);
-}
-/* A small label with a hairline running out from it to the edge. */
-.sec-label {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: clamp(22px, 3vw, 40px);
+/* A section's name: a heading, under the groove that opens the section. */
+.sec-h {
+  margin-bottom: clamp(22px, 2.8vw, 46px);
+  padding-top: clamp(18px, 2vw, 30px);
+  background: var(--rule);
+  font-family: var(--font-display);
+  font-size: clamp(1.625rem, 1.5vw + 1.1rem, 2.75rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
   grid-column: 1 / -1;
 }
-.sec-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
 
-/* Under a section's label, whose hairline already rules the top, the first row of a list carries none of its own. */
-.bars > :first-child,
-.changes > :first-child,
-.models > :first-child,
-.dia > :first-child,
-.sec-steps-list .steps > :first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
-/* ---------- plates: real media on the snow ---------- */
+/* ---------- pictures ---------- */
 
 .plate {
   margin: 0;
@@ -304,24 +305,29 @@
   width: 100%;
   height: auto;
 }
-.plate-cap {
-  margin-top: 14px;
+/* A light capture is mounted: a mat round it by day, and before dawn a dark
+   frame with the picture itself turned down, so it does not glare. */
+.plate-light .plate-frame {
+  padding: clamp(5px, 0.55vw, 9px);
+  background: #f8fafb;
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px rgba(24, 44, 66, 0.2);
 }
-.sec-pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-5);
-  align-items: start;
+.plate-light .plate-media {
+  border-radius: clamp(6px, 0.7vw, 11px);
+  box-shadow: 0 0 0 1px rgba(24, 44, 66, 0.1);
 }
-.sec-pair-lean {
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  align-items: end;
+:root[data-theme='dark'] .plate-light .plate-frame {
+  background: #0a0f15;
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px rgba(255, 255, 255, 0.14);
 }
-.pair-cap {
-  grid-column: 1 / -1;
-  margin-top: 0;
+:root[data-theme='dark'] .plate-light .plate-media {
+  filter: brightness(0.84) saturate(0.92);
+  box-shadow: none;
 }
-
 /* The film: the home page's slab, at the page's scale. */
 .pg-ground .slab {
   border-radius: clamp(10px, 1.1vw, 18px);
@@ -329,160 +335,106 @@
     var(--plate-shadow),
     0 0 0 1px var(--line);
 }
-.sec-film {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
-  column-gap: clamp(32px, 7vw, 140px);
-  row-gap: var(--s-7);
-  align-items: center;
-}
-.film {
-  min-width: 0;
-}
 
-/* ---------- the opening: what it is, and its facts ---------- */
+/* ---------- the pieces pages share ---------- */
 
-.intro {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
-  column-gap: clamp(32px, 7vw, 140px);
-  row-gap: var(--s-7);
-  align-items: start;
-}
+/* What it is, at reading scale. */
 .sum {
   max-width: 33ch;
   font-size: clamp(1.375rem, 1.3vw + 0.95rem, 2.25rem);
   font-weight: 520;
   line-height: 1.2;
-  letter-spacing: -0.024em;
+  letter-spacing: -0.022em;
   color: var(--ink);
   text-wrap: pretty;
 }
-.intro-side {
+.sum-s {
+  max-width: 38ch;
+  font-size: clamp(1.25rem, 0.8vw + 1rem, 1.75rem);
+  font-weight: 500;
+  line-height: 1.26;
+  letter-spacing: -0.018em;
+}
+/* The facts: a quiet list in the text face, a name and what it is. */
+.spec {
   display: grid;
-  gap: var(--s-6);
-  padding-top: 0.4em;
+  align-content: start;
 }
-.facts {
+.spec-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
-  column-gap: var(--s-7);
+  grid-template-columns: minmax(6rem, 9.5rem) minmax(0, 1fr);
+  column-gap: var(--s-4);
+  align-items: baseline;
+  padding: 13px 0 14px;
+  background: var(--rule);
 }
-.intro-side .facts,
-.phone-side .facts {
-  grid-template-columns: 1fr;
+.spec dt {
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  color: var(--ink-3);
 }
-.fact {
-  display: grid;
-  gap: 6px;
-  padding: 15px 0 19px;
-  border-top: 1px solid var(--line);
-}
-.fact dd {
-  font-size: clamp(1.125rem, 0.5vw + 1rem, 1.5rem);
-  font-weight: 560;
-  line-height: 1.22;
-  letter-spacing: -0.016em;
+.spec dd {
+  font-size: clamp(1.0625rem, 0.3vw + 1rem, 1.25rem);
+  font-weight: 540;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
   color: var(--ink);
 }
-.fact dd.mono {
+.spec dd.mono {
   font-size: clamp(0.875rem, 0.3vw + 0.8rem, 1.0625rem);
   font-weight: 500;
-  letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
 }
-
-/* ---------- statements ---------- */
-
-/* Someone's own words, in the serif: the other voice on the page. */
-.quote {
+/* A point made in a paragraph that opens with its own name. */
+.notes {
   display: grid;
-  gap: var(--s-4);
+  gap: clamp(14px, 1.5vw, 24px);
+  align-content: start;
+}
+.note {
+  max-width: 48ch;
+  font-size: var(--pg-body);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.note strong {
+  font-weight: 640;
+  color: var(--ink);
+}
+/* Words taken from a source, in the display face, with the source under them. */
+.said {
+  display: grid;
   align-content: center;
   margin: 0;
   min-width: 0;
 }
-.quote-text {
+.say {
   max-width: 15ch;
-  font-family: var(--font-accent);
-  font-size: clamp(2rem, 3vw + 0.7rem, 4.2rem);
-  font-weight: 380;
-  line-height: 1;
+  padding-bottom: 0.06em;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.4vw + 0.8rem, 4.9rem);
+  font-weight: 720;
+  line-height: 0.99;
   letter-spacing: -0.03em;
   text-wrap: balance;
-  padding-bottom: 0.08em;
 }
-.quote-wide .quote-text {
-  max-width: 20ch;
-  font-size: clamp(2.3rem, 5.4vw + 0.5rem, 7rem);
-  line-height: 0.96;
+.say-s {
+  max-width: 32ch;
+  font-size: clamp(1.375rem, 1.5vw + 0.95rem, 2.5rem);
+  font-weight: 620;
+  line-height: 1.12;
+  letter-spacing: -0.026em;
 }
-
-/* ---------- how it works ---------- */
-
-.steps {
+/* Short facts set as lines. */
+.limits {
   display: grid;
-  counter-reset: step;
-}
-.step {
-  counter-increment: step;
-  display: grid;
-  align-content: start;
-  min-width: 0;
-}
-.step::before {
-  content: counter(step, decimal-leading-zero);
+  gap: 0.28em;
   font-family: var(--font-display);
-  font-weight: 400;
-  letter-spacing: -0.05em;
-  line-height: 0.9;
-  font-variant-numeric: tabular-nums lining-nums;
-  color: var(--ink);
-}
-.step-title {
-  font-family: var(--font-display);
-  font-size: clamp(1.375rem, 0.9vw + 1.05rem, 2rem);
+  font-size: clamp(1.375rem, 1.4vw + 0.95rem, 2.4rem);
   font-weight: 660;
-  line-height: 1.08;
+  line-height: 1.12;
   letter-spacing: -0.028em;
 }
-.step .body {
-  max-width: 40ch;
-}
-/* Across the page, under large numerals. */
-.sec-steps-row .steps {
-  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
-  gap: var(--s-7) clamp(20px, 2.6vw, 44px);
-}
-.sec-steps-row .step {
-  gap: 12px;
-  padding-top: 18px;
-  border-top: 1px solid var(--ink);
-}
-.sec-steps-row .step::before {
-  font-size: clamp(2.8rem, 3.6vw + 1rem, 5.2rem);
-  margin-bottom: clamp(10px, 1.6vw, 26px);
-}
-/* One step to a line: numeral, title, what happens. */
-.sec-steps-list .step {
-  grid-template-columns: clamp(3.6rem, 8vw, 9rem) minmax(0, 4fr) minmax(0, 6fr);
-  column-gap: var(--s-5);
-  align-items: baseline;
-  padding: clamp(20px, 2.4vw, 34px) 0;
-  border-top: 1px solid var(--line);
-}
-.sec-steps-list .step::before {
-  font-size: clamp(1.6rem, 1.6vw + 0.9rem, 2.6rem);
-}
-.sec-steps-list .step-title {
-  font-size: clamp(1.5rem, 1.6vw + 0.9rem, 2.6rem);
-}
-.sec-steps-list .step .body {
-  max-width: 52ch;
-}
-
-/* ---------- numbers at scale ---------- */
-
+/* A result: a number set large. One row of these on a page, at most. */
 .figs {
   --cols: var(--n);
   display: grid;
@@ -501,12 +453,12 @@
   font-size: min(var(--pg-num), calc((100vw - 2 * var(--gutter)) / var(--cols, 1) / 4.3));
   font-weight: var(--display-wght);
   line-height: 0.86;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums lining-nums;
   white-space: nowrap;
 }
 .fig-unit {
-  max-width: 20ch;
+  max-width: 22ch;
   font-size: var(--pg-body);
   font-weight: 520;
   line-height: 1.25;
@@ -514,79 +466,318 @@
 }
 .figs-side {
   --cols: 2;
-  margin-top: clamp(28px, 4vw, 56px);
 }
 .figs-side .fig-value {
   font-size: clamp(2.6rem, 4.4vw + 0.4rem, 5.4rem);
 }
 
-/* ---------- the ways out, and the next project ---------- */
-
+/* The ways out are links. */
 .outs {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 4px clamp(24px, 3.4vw, 56px);
+  padding-top: clamp(18px, 2vw, 30px);
+  background: var(--rule);
 }
-.btn-lg {
-  min-height: 56px;
-  padding: 0 28px;
-  font-size: 1.0625rem;
-}
-.next {
-  margin-top: var(--pg-gap);
-}
-.next-link {
-  display: grid;
-  justify-items: start;
-  gap: 14px;
-  padding-top: clamp(22px, 3vw, 40px);
-  border-top: 1px solid var(--ink);
-}
-.next-name {
+.out {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.24em;
-  font-size: clamp(3rem, 9.6vw + 0.4rem, 11rem);
-  padding-bottom: 0.06em;
-  transition: transform var(--t-press) var(--ease-out);
+  gap: 0.4em;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 1.2vw + 1rem, 2.1rem);
+  font-weight: 660;
+  letter-spacing: -0.026em;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, var(--ink) 34%, transparent);
+  transition: text-decoration-color var(--t-fast) ease;
 }
-.next-name .arrow {
-  width: 0.42em;
-  height: 0.42em;
+.out .arrow {
+  width: 0.6em;
+  height: 0.6em;
   transition: transform var(--t-ui) var(--ease-out);
 }
-.next-line {
-  max-width: 40ch;
-  font-size: var(--pg-lead);
-  line-height: 1.3;
-  color: var(--ink-2);
-}
-.next-link:active .next-name {
+.out:active {
   transform: scale(0.985);
 }
 @media (hover: hover) and (pointer: fine) {
-  .next-link:hover .arrow {
-    transform: translateX(0.12em);
+  .out:hover {
+    text-decoration-color: var(--ink);
+  }
+  .out:hover .arrow {
+    transform: translate(2px, -2px);
   }
 }
 
-/* ---------- Upstream: bars, changes, the ledger ---------- */
+/* The way round the set: the eight by name, and the one after this. */
+.strip {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: start;
+  margin-top: var(--pg-gap);
+}
+.strip-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 clamp(16px, 1.8vw, 30px);
+  padding-top: clamp(14px, 1.6vw, 24px);
+  background: var(--rule);
+}
+.strip-name {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: clamp(1.0625rem, 0.4vw + 0.95rem, 1.3125rem);
+  font-weight: 560;
+  letter-spacing: -0.014em;
+  color: var(--ink-3);
+  transition: color var(--t-fast) ease;
+}
+.strip-name[aria-current] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.3em;
+}
+.strip-next {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px;
+  gap: var(--s-5);
+  align-items: center;
+  padding-top: clamp(14px, 1.6vw, 24px);
+  background: var(--rule);
+  color: var(--ink);
+}
+.strip-next-copy {
+  display: grid;
+  gap: 8px;
+}
+.strip-next-name {
+  justify-self: start;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 2.6vw + 1rem, 4rem);
+  font-weight: var(--display-wght);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  padding-bottom: 0.05em;
+}
+.strip-next-line {
+  max-width: 40ch;
+  font-size: var(--pg-body);
+  line-height: 1.36;
+  color: var(--ink-2);
+}
+.strip-next:active .row-go {
+  transform: scale(0.94);
+}
+@media (hover: hover) and (pointer: fine) {
+  a.strip-name:hover {
+    color: var(--ink);
+  }
+  .strip-next:hover .row-go {
+    background: var(--ink);
+    color: var(--land);
+  }
+  .strip-next:hover .row-go .arrow {
+    transform: translateX(2px);
+  }
+}
 
+/* ---------- 01 Infiniview: one run, drawn as the pipeline it is ---------- */
+
+.iv-open,
+.up-open,
+.om-open,
+.cs-open {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 7vw, 140px);
+  row-gap: var(--s-7);
+  align-items: start;
+}
+/* The pipe runs down the left; each stage hangs from it, its pictures beside
+   it. A stage's words stay in view while its pictures pass, so its joint
+   travels down the pipe. */
+.run {
+  --run-gap: clamp(44px, 6vw, 104px);
+  --run-in: calc(16px + clamp(18px, 2.4vw, 44px));
+  display: grid;
+  row-gap: var(--run-gap);
+}
+.run-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 9fr);
+  column-gap: clamp(18px, 2.4vw, 44px);
+  padding-left: var(--run-in);
+}
+.run-stage::before {
+  content: '';
+  position: absolute;
+  top: 0.62rem;
+  bottom: calc(-0.62rem - var(--run-gap));
+  left: 7px;
+  width: 2px;
+  background: var(--ink);
+}
+.run-stage:last-child::before {
+  bottom: 0;
+}
+.run-copy {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+  display: grid;
+  gap: clamp(36px, 5vw, 80px);
+}
+.run-block {
+  position: relative;
+  display: grid;
+  gap: 14px;
+}
+.run-block::before {
+  content: '';
+  position: absolute;
+  top: 0.62rem;
+  left: calc(-1 * var(--run-in));
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 0 5px var(--seq-bg);
+}
+/* Where the run forks into its three passes the joint is the water's colour; where it ends, it is square. */
+.run-block-fork::before {
+  background: var(--bar);
+}
+.run-block-end::before {
+  border-radius: 4px;
+}
+.run-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.875rem, 2.2vw + 1rem, 3.5rem);
+  font-weight: 740;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.run-copy .body {
+  max-width: 34ch;
+}
+.run-show {
+  display: grid;
+  gap: clamp(22px, 2.6vw, 44px);
+  min-width: 0;
+}
+.run-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--s-5);
+}
+.run-pair .cap {
+  grid-column: 1 / -1;
+}
+/* The three passes run side by side, off one trunk. */
+.lanes {
+  display: grid;
+  border-left: 2px solid var(--ink);
+}
+.lane {
+  display: grid;
+  grid-template-columns: minmax(0, 11.5rem) minmax(28px, 1fr) minmax(0, max-content);
+  align-items: center;
+  column-gap: 16px;
+  padding: clamp(10px, 1.2vw, 18px) 0;
+}
+.lane-pass {
+  position: relative;
+  padding-left: 30px;
+  font-family: var(--font-display);
+  font-size: clamp(1.125rem, 0.7vw + 0.98rem, 1.625rem);
+  font-weight: 680;
+  letter-spacing: -0.024em;
+}
+.lane-pass::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 20px;
+  height: 2px;
+  background: var(--ink);
+}
+.lane-line {
+  position: relative;
+  height: 2px;
+  background: var(--ink-3);
+}
+.lane-line::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  border-left: 9px solid var(--ink-3);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+.lane-what {
+  font-size: var(--pg-body);
+  line-height: 1.2;
+  color: var(--ink-2);
+}
+.lane-what strong {
+  margin-right: 0.18em;
+  font-family: var(--font-display);
+  font-size: 1.7em;
+  font-weight: 740;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* ---------- 02 Upstream: bars, changes, the ledger ---------- */
+
+.up-figs .cap {
+  margin-top: clamp(20px, 2.4vw, 36px);
+}
+.bars > :first-child,
+.changes > :first-child,
+.models > :first-child {
+  border-top: 0;
+  padding-top: 0;
+}
 .bar-row {
   display: grid;
-  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) 4rem;
+  grid-template-columns: minmax(0, 22rem) minmax(0, 1fr) 4rem;
   align-items: center;
   gap: var(--s-5);
   padding: 10px 0;
   border-top: 1px solid var(--line-2);
 }
+/* The owner stands small over the repository's name; neither breaks inside a word. */
 .bar-name {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-size: clamp(0.875rem, 0.3vw + 0.8rem, 1.0625rem);
-  font-weight: 520;
-  overflow-wrap: anywhere;
+  display: grid;
+  align-content: center;
+  min-height: 48px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.bar-owner {
+  font-size: 0.875rem;
+  line-height: 1.3;
+  color: var(--ink-3);
+}
+.bar-repo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(1.0625rem, 0.4vw + 0.95rem, 1.3125rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.016em;
 }
 /* A channel cut in the snow, and the water in it. */
 .bar-track {
@@ -606,12 +797,12 @@
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 1.2vw + 1rem, 2.4rem);
   font-weight: 700;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 @media (hover: hover) and (pointer: fine) {
-  .bar-name:hover,
+  .bar-name:hover .bar-repo,
   .change-n:hover {
     text-decoration: underline;
     text-underline-offset: 4px;
@@ -619,7 +810,7 @@
 }
 .change {
   display: grid;
-  grid-template-columns: clamp(4.6rem, 9vw, 9rem) minmax(0, 1fr) 7.5rem;
+  grid-template-columns: clamp(4.6rem, 9vw, 9rem) minmax(0, 1fr) 9rem;
   gap: var(--s-5);
   align-items: baseline;
   padding: clamp(18px, 2vw, 28px) 0;
@@ -629,7 +820,9 @@
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  font-size: 1rem;
+  font-size: 1.0625rem;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-2);
 }
 .change-title {
@@ -643,13 +836,39 @@
   margin-top: 8px;
   max-width: 64ch;
 }
+/* Dates are set in the text face with tabular figures: the mono's comma stands in a cell of its own. */
 .change-meta {
   display: grid;
   justify-items: end;
-  gap: 4px;
-  font-size: 0.9375rem;
+  gap: 6px;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-2);
   white-space: nowrap;
+}
+.diff {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.diff-n {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+.diff-cells {
+  display: inline-flex;
+  gap: 2px;
+}
+.diff-cells i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+.diff-add {
+  background: var(--bar);
+}
+.diff-del {
+  background: color-mix(in srgb, var(--ink) 26%, transparent);
 }
 .ledger {
   width: 100%;
@@ -669,12 +888,14 @@
 }
 .ledger td:first-child {
   white-space: nowrap;
+  font-weight: 600;
   color: var(--ink);
 }
 .ledger td:last-child {
   white-space: nowrap;
   text-align: right;
   padding-right: 0;
+  font-variant-numeric: tabular-nums;
 }
 .ledger th:last-child {
   text-align: right;
@@ -693,107 +914,301 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* ---------- Kilo Bench: modes, details ---------- */
+/* ---------- 03 Kilo Bench: the result, then three things, each beside what it makes ---------- */
 
+.kb-open {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-7);
+  align-items: end;
+}
+.kb-side,
+.ab-side,
+.cs-side {
+  display: grid;
+  gap: var(--s-7);
+  min-width: 0;
+}
+.act {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  column-gap: clamp(28px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: center;
+  padding: clamp(30px, 4.4vw, 72px) 0;
+  background: var(--rule);
+}
+.act-copy,
+.paper-cap {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.act-title,
+.paper-h {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.6vw + 0.9rem, 2.6rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+}
+.act-copy .body,
+.paper-cap .body {
+  max-width: 40ch;
+}
+.act-plate {
+  max-width: 35rem;
+}
 .modes {
   display: flex;
   flex-wrap: wrap;
   gap: 0.08em 0.5em;
   font-family: var(--font-display);
-  font-size: clamp(2.2rem, 5vw + 0.5rem, 6.4rem);
+  font-size: clamp(2.2rem, 4.6vw + 0.5rem, 6rem);
   font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.042em;
+  letter-spacing: -0.034em;
 }
 .modes li:nth-child(even) {
   color: var(--ink-3);
 }
-.sec-trio {
-  display: grid;
-  grid-template-columns: minmax(0, 25rem) minmax(0, 1fr);
-  gap: var(--s-5);
-  align-items: start;
+/* Every mode, against the four things a run is judged on. */
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
 }
-.trio-main {
-  display: grid;
-  gap: var(--s-5);
-  min-width: 0;
+.matrix thead td {
+  width: 34%;
 }
-/* The radar and the question beside it; where there is no room for both, the question goes under. */
-.trio-under {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
-  gap: clamp(24px, 3.4vw, 56px);
-  align-items: center;
-}
-.trio-under .plate {
-  max-width: 31.25rem;
-}
-.chips-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.chips-row li {
-  padding: 13px 20px;
-  border-radius: var(--r-pill);
-  box-shadow: inset 0 0 0 1px var(--line);
-  font-size: clamp(1rem, 0.4vw + 0.9rem, 1.25rem);
-  font-weight: 540;
-  letter-spacing: -0.01em;
-}
-
-/* ---------- Agent Bridge: one message, start to finish ---------- */
-
-.flow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s-5);
-  counter-reset: flow;
-}
-/* Each step is a slab of ice set in the snow. */
-.flow-step {
-  position: relative;
-  counter-increment: flow;
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  min-height: 12.5rem;
-  padding: clamp(18px, 1.8vw, 28px);
-  padding-top: clamp(64px, 6vw, 100px);
-  border-radius: clamp(12px, 1.1vw, 18px);
-  background: var(--panel);
-  box-shadow:
-    inset 0 0 0 1px var(--panel-edge),
-    0 22px 40px -34px rgba(16, 38, 58, 0.5);
-}
-.flow-step::before {
-  content: counter(flow);
-  position: absolute;
-  top: clamp(14px, 1.4vw, 22px);
-  right: clamp(18px, 1.8vw, 28px);
-  font-family: var(--font-display);
-  font-size: clamp(2.2rem, 2.6vw + 1rem, 4rem);
-  font-weight: 400;
-  line-height: 0.9;
-  letter-spacing: -0.05em;
-}
-.flow-who {
-  position: absolute;
-  top: clamp(18px, 1.8vw, 28px);
-  left: clamp(18px, 1.8vw, 28px);
-}
-.flow-note {
-  font-family: var(--font-mono);
-  font-size: clamp(0.875rem, 0.25vw + 0.8rem, 1rem);
-  line-height: 1.4;
+.matrix thead th {
+  padding: 0 0 14px;
+  font-size: clamp(0.875rem, 0.3vw + 0.82rem, 1.0625rem);
+  font-weight: 600;
+  text-align: center;
   color: var(--ink-2);
 }
-.flow-ack {
-  background: color-mix(in srgb, var(--bar) 15%, var(--panel));
+.matrix tbody th {
+  padding: clamp(12px, 1.3vw, 20px) 12px clamp(12px, 1.3vw, 20px) 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.125rem, 0.8vw + 0.98rem, 1.75rem);
+  font-weight: 680;
+  letter-spacing: -0.026em;
+  text-align: left;
+}
+.matrix tbody th,
+.matrix tbody td {
+  border-top: 1px solid var(--line);
+}
+.matrix td {
+  text-align: center;
+  vertical-align: middle;
+}
+.mark {
+  display: inline-block;
+  width: clamp(14px, 1.2vw, 20px);
+  height: clamp(14px, 1.2vw, 20px);
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.mark-judge {
+  background: var(--ink);
+}
+.mark-meter {
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.matrix-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+}
+.matrix-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.matrix-key .mark {
+  width: 12px;
+  height: 12px;
+}
+.views {
+  max-width: 28ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2vw + 0.9rem, 3.2rem);
+  font-weight: 680;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.views-h {
+  display: block;
+  margin-bottom: 14px;
+  font-family: var(--font-text);
+  font-size: clamp(0.875rem, 0.15vw + 0.84rem, 0.9375rem);
+  font-weight: 420;
+  letter-spacing: 0;
+  color: var(--ink-3);
 }
 
-/* ---------- Open models: columns of ice, as tall as their pulls ---------- */
+/* ---------- 04 Agent Bridge: the film, the message flow as a sequence diagram ---------- */
+
+.ab-film {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: center;
+}
+.film {
+  min-width: 0;
+}
+.ab-open,
+.ab-limits {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 7vw, 140px);
+  row-gap: var(--s-7);
+  align-items: start;
+}
+/* Three lifelines; time runs down the page. An arrow is a message, a box is
+   something the bridge does on its own. */
+.seq {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) minmax(0, 23rem);
+  row-gap: clamp(20px, 2.2vw, 34px);
+  align-items: center;
+}
+.seq-head {
+  grid-row: 1;
+  justify-self: center;
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--land);
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 0.5vw + 0.9rem, 1.375rem);
+  font-weight: 680;
+  letter-spacing: -0.02em;
+}
+.seq-at-sender {
+  grid-column: 1 / 3;
+}
+.seq-at-bridge {
+  grid-column: 3 / 5;
+}
+.seq-at-recipient {
+  grid-column: 5 / 7;
+}
+.seq-life {
+  grid-row: 2 / 8;
+  align-self: stretch;
+  justify-self: start;
+  width: 0;
+  margin-top: calc(-1 * clamp(20px, 2.2vw, 34px));
+  border-left: 2px dashed color-mix(in srgb, var(--ink) 42%, transparent);
+}
+.seq-life-sender {
+  grid-column: 2;
+}
+.seq-life-bridge {
+  grid-column: 4;
+}
+.seq-life-recipient {
+  grid-column: 6;
+}
+.seq-steps {
+  display: contents;
+}
+.seq-msg {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 0 16px;
+  text-align: center;
+}
+.seq-sender-bridge,
+.seq-bridge-sender {
+  grid-column: 2 / 4;
+}
+.seq-bridge-recipient,
+.seq-recipient-bridge {
+  grid-column: 4 / 6;
+}
+.seq-bridge-bridge {
+  grid-column: 3 / 5;
+  justify-self: center;
+  padding: 14px 20px 15px;
+  border-radius: 12px;
+  background: var(--seq-bg);
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.seq-route {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.seq-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.0625rem, 0.7vw + 0.94rem, 1.625rem);
+  font-weight: 680;
+  line-height: 1.1;
+  letter-spacing: -0.024em;
+}
+.seq-line {
+  position: relative;
+  justify-self: stretch;
+  height: 2px;
+  margin: 0 -16px;
+  background: var(--ink);
+}
+.seq-line::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 0;
+  border-left: 11px solid var(--ink);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+}
+.seq-recipient-bridge .seq-line::after,
+.seq-bridge-sender .seq-line::after {
+  right: auto;
+  left: 0;
+  border-left: 0;
+  border-right: 11px solid var(--ink);
+}
+.seq-bridge-bridge .seq-line {
+  display: none;
+}
+/* The acknowledgement comes back in the water's colour. */
+.seq-ack .seq-line {
+  background: var(--bar);
+}
+.seq-ack.seq-msg .seq-line::after {
+  border-left-color: var(--bar);
+  border-right-color: var(--bar);
+}
+.seq-note {
+  font-size: clamp(0.8125rem, 0.2vw + 0.78rem, 0.9375rem);
+  line-height: 1.35;
+  color: var(--ink-2);
+}
+.seq-aside {
+  grid-column: 7;
+  align-self: stretch;
+  display: grid;
+  align-content: center;
+  padding-left: clamp(20px, 2.6vw, 48px);
+  border-left: 1px solid var(--line);
+}
+
+/* ---------- 05 Open models: columns of ice, as tall as their pulls ---------- */
 
 .sec-chart {
   display: grid;
@@ -841,17 +1256,18 @@
   font-size: clamp(1.25rem, 1.6vw + 0.7rem, 2.6rem);
   font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
+/* (A model's name breaks at its hyphens only.) */
 .col-name {
   display: flex;
   align-items: center;
   min-height: 44px;
-  font-size: clamp(0.75rem, 0.35vw + 0.68rem, 1rem);
-  font-weight: 520;
-  overflow-wrap: anywhere;
+  font-size: clamp(0.75rem, 0.4vw + 0.68rem, 1.0625rem);
+  font-weight: 600;
   line-height: 1.2;
+  letter-spacing: -0.012em;
 }
 .model-row {
   display: grid;
@@ -865,9 +1281,8 @@
   font-family: var(--font-display);
   font-size: clamp(1.375rem, 1vw + 1rem, 2rem);
   font-weight: 680;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.028em;
   line-height: 1.1;
-  overflow-wrap: anywhere;
 }
 .model-title a {
   display: inline-flex;
@@ -882,11 +1297,11 @@
 }
 .model-run {
   justify-self: start;
-  padding: 9px 13px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--ink) 7%, transparent);
   font-size: clamp(0.8125rem, 0.25vw + 0.76rem, 0.9375rem);
-  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+.model-run .term-p {
+  color: var(--bar);
 }
 .model-pulls {
   font-family: var(--font-display);
@@ -894,29 +1309,30 @@
   font-weight: 700;
   letter-spacing: -0.03em;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ---------- cc-switch: the terminal, the providers ---------- */
+/* ---------- 06 cc-switch: a terminal session, each command with what it does beside it ---------- */
 
-.sec-term {
+.session {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  column-gap: clamp(28px, 5vw, 96px);
-  row-gap: var(--s-7);
-  align-items: center;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-rows: auto repeat(var(--n), auto);
 }
-.term {
-  margin: 0;
-  min-width: 0;
-  overflow: hidden;
+.session::before {
+  content: '';
+  grid-column: 1;
+  grid-row: 1 / -1;
   border-radius: clamp(12px, 1.1vw, 18px);
   background: #0b1117;
-  color: #e6edf3;
   box-shadow:
     var(--plate-shadow),
     0 0 0 1px var(--line);
 }
-.term-bar {
+.session-bar {
+  grid-column: 1;
+  grid-row: 1;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -937,13 +1353,26 @@
   font-size: 0.8125rem;
   color: #9aa7b3;
 }
-.term-body {
+.session-row {
+  display: contents;
+}
+.session-cmd {
+  grid-column: 1;
+  z-index: 1;
+  align-self: center;
   margin: 0;
-  padding: clamp(16px, 2.4vw, 40px);
+  padding: clamp(12px, 1.5vw, 24px) clamp(16px, 2.4vw, 40px);
   overflow-x: auto;
-  font-size: clamp(0.8125rem, 0.5vw + 0.7rem, 1.1875rem);
-  line-height: 1.9;
+  color: #e6edf3;
+  font-size: clamp(0.8125rem, 0.7vw + 0.7rem, 1.375rem);
+  line-height: 1.8;
   white-space: pre;
+}
+.session-row:nth-child(2) .session-cmd {
+  padding-top: clamp(20px, 2.4vw, 38px);
+}
+.session-row:last-child .session-cmd {
+  padding-bottom: clamp(20px, 2.4vw, 38px);
 }
 .term-p {
   color: #5fd3c4;
@@ -952,66 +1381,109 @@
   color: #f3f7fa;
   font-weight: 520;
 }
-.term-note {
-  color: #93a1ad;
+/* What the command does stands beside it, tied to it by a hairline. */
+.session-note {
+  position: relative;
+  grid-column: 2;
+  align-self: center;
+  padding-left: clamp(28px, 4.4vw, 84px);
 }
-/* A command with a remark stands a little apart from the one before it. */
-.term-line + .term-line:has(.term-note) {
-  display: block;
-  margin-top: 0.7em;
+.session-note:not(:empty)::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: clamp(16px, 3.2vw, 60px);
+  height: 1px;
+  background: var(--ink-3);
 }
-.groups {
+/* 41 templates: a cell each, in their six groups. */
+.prov-strip {
+  display: flex;
+  gap: clamp(5px, 0.9vw, 16px);
+  margin-bottom: clamp(22px, 2.6vw, 40px);
+}
+.prov-group {
+  flex: var(--k) 1 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0 clamp(20px, 2.6vw, 44px);
+  grid-template-columns: repeat(var(--k), minmax(0, 1fr));
+  gap: clamp(1px, 0.2vw, 3px);
 }
-.group {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  padding: 18px 0 clamp(26px, 3vw, 44px);
-  border-top: 1px solid var(--ink);
+.prov-group i {
+  height: clamp(16px, 2vw, 30px);
+  border-radius: 2px;
+  background: var(--bar);
 }
-.group-n {
-  font-family: var(--font-display);
-  font-size: clamp(3rem, 4.8vw + 1rem, 6.6rem);
-  font-weight: var(--display-wght);
-  line-height: 0.9;
-  letter-spacing: -0.05em;
-  /* (Room over the numeral that grows with it, so on a very wide screen its box still stands clear of the rule above.) */
-  margin-top: 0.14em;
-  margin-bottom: clamp(6px, 1vw, 16px);
+.prov-group:nth-child(even) i {
+  background: var(--bar-2);
 }
-.group .body {
-  max-width: 34ch;
-}
-
-/* ---------- TensorPoW: the diagram ---------- */
-
-.dia-row {
+.prov-row {
   display: grid;
   grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-  column-gap: clamp(28px, 5vw, 96px);
-  row-gap: var(--s-5);
-  align-items: center;
-  padding: clamp(24px, 3vw, 44px) 0;
-  border-top: 1px solid var(--line);
+  column-gap: clamp(24px, 4vw, 80px);
+  align-items: baseline;
+  padding: 16px 0 18px;
+  background: var(--rule);
 }
-.dia-copy {
+.prov-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 0.9vw + 1rem, 1.875rem);
+  font-weight: 680;
+  letter-spacing: -0.028em;
+  line-height: 1.12;
+}
+.prov-n {
+  margin-left: 0.25em;
+  font-weight: 480;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.prov-row .body {
+  max-width: 72ch;
+}
+.said-s {
+  margin-top: clamp(36px, 5vw, 80px);
+}
+
+/* ---------- 07 TensorPoW: set as the paper it is becoming, in three figures ---------- */
+
+.tp-abs {
   display: grid;
-  gap: 12px;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-7);
+  align-items: start;
 }
-.dia-copy .step-title {
-  font-size: clamp(1.5rem, 1.6vw + 0.9rem, 2.6rem);
+.tp-abs .spec {
+  order: -1;
 }
+.tp-abs .sum {
+  max-width: 38ch;
+}
+.tp-figs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(44px, 6vw, 104px) clamp(28px, 5vw, 96px);
+}
+.paper-fig {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 36px);
+  align-content: start;
+  margin: 0;
+  min-width: 0;
+}
+.paper-fig-wide {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  column-gap: clamp(28px, 5vw, 96px);
+  align-items: center;
+}
+/* A figure is drawn on the snow itself, between two grooves. */
 .dia-art {
   min-width: 0;
-  padding: clamp(18px, 3vw, 52px);
-  border-radius: clamp(12px, 1.1vw, 18px);
-  background: var(--panel);
-  box-shadow:
-    inset 0 0 0 1px var(--panel-edge),
-    0 22px 40px -34px rgba(16, 38, 58, 0.5);
+  padding: clamp(24px, 3.2vw, 56px) 0;
+  background: var(--rule);
+  border-bottom: 1px solid var(--line);
 }
 .dia-node {
   position: relative;
@@ -1096,14 +1568,14 @@
   flex: none;
 }
 .dia-anchor {
-  width: clamp(30px, 3.4vw, 52px);
-  height: clamp(30px, 3.4vw, 52px);
+  width: clamp(26px, 2.6vw, 44px);
+  height: clamp(26px, 2.6vw, 44px);
   border-radius: clamp(6px, 0.7vw, 10px);
   background: var(--ink);
 }
 .dia-fruit {
-  width: clamp(14px, 1.5vw, 22px);
-  height: clamp(14px, 1.5vw, 22px);
+  width: clamp(12px, 1.2vw, 20px);
+  height: clamp(12px, 1.2vw, 20px);
   border-radius: 50%;
   box-shadow: inset 0 0 0 2px var(--bar);
   background: color-mix(in srgb, var(--bar) 22%, transparent);
@@ -1111,7 +1583,7 @@
 .dia-chain > .dia-link > * + *,
 .dia-chain > .dia-link + .dia-link > :first-child,
 .dia-chain > .dia-link + .dia-anchor {
-  margin-left: clamp(10px, 1.5vw, 24px);
+  margin-left: clamp(8px, 1vw, 18px);
 }
 .dia-chain > .dia-link > * + *::before,
 .dia-chain > .dia-link + .dia-link > :first-child::before,
@@ -1120,7 +1592,7 @@
   position: absolute;
   top: 50%;
   right: 100%;
-  width: clamp(10px, 1.5vw, 24px);
+  width: clamp(8px, 1vw, 18px);
   height: 1.5px;
   background: var(--ink-3);
 }
@@ -1130,7 +1602,7 @@
   flex-wrap: wrap;
   gap: 8px 28px;
   margin-top: clamp(6px, 1vw, 18px);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   color: var(--ink-2);
 }
 .dia-key span {
@@ -1160,44 +1632,64 @@
   font-family: var(--font-display);
   font-size: clamp(1.125rem, 0.7vw + 0.95rem, 1.625rem);
   font-weight: 680;
-  letter-spacing: -0.028em;
+  letter-spacing: -0.026em;
 }
-.gates {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--s-6) clamp(20px, 2.6vw, 44px);
-  counter-reset: gate;
-}
-.gate {
-  counter-increment: gate;
-  padding-top: 16px;
-  border-top: 1px solid var(--ink);
-  font-size: clamp(1.125rem, 0.6vw + 1rem, 1.625rem);
-  font-weight: 540;
-  line-height: 1.22;
-  letter-spacing: -0.018em;
-}
-.gate::before {
-  content: counter(gate, decimal-leading-zero);
-  display: block;
-  margin-bottom: clamp(14px, 2vw, 30px);
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  font-weight: 480;
-  letter-spacing: 0.07em;
+.dia-part-does {
+  font-size: 0.9375rem;
   color: var(--ink-3);
 }
+/* What is still to do: boxes, and none of them ticked. */
+.tp-status .lead {
+  margin-bottom: clamp(14px, 1.6vw, 24px);
+  color: var(--ink-2);
+}
+.checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(28px, 5vw, 96px);
+}
+.check {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 18px;
+  align-items: start;
+  padding: 18px 0 20px;
+  background: var(--rule);
+  font-size: clamp(1.125rem, 0.6vw + 1rem, 1.5rem);
+  font-weight: 540;
+  line-height: 1.24;
+  letter-spacing: -0.016em;
+}
+.check-box {
+  width: 22px;
+  height: 22px;
+  margin-top: 0.1em;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
 
-/* ---------- RydAR: the phone ---------- */
+/* ---------- 08 RydAR: the map, the phone, the two pages ---------- */
 
-.sec-phone {
+.ry-count {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: clamp(32px, 7vw, 140px);
+  row-gap: var(--s-5);
+  align-items: end;
+  margin-top: clamp(26px, 3.4vw, 56px);
+}
+.ry-more {
+  padding-bottom: 0.2em;
+}
+.ry-phone {
   display: grid;
   grid-template-columns: minmax(0, 24.4rem) minmax(0, 1fr);
   column-gap: clamp(32px, 8vw, 160px);
   row-gap: var(--s-7);
   align-items: center;
 }
-.plate-phone .plate-frame {
+.plate-phone .plate-frame,
+:root[data-theme='dark'] .plate-phone .plate-frame {
   padding: 9px;
   border-radius: clamp(34px, 3.2vw, 50px);
   background: #0c0f12;
@@ -1207,18 +1699,28 @@
 }
 .phone-side {
   display: grid;
-  gap: clamp(32px, 4.4vw, 72px);
+  gap: clamp(30px, 4vw, 64px);
   min-width: 0;
+}
+.ry-pages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--s-5);
+  align-items: start;
+}
+.ry-pages .cap {
+  grid-column: 1 / -1;
 }
 
 /* ---------- the work index ---------- */
 
+/* Each project's picture is its own station: large, and hard by its name. */
 .row.feat-row {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) clamp(11rem, 26vw, 28rem) 56px;
+  grid-template-columns: 2.6rem clamp(13rem, 27vw, 30rem) minmax(0, 1fr) 56px;
   align-items: center;
-  gap: var(--s-4) clamp(18px, 3vw, 56px);
-  padding: clamp(16px, 1.8vw, 28px) 0;
+  gap: var(--s-4) clamp(18px, 2.4vw, 44px);
+  padding: clamp(14px, 1.5vw, 24px) 0;
   border-top: 1px solid var(--line);
   color: var(--ink);
 }
@@ -1228,15 +1730,15 @@
 }
 .feat-n {
   align-self: start;
-  padding-top: 0.9em;
+  padding-top: 0.5em;
 }
 .feat-name {
   display: block;
   font-family: var(--font-display);
-  font-size: clamp(2.2rem, 4.6vw + 0.5rem, 5.8rem);
+  font-size: clamp(2.2rem, 4.4vw + 0.5rem, 5.6rem);
   font-weight: var(--display-wght);
   line-height: 0.95;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.03em;
   padding-bottom: 0.06em;
 }
 .feat-line {
@@ -1251,11 +1753,11 @@
   display: block;
   margin-top: 6px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
-/* Each project's picture is its own station. */
 .feat-pic {
-  aspect-ratio: 12 / 5;
+  aspect-ratio: 2 / 1;
   border-radius: clamp(8px, 0.9vw, 14px);
   background-color: var(--land-2);
   background-image: var(--still-wide-light);
@@ -1271,7 +1773,7 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .feat-row:hover .feat-pic {
-    transform: scale(1.025);
+    transform: scale(1.02);
   }
   .feat-row:hover .row-go,
   .post-row:hover .row-go {
@@ -1313,7 +1815,7 @@
 .row {
   position: relative;
   display: grid;
-  grid-template-columns: 9rem minmax(0, 1.05fr) minmax(0, 1.7fr) minmax(0, 15rem);
+  grid-template-columns: 9.5rem minmax(0, 1.05fr) minmax(0, 1.7fr) minmax(0, 15rem);
   align-items: baseline;
   gap: var(--s-5);
   padding: clamp(16px, 1.6vw, 24px) 0;
@@ -1323,15 +1825,19 @@
 .rows > :first-child {
   border-top: 0;
 }
+/* (A row's kind and its year: the one place the small capitals carry a category.) */
+.row > .label {
+  color: var(--ink-2);
+}
 .row-name {
-  /* Repository names can be one long word: let them break, never spill. */
-  overflow-wrap: anywhere;
   min-width: 0;
   font-family: var(--font-display);
   font-size: clamp(1.375rem, 1.2vw + 0.85rem, 2.1rem);
   font-weight: 700;
-  line-height: 1.02;
-  letter-spacing: -0.038em;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  /* A repository's name breaks at its hyphens, never inside a word. */
+  overflow-wrap: normal;
 }
 .row-line {
   max-width: 56ch;
@@ -1362,22 +1868,23 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-4);
+  gap: var(--s-4) var(--s-6);
   margin-bottom: var(--s-5);
 }
+/* The field is a line to write on, not a capsule. */
 .search {
   flex: 1 1 260px;
   min-width: 0;
   height: 56px;
-  padding: 0 22px;
+  padding: 0 2px;
   border: 0;
-  border-radius: var(--r-pill);
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--line);
+  border-radius: 0;
+  background: none;
+  box-shadow: inset 0 -1.5px 0 var(--ink-3);
   color: var(--ink);
   font: inherit;
   /* 16px or more, so phones do not zoom the page into the field. */
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
   transition: box-shadow var(--t-fast) ease;
 }
 .search::placeholder {
@@ -1385,32 +1892,41 @@
 }
 .search:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 2px var(--ink);
+  box-shadow: inset 0 -2.5px 0 var(--ink);
 }
+/* The kinds are words: the chosen one is underlined. */
 .chips {
   display: inline-flex;
-  gap: 6px;
+  gap: 4px clamp(14px, 1.6vw, 26px);
 }
 .chip {
-  height: 48px;
-  padding: 0 18px;
-  border-radius: var(--r-pill);
-  font-size: 1rem;
-  font-weight: 540;
-  color: var(--ink-2);
-  box-shadow: inset 0 0 0 1px var(--line);
+  min-height: 48px;
+  padding: 0 2px;
+  font-size: 1.0625rem;
+  font-weight: 560;
+  color: var(--ink-3);
   transition:
-    background-color var(--t-fast) ease,
     color var(--t-fast) ease,
     transform var(--t-press) var(--ease-out);
 }
 .chip[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--land);
-  box-shadow: none;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.34em;
 }
 .chip:active {
   transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover {
+    color: var(--ink);
+  }
+}
+.archive-count {
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
 }
 .empty {
   padding: var(--s-7) 0;
@@ -1426,6 +1942,7 @@
   margin-top: var(--s-7);
   max-width: 70ch;
   font-size: 1rem;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
 .footnote a {
@@ -1435,45 +1952,92 @@
 
 /* ---------- writing ---------- */
 
+/* The newest post is the page: its title large, when it was written, what it
+   is about, and how it opens. */
 .post-row {
   display: grid;
+  color: var(--ink);
+}
+.post-lead {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: start;
+}
+.post-when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  grid-column: 1 / -1;
+  color: var(--ink-2);
+}
+.post-title {
+  max-width: 17ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.4vw + 0.6rem, 5.6rem);
+  font-weight: 740;
+  line-height: 0.97;
+  letter-spacing: -0.032em;
+  padding-bottom: 0.06em;
+}
+.post-about {
+  display: grid;
+  gap: clamp(16px, 1.8vw, 28px);
+  align-content: start;
+  padding-top: 0.5em;
+}
+.post-desc {
+  max-width: 34ch;
+  font-size: clamp(1.25rem, 0.8vw + 1rem, 1.75rem);
+  font-weight: 520;
+  line-height: 1.26;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+}
+.post-open {
+  max-width: 46ch;
+  font-size: var(--pg-body);
+  line-height: 1.56;
+  color: var(--ink-2);
+}
+.post-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+/* Earlier posts follow, one to a row. */
+.posts-more {
+  margin-top: clamp(48px, 7vh, 96px);
+}
+.post-item {
   grid-template-columns: 11rem minmax(0, 1fr) 56px;
   gap: var(--s-4) clamp(18px, 3vw, 56px);
   align-items: start;
-  padding: clamp(24px, 3.4vw, 52px) 0;
-  border-top: 1px solid var(--line);
-  color: var(--ink);
+  padding: clamp(22px, 2.8vw, 44px) 0;
+  background: var(--rule);
 }
-.posts > :first-child .post-row {
-  border-top: 0;
-  padding-top: 0;
-}
-.post-date {
+.post-item .post-when {
   display: grid;
   gap: 6px;
-  padding-top: 0.7em;
+  grid-column: auto;
+  padding-top: 0.6em;
 }
-.post-title {
-  max-width: 19ch;
-  font-family: var(--font-display);
-  font-size: clamp(1.9rem, 3.8vw + 0.6rem, 4.9rem);
-  font-weight: 720;
-  line-height: 0.98;
-  letter-spacing: -0.042em;
-  padding-bottom: 0.06em;
+.post-item .post-title {
+  max-width: 22ch;
+  font-size: clamp(1.75rem, 2.4vw + 0.8rem, 3.4rem);
+  line-height: 1;
 }
-.post-desc {
-  margin-top: clamp(12px, 1.4vw, 22px);
-  max-width: 50ch;
+.post-item .post-desc {
+  margin-top: clamp(10px, 1.2vw, 18px);
+  max-width: 52ch;
   font-size: var(--pg-lead);
-  line-height: 1.32;
+  font-weight: 440;
   color: var(--ink-2);
 }
-.post-row .row-go {
-  margin-top: 0.5em;
-}
 
-/* A post: what it is about in the margin, the text in a reading measure. */
+/* A post: what it is filed under in the margin, the text in a reading measure. */
 .article {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 7fr) minmax(0, 2fr);
@@ -1484,33 +2048,26 @@
   position: sticky;
   top: 92px;
   align-self: start;
-  padding-top: 0.75em;
+  padding-top: 0.5em;
 }
 .tags {
   display: grid;
-  gap: 8px;
-}
-.tags li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.tags li::before {
-  content: '';
-  width: 18px;
-  height: 1px;
-  background: currentColor;
+  gap: 4px;
+  font-size: 1rem;
+  font-weight: 520;
+  line-height: 1.4;
+  color: var(--ink-2);
 }
 .article-main {
   min-width: 0;
 }
 .article-lead {
-  max-width: 28em;
+  max-width: 26em;
   margin-bottom: clamp(28px, 3.4vw, 52px);
   font-size: clamp(1.375rem, 1.1vw + 1rem, 2rem);
   font-weight: 520;
   line-height: 1.24;
-  letter-spacing: -0.022em;
+  letter-spacing: -0.02em;
   color: var(--ink);
   text-wrap: pretty;
 }
@@ -1518,14 +2075,15 @@
   margin-top: var(--s-7);
 }
 .prose {
-  max-width: 38em;
+  max-width: 34em;
   font-size: var(--pg-body);
   line-height: 1.62;
   color: var(--ink-2);
   font-weight: 420;
+  hanging-punctuation: first;
 }
 .prose > * + * {
-  margin-top: 1.2em;
+  margin-top: 1.15em;
 }
 .prose h1,
 .prose h2,
@@ -1533,7 +2091,7 @@
 .prose h4 {
   font-family: var(--font-display);
   color: var(--ink);
-  letter-spacing: -0.032em;
+  letter-spacing: -0.028em;
   line-height: 1.08;
   text-wrap: balance;
 }
@@ -1552,6 +2110,11 @@
   font-size: 1.25rem;
   font-weight: 640;
   margin-top: 1.6em;
+}
+.prose h2 + *,
+.prose h3 + *,
+.prose h4 + * {
+  margin-top: 0.7em;
 }
 .prose h2 a,
 .prose h3 a,
@@ -1594,8 +2157,8 @@
 }
 .prose hr {
   border: 0;
-  height: 1px;
-  background: var(--line);
+  height: 2px;
+  background: var(--rule);
   margin-block: 2.4em;
 }
 .prose :not(pre) > code {
@@ -1651,7 +2214,7 @@
   gap: var(--s-6);
   margin-top: clamp(56px, 9vh, 110px);
   padding-top: var(--s-6);
-  border-top: 1px solid var(--ink);
+  background: var(--rule);
 }
 .post-nav a {
   display: grid;
@@ -1672,12 +2235,6 @@
 /* ---------- narrow ---------- */
 
 @media (max-width: 1100px) {
-  .sec-steps-row .steps {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .gates {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .model-row {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -1691,6 +2248,32 @@
   }
   .article {
     grid-template-columns: minmax(0, 2fr) minmax(0, 8fr);
+  }
+  /* The diagram keeps its three lifelines; what the README says of them goes under it. */
+  .seq {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .seq-aside {
+    grid-column: 1 / -1;
+    grid-row: auto !important;
+    padding: 0;
+    border: 0;
+  }
+  .seq-aside:first-of-type {
+    margin-top: var(--s-5);
+  }
+  .run-stage {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 8fr);
+  }
+  .lane {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 4px;
+  }
+  .lane-line {
+    display: none;
+  }
+  .lane-what {
+    padding-left: 30px;
   }
 }
 
@@ -1710,20 +2293,32 @@
   .band-view::after {
     background: linear-gradient(to top, var(--veil) 0%, var(--veil) 46%, transparent 72%);
   }
-  .intro,
-  .sec-film,
+  .iv-open,
+  .up-open,
+  .om-open,
+  .cs-open,
+  .kb-open,
+  .ab-film,
+  .ab-open,
+  .ab-limits,
+  .tp-abs,
+  .tp-figs,
+  .paper-fig-wide,
+  .checks,
+  .act,
   .sec-chart,
-  .sec-term,
-  .sec-trio,
-  .trio-under,
-  .sec-phone,
-  .dia-row,
-  .sec-pair,
-  .sec-pair-lean {
+  .ry-phone,
+  .ry-count,
+  .prov-row,
+  .strip,
+  .post-lead {
     grid-template-columns: minmax(0, 1fr);
   }
-  .sec-pair-lean {
-    align-items: start;
+  .tp-abs .spec {
+    order: 0;
+  }
+  .prov-row {
+    row-gap: 6px;
   }
   .figs {
     --cols: 2;
@@ -1734,24 +2329,17 @@
     right: 0;
     transform-origin: 100% 100%;
   }
-  .sec-steps-row .steps,
-  .gates,
-  .flow,
-  .groups {
+  /* The run on a phone: the pipe at the left, each stage and its pictures under one another. */
+  .run-stage {
     grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--s-6);
   }
-  .groups {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .run-copy {
+    position: static;
   }
-  .sec-steps-list .step {
-    grid-template-columns: 3rem minmax(0, 1fr);
-  }
-  .sec-steps-list .step .body {
-    grid-column: 2;
-    margin-top: 8px;
-  }
-  .flow-step {
-    min-height: 0;
+  .run-pair {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--s-5);
   }
   .bar-row {
     grid-template-columns: minmax(0, 1fr) 3rem;
@@ -1776,7 +2364,11 @@
   }
   .change-meta {
     grid-auto-flow: column;
+    align-items: center;
     gap: 14px;
+  }
+  .diff-cells {
+    display: none;
   }
   /* The ledger on a phone: the repository and the date on one line, the change under them. */
   .ledger thead {
@@ -1808,7 +2400,6 @@
   }
   .ledger td:first-child {
     white-space: normal;
-    overflow-wrap: anywhere;
   }
   .ledger td:nth-child(2) {
     grid-column: 1 / -1;
@@ -1819,14 +2410,39 @@
     grid-column: 2;
     grid-row: 1;
   }
-  .term-body {
+  /* The session on a phone: one terminal, what each command does written under it. */
+  .session {
+    display: block;
+    overflow: hidden;
+    border-radius: 14px;
+    background: #0b1117;
+    box-shadow:
+      var(--plate-shadow),
+      0 0 0 1px var(--line);
+  }
+  .session::before,
+  .session-note::before,
+  .session-note:empty {
+    display: none !important;
+  }
+  .session-cmd {
+    padding: 14px 16px 4px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     line-height: 1.7;
   }
-  .term-line {
-    display: block;
-    padding: 4px 0;
+  .session-row:last-child .session-cmd {
+    padding-bottom: 18px;
+  }
+  .session-note {
+    padding: 0 16px 12px;
+  }
+  .session-note .note {
+    font-size: 0.9375rem;
+    color: #a9b6c1;
+  }
+  .session-note .note strong {
+    color: #e6edf3;
   }
   .plate-phone {
     max-width: 19.5rem;
@@ -1859,16 +2475,17 @@
   .row-links {
     justify-content: flex-start;
   }
-  .post-row {
+  .post-item {
     grid-template-columns: minmax(0, 1fr);
   }
-  .post-row .row-go {
+  .post-item .row-go {
     display: none;
   }
-  .post-date {
-    grid-auto-flow: column;
-    justify-content: start;
-    gap: 16px;
+  .post-item .post-when {
+    display: flex;
+    padding-top: 0;
+  }
+  .post-about {
     padding-top: 0;
   }
   .article {
@@ -1881,10 +2498,7 @@
   .tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 18px;
-  }
-  .tags li::before {
-    display: none;
+    gap: 2px 18px;
   }
   .post-nav {
     grid-template-columns: 1fr;
@@ -1897,12 +2511,60 @@
   }
 }
 
-/* On a phone the challenge, its three backends and the answer stand one under the other. */
-@media (max-width: 620px) {
-  /* (The leaderboard strip is a line of small type 2,300 px wide: on a phone it is a sliver, and the full results plate above already shows it.) */
-  .trio-main > .plate:first-child {
+/* On a phone the sequence is read down one line: who speaks to whom, then what happens. */
+@media (max-width: 700px) {
+  .seq {
+    display: block;
+    padding-left: 22px;
+    border-left: 2px solid var(--ink);
+  }
+  .seq-head,
+  .seq-life,
+  .seq-line {
     display: none;
   }
+  .seq-steps {
+    display: grid;
+    gap: 22px;
+  }
+  .seq-msg,
+  .seq-bridge-bridge {
+    justify-items: start;
+    justify-self: stretch;
+    gap: 4px;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    text-align: left;
+  }
+  .seq-msg::before {
+    content: '';
+    position: absolute;
+    top: 0.2em;
+    left: -30px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ink);
+  }
+  .seq-ack::before {
+    background: var(--bar);
+  }
+  .seq-route {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+  .seq-aside {
+    margin-top: 22px;
+  }
+}
+
+/* On a phone the challenge, its three backends and the answer stand one under the other. */
+@media (max-width: 620px) {
   .dia-tensor {
     --gap: 26px;
     grid-template-columns: minmax(0, 1fr);
@@ -1935,6 +2597,13 @@
   }
   .dia-node-out::before {
     bottom: 100%;
+  }
+  .matrix thead th {
+    font-size: 0.75rem;
+  }
+  .ry-pages {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--s-5);
   }
 }
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
-import { NextProject } from '@/components/work/blocks';
+import { WorkStrip } from '@/components/work/blocks';
 import { Case, SwitchInScene } from '@/components/work/cases';
 import { SCENE_OF } from '@/components/work/stations';
 import { PROJECTS, projectBySlug } from '@/content/projects';
@@ -25,23 +25,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 /**
  * A project's page: its own station from the home page's world, live, with
- * its name standing in it, then a case study laid out for what the project
- * has (src/components/work/cases.tsx), then the way to the next one.
+ * its name standing in it, then a page built from what the project is
+ * (src/components/work/cases.tsx), then the way round the set.
  */
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const p = projectBySlug(slug);
   if (!p) notFound();
   const m = await getMetrics();
-  const next = PROJECTS[(PROJECTS.indexOf(p) + 1) % PROJECTS.length];
 
   return (
     <PageShell
       scene={SCENE_OF[p.slug] ?? 'delta'}
       head={{
+        // (The way back says where the page belongs. Nothing else stands over a project's name.)
         back: { href: '/work', label: 'Work' },
-        // (The way back already says Work: a project with no label of its own gets none.)
-        label: p.kicker || undefined,
         title: p.name,
         vt: `title-${p.slug}`,
         lead: p.line,
@@ -50,7 +48,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
     >
       <Case p={p} m={m} />
-      <NextProject next={next} />
+      <WorkStrip current={p} />
     </PageShell>
   );
 }
