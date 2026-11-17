@@ -1096,7 +1096,7 @@ vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
   // The rime round it: white by day; before dawn it holds the picture's own light, brightest at the clear patch's rim.
   float rime = (1.0 - clear) * smoothstep(-64.0, -2.0, edge + 20.0 * (gj.r - 0.5)) * (0.86 + 0.14 * gi.b);
   float nearPic = exp(-max(-edge, 0.0) / 44.0);
-  vec3 frost = mix(vec3(0.72, 0.85, 0.93) * (S.amb * 1.25 + S.key * 0.1), vec3(0.2, 0.36, 0.6) * S.amb * 3.0 + glow * screen * vec3(0.8, 1.0, 1.15) * 1.5 * nearPic, uNight);
+  vec3 frost = mix(vec3(0.72, 0.85, 0.93) * (S.amb * 1.25 + S.key * 0.1), vec3(0.3, 0.4, 0.55) * S.amb * 2.3 + glow * screen * vec3(0.8, 1.0, 1.15) * 1.5 * nearPic, uNight);
   col = mix(col, frost, rime * 0.8 * pic);
   // (Its light in the ice beyond the rime: a cold glow that falls away into the wall.)
   col += glow * screen * vec3(0.7, 0.9, 1.1) * 0.2 * exp(-max(-edge, 0.0) / 30.0) * (1.0 - aPic) * uNight * pic * (0.6 + 0.4 * gj.b);
@@ -1295,6 +1295,12 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
   // (Little of the night sky reaches the water between the walls.)
   float deep = uNight * gSt.w * smoothstep(0.0, 120.0, glacierTop(pwp.xy));
   col = mix(col, min(col * 0.4, vec3(0.05, 0.085, 0.09)), deep);
+  // (Before dawn the app's page lights the water under it: a pool of its own cold light at the wall's foot.)
+  if (uNight > 0.0 && pwp.x > ${f(FACE.x - 420)}) {
+    vec2 df = pwp.xy - vec2(${f(FACE.x)}, ${f(FACE.y)});
+    float pool_ = exp(-max(-df.x, 0.0) / 110.0) * exp(-df.y * df.y / 36000.0) * (0.7 + 0.6 * wv.g);
+    col += pow(textureLod(uSlabTex, vec2(0.5), 7.0).rgb, vec3(2.2)) * vec3(0.075, 0.125, 0.19) * 0.42 * pool_ * uNight * gSt.w;
+  }
   return mix(col, mistC, (1.0 - exp(-tw / 5200.0)) * inK * gSt.w);
 }
 `;
