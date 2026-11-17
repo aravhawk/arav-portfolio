@@ -98,7 +98,7 @@ const NIGHT: Key = {
   zen: [0.004, 0.011, 0.04],
   mid: [0.012, 0.032, 0.085],
   hor: [0.075, 0.07, 0.085],
-  band: [0.62, 0.27, 0.085],
+  band: [0.5, 0.215, 0.068],
   az: 0.225,
   el: -0.03,
   key: mul([0.62, 0.44, 0.36], 0.15),
@@ -108,6 +108,23 @@ const NIGHT: Key = {
   aurora: 1,
   dusk: 0,
   under: 1,
+};
+
+/**
+ * The same night further on, as the flight comes down the valley: the band of
+ * first light at the horizon has widened and warmed, the snow takes more of
+ * it on the faces turned its way, and the aurora has begun to thin. The night
+ * turns toward this all the way from the lake to the canyon.
+ */
+const LATE_NIGHT: Key = {
+  ...NIGHT,
+  hor: [0.098, 0.082, 0.088],
+  band: [0.95, 0.41, 0.125],
+  el: -0.022,
+  key: mul([0.7, 0.46, 0.34], 0.3),
+  keyEl: 0.1,
+  amb: [0.024, 0.036, 0.064],
+  aurora: 0.8,
 };
 
 /**
@@ -175,7 +192,8 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
   const d = Math.min(1, Math.max(0, day));
   const light = d < 0.55 ? mixKey(MORNING, late, d / 0.55) : mixKey(late, blue, smooth(0.55, 1, d));
   // (The night holds until the delta; the first light comes over the sea.)
-  const dark = mixKey(NIGHT, first, smooth(0.3, 1, d) * smooth(0.3, 1, d) * 0.35 + smooth(0.6, 1, d) * 0.65);
+  // (And before that the first light grows a little with every station.)
+  const dark = mixKey(mixKey(NIGHT, LATE_NIGHT, smooth(0, 0.1, d)), first, smooth(0.3, 1, d) * smooth(0.3, 1, d) * 0.35 + smooth(0.6, 1, d) * 0.65);
   const k = theme <= 0 ? light : theme >= 1 ? dark : mixKey(light, dark, theme);
   const dir = (az: number, el: number): V3 => [Math.sin(az) * Math.cos(el), Math.cos(az) * Math.cos(el), Math.sin(el)];
   return {
