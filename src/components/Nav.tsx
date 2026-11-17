@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useCallback, useSyncExternalStore } from 'react';
 import { haptic } from '@/lib/haptics';
 import { THEME_COLOR } from '@/lib/site';
+import { SoundToggle } from './SoundToggle';
 import './nav.css';
 
 type Theme = 'light' | 'dark';
@@ -80,6 +81,7 @@ export function Nav() {
             </Link>
           );
         })}
+        <SoundToggle />
         <ThemeToggle />
       </nav>
     </header>

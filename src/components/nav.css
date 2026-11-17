@@ -133,6 +133,24 @@ html:not([data-js]) .nav-mark,
   width: 17px;
 }
 
+/* The sound control stands by the theme switch. On a narrow screen the
+   group closes up, so it takes no more room than it did before. */
+@media (max-width: 400px) {
+  .nav-links {
+    gap: 0;
+    padding: 0 4px 0 6px;
+  }
+  .nav-link {
+    padding: 0 9px;
+  }
+  .nav-links .nav-sound {
+    width: 30px;
+  }
+  .nav-toggle {
+    width: 46px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nav,
   .nav-toggle-knob,

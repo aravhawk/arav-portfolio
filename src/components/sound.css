@@ -1,0 +1,91 @@
+/* The sound control: four bars. Off, they lie flat as a level line; on,
+   they stand and move like a level. The state reads without a label. */
+
+.nav-sound {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 44px;
+  border-radius: var(--r-pill);
+  color: var(--ink-3);
+  transition: color var(--t-fast) ease;
+}
+.nav-sound[data-on] {
+  color: var(--ink);
+}
+.nav-sound:active .nav-sound-bars {
+  transform: scale(0.9);
+}
+@media (hover: hover) and (pointer: fine) {
+  .nav-sound:hover {
+    color: var(--ink);
+  }
+}
+
+.nav-sound-bars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 14px;
+  transition: transform var(--t-fast) var(--ease-out);
+}
+.nav-sound-bars span {
+  width: 2px;
+  height: 14px;
+  border-radius: 1px;
+  background: currentColor;
+  transform: scaleY(0.14);
+  transition: transform var(--t-ui) var(--ease-out);
+}
+
+/* On: each bar keeps its own height and its own time. */
+.nav-sound[data-on] .nav-sound-bars span {
+  animation: nav-sound-level 1.15s ease-in-out infinite alternate;
+}
+.nav-sound[data-on] .nav-sound-bars span:nth-child(1) {
+  transform: scaleY(0.5);
+  --lo: 0.32;
+  --hi: 0.72;
+  animation-duration: 0.9s;
+}
+.nav-sound[data-on] .nav-sound-bars span:nth-child(2) {
+  transform: scaleY(1);
+  --lo: 0.55;
+  --hi: 1;
+  animation-duration: 1.25s;
+  animation-delay: -0.4s;
+}
+.nav-sound[data-on] .nav-sound-bars span:nth-child(3) {
+  transform: scaleY(0.72);
+  --lo: 0.4;
+  --hi: 0.86;
+  animation-duration: 1.05s;
+  animation-delay: -0.7s;
+}
+.nav-sound[data-on] .nav-sound-bars span:nth-child(4) {
+  transform: scaleY(0.36);
+  --lo: 0.22;
+  --hi: 0.56;
+  animation-duration: 1.4s;
+  animation-delay: -0.2s;
+}
+@keyframes nav-sound-level {
+  from {
+    transform: scaleY(var(--lo));
+  }
+  to {
+    transform: scaleY(var(--hi));
+  }
+}
+
+/* Reduced motion: on is four standing bars, still. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-sound-bars,
+  .nav-sound-bars span {
+    transition: none;
+  }
+  .nav-sound[data-on] .nav-sound-bars span {
+    animation: none;
+  }
+}
