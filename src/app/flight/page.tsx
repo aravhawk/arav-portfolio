@@ -238,7 +238,7 @@ export default async function Flight() {
         {/* ---------- 06 cc-switch ---------- */}
         <section className="fl-sec fl-forks" data-fl style={len(SECTIONS.fork)} aria-label="cc-switch">
           <div className="fl-pin">
-            <div className="fl-words fl-up-words fl-fork-words" data-fl-from={FORK + 0.9} data-fl-to={LATTICE - 0.85}>
+            <div className="fl-words fl-up-words fl-fork-words" data-fl-from={FORK + 1.05} data-fl-to={LATTICE - 0.85}>
               <h2 className="display fl-view-name">
                 <Link className="beat-link" href={`/work/${SWITCH_P.slug}`}>
                   {SWITCH_P.name}
@@ -267,7 +267,7 @@ export default async function Flight() {
         {/* ---------- 07 TensorPoW ---------- */}
         <section className="fl-sec fl-tensor" data-fl style={len(SECTIONS.lattice)} aria-label="TensorPoW">
           <div className="fl-pin">
-            <div className="fl-words fl-view-words fl-tensor-words" data-fl-from={LATTICE + 0.85} data-fl-to={CANYON - 0.85}>
+            <div className="fl-words fl-view-words fl-tensor-words" data-fl-from={LATTICE + 1.0} data-fl-to={CANYON - 0.85}>
               {TENSOR_P.kicker ? <p className="label fl-label">{TENSOR_P.kicker}</p> : null}
               <h2 className="display fl-view-name">
                 <Link className="beat-link" href={`/work/${TENSOR_P.slug}`}>
@@ -283,7 +283,7 @@ export default async function Flight() {
         {/* ---------- 08 RydAR ---------- */}
         <section className="fl-sec fl-rydar" data-fl style={len(SECTIONS.canyon)} aria-label="RydAR">
           <div className="fl-pin">
-            <div className="fl-words fl-view-words fl-rydar-words" data-fl-from={CANYON + 1.9} data-fl-to={END - 0.75}>
+            <div className="fl-words fl-view-words fl-rydar-words" data-fl-from={CANYON + 1.9} data-fl-to={CANYON + 2.7}>
               <h2 className="display fl-view-name">
                 <Link className="beat-link" href={`/work/${RYDAR_P.slug}`}>
                   {RYDAR_P.name}

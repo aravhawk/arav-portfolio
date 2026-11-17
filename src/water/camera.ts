@@ -176,8 +176,8 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         { s: s6 - 0.6, pos: [440, T + 400, 420], aim: [1240, T + 1115, 0], fov: 58 },
         { s: s6 + 0.3, pos: [1300, T + 1500, 380], aim: [1300, T + 2300, 0], fov: 58 },
         // From over the west bank: the dam across the frame, the three channels beyond it, the bank at the foot.
-        { s: s6 + 1.2, pos: [700, T + 1300, 820], aim: [1235, T + 3000, 0], fov: 62 },
-        { s: s7 - 0.6, pos: [706, T + 1330, 810], aim: [1238, T + 3012, 0], fov: 62 },
+        { s: s6 + 1.2, pos: [640, T + 1300, 820], aim: [1090, T + 3000, 0], fov: 62 },
+        { s: s7 - 0.6, pos: [646, T + 1330, 810], aim: [1093, T + 3012, 0], fov: 62 },
         { s: s7 + 0.3, pos: [1300, T + 3300, 380], aim: [1300, T + 4100, 0], fov: 58 },
         // The lattice from up the west bank: all sixteen above the middle, the bank at the foot.
         { s: s7 + 1.15, pos: [640, T + 3200, 760], aim: [1270, T + 4470, 0], fov: 58 },
