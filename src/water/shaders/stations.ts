@@ -182,7 +182,8 @@ vec3 iceLook(vec3 p, vec3 n, vec3 rd, float t, float thick, vec2 q, float edge, 
   vec4 g1 = textureLod(uGrain, q / 52.0 + seed, lodFor(px, 52.0, 256.0));
   vec2 bump = ((g0.gb - 0.5) * 0.34 + (g1.rg - 0.5) * 0.15) * gRough;
   float film = 0.0;
-  if (wet > 0.0 && gMirror < 0.5) {
+  // (On a canyon's wall the lanes are only looked for from close by.)
+  if (wet > 0.0 && gMirror < 0.5 && (gShut <= 0.0 || px < 0.3)) {
     // (Water finds its own lanes down a face, and runs faster in the fuller ones.)
     float lane = textureLod(uGrain, vec2(q.x / 70.0 + seed, 0.37 + q.y / 3000.0), 0.0).g;
     film = wet * smoothstep(0.5, 0.66, lane);
@@ -229,7 +230,7 @@ vec3 iceLook(vec3 p, vec3 n, vec3 rd, float t, float thick, vec2 q, float edge, 
     if (near > 0.0 && gMirror < 0.5) {
       for (int k = 0; k < 2; k++) {
         // (The deeper sheets are only looked for from close by.)
-        if (k == 1 && px > 0.9) break;
+        if (k == 1 && px > 0.36) break;
         float dep = k == 0 ? 7.0 : 28.0;
         float sc = k == 0 ? 62.0 : 124.0;
         vec3 f3 = fracture((q + par * dep) / vec2(sc, sc * 1.5) + seed * 3.1 + float(k) * 7.3);
@@ -249,8 +250,12 @@ vec3 iceLook(vec3 p, vec3 n, vec3 rd, float t, float thick, vec2 q, float edge, 
   vec3 rr = reflect(rd, nb);
   // (Before dawn a wet lane is a mirror for the aurora overhead. Between a canyon's walls a face mostly mirrors
   // the wall across from it, and the sky only where it looks up past that wall's rim.)
-  vec3 mir = beyond(p, rr);
-  if (gShut > 0.0) mir = mix(mix(vec3(0.16, 0.42, 0.62) * (S.amb * 0.9 + S.key * 0.03), vec3(0.004, 0.012, 0.03), uNight), mir * (1.0 - 0.6 * uNight), smoothstep(0.8 * gShut - 0.12, 0.8 * gShut + 0.3, rr.z));
+  vec3 mir;
+  if (gShut > 0.0) {
+    float skyK = smoothstep(0.8 * gShut - 0.12, 0.8 * gShut + 0.3, rr.z);
+    mir = mix(vec3(0.16, 0.42, 0.62) * (S.amb * 0.9 + S.key * 0.03), vec3(0.004, 0.012, 0.03), uNight);
+    if (skyK > 0.0) mir = mix(mir, beyond(p, rr) * (1.0 - 0.6 * uNight), skyK);
+  } else mir = beyond(p, rr);
   col = mix(col, mir, clamp(fres * (0.85 + 0.3 * film) + (0.05 + 0.1 * uNight) * film, 0.0, 1.0));
   col += S.band * pow(max(dot(rr, S.sun), 0.0), 220.0) * (0.5 + 1.6 * film) * (1.0 - uNight) * step(0.0, S.sun.z);
   // The scallops: each small hollow in the face is a little lighter on the side turned to the sky and the light.
@@ -788,6 +793,50 @@ const vec2 LAT_V[16] = vec2[16](${cubeLean()});
 const mat3 LAT_R[16] = mat3[16](${cubeFrames()});
 vec2 cubeSize(vec2 ij) { return LAT_SZ[int(ij.x) + 4 * int(ij.y)].xy; }
 float cubeGlowAt(vec2 ij) { return all(greaterThanEqual(ij, vec2(0.0))) && all(lessThanEqual(ij, vec2(3.0))) ? cubeGlow(ij.x, ij.y) : 0.0; }
+// One cube: where a ray meets it, or -1.
+float cubeOne(int k, vec3 ro, vec3 rd, out vec3 n, out float tF) {
+  vec2 ij = vec2(float(k - (k / 4) * 4), float(k / 4));
+  vec3 c = vec3(LAT_C + (ij - 1.5) * LAT_P, -FREEBOARD);
+  vec4 sz = LAT_SZ[k];
+  // (Most rays pass a cube by: a ball round it is asked first.)
+  vec3 oc = c + vec3(0.0, 0.0, sz.y * 0.5) - ro;
+  float tc = dot(oc, rd);
+  if (dot(oc, oc) - tc * tc > 2.0 * sz.x * sz.x + 0.3 * sz.y * sz.y) return -1.0;
+  // (The ray in the cube's own frame.)
+  vec3 ol = (ro - c) * LAT_R[k];
+  vec3 dl = rd * LAT_R[k];
+  vec3 n1;
+  float f1;
+  float t = boxHit(ol, dl, vec3(-sz.x, -sz.x, -12.0), vec3(sz.x, sz.x, sz.y), n1, f1);
+  if (t < 0.0) return -1.0;
+  // Its corners have melted back: four upright edges and the four edges of its top are cut away, no two by as much.
+  float tN = t;
+  float tX = f1;
+  vec3 nn = n1;
+  for (int e = 0; e < 8; e++) {
+    vec3 pn;
+    float d;
+    if (e < 4) {
+      vec2 sg = vec2(e < 2 ? 1.0 : -1.0, e == 0 || e == 2 ? 1.0 : -1.0);
+      pn = vec3(sg, 0.0) * 0.70711;
+      d = (2.0 * sz.x - sz.z * (1.0 + 0.5 * sg.x * LAT_V[k].x + 0.5 * sg.y * LAT_V[k].y)) * 0.70711;
+    } else {
+      float sg = e < 6 ? 1.0 : -1.0;
+      bool onX = e == 4 || e == 6;
+      pn = (onX ? vec3(sg, 0.0, 1.0) : vec3(0.0, sg, 1.0)) * 0.70711;
+      d = (sz.x + sz.y - sz.w * (1.0 + 0.5 * sg * (onX ? LAT_V[k].y : LAT_V[k].x))) * 0.70711;
+    }
+    float den = dot(dl, pn);
+    float num = d - dot(ol, pn);
+    if (den < -1e-6) { float tt = num / den; if (tt > tN) { tN = tt; nn = pn; } }
+    else if (den > 1e-6) tX = min(tX, num / den);
+    else if (num < 0.0) tX = -1.0;
+  }
+  if (tN >= tX) return -1.0;
+  n = LAT_R[k] * nn;
+  tF = tX;
+  return tN;
+}
 float cubesHit(vec3 ro, vec3 rd, out vec3 n, out float tF, out vec2 id) {
   vec3 n1;
   float f1;
@@ -795,38 +844,8 @@ float cubesHit(vec3 ro, vec3 rd, out vec3 n, out float tF, out vec2 id) {
   if (boxHit(ro, rd, vec3(LAT_C - ext, -FREEBOARD - 12.0), vec3(LAT_C + ext, LAT_H * 1.7 - FREEBOARD), n1, f1) < 0.0) return -1.0;
   float best = -1.0;
   for (int k = 0; k < 16; k++) {
-    vec2 ij = vec2(float(k - (k / 4) * 4), float(k / 4));
-    vec3 c = vec3(LAT_C + (ij - 1.5) * LAT_P, -FREEBOARD);
-    vec4 sz = LAT_SZ[k];
-    // (The ray in the cube's own frame.)
-    vec3 ol = (ro - c) * LAT_R[k];
-    vec3 dl = rd * LAT_R[k];
-    float t = boxHit(ol, dl, vec3(-sz.x, -sz.x, -12.0), vec3(sz.x, sz.x, sz.y), n1, f1);
-    if (t < 0.0 || (best > 0.0 && t > best)) continue;
-    // Its corners have melted back: four upright edges and the four edges of its top are cut away, no two by as much.
-    float tN = t;
-    float tX = f1;
-    vec3 nn = n1;
-    for (int e = 0; e < 8; e++) {
-      vec3 pn;
-      float d;
-      if (e < 4) {
-        vec2 sg = vec2(e < 2 ? 1.0 : -1.0, e == 0 || e == 2 ? 1.0 : -1.0);
-        pn = vec3(sg, 0.0) * 0.70711;
-        d = (2.0 * sz.x - sz.z * (1.0 + 0.5 * sg.x * LAT_V[k].x + 0.5 * sg.y * LAT_V[k].y)) * 0.70711;
-      } else {
-        float sg = e < 6 ? 1.0 : -1.0;
-        bool onX = e == 4 || e == 6;
-        pn = (onX ? vec3(sg, 0.0, 1.0) : vec3(0.0, sg, 1.0)) * 0.70711;
-        d = (sz.x + sz.y - sz.w * (1.0 + 0.5 * sg * (onX ? LAT_V[k].y : LAT_V[k].x))) * 0.70711;
-      }
-      float den = dot(dl, pn);
-      float num = d - dot(ol, pn);
-      if (den < -1e-6) { float tt = num / den; if (tt > tN) { tN = tt; nn = pn; } }
-      else if (den > 1e-6) tX = min(tX, num / den);
-      else if (num < 0.0) tX = -1.0;
-    }
-    if (tN < tX && (best < 0.0 || tN < best)) { best = tN; n = LAT_R[k] * nn; tF = tX; id = ij; }
+    float t = cubeOne(k, ro, rd, n1, f1);
+    if (t > 0.0 && (best < 0.0 || t < best)) { best = t; n = n1; tF = f1; id = vec2(float(k - (k / 4) * 4), float(k / 4)); }
   }
   return best;
 }
@@ -876,11 +895,11 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
     float cov = 1.0;
     vec3 n2;
     float tF2;
-    vec2 id2;
+    // (Its outline is counted on the cube that was met: the others are not asked again.)
     for (int k = 0; k < 2; k++) {
       if (uLean > 0.5) break;
       vec3 rd = normalize(dir + (uCamR * (k == 0 ? 0.5 : -0.5) + uCamU * (k == 0 ? -0.5 : 0.5)) * uPxAng);
-      if (cubesHit(uCamPos, rd, n2, tF2, id2) < 0.0) cov -= 0.33;
+      if (cubeOne(int(id.x) + 4 * int(id.y), uCamPos, rd, n2, tF2) < 0.0) cov -= 0.33;
     }
     return mix(col, inAir(cubeColor(uCamPos, dir, t, tF, n, id), dir, t), cov * gSt.z);
   }
@@ -948,14 +967,16 @@ float faceNear(vec3 p) {
 }
 // How far inside the canyon's open air a place is (under 0: in the ice). The walls lean back as they rise,
 // and the water has scalloped them: long hollows along the flow, ledges where one year's ice lies on the last.
-float canyonAir(vec3 p) {
+// (D: how far the place is from the river's middle line.)
+float canyonAirD(vec3 p, float D) {
   float z = p.z + FREEBOARD;
   float along = (p.x + p.y) * 0.7;
   float relief = 13.0 * sin(along * 0.021 + 1.6 * sin(z * 0.017)) + 5.0 * sin(z * 0.09 + along * 0.004) + 4.0 * sin(along * 0.083 + z * 0.05);
   // (Only the hall's east wall is cut plumb: nowhere else is it asked.)
   float plumb = p.x > ${f(FACE.x - 160)} ? faceNear(p) : 0.0;
-  return CY_W + (CY_LEAN * z + relief) * (1.0 - plumb) - canyonD(p.xy);
+  return CY_W + (CY_LEAN * z + relief) * (1.0 - plumb) - D;
 }
+float canyonAir(vec3 p) { return canyonAirD(p, canyonD(p.xy)); }
 // The crevasse. Where the river turns away at the first bend a dry slot runs straight on through the glacier, its
 // floor above the water and its walls leaning apart as they rise: the first reach looks down it to the day beyond.
 const float SL_X = 1300.0;
@@ -1036,7 +1057,8 @@ float glacierTop(vec2 p) {
   return CY_H * rise * roll - 30.0 * slot;
 }
 // The first ice a ray meets before tMax. wall: 0 the glacier's top, 1 the canyon's side, 2 the crevasse's side, 3 its floor.
-float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, out float wall) {
+// blunt: for a mirror image in moving water, where the walls' scallops are not looked for.
+float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, bool blunt, out float wall) {
   vec3 n1;
   float tF;
   float t = boxHit(ro, rd, vec3(CY_LO, -FREEBOARD - 8.0), vec3(CY_HI, CY_H + 1.0), n1, tF);
@@ -1047,7 +1069,7 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, out float wall) {
   wall = 0.0;
   float near = 1e5;
   bool slotSeen = false;
-  for (int i = 0; i < 44; i++) {
+  for (int i = 0; i < 40; i++) {
     if (i >= steps) break;
     if (t > tEnd) return -1.0;
     vec3 p = ro + rd * t;
@@ -1062,10 +1084,14 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, out float wall) {
       wall = how > 1.5 ? 3.0 : 2.0;
       return t + ts;
     }
-    float w = canyonAir(p) * 0.6;
+    // Out in the canyon's open air the walls' scallops cannot matter yet: the plain canyon, less the deepest a scallop
+    // goes, is a safe and far cheaper measure of the room there, and it allows a longer step.
+    float D = canyonD(p.xy);
+    float room = CY_W + (p.x > ${f(FACE.x - 160)} ? 0.0 : CY_LEAN * (p.z + FREEBOARD)) - D - 22.0;
+    float w = blunt ? (room + 22.0) * 0.8 : room > 18.0 ? room * 0.9 : canyonAirD(p, D) * 0.6;
     // (Well inside the glacier and well under its top, the top is not what a ray meets next: it is not worked out.)
     vec2 eg = min(p.xy - CY_LO, CY_HI - p.xy);
-    float top = min(eg.x, eg.y) > 320.0 && p.z < ${f(CANYON.h * 0.84 - 60)} ? -12.0 : (p.z - glacierTop(p.xy)) * 0.42;
+    float top = (min(eg.x, eg.y) > 320.0 || blunt) && p.z < ${f(CANYON.h * 0.84 - 60)} ? -12.0 : (p.z - glacierTop(p.xy)) * 0.42;
     float d = max(w, top);
     // (What is far off is found to within a pixel, not a hair: the steps there are longer.)
     if (d < 0.4 + t * 0.002) { wall = w > top ? 1.0 : 0.0; return t; }
@@ -1143,7 +1169,7 @@ vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
 /** The glacier over the finished ground, and its walls in the water between them. */
 vec3 canyon(vec3 col, vec3 dir, float tw) {
   float wall;
-  float t = glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, uLean > 0.5 ? 32 : 44, wall);
+  float t = glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, uLean > 0.5 ? 30 : 40, false, wall);
   // Cold air lies between the walls: what is far down the canyon stands in it, paler, and the day at the canyon's end shows through it.
   float inK = smoothstep(CY_LO.y - 60.0, CY_LO.y + 120.0, uCamPos.y) * (1.0 - smoothstep(CY_HI.y - 120.0, CY_HI.y + 60.0, uCamPos.y)) * step(uCamPos.z, CY_H);
   // (Before dawn that air is the night's own blue: the aurora is overhead, not between the walls.)
@@ -1160,7 +1186,7 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
   if (any(lessThan(pwp.xy, CY_LO)) || any(greaterThan(pwp.xy, CY_HI)) || canyonD(pwp.xy) > CY_W + 12.0) return col;
   vec4 wv = textureLod(uGrain, pwp.xy / 300.0 + vec2(0.0, -uTime * 0.25), 1.0);
   vec3 rd2 = normalize(vec3(dir.xy, -dir.z) + vec3((wv.rg - 0.5) * 0.09, 0.0));
-  float t2 = uLean < 1.5 ? glacierHit(pwp + vec3(0.0, 0.0, 1.0), rd2, 700.0, 14, wall) : -1.0;
+  float t2 = uLean < 1.5 ? glacierHit(pwp + vec3(0.0, 0.0, 1.0), rd2, 700.0, 10, true, wall) : -1.0;
   if (t2 >= 0.0) {
     gMirror = 1.0;
     // (By day the water keeps its own colour under the walls' image.)
