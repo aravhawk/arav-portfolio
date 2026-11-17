@@ -1,3 +1,4 @@
+import type { Viewport } from 'next';
 import Link from 'next/link';
 import { ViewTransition } from 'react';
 import { Arrow, Slab } from '@/components/bits';
@@ -8,6 +9,7 @@ import { FlightStage } from '@/components/FlightStage';
 import { LiveNumber } from '@/components/LiveNumber';
 import { INTERESTS, PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
+import { THEME_COLOR } from '@/lib/site';
 import { SECTIONS, SETTLE_AT } from '@/water/camera';
 import { COLS, TRIBS, colHeights } from '@/water/world';
 import './home.css';
@@ -23,6 +25,14 @@ import './flight.css';
 // Live numbers are read on the server and cached for an hour. A visitor's
 // page view never reaches GitHub, npm or Ollama.
 export const revalidate = 3600;
+
+// The browser's chrome takes the colour of the first frame's sky.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: THEME_COLOR.home.light },
+    { media: '(prefers-color-scheme: dark)', color: THEME_COLOR.home.dark },
+  ],
+};
 
 const INFINIVIEW = PROJECTS.find((p) => p.slug === 'infiniview')!;
 const BENCH_P = PROJECTS.find((p) => p.slug === 'kilo-bench')!;

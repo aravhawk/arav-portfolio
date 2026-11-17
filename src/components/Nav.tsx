@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useSyncExternalStore } from 'react';
 import { haptic } from '@/lib/haptics';
+import { THEME_COLOR } from '@/lib/site';
 import './nav.css';
 
 type Theme = 'light' | 'dark';
@@ -24,7 +25,7 @@ export function setTheme(next: Theme) {
     /* private mode: theme lasts for this page */
   }
   document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((m) => {
-    m.content = next === 'dark' ? '#15181b' : '#e4e7e8';
+    m.content = THEME_COLOR[window.location.pathname === '/' ? 'home' : 'page'][next];
   });
   window.dispatchEvent(new Event('themechange'));
 }
