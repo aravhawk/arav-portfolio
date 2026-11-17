@@ -7,7 +7,7 @@ import { Nav } from '@/components/Nav';
 import { Runtime } from '@/components/Runtime';
 import { WaterStage } from '@/components/WaterStage';
 import { CONTACT } from '@/content/projects';
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL, THEME_COLOR } from '@/lib/site';
 import './globals.css';
 
 /* Type: see docs/redesign-v4/typography.md and font-licenses.md.
@@ -106,8 +106,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#e4e7e8' },
-    { media: '(prefers-color-scheme: dark)', color: '#15181b' },
+    { media: '(prefers-color-scheme: light)', color: THEME_COLOR.page.light },
+    { media: '(prefers-color-scheme: dark)', color: THEME_COLOR.page.dark },
   ],
 };
 
