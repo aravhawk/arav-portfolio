@@ -2826,8 +2826,12 @@ void main() {
     slabCov *= 1.0 - smoothstep(1900.0, 2500.0, slabT);
   }
 
+  // (Between the canyon's walls: where ice stands on this line of sight, nothing behind it is worked out.)
+  if (canyonEye()) canyonFirst(dir);
   if (slabCov > 0.999) {
     col = slabCol;
+  } else if (gWallT >= 0.0) {
+    col = vec3(0.0);
   } else if (dir.z > -0.0006) {
     // ---- above the horizon
     gDirect = true;
