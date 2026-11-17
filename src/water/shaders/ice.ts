@@ -21,8 +21,7 @@ uniform vec4 uIceL;        // the floes' lattice: x: a cell's height over its wi
 uniform float uIceK;       // the pressure cracks' cell px
 uniform float uIceW;       // the lake's width px: the page's
 uniform vec4 uIceBox;      // the letters' own box in the sheet's frame: centre xy, half size zw, px
-uniform vec4 uIceP;        // the camera the name is cut for: its y, its height, the cosine and sine of its pitch (all 0: the name lies flat and true)
-uniform float uIceRim;     // the flight: how far the opening is carried on past the far side of each stroke, so the cut's far wall stands outside the letter and the water seen is the letter itself (0 everywhere else)
+uniform vec4 uIceP;        // the camera the name's blocks are laid for: its y, its height, the cosine and sine of its pitch (all 0: the page's own sheet, seen from above, with the name cut through it)
 uniform float uIceLean;    // the flight's governor: at 2 the cracks are let go while they are only hairlines (0 everywhere else)
 uniform vec4 uIceN;        // the name as a melt pond (the flight): x: half its broadest stroke px, y: 0..1 how much of a pond it still is, z: how far each letter's pond has spread past its outline px, w: the even growth the page's pool would add px (left out here)
 uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet is 0..1, w: 1 while the sheet is whole, 0 once it is gone
@@ -123,20 +122,9 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // everything in it gathers toward the outlet.
   vec2 u = uIceB.xy + (w - uIceB.xy) * uIceB.z;
   il = u - uIce.xy;
-  // Lettering painted on a road is drawn for one eye. Where that eye is
-  // given, each point of the ice is looked up where that camera sees it,
-  // so from there the name stands square-on and true.
+  // (Where the letters stand on the sheet as blocks nothing is cut through it for one eye: the raster lies flat and true.)
   vec2 nl = il;
   float nk = 1.0;
-  if (uIceP.y > 0.0) {
-    vec2 mid = uIce.xy + uIce.zw * 0.5;
-    float dy0 = mid.y - uIceP.x;
-    float z0 = dy0 * uIceP.z + uIceP.y * uIceP.w;
-    float dy = u.y - uIceP.x;
-    float zc = max(dy * uIceP.z + uIceP.y * uIceP.w, 1.0);
-    nl = uIce.zw * 0.5 + vec2((u.x - mid.x) * z0 / zc, ((dy * uIceP.w - uIceP.y * uIceP.z) / zc - (dy0 * uIceP.w - uIceP.y * uIceP.z) / z0) * z0 * z0 / uIceP.y);
-    nk = zc / z0;
-  }
   vec2 iuv = nl / uIce.zw;
   // The raster's distances stop at a ceiling; past it the distance to the
   // letters' own box carries on, so no opening ever ends on the raster's edge.
@@ -154,12 +142,6 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     vec2 cl = clamp(iuv, 0.002, 0.998);
     lsd = (texture(uIceSdf, cl).r + length((iuv - cl) * uIce.zw)) * nk;
     if (lsd > 0.0) lsd = max(lsd, boxD);
-    if (uIceRim > 0.0 && lsd > -2.0 && lsd < uIceRim * 1.5 * nk + 4.0) {
-      vec2 n2 = nl - vec2(0.0, uIceRim);
-      vec2 i2 = n2 / uIce.zw;
-      vec2 c2 = clamp(i2, 0.002, 0.998);
-      lsd = min(lsd, (texture(uIceSdf, c2).r + length((i2 - c2) * uIce.zw)) * nk);
-    }
   }
   float cell = uIceB.w;
   // Half way through, the letters stop being letters: their openings run
