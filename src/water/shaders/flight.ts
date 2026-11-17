@@ -1276,7 +1276,10 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     vec3 snowN = vec3(0.74, 0.8, 0.9) * (S.key * max(dot(n, L), 0.0) + (S.amb * 0.8 + uAurora * 0.035) * (0.62 + 0.38 * n.z)) * (0.94 + 0.12 * g.r);
     // (Air is clouded in it in long drifts of its own, where the snow lies thickest.)
     float cloudI = 0.5 + 0.7 * big;
-    vec3 iceN = vec3(0.009, 0.024, 0.04) * (0.7 + 0.5 * under) + vec3(0.016, 0.036, 0.05) * smoothstep(0.45, 0.8, cloudI) * (1.0 - 0.6 * nearK);
+    vec3 iceN = vec3(0.011, 0.028, 0.046) * (0.7 + 0.5 * under) + vec3(0.016, 0.036, 0.05) * smoothstep(0.45, 0.8, cloudI) * (1.0 - 0.6 * nearK);
+    // (Once the sheet is breaking into plates each plate is rimed: its top is pale against the water round it, wherever it lies.)
+    float broken = smoothstep(0.28, 0.55, uIceA.z);
+    iceN = mix(iceN, snowN * (0.62 + 0.3 * cloudI), 0.42 * broken);
     vec3 cN = mix(iceN, snowN * 0.8, dust * 0.5);
     cN = mix(cN, snowN, drift);
     cN = mix(cN, snowN * 1.18, lip * 0.6);
@@ -1293,7 +1296,8 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     cN += crackC * plane / cw * 0.16 * (1.0 - 0.8 * drift);
     cN = mix(cN, crackC, thread * (1.0 - 0.7 * drift));
     // (The ice round the name is the darkest on the lake: nothing there competes with the light in the letters.)
-    cN *= 1.0 - 0.62 * (1.0 - smoothstep(40.0, 1100.0, nameD));
+    // (Only while the name stands: once it has gone the plates there are ice like the rest.)
+    cN *= 1.0 - 0.62 * (1.0 - smoothstep(40.0, 1100.0, nameD)) * (1.0 - broken);
     col = mix(col, cN, uNight);
   }
   // The lip of a cut: a hair of snow, then the edge itself.
@@ -1333,7 +1337,7 @@ vec3 iceCut(vec2 p, float s, float tall) {
   // (Before dawn it is the ice's thickness under the sky: a pale cold band, a little greener and brighter toward
   // the water, where the curtain's light comes back up off it. It is lit, it does not shine.)
   vec3 top = mix(vec3(0.36, 0.74, 0.93), vec3(0.02, 0.055, 0.075), uNight);
-  vec3 foot = mix(vec3(0.07, 0.38, 0.66), vec3(0.045, 0.16, 0.16) + uAurora * 0.06, uNight);
+  vec3 foot = mix(vec3(0.07, 0.38, 0.66), vec3(0.04, 0.13, 0.14) + uAurora * 0.035, uNight);
   vec3 face = mix(top, foot, smoothstep(0.0, mix(0.9, 1.0, uNight), s) * mix(1.0, s, uNight)) * (0.84 + 0.3 * streak) * (0.9 + 0.2 * band);
   // The lip: packed snow standing over the cut.
   float w = min(1.4 / max(tall, 1.0), 0.3);
