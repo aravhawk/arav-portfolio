@@ -3042,12 +3042,24 @@ void main() {
       float aWall = smoothstep(-aa, aa, bw.r);
       vec3 cut = vec3(0.0);
       if (aWall > 0.0) {
-        // The far bank's face above the waterline: packed snow over ice,
-        // bluer and darker toward the water.
+        // The far bank's face above the waterline. The snow ends in a shelf
+        // of ice that overhangs the water: its cut edge is bright, the hollow
+        // the water has eaten under it lies in shade, and below that old blue
+        // ice goes down to a dark wet foot. Each of these ends at an edge a
+        // pixel wide, so the bank is drawn, not smeared.
         float f = clamp(-sd0 / max(length(tilt) * gFree, 1.0), 0.0, 1.0);
+        float af = clamp(1.2 * foot / gFree, 0.012, 0.22);
         vec3 nW = normalize(vec3(-bw.ba, 0.35));
-        vec4 gw = textureLod(uGrain, vec2(dot(p, vec2(bw.a, -bw.b)) / 180.0, f * 0.35), 0.0);
-        vec3 wall = mix(vec3(0.84, 0.88, 0.93), vec3(0.3, 0.48, 0.6), smoothstep(0.25, 1.0, f)) * (0.9 + 0.2 * gw.g);
+        float alongB = dot(p, vec2(bw.a, -bw.b));
+        vec4 gw = textureLod(uGrain, vec2(alongB / 180.0, f * 0.35), lodFor(foot, 180.0, 256.0));
+        float rimF = 0.085 + 0.05 * textureLod(uGrain, vec2(alongB / 760.0, 0.21), 0.0).g;
+        // (The hollow's lower edge hangs unevenly: it is where the melt has cut furthest.)
+        float underF = rimF + 0.16 + 0.22 * textureLod(uGrain, vec2(alongB / 430.0, 0.37), 0.0).g;
+        vec3 iceF_ = mix(vec3(0.6, 0.79, 0.9), vec3(0.2, 0.44, 0.6), smoothstep(underF, 1.0, f)) * (0.86 + 0.28 * gw.g);
+        vec3 wall = iceF_ * lightOn(nW, 1.0);
+        wall = mix(iceF_ * vec3(0.5, 0.62, 0.8) * S.amb * 0.62, wall, smoothstep(underF - 1.5 * af, underF + 1.5 * af, f));
+        wall = mix(mix(vec3(0.95, 0.97, 1.0), vec3(0.7, 0.82, 0.92), uNight) * (S.key * mix(0.27, 0.0, uNight) + S.amb * mix(0.86, 1.5, uNight) + uAurora * 0.2), wall, smoothstep(rimF - af, rimF + af, f));
+        wall *= 1.0 - 0.5 * smoothstep(0.87 - af, 0.91 + af, f);
         wall = mix(wall, wall * vec3(0.55, 0.7, 0.85), uNight * 0.6);
         // The basin's walls are the glacier's own ice under a cornice of snow: fluted where melt runs down them,
         // blue and deeper toward the water, with a seam or two of the dark moraine frozen into them.
@@ -3059,10 +3071,8 @@ void main() {
           vec3 iceW = mix(vec3(0.6, 0.81, 0.92), vec3(0.1, 0.36, 0.56), smoothstep(0.12, 1.0, f)) * (0.66 + 0.5 * flute + 0.24 * flute2);
           iceW = mix(iceW, vec3(0.085, 0.095, 0.11) * (0.7 + 0.6 * flute2), smoothstep(0.6, 0.68, seam) * smoothstep(0.22, 0.4, f) * 0.75);
           iceW = mix(iceW, iceW * vec3(0.6, 0.8, 0.95) + uAurora * 0.05, uNight * 0.6);
-          wall = mix(wall, iceW, gWalled * smoothstep(0.07, 0.16, f + (gw.g - 0.5) * 0.1));
+          wall = mix(wall, iceW * lightOn(nW, 1.0) * mix(1.0, 0.7, f * f), gWalled * smoothstep(0.07, 0.16, f + (gw.g - 0.5) * 0.1));
         }
-        wall *= lightOn(nW, 1.0);
-        wall *= mix(1.0, 0.7, f * f);
         // (Before dawn a bank's face is ice under the aurora, not a black rim.)
         wall += (vec3(0.03, 0.05, 0.07) + uAurora * 0.06) * uNight * (1.0 - 0.6 * gWalled);
 
