@@ -1300,6 +1300,16 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     vec3 crackC = (vec3(0.075, 0.15, 0.165) + uAurora * 0.08) * (0.35 + 0.9 * smoothstep(0.2, 0.62, g.b)) * (0.7 + 0.6 * cr.y);
     cN += crackC * plane / cw * 0.16 * (1.0 - 0.8 * drift);
     cN = mix(cN, crackC, thread * (1.0 - 0.7 * drift));
+    float leanK = gL2 * (1.0 - smoothstep(0.0, 0.01, uIceA.y));
+    if (leanK > 0.0) {
+      // A lean frame has let the sheet's wandering fractures go until the melt needs them. Before dawn they are
+      // what says ice and not swell, so two sets of long, nearly straight ones are drawn in their place: lines
+      // that cost almost nothing, bent a little by the snow's own field, and never across the name.
+      float d1 = abs(fract(dot(il, vec2(0.94, 0.34)) / 470.0 + 0.3 * big) - 0.5) * 470.0;
+      float d2 = abs(fract(dot(il, vec2(-0.5, 0.87)) / 690.0 + 0.17 - 0.2 * big) - 0.5) * 690.0;
+      float ln = (1.0 - smoothstep(0.8 * cwN, 2.0 * cwN, min(d1, d2))) * min(1.0, 1.4 / (foot * 0.9));
+      cN = mix(cN, crackC * 1.5, ln * leanK * (1.0 - 0.7 * drift) * (1.0 - 0.75 * nearK) * smoothstep(60.0, 300.0, nameD));
+    }
     // (The ice round the name is the darkest on the lake: nothing there competes with the light in the letters.)
     // (Only while the name stands: once it has gone the plates there are ice like the rest.)
     cN *= 1.0 - 0.62 * (1.0 - smoothstep(40.0, 1100.0, nameD)) * (1.0 - broken);
