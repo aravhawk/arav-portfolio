@@ -73,9 +73,10 @@ export class Score {
     this.phraseEnd = Math.min(this.phraseEnd, t);
   }
 
-  /** Bring the arrival: the piece goes to its tonic now. */
+  /** Bring the arrival: the piece goes to its tonic now. (If the frame that brought the dawn has already taken it there, it stays: the harmony does not move twice.) */
   arrive(t: number) {
     this.cut(t);
+    if (this.move === MOVE.rest) return;
     this.want = MOVE.rest;
     this.nextChord = t;
   }

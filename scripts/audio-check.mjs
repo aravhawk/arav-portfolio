@@ -635,6 +635,13 @@ async function renders() {
     const own = (period ?? []).some((p) => Math.abs(m.loopAt / p - Math.round(m.loopAt / p)) * p < 0.12 && m.loopAt > p / 2);
     if (spec.solo === 'world' && m.loop > 0.3 && !own) problems.push(`a loop: the texture comes round at ${m.loopAt} s (r ${m.loop})`);
     if (meta.phrases.some((p) => !p.derived)) problems.push(`a bell phrase that is not the theme: ${JSON.stringify(meta.phrases.find((p) => !p.derived))}`);
+    // The harmony: it never moves twice in two seconds, and the arrival is reached from the dominant.
+    meta.chords.forEach((c, i) => {
+      const was = meta.chords[i - 1];
+      if (!was) return;
+      if (c.t - was.t < 2 && !(spec.night ?? []).some((n) => Math.abs(n[0] - c.t) < 2.5)) problems.push(`the harmony moved twice in ${(c.t - was.t).toFixed(2)} s: ${was.chord} at ${was.t}, ${c.chord} at ${c.t}`);
+      if (c.move === 'rest' && was.move !== 'rest' && !/^A/.test(was.chord)) problems.push(`the arrival was reached from ${was.chord}, not from the dominant`);
+    });
     if (disturbedMin && meta.disturbed < disturbedMin) problems.push(`the clock was disturbed ${disturbedMin} times and noticed ${meta.disturbed}`);
     const quiet = (silent ?? []).map(([a, b]) => +rmsOf(chs, meta.sr, a, b).toFixed(1));
     quiet.forEach((q, i) => {
