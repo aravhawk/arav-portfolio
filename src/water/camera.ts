@@ -152,7 +152,7 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
 
         // Out wide of the island's left side: the slab leaves the frame whole
         // and at a distance, never as an edge sliding past the lens.
-        { s: s2 - 0.1, pos: [900, 4950 + DY, 250], aim: [1250, 5900 + DY, 0], fov: 42 },
+        { s: s2 - 0.1, pos: [780, 4950 + DY, 250], aim: [1180, 5900 + DY, 0], fov: 42 },
         { s: s2 + 0.4, pos: [1400, 5720 + Y, 230], aim: [1620, 6350 + Y, 0], fov: 46 },
         // The confluence: the river crosses the frame, the streams fan down to it from the snowfield.
         // The confluence: the cliff and its seven falls across the frame, the river along its foot, the near bank below.

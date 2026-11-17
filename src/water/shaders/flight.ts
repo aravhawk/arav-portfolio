@@ -1000,7 +1000,9 @@ vec3 cutFoot(vec3 col, vec2 pw, vec3 dir, vec2 slope, float foot, float k) {
 
 /* ---------- the confluence: a snowfield above a cliff of ice, and seven falls ---------- */
 
-const float LIP_H = ${LIP.h.toFixed(1)};
+// (The snowfield comes up to its height as the eye comes toward it down the valley, over a long stretch of the flight:
+// from the basin it is a low shelf, and nothing ever appears at once.)
+#define LIP_H (${LIP.h.toFixed(1)} * smoothstep(${(CONF_Y - 3300).toFixed(1)}, ${(CONF_Y - 2450).toFixed(1)}, uCamPos.y))
 const vec2 LIP_O = vec2(${LIP.x0.toFixed(1)}, ${LIP.y0.toFixed(1)});
 // The way the cliff faces, in plan: out over the river.
 const vec2 LIP_N = vec2(${(-LIP.m / Math.hypot(1, LIP.m)).toFixed(5)}, ${(-1 / Math.hypot(1, LIP.m)).toFixed(5)});
@@ -1093,10 +1095,10 @@ vec3 confCliff(vec3 col, vec3 dir, float landAt0) {
   vec3 h = uCamPos + dir * tc;
   if (h.x < LIP_W) return col;
   float px = max(tc * uPxAng, 0.05);
-  if (h.z > LIP_H + 22.0 || h.z < -FREEBOARD) return col;
+  if (LIP_H < 1.0 || h.z > LIP_H + 22.0 || h.z < -FREEBOARD) return col;
   // Snow is banked along the lip in drifts of its own height: the cliff's crest is not a ruled line.
   // (Not where a stream goes over: there the lip is cut down to the stream.)
-  float berm = 18.0 * smoothstep(0.3, 0.8, textureLod(uGrain, vec2(h.x / 2100.0 + 0.07, 0.43), 0.0).g) + 3.0 * textureLod(uGrain, vec2(h.x / 300.0, 0.91), 0.0).g;
+  float berm = 0.18 * LIP_H * smoothstep(0.3, 0.8, textureLod(uGrain, vec2(h.x / 2100.0 + 0.07, 0.43), 0.0).g) + 3.0 * textureLod(uGrain, vec2(h.x / 300.0, 0.91), 0.0).g;
   for (int i = 0; i < ${TRIBS.length}; i++) {
     float w = uTribW[i];
     if (w > 0.0) berm *= smoothstep(w * 0.5 + 2.0, w * 0.5 + 34.0, abs(h.x - TRIB_M[i].x) * LIP_LEN);
