@@ -1095,7 +1095,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     for (const it of w.pieces) {
       it.el.style.transform = k < 0.0005 ? '' : `translate3d(${(it.dx * k).toFixed(1)}px,${(it.dy * k).toFixed(1)}px,0) scale(${(1 + (it.k - 1) * k).toFixed(4)})`;
     }
-    w.el.toggleAttribute('data-tag', p < 0.5);
+    // (What is not part of the tag goes as soon as the block begins to move: it does not travel, and the lee does.)
+    w.el.toggleAttribute('data-tag', p < 0.985);
     w.p = p;
   };
   /**
@@ -1276,6 +1277,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   measureView();
   built = true;
   html.dataset.flight = 'on';
+  // (Each station's composition is set once the picture is there: its words are read where they then stand.)
+  measureWords();
   // The sea's variant of the pass is compiled once the first frames are out.
   const warm = window.setTimeout(() => engine.warmSea(), 900);
 

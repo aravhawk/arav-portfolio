@@ -151,6 +151,20 @@ html:not([data-js]) .nav-mark,
   }
 }
 
+/* On the narrowest phones the mark and the group still stand side by side on one line. */
+.nav-mark {
+  white-space: nowrap;
+}
+@media (max-width: 340px) {
+  .nav-mark {
+    padding: 0 11px;
+    font-size: 0.875rem;
+  }
+  .nav-link {
+    padding: 0 7px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nav,
   .nav-toggle-knob,

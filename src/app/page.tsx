@@ -145,7 +145,7 @@ export default async function Home() {
                 <span data-ice-line>Arav</span> <span data-ice-line>Jain</span>
               </h1>
             </div>
-            <div className="fl-words fl-hero-words" {...win(-1, 0.7)} data-on>
+            <div className="fl-words fl-hero-words" {...win(-1, 0.5)} data-on>
               <p className="statement fl-role">AI and developer tooling builder.</p>
               <p className="lead fl-intro">I co-founded Infiniflop Labs and build Infiniview: agents that attack your app to prove what breaks.</p>
             </div>
@@ -340,11 +340,11 @@ export default async function Home() {
               </p>
               {/* One stream in, three channels out, the chosen one running: the switch is drawn as what it does. */}
               <div className="fl-fork" data-bed="feat:fork" data-active="0" data-x>
-                <svg className="fl-gates" viewBox="0 0 284 30" preserveAspectRatio="none" aria-hidden="true">
-                  <path className="fl-gate-in" d="M142 0v9" />
-                  <path className="fl-gate" data-g="0" d="M142 9C142 22 50 12 50 30" />
-                  <path className="fl-gate" data-g="1" d="M142 9V30" />
-                  <path className="fl-gate" data-g="2" d="M142 9C142 22 234 12 234 30" />
+                <svg className="fl-gates" viewBox="0 0 284 40" preserveAspectRatio="none" aria-hidden="true">
+                  <path className="fl-gate-in" d="M142 0v12" />
+                  <path className="fl-gate" data-g="0" d="M142 12C142 30 50 20 50 40" />
+                  <path className="fl-gate" data-g="1" d="M142 12V40" />
+                  <path className="fl-gate" data-g="2" d="M142 12C142 30 234 20 234 40" />
                 </svg>
                 <ProfileSwitch />
               </div>
