@@ -350,13 +350,16 @@ vec3 withRidges(vec3 col, vec3 d, float soft) {
         float found = smoothstep(0.02, 0.3, m.r) * 0.55 + 0.45 * m.g * m.b;
         // (A crest is where a little higher is a good deal further off: the next range, or the sky. The low light
         // behind the ranges catches every one of them.)
-        // (One blunt look a little higher: the light lies on a crest and falls away down the slope under it, more on
-        // the ground that faces up, so it is a lit top and never a drawn line.)
-        float crest = smoothstep(0.0, 0.42, textureLod(uPano, uv + vec2(0.0, 0.055), lod + 3.0).a - m.a);
-        vec3 shade = S.zen * 0.14 + S.mid * 0.03 + S.hor * 0.008;
-        vec3 sunlit = S.mid * 0.1 + S.hor * 0.06 + S.band * 0.03 * exp(-off * 1.6);
+        // (Four blunt looks higher and higher: the light lies on a crest and falls away down the slope under it, more
+        // on the ground that faces up, so it is a lit top that fades and never a line drawn round the range.)
+        float crest = 0.4 * clamp((textureLod(uPano, uv + vec2(0.0, 0.016), lod + 2.0).a - m.a) / 0.3, 0.0, 1.0)
+          + 0.28 * clamp((textureLod(uPano, uv + vec2(0.0, 0.04), lod + 3.0).a - m.a) / 0.3, 0.0, 1.0)
+          + 0.2 * clamp((textureLod(uPano, uv + vec2(0.0, 0.08), lod + 3.0).a - m.a) / 0.3, 0.0, 1.0)
+          + 0.12 * clamp((textureLod(uPano, uv + vec2(0.0, 0.14), lod + 4.0).a - m.a) / 0.3, 0.0, 1.0);
+        vec3 shade = S.zen * 0.08 + S.mid * 0.02 + S.hor * 0.028;
+        vec3 sunlit = S.mid * 0.06 + S.hor * 0.085 + S.band * 0.03 * exp(-off * 1.6);
         vec3 low = mix(shade, sunlit, found);
-        low += S.band * (0.02 + 0.2 * exp(-off * 2.2)) * crest * crest * (0.25 + 0.75 * m.g * m.g);
+        low += S.band * (0.016 + 0.2 * exp(-off * 2.2)) * crest * crest * (0.3 + 0.7 * m.g * m.g);
         rock = mix(rock, low, gDusk);
         // (They are darker than the sky behind them: only the furthest stand deep in the lit air.)
         airK = mix(airK, clamp(0.02 + far * 0.3 * S.haze, 0.0, 0.6), gDusk);
