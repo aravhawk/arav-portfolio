@@ -5,8 +5,38 @@ import type { ArchiveEntry } from '@/content/projects';
 import { haptic } from '@/lib/haptics';
 import { Arrow } from '../bits';
 
-const GROUPS = ['All', 'Earlier', 'Tools', 'Small'] as const;
+const GROUPS = ['All', 'Tools', 'Earlier', 'Small'] as const;
 type Group = (typeof GROUPS)[number];
+
+/**
+ * The order the archive is read in: the tools in daily use lead, then the
+ * earlier work, then the small things. The data's own order is left alone;
+ * a name that is not listed here falls in after the ones that are.
+ */
+const ORDER = [
+  'envfetch',
+  'lite-stats',
+  'claude-code-utils',
+  'passportphoto',
+  'CryptoLab',
+  'SumQuick',
+  'ChatGPT-3.5-with-Vision',
+  'IntergalacticPro',
+  'Weather-Station-BMP280',
+  'neuralbytes.net',
+  'Master Coders',
+  'typing-game',
+  'teamastros',
+  'merlin-control',
+  'who-wants-to-be-a-billionaire',
+  'escaperoom',
+  'workjet',
+  'top10tipsforsurvival',
+];
+const rank = (name: string) => {
+  const i = ORDER.indexOf(name);
+  return i < 0 ? ORDER.length : i;
+};
 
 /** The archive: every other thing, one line each, searchable. */
 export function ArchiveList({ entries }: { entries: ArchiveEntry[] }) {
@@ -15,7 +45,8 @@ export function ArchiveList({ entries }: { entries: ArchiveEntry[] }) {
 
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return entries.filter(
+    const ordered = [...entries].sort((a, b) => rank(a.name) - rank(b.name));
+    return ordered.filter(
       (e) =>
         (group === 'All' || e.group === group) &&
         (!needle || `${e.name} ${e.line} ${e.year} ${e.group}`.toLowerCase().includes(needle)),
@@ -58,7 +89,7 @@ export function ArchiveList({ entries }: { entries: ArchiveEntry[] }) {
           ))}
         </div>
       </div>
-      <p className="label" aria-live="polite">
+      <p className="archive-count" aria-live="polite">
         {shown.length} of {entries.length}
       </p>
       {shown.length ? (

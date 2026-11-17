@@ -20,7 +20,7 @@ export const metadata: Metadata = pageMeta({
 });
 
 /**
- * The work index: the delta, then the eight featured projects, each with
+ * The work index: the delta, then the eight featured projects, each beside
  * the picture of its own station, then the rest, one line each.
  */
 export default async function Work() {
@@ -36,21 +36,18 @@ export default async function Work() {
       scene="delta"
       index
       head={{
-        label: 'Work',
         title: 'Everything I have built',
         lead: 'Eight things I would point you to first, then the rest, one line each.',
       }}
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
     >
-      <section className="sec wrap" aria-labelledby="w-featured">
-        <h2 className="label sec-label" id="w-featured">
-          Featured
-        </h2>
+      <section className="sec wrap" aria-label="Featured">
         <ul className="feats">
           {PROJECTS.map((p) => (
             <li key={p.slug}>
               <Link className="row feat-row" href={`/work/${p.slug}`}>
                 <span className="label feat-n">{p.n}</span>
+                <span className="feat-pic" style={stillVars(SCENE_OF[p.slug])} aria-hidden="true" />
                 <span className="feat-copy">
                   <ViewTransition name={`title-${p.slug}`} share="title" default="none">
                     <span className="feat-name">{p.name}</span>
@@ -60,7 +57,6 @@ export default async function Work() {
                     {stat[p.slug] ? <strong>{stat[p.slug]}</strong> : null}
                   </span>
                 </span>
-                <span className="feat-pic" style={stillVars(SCENE_OF[p.slug])} aria-hidden="true" />
                 <span className="row-go" aria-hidden="true">
                   <Arrow />
                 </span>
@@ -71,7 +67,7 @@ export default async function Work() {
       </section>
 
       <section className="sec wrap" aria-labelledby="w-more">
-        <h2 className="label sec-label" id="w-more">
+        <h2 className="sec-h" id="w-more">
           Also
         </h2>
         <ul className="rows">
@@ -99,7 +95,7 @@ export default async function Work() {
       </section>
 
       <section className="sec wrap" aria-labelledby="w-archive">
-        <h2 className="label sec-label" id="w-archive">
+        <h2 className="sec-h" id="w-archive">
           Archive
         </h2>
         <ArchiveList entries={ARCHIVE} />
