@@ -267,8 +267,9 @@ export class FlightEngine extends WaterEngine {
     if (this.dawnT < 0) return;
     const t = this.time - this.dawnT;
     this.lift = smooth(0, 2.6, t);
-    this.ray = smooth(0.7, 2.9, t);
-    if (t < 3.2) this.dirty = true;
+    // (The line of light comes in over the first two thirds of this; the pillar rises over the last.)
+    this.ray = smooth(0.7, 4.4, t);
+    if (t < 4.7) this.dirty = true;
   }
 
   /**
@@ -933,7 +934,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const narrow = viewW < 720;
     const pinTop = endPin?.getBoundingClientRect().top ?? 0;
     calm = b ? Math.min(0.9, b.x1 / viewW + 0.03) : 0.6;
-    nearV = narrow && b ? Math.min(0.6, 1 - (b.y0 - pinTop) / viewH + 0.02) : 0;
+    // (On a wide screen the same height is passed below zero: the lee is shaped to it, but the words are not at the foot.)
+    nearV = b ? (narrow ? 1 : -1) * Math.min(0.6, 1 - (b.y0 - pinTop) / viewH + 0.02) : 0;
   }
 
   /** The bed is the same for every screen; it is carved once. */
