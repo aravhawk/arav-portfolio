@@ -24,7 +24,7 @@ import { ICE_FIELD } from './ice';
 import { NAME_ICE } from './name';
 import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
 import { PANO, SHADE_AZ, WIND } from './terrain';
-import { BASIN, BOARD, BOARD_DEPTH, boardSpan, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, slabFaces, STREAM, T2, TARN, TRIBS } from '../world';
+import { BASIN, BOARD, BOARD_DEPTH, boardSpan, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, slabFaces, STREAM, T2, TARN, TARN_BAY, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -3172,7 +3172,12 @@ vec3 pulseRings(vec2 pw) {
   }
   return acc;
 }
-// A shard is five leaning faces that meet near a point: a convex solid, cut by planes.
+/** The tarn is still, not glass: the long slow swell that bends what stands in it. The slope it gives the water at a place. */
+vec2 tarnSwell(vec2 p) {
+  return vec2(sin(p.y * 0.052 + p.x * 0.013 + uTime * 0.5) + 0.6 * sin(p.y * 0.117 - p.x * 0.031 - uTime * 0.72), 0.5 * sin(p.x * 0.043 + p.y * 0.021 + uTime * 0.4)) * 0.0085;
+}
+// A shard is a piece of the glacier that stands on end: five leaning faces that draw together, two shoulders broken away
+// below the point, the point itself snapped off aslant, and a chip or two out of its arrises. A convex solid, cut by planes.
 // How far behind the face the ray meets, along the ray, the next face would have been met: small at an arris.
 float gShardEdge = 1e3;
 float shardHit(vec3 ro, vec3 rd, vec4 s, float turn, out vec3 n, out float tF) {
@@ -3181,12 +3186,28 @@ float shardHit(vec3 ro, vec3 rd, vec4 s, float turn, out vec3 n, out float tF) {
   tF = 1e9;
   n = vec3(0.0, 0.0, 1.0);
   vec3 o = ro - vec3(s.xy, -FREEBOARD - 6.0);
-  for (int k = 0; k < 8; k++) {
+  // (Most rays pass nowhere near it: a ball that holds all of it is asked first.)
+  vec3 oc = o - vec3(0.0, 0.0, s.z * 0.45);
+  float bq = dot(oc, rd);
+  if (bq * bq - dot(oc, oc) + s.z * s.z * 0.4 < 0.0) return -1.0;
+  for (int k = 0; k < 13; k++) {
     vec3 pn = vec3(0.0, 0.0, -1.0);
     float d = 30.0;
-    if (k != 5) {
-      // (Five faces that lean together, and two shoulders broken away below the point: lower, steeper planes that cut an arris each.)
-      float fk = float(k);
+    float fk = float(k);
+    if (k == 8) {
+      // The point, snapped off: one slanting facet where the needle was.
+      float a = turn * 3.0 + 1.0;
+      pn = normalize(vec3(cos(a) * 0.9, sin(a) * 0.9, 1.0));
+      d = pn.z * s.z * 0.8;
+    } else if (k > 8) {
+      // A chip out of it: a small face of its own, at its own height, looking a little up.
+      float ck = fk - 8.0;
+      float a = turn * 2.0 + ck * 1.9 + 0.7 * sin(ck * 3.3 + turn * 9.0);
+      float z0 = s.z * (0.1 + 0.15 * ck + 0.05 * sin(ck * 5.1 + turn * 4.0));
+      float r0 = s.w * (1.0 - z0 / s.z) * 0.8;
+      pn = normalize(vec3(cos(a), sin(a), 0.2 + 0.5 * fract(sin(ck * 7.7 + turn * 13.0) * 43.7)));
+      d = dot(pn, vec3(cos(a) * r0, sin(a) * r0, z0));
+    } else if (k != 5) {
       bool sh = k > 5;
       float a = sh ? turn + 0.63 + (fk - 6.0) * 2.6 : turn + fk * 1.2566 + 0.34 * sin(fk * 2.7 + turn * 5.0);
       float rr = s.w * (sh ? 0.9 + 0.12 * (fk - 6.0) : 0.78 + 0.5 * fract(sin(fk * 12.9 + turn * 7.0) * 43.7));
@@ -3205,94 +3226,57 @@ float shardHit(vec3 ro, vec3 rd, vec4 s, float turn, out vec3 n, out float tF) {
   return tN < tF && tN > 0.0 ? tN : -1.0;
 }
 /**
- * A shard's ice: the block's own. Clear, and so dark and blue-green through
- * its thick foot, pale only where it is thin (its edges, its point); every
- * face a break, scalloped where the ice parted, weathered to its own tone,
- * frosted on some and clear on others, with the veils and fractures inside.
- * Its light is in the ice, not on it: a thread up the heart that every
- * face bends its own way, so it is seen in broken lengths that do not meet
- * at an arris, a blue glow in the ice round it that the veils and every
- * fracture catch, and the frosted faces glowing through.
+ * A shard's ice: the glacier's own, as the block's broken faces, the seracs
+ * and the dam are. Strata at its own tilt, fracture planes, melt cups,
+ * threads of meltwater; clear, so dark and blue through its thick foot and
+ * pale where it is thin, with what stands behind it showing through its
+ * edges; snow on the facet where its point broke off, and a wet notch at
+ * the water. Its light is in the ice, not on it: a fine thread up its
+ * heart that each face bends its own way, and a blue glow in the ice round
+ * that, brighter while a pulse rests in it.
  */
 vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow) {
-  vec3 L = keyDir();
   float thick = max(tF - t, 0.0);
-  vec3 hp = ro + rd * t - vec3(s.xy, -FREEBOARD);
-  // The face's own plane: across it, and up it.
-  vec3 tu = normalize(vec3(-n.y, n.x, 0.0));
-  vec3 tv = cross(n, tu);
-  vec2 q = vec2(dot(hp, tu), dot(hp, tv));
-  vec3 ri = refract(rd, n, 0.763);
-  vec2 across = vec2(dot(ri, tu), dot(ri, tv)) / max(-dot(ri, n), 0.25);
+  vec3 p = ro + rd * t;
+  vec3 hp = p - vec3(s.xy, -FREEBOARD);
+  vec3 tu = abs(n.z) > 0.9 ? vec3(1.0, 0.0, 0.0) : normalize(vec3(-n.y, n.x, 0.0));
   float foot = t * uPxAng;
   float faceId = fract(n.x * 7.31 + n.y * 3.17);
-  float edgeK = 1.0 - smoothstep(0.5 + foot, 4.0 + 3.0 * foot, gShardEdge);
-  // (A shard is a smaller piece than the block: what is in it is finer.)
-  vec3 in_ = iceInside(q * 1.8, across, thick * 1.8, foot * 1.8, 3.0 + faceId * 5.0);
-  float deepK = 1.0 - exp(-thick / (s.w * 0.4));
-  // (Each face has its own tone: one is a clean break, the next has weathered.)
-  float tone = 0.74 + 0.52 * fract(faceId * 5.7 + 0.3);
-  vec3 body = mix(vec3(0.3, 0.62, 0.76), vec3(0.008, 0.075, 0.12), deepK) * tone;
-  float thru = 0.55 + 0.45 * max(dot(n, L), 0.0) + 0.5 * max(dot(-n, L), 0.0);
-  vec3 light = S.key * 0.2 * thru + S.amb * 0.92;
-  vec3 airC = vec3(0.82, 0.91, 0.96);
-  vec3 col = mix(body, airC, in_.x * 0.2) * light;
-  col += vec3(0.85, 0.95, 1.0) * (S.key * 0.24 + S.amb * 0.56) * in_.y * 0.8;
-  if (uNight > 0.0) {
-    // Before dawn: the night's ice. Dark through its foot, the cold sky through its point and its edges.
-    vec3 nc = iceNight(n, n, rd, thick * 1.5, 0.3, 0.0);
-    nc += S.amb * vec3(0.5, 0.62, 0.72) * in_.x * 0.6 + skyNightOn(vec3(n.xy, 0.6)) * 0.05 * in_.y;
-    col = mix(col, nc, uNight);
-  }
-  // The skin: the break's own shells, frosted and fluted on some faces, nearly clear on others.
-  vec4 gr = textureLod(uGrain, q / vec2(380.0, 4200.0) + faceId, lodFor(foot, 380.0, 256.0));
-  vec4 gr2 = textureLod(uGrain, q / vec2(110.0, 2100.0) + faceId * 3.0, lodFor(foot, 110.0, 256.0));
-  vec3 shell = gSlabSoft > 0.5 ? vec3(1.0, 0.5, 0.5) : fracture(q / vec2(58.0, 150.0) + faceId * 9.0);
-  float frost = clamp(0.06 + 1.5 * (gr.g - 0.46) + 0.6 * (faceId - 0.5), 0.0, 1.0) * 0.34 * (1.0 - gSlabSoft * 0.4);
-  vec3 nF = normalize(n + tu * ((gr2.g - 0.5) * 0.45 + (shell.y - 0.5) * 0.42) + tv * (shell.z - 0.5) * 0.34);
-  vec3 skin = vec3(0.84, 0.9, 0.95) * (S.key * 0.3 * (0.25 + 0.75 * max(dot(nF, L), 0.0)) + S.amb * 0.8) * tone;
-  if (uNight > 0.0) skin = mix(skin, (vec3(0.5, 0.58, 0.68) * S.amb * (1.1 + 0.5 * max(nF.z, 0.0)) + S.band * 0.006 * max(dot(n, dawnDir()), 0.0)) * tone, uNight);
-  col = mix(col, skin * (0.88 + 0.24 * gr2.g), frost);
-  // (The lip of each shell is a thin bright line.)
-  col += mix(vec3(0.8, 0.92, 1.0) * (S.amb * 0.3 + S.key * 0.1), S.amb * 0.5, uNight) * (1.0 - smoothstep(0.0, 0.035 + 0.03 * foot, shell.x)) * (1.0 - smoothstep(1.5, 4.0, foot)) * 0.16 * (0.3 + 0.7 * gr.b);
+  // (Drawn as its image in the water, its fine inner work is not looked for.)
+  float soft = gSlabSoft;
+  float wasM = gMirror;
+  gMirror = soft;
+  vec3 axis = normalize(vec3(0.32 * sin(s.x), 0.32 * cos(s.x * 1.3), 1.0));
+  float along = dot(hp, tu);
+  vec2 q = vec2(along + faceId * 170.0, dot(hp, axis));
+  vec3 col = iceGlacier(p, n, rd, t, q, thick, 1.0, 1.0, 0.8, gShardEdge * 1.6, s.x * 0.013 + floor(faceId * 3.0));
+  gMirror = wasM;
+  bool top = n.z > 0.62;
+  // Snow on what looks up; under its edge a hand of it hangs over the face below.
+  if (top) col = snowOn(n, 0.2 * sin(hp.x * 0.13 + s.x) * sin(hp.y * 0.11));
   // The light inside. The ray's nearest approach to the heart's line says how much of the glow it crosses.
   vec3 mp = ro + rd * (t + tF) * 0.5 - vec3(s.xy, -FREEBOARD);
   float up = clamp(mp.z / s.z, 0.0, 1.0);
-  float rise = smoothstep(-0.04, 0.1, mp.z / s.z) * (1.0 - smoothstep(0.42, 0.82, up));
-  // (Each face bends the thread its own way, and each shell on it a little more: it is seen broken, never as a tube.)
-  vec2 bent = mp.xy + (tu.xy * (faceId - 0.5) * 0.5 + tu.xy * (shell.y - 0.5) * 0.3) * s.w + n.xy * (gr2.g - 0.5) * 0.16 * s.w;
-  float axis = length(bent) / s.w;
+  float rise = smoothstep(-0.04, 0.1, mp.z / s.z) * (1.0 - smoothstep(0.34, 0.6, up));
+  // (Each face bends the thread a little its own way: it wavers as it climbs, and is never a ruled tube.)
+  vec2 bent = mp.xy + (tu.xy * (faceId - 0.5) * 0.12 + n.xy * 0.05 * sin(mp.z * 0.045 + faceId * 9.0)) * s.w;
+  float axisD = length(bent) / s.w;
   float axis0 = length(mp.xy) / s.w;
-  // (It is not even: brighter lengths climb it slowly, with dark between them where a fracture stands in the way.)
-  float lengths = smoothstep(0.3, 0.7, n1(mp.z / 13.0 - uTime * 0.35 + s.x)) * smoothstep(0.25, 0.5, textureLod(uGrain, vec2(faceId, mp.z / 700.0 + shell.z * 0.05), 0.0).g + 0.2);
-  float thread = exp(-axis * axis / 0.0028) * rise * (0.12 + 0.88 * lengths) * (1.0 - 0.8 * gSlabSoft);
+  // (It is not even: brighter lengths climb it slowly.)
+  float lengths = 0.7 + 0.3 * smoothstep(0.25, 0.75, n1(mp.z / 23.0 - uTime * 0.35 + s.x));
+  float thread = exp(-axisD * axisD / 0.004) * rise * lengths * (1.0 - 0.8 * soft);
   // (Before dawn the glow keeps close to the thread: it lights the ice near it, and the rest of the shard is the night's.)
   float halo = exp(-axis0 / mix(0.34, 0.2, uNight)) * rise;
   float lamp = glow * mix(0.9, 1.0, uNight);
-  vec3 hot = vec3(0.9, 1.0, 1.0) * thread * mix(1.5, 2.4, uNight) + vec3(0.2, 0.72, 0.95) * halo * (0.3 + 1.7 * in_.x + 2.4 * in_.y + 0.2 * (1.0 - smoothstep(0.0, 0.1, shell.x))) * mix(0.32, 0.6, uNight);
-  // (Frost hides the thread and keeps the glow; clear ice shows both.)
-  col += hot * lamp * (1.0 - 0.75 * frost) + vec3(0.2, 0.7, 0.92) * halo * frost * lamp * mix(0.25, 0.4, uNight);
-  // The sky on it, and the sun on a face turned its way.
-  float cosi = max(dot(-rd, n), 0.0);
-  float fr = 0.04 + 0.96 * pow(1.0 - cosi, 5.0);
-  vec3 rf = reflect(rd, nF);
-  rf.z = abs(rf.z);
-  // (Before dawn the sky on it is already in the night's ice.)
-  col = mix(col, skyColor(rf, 0.0), fr * 0.45 * (1.0 - uNight));
-  col += S.band * pow(max(dot(rf, S.sun), 0.0), 40.0) * 0.5 * (1.0 - uNight) * (1.0 - gSlabSoft);
-  // Every arris is worn bright, and single crystals in the skin catch the light as the eye moves.
-  // (Before dawn an arris is where the ice is thin: the cold through it, broken along its length, and the thread's light where that is near.)
-  col += mix(vec3(0.8, 0.92, 1.0) * (S.key * 0.2 + S.amb * 0.75) * (0.55 + 0.45 * gr2.g), (vec3(0.012, 0.032, 0.06) + vec3(0.1, 0.36, 0.48) * halo * lamp * 0.5) * smoothstep(0.3, 0.7, gr2.b), uNight) * edgeK;
-  float glint = smoothstep(0.975, 1.0, textureLod(uGrain, q / 46.0 + faceId, 0.0).r) * smoothstep(0.35, 0.8, fract(gr2.a * 7.0 + dot(rd.xy, vec2(3.1, 2.3)) * 6.0)) * (1.0 - smoothstep(0.4, 1.2, foot)) * (1.0 - gSlabSoft);
-  col += mix(S.key * 0.5 + S.amb * 0.4, uAurora * 0.25 + S.amb, uNight) * glint;
-  // The waterline: a dark wet band, a bright lip over it.
-  float wl = hp.z;
-  col = mix(col, col * vec3(0.3, 0.48, 0.6), (1.0 - smoothstep(4.0, 11.0, wl)) * 0.7);
-  col += mix(vec3(0.82, 0.93, 1.0) * S.amb * 0.8, (S.amb * 0.9 + uAurora * 0.02) * (0.3 + 0.7 * gr2.g), uNight) * (1.0 - smoothstep(0.0, 2.2, abs(wl - 12.0))) * 0.6;
+  if (!top) col += (vec3(0.6, 0.95, 1.0) * thread * mix(0.5, 0.42, uNight) + vec3(0.2, 0.72, 0.95) * halo * mix(0.3, 0.55, uNight)) * lamp;
+  // Where it stands in the water.
+  if (!top) col = waterlineOn(col, hp.z, 0.5 + 0.5 * sin(along * 0.07 + s.x));
+  // (Its image in the water is the water's: darker than the ice that throws it, and bluer.)
+  if (soft > 0.5) col *= mix(vec3(0.58, 0.72, 0.84), vec3(0.7, 0.8, 0.9), uNight);
   // (Seen from far off it stands in the valley's air, as the land round it does.)
   float thin = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
   vec3 air = airAt(rd.xy);
-  return mix(col, mix(air, mix(S.hor, air, 0.45), uNight), (1.0 - exp(-t * 0.00021 * S.haze * thin)) * (1.0 - gSlabSoft));
+  return mix(col, mix(air, mix(S.hor, air, 0.45), uNight), (1.0 - exp(-t * 0.00021 * S.haze * thin)) * (1.0 - soft));
 }
 
 void main() {
@@ -3623,7 +3607,8 @@ void main() {
     float tw = dir.z < -0.0006 ? (uCamPos.z + FREEBOARD) / -dir.z : -1.0;
     vec3 pwp = uCamPos + dir * max(tw, 0.0);
     vec2 te = (pwp.xy - vec2(${TARN.x.toFixed(1)}, ${TARN.y.toFixed(1)})) / vec2(${TARN.rx.toFixed(1)}, ${TARN.ry.toFixed(1)});
-    float onTarn = tw > 0.0 ? 1.0 - smoothstep(0.86, 1.0, length(te)) : 0.0;
+    // (The bay where the river comes in is the tarn's water too: the shards' images reach across it toward the eye.)
+    float onTarn = tw > 0.0 ? max(1.0 - smoothstep(0.86, 1.0, length(te)), 1.0 - smoothstep(0.82, 0.98, length(pwp.xy - vec2(${TARN_BAY.x.toFixed(1)}, ${TARN_BAY.y.toFixed(1)})) / ${TARN_BAY.r.toFixed(1)})) : 0.0;
     // (Before dawn the tarn is the night's own water: dark, deep and still, with the sky lying in it. Nothing is
     // laid over it, or over the country beyond it, to make it so: that shade stood behind the next station's words as a scrim.)
     vec3 rings = vec3(0.0);
@@ -3679,7 +3664,8 @@ void main() {
         col = shardColor(uCamPos, dir, t, tF, n, s, glow);
       } else if (onTarn > 0.0) {
         // Its mirror image in the still water: clean, until a ring crosses it.
-        vec3 rd2 = reflect(dir, normalize(vec3(-rings.xy * 9.0, 1.0)));
+        // (Clean at the shard's foot, bent by the tarn's slow swell further out, and broken where a ring crosses it.)
+        vec3 rd2 = reflect(dir, normalize(vec3(-rings.xy * 9.0 - tarnSwell(pwp.xy), 1.0)));
         float t2 = shardHit(pwp, rd2, s, turn, n, tF);
         if (t2 > 0.0) {
           gSlabSoft = 1.0;

@@ -326,6 +326,8 @@ export function rockFaces(i: number): [number, number, number, number][] {
 
 /** Station 4, the tarn, and the two shards of ice that stand in it. */
 export const TARN = { x: 1300, y: 10800 + DY, rx: 820, ry: 640 };
+/** The bay at the tarn's south-west, where the river comes in: still water under the eye that looks across the tarn. */
+export const TARN_BAY = { x: 1120, y: 10040 + DY, r: 240 };
 export const SHARDS: { x: number; y: number; h: number; r: number; turn: number }[] = [
   { x: 1648, y: 10590 + DY, h: 400, r: 62, turn: 0.5 },
   { x: 1527, y: 11090 + DY, h: 520, r: 74, turn: -0.35 },
@@ -508,6 +510,11 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
   b.disc(pt(TARN.x - 560, TARN.y - 330), 250);
   b.disc(pt(TARN.x + 520, TARN.y + 380), 260);
   b.disc(pt(TARN.x + 600, TARN.y - 280), 190);
+  b.disc(pt(TARN_BAY.x, TARN_BAY.y), TARN_BAY.r);
+  // (And the bay runs on into the tarn's western lobe: no point of land stands between them.)
+  b.disc(pt(TARN_BAY.x - 200, TARN_BAY.y + 200), 190);
+  // (The river slows as it comes into the bay: under the eye that looks across the tarn the water is all but still.)
+  b.channel([pt(TARN_BAY.x - 150, TARN_BAY.y - 260), pt(TARN_BAY.x, TARN_BAY.y), pt(TARN_BAY.x + 150, TARN_BAY.y + 230)], { width: 560, speed: 0.1, flowOnly: true });
   b.channel([pt(1350, 10150 + DY), pt(1330, 10400 + DY), pt(1300, 10800 + DY), pt(1300, 11400 + DY)], { width: 400, speed: 0.1, flowOnly: true });
 
   paintLater(b, gate);

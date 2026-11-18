@@ -7,7 +7,7 @@
  * so a held frame still drifts.
  */
 
-import { BENDS, BOARD_DEPTH, CANYON, DY, FACE, NAME, type NameLayout, REST, SHEET, SLAB, T2, boardSpan, sheetCols } from './world';
+import { BENDS, BOARD_DEPTH, CANYON, DY, FACE, NAME, type NameLayout, REST, SHARDS, SHEET, SLAB, T2, TARN_BAY, boardSpan, sheetCols } from './world';
 
 export type V3 = [number, number, number];
 
@@ -176,9 +176,9 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         { s: s3 + 1.15, ...benchPose(aspect, 0) },
         { s: s4 - 0.6, ...benchPose(aspect, 1) },
         { s: s4 + 0.3, pos: [1150, 9700 + Y, 300], aim: [1300, 10500 + Y, 0], fov: 46 },
-        // The tarn: one shard near on the left, one far on the right, the ranges beyond.
-        { s: s4 + 1.2, pos: [1120, 9900 + Y, 250], aim: [1400, 10950 + Y, 105], fov: 46 },
-        { s: s5 - 0.6, pos: [1135, 9950 + Y, 242], aim: [1405, 10975 + Y, 105], fov: 46 },
+        // The tarn, from low over the water of its near bay, looking a little up (see tarnPose).
+        { s: s4 + 1.2, ...tarnPose(aspect, 0) },
+        { s: s5 - 0.6, ...tarnPose(aspect, 1) },
         { s: s5 + 0.3, pos: [1300, T2 - 300, 300], aim: [1300, T2 + 600, 0], fov: 44 },
         ...laterKeys(false, s5, s6, s7, s8),
         ...seaKeys(aspect, sunAz, s9, s10),
@@ -229,6 +229,32 @@ function benchPose(aspect: number, drift: number): Pose {
   const y = SHEET.y - z * BACK + 8 * drift;
   const zc = z - 5 * drift;
   return { pos: [x, y, zc], aim: [x, y + zc / Math.tan(pitch), 0], fov };
+}
+
+/**
+ * Station 4's wide frame, composed from the picture backwards. The eye is a
+ * man's height over the water of the tarn's near bay and looks a little up,
+ * so the horizon lies six tenths of the way down the frame: the station's
+ * name, its lines and the film's control stand in clear sky over the ranges,
+ * and the water under the horizon is a mirror that holds the ranges, the sky
+ * and the two shards. The shards stand whole against the sky to the right
+ * of the words: the eye is turned until the nearer one is just inside the
+ * frame's right side, but never so far west of north that the low sun
+ * comes in under the words on a screen of ordinary shape. `drift`: 0 at the
+ * start of the hold, 1 at its end.
+ */
+function tarnPose(aspect: number, drift: number): Pose {
+  const fov = 44;
+  const th = Math.tan(rad(fov / 2));
+  const pos: V3 = [TARN_BAY.x - 100 + 4 * drift, TARN_BAY.y - 140 + 26 * drift, 40 - 2 * drift];
+  // (The nearer shard's middle stands a third of the frame's width right of the frame's middle.)
+  const near = SHARDS[0];
+  const to = Math.atan2(near.x - TARN_BAY.x + 100, near.y - TARN_BAY.y + 140);
+  const head = Math.min(rad(21), Math.max(rad(13), to - Math.atan(0.33 * 2 * th * aspect)));
+  // (Looking up by this much puts the horizon 0.6 of the way down.)
+  const up = 0.2 * th;
+  const far = 1000;
+  return { pos, aim: [pos[0] + Math.sin(head) * far, pos[1] + Math.cos(head) * far, pos[2] + up * far], fov };
 }
 
 /** The last four stations' keys: the columns, the dam, the lattice, the canyon. */
