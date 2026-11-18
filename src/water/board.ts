@@ -8,10 +8,13 @@
  * the type is type at every size.
  *
  * The slab lies flat and is read from a camera that looks across it, which
- * foreshortens it: the far rows more than the near ones. As the name on the
- * lake is cut for the first camera, each row of the table is set taller
- * than true by exactly what its camera takes away, so its letters read at
- * their own proportions from where they are read.
+ * foreshortens it (the far rows more than the near ones) and leans whatever
+ * lies off to one side of the eye. As the name on the lake is cut for the
+ * first camera, the table's type is set for the camera that reads it: each
+ * row taller than true by exactly what that camera takes away, and each
+ * letter's upright laid along the line that the camera sees as upright
+ * there. So from where it is read the type stands square and at its own
+ * proportions, on a slab that lies in perspective.
  */
 
 import { type Pose, basisOf, flightKeys, poseAt, projectPoint, stillStops } from './camera';
@@ -53,12 +56,23 @@ export function boardStretch(pose: Pose, aspect: number): number[] {
 const SEVEN = 'M349 0Q338 292 390 534Q443 776 538 950Q633 1123 747 1207Q767 1222 809 1238Q851 1254 882 1260H85V1454H980L1036 1289Q880 1170 780 992Q679 814 630 569Q582 323 582 0Z';
 
 /**
+ * The place on the table's own level that every line the camera sees as upright runs through: straight under the eye,
+ * and behind it by as much as it looks down. (A letter's upright is laid along the line from here to the letter.)
+ */
+export function boardNadir(pose: Pose): [number, number] {
+  const cam = basisOf(pose);
+  const s = (-SEEN_DEPTH - pose.pos[2]) / Math.max(cam.u[2], 0.05);
+  return [pose.pos[0] + cam.u[0] * s, pose.pos[1] + cam.u[1] * s];
+}
+
+/**
  * The table as a mask, white on black, all five columns of it.
  * @param family the mono face's family, as the page's styles name it
  * @param perUnit how many of the mask's pixels there are to a world unit
  * @param stretch how much taller than true each line is set (see boardStretch)
+ * @param nadir where the letters' uprights run from (see boardNadir); none: they stand square to the table
  */
-export function drawBoard(family: string, perUnit: number, stretch: number[]): HTMLCanvasElement {
+export function drawBoard(family: string, perUnit: number, stretch: number[], nadir?: [number, number]): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = Math.max(64, Math.round(boardSpan(BOARD_HEAD.length) * perUnit));
   c.height = Math.max(32, Math.round(BOARD_DEPTH * perUnit));
@@ -76,8 +90,12 @@ export function drawBoard(family: string, perUnit: number, stretch: number[]): H
   const base = (BOARD.em * CAP) / 2;
   const seven = new Path2D(SEVEN);
   [BOARD_HEAD, ...BOARD_ROWS].forEach((row, r) => {
-    // The line's own frame: its middle at 0, a unit a world unit across and `stretch` of one deep.
-    const line = (x: number) => ctx.setTransform(sx, 0, 0, sy * (stretch[r] ?? 1), x * sx, lines[r] * sy);
+    // A letter's own frame at x along the line: the line's middle at 0, a unit a world unit across and `stretch` of one
+    // deep, its upright leaning as the camera's does at that place (about the letter's own middle, so it keeps its cell).
+    const st = stretch[r] ?? 1;
+    const yw = SHEET.y + BOARD_DEPTH / 2 - lines[r];
+    const lean = (x: number) => (nadir ? Math.max(-1.2, Math.min(1.2, (SHEET.x0 + x - nadir[0]) / Math.max(yw - nadir[1], 1))) : 0);
+    const line = (x: number, at = x) => ctx.setTransform(sx, 0, -sx * lean(at) * st, sy * st, x * sx, lines[r] * sy);
     // (Every character stands in its own cell: the table keeps its measure whatever face the browser has drawn it in.)
     const set = (text: string, x0: number) => {
       let x = x0;
@@ -86,26 +104,22 @@ export function drawBoard(family: string, perUnit: number, stretch: number[]): H
         const cell = ch === '.' ? BOARD_DOT : BOARD_CH;
         if (ch === '.' && prev === '7') x -= BOARD_KERN;
         prev = ch;
+        line(x, x + cell / 2);
         if (ch === '7') {
-          line(x);
           ctx.transform(BOARD.em / 2000, 0, 0, -BOARD.em / 2000, 0, base);
           ctx.fill(seven);
-        } else {
-          line(0);
-          ctx.fillText(ch, x + cell / 2, base);
-        }
+        } else ctx.fillText(ch, cell / 2, base);
         x += cell;
       }
     };
-    line(0);
     ctx.font = `${r === 0 ? 500 : 480} ${BOARD.em}px ${family}`;
     row.forEach((text, i) => {
       if (i === 0) set(text, BOARD.pad);
       else if (r === 0 && i === 1) {
         // "Score" and its sort arrow: the arrow takes the last cell.
         set(text, edges[i] - boardRun(text) - 2 * BOARD_CH);
-        line(0);
-        const x = edges[i] - BOARD_CH / 2;
+        line(edges[i] - BOARD_CH / 2);
+        const x = 0;
         const top = -base + BOARD.em * 0.04;
         const barb = BOARD.em * 0.2;
         ctx.lineWidth = BOARD.em * 0.085;
@@ -147,5 +161,5 @@ export function boardMask(aspect: number, devW: number): HTMLCanvasElement {
   const upright = aspect < 0.9;
   // (How many device pixels a world unit of the table's near edge takes in that frame, and half as much again.)
   const need = (1.6 * devW * (upright ? 0.92 : 0.56)) / boardSpan(sheetCols(aspect));
-  return drawBoard(monoFamily(), Math.min(12, Math.max(4, need)), boardStretch(pose, aspect));
+  return drawBoard(monoFamily(), Math.min(12, Math.max(4, need)), boardStretch(pose, aspect), boardNadir(pose));
 }
