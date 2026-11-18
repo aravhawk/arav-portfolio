@@ -169,7 +169,7 @@ async function carve(s: Shared, tribs: number[] | undefined, isDead: () => boole
 /** The pose a scene is first seen from (its own first pose, or its station's composed frame). */
 function firstPose(scene: SceneId, aspect: number): Pose {
   const own = ownPoses(scene, aspect);
-  return own ? own[0] : poseAt(flightKeys(aspect), stillStops()[STOP[scene] ?? 0]);
+  return own ? own[0] : poseAt(flightKeys(aspect, undefined, true), stillStops()[STOP[scene] ?? 0]);
 }
 
 function start(first: BandOpts, aspect: number): Promise<Shared | null> {
@@ -433,7 +433,7 @@ export async function attachBand(host: HTMLElement, opts: BandOpts, isCancelled:
       a.dpr = dpr;
       a.aspect = w / h;
       engine.resize(w, h, 0, dpr);
-      a.keys = flightKeys(a.aspect, engine.sunAz);
+      a.keys = flightKeys(a.aspect, engine.sunAz, true);
     }
     measureBox();
   };
