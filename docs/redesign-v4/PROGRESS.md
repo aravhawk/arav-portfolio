@@ -999,3 +999,39 @@ not refraction; on a phone before dawn the pool's front shore breaks
 into several bays; the lead's mouth is a plain funnel.
 
 Next, alone: R3d (stations 1 to 4, Kilo Bench first).
+
+### R3d (stations 1 to 4, round 3), integrated 8:58 PM CT
+
+Nine signed commits on the branch ending at `c845c13`, merged without
+conflict; looked at in the merged build in both themes.
+
+- **Kilo Bench:** the results are set as real type in the site's mono
+  face on one dark slab on the pool's bed, crisp at every size (figures
+  15.5 to 21.5 px at 1440, 12.5 to 13.5 px at 390; the phone shows the
+  whole table). The transcription was checked by the helper three times
+  and by this thread against the published image
+  (`public/media/kilo-bench-results-2324.webp`): all fifteen cells
+  match (7.6, $0.7726, 719.9s, 53.3k; 7.4, $1.1007, 832.3s, 45.8k; 6.3,
+  $0.3207, 410.1s, 24.7k). The image stays the source on the project
+  page. The boulders are blocks of the shared glacier ice.
+- **Infiniview:** a bank under the whole name; the block's image in the
+  water is broken light; the red smear on the far falls is gone.
+- **Agent Bridge:** the wide frame recomposed so the name, its lines
+  and the film's control stand in clear sky; the shards rebuilt in the
+  shared ice with a mirror in a tarn that has depth.
+- **Upstream:** each caption's point is on its own stream; the cliff is
+  in the shared ice.
+- Titles test: Infiniview, Kilo Bench and Agent Bridge pass at 1440,
+  390, 1920 and 2560 in both themes (worst 1.39; they were 2.34, 2.29,
+  1.73). Six cases still fail, outside these stations: Open models'
+  figure before dawn at three widths (the sky behind it), cc-switch at
+  390 in both themes, RydAR at 390 before dawn.
+
+Its checks: lint, typecheck, 309 tests, build; 200 words; legibility
+over stations 1 to 4 at 390 and 1440, 3,227 lines, 0 failures; the
+words test, 0 faults. Its shortfalls: geometry is still convex solids
+cut by planes; Agent Bridge's camera moved a lot and the pulse's rings
+are now seen nearly edge on; the table's type is set for the composed
+camera and leans in transit; cost not measured.
+
+Next, alone: R3f (night snow, the delta, the ending's air).
