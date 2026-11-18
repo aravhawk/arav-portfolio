@@ -47,7 +47,7 @@ export default async function Work() {
             <li key={p.slug}>
               <Link className="row feat-row" href={`/work/${p.slug}`}>
                 <span className="label feat-n">{p.n}</span>
-                <span className="feat-pic" style={stillVars(SCENE_OF[p.slug])} aria-hidden="true" />
+                <span className="feat-pic" data-fill style={stillVars(SCENE_OF[p.slug])} aria-hidden="true" />
                 <span className="feat-copy">
                   <ViewTransition name={`title-${p.slug}`} share="title" default="none">
                     <span className="feat-name">{p.name}</span>
@@ -72,7 +72,7 @@ export default async function Work() {
         </h2>
         <ul className="rows">
           {MORE.map((x) => (
-            <li key={x.name} className="row">
+            <li key={x.name} className="row" data-row>
               <span className="label">{x.tag}</span>
               <span className="row-name">{x.name}</span>
               <span className="row-line">

@@ -48,7 +48,7 @@ export function Spec({ facts, className = '' }: { facts: Project['facts']; class
   return (
     <dl className={`spec ${className}`}>
       {facts.map((f) => (
-        <div key={f.label} className="spec-row">
+        <div key={f.label} className="spec-row" data-row>
           <dt>{f.label}</dt>
           <dd className={/^(npm |ollama |cc-switch )/.test(f.value) ? 'mono' : undefined}>{f.value}</dd>
         </div>

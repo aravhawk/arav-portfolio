@@ -766,8 +766,7 @@
   margin-top: clamp(20px, 2.4vw, 36px);
 }
 .bars > :first-child,
-.changes > :first-child,
-.models > :first-child {
+.changes > :first-child {
   border-top: 0;
   padding-top: 0;
 }
@@ -965,14 +964,27 @@
   gap: var(--s-7);
   min-width: 0;
 }
+/* What it does, in two halves: how it begins, beside the screen it begins on; then every mode against what a
+   run is judged on, as one table. */
+.acts {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-7);
+  align-items: start;
+  padding-top: clamp(26px, 3.2vw, 52px);
+  background: var(--rule);
+}
 .act {
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-  column-gap: clamp(28px, 6vw, 120px);
-  row-gap: var(--s-6);
-  align-items: center;
-  padding: clamp(30px, 4.4vw, 72px) 0;
-  background: var(--rule);
+  gap: clamp(22px, 2.6vw, 40px);
+  align-content: start;
+  min-width: 0;
+}
+.act-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5) clamp(24px, 3vw, 56px);
 }
 .act-copy,
 .paper-cap {
@@ -992,18 +1004,9 @@
 .paper-cap .body {
   max-width: 40ch;
 }
+/* (The capture of the start screen is 800 px wide: it is not shown wider than it stays crisp.) */
 .act-plate {
   max-width: 35rem;
-}
-.modes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.08em 0.5em;
-  font-family: var(--font-display);
-  font-size: clamp(1.75rem, 2.6vw + 0.6rem, 3.6rem);
-  font-weight: 700;
-  line-height: 1.06;
-  letter-spacing: -0.016em;
 }
 /* The leaderboard's own rows, cut from the capture column by column and set side by side, so they are read at
    the page's scale. The capture is dark in both themes: it is mounted. */
@@ -1088,22 +1091,29 @@
   width: 12px;
   height: 12px;
 }
+/* What it gives you, in its own words, and beside that the five views of its dashboard, as a list. */
+.kb-views {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: start;
+  padding-top: clamp(26px, 3.2vw, 52px);
+  background: var(--rule);
+}
+.say-m {
+  max-width: 19ch;
+  font-size: clamp(1.875rem, 2.6vw + 0.8rem, 4rem);
+  line-height: 1.02;
+}
 .views {
-  max-width: 28ch;
-  font-family: var(--font-display);
-  font-size: clamp(1.5rem, 2vw + 0.9rem, 3.2rem);
-  font-weight: 680;
-  line-height: 1.1;
-  letter-spacing: -0.022em;
-  text-wrap: balance;
+  display: grid;
+  gap: clamp(12px, 1.4vw, 20px);
+  align-content: start;
 }
 .views-h {
-  display: block;
-  margin-bottom: 14px;
-  font-family: var(--font-text);
   font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
-  font-weight: 420;
-  letter-spacing: 0;
+  font-weight: 520;
   color: var(--ink-3);
 }
 
@@ -1253,7 +1263,7 @@
   border-right-color: var(--bar);
 }
 .seq-note {
-  font-size: clamp(0.8125rem, 0.2vw + 0.78rem, 0.9375rem);
+  font-size: clamp(0.875rem, 0.3vw + 0.7rem, 1.125rem);
   line-height: 1.35;
   color: var(--ink-2);
 }
@@ -1318,60 +1328,65 @@
   line-height: 1.2;
   letter-spacing: -0.012em;
 }
-/* Each build: its name and its pulls, what it is, its facts, and the line that runs it. */
-.model {
+/* Each build: its name and its pulls, what it is, its facts, and the line that runs it. Two to a row. */
+.builds {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  column-gap: clamp(32px, 6vw, 120px);
-  row-gap: var(--s-4);
-  align-items: start;
-  padding: clamp(22px, 2.4vw, 38px) 0;
-  border-top: 1px solid var(--line);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(40px, 5vw, 88px) clamp(32px, 6vw, 120px);
 }
-.model-head {
+.build {
   display: grid;
-  gap: 6px;
-  justify-items: start;
-  justify-content: start;
-  justify-self: start;
-}
-.model-main {
-  display: grid;
-  gap: clamp(14px, 1.4vw, 22px);
+  grid-template-rows: auto auto 1fr auto;
+  gap: clamp(14px, 1.5vw, 24px);
+  align-content: start;
   min-width: 0;
+  padding-top: clamp(18px, 2vw, 30px);
+  border-top: 1.5px solid var(--ink);
 }
-.model-main .body {
+.build-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--s-5);
+}
+.build .body {
   max-width: 56ch;
   color: var(--ink);
 }
-.model-title {
+.build .spec {
+  align-self: start;
+}
+.build-title {
   font-family: var(--font-display);
   font-size: clamp(1.625rem, 1.9vw + 1rem, 3.25rem);
   font-weight: 700;
   letter-spacing: -0.022em;
   line-height: 1.04;
 }
-.model-title a {
+.build-title a {
   display: inline-flex;
   align-items: center;
   gap: 0.35em;
   min-height: 44px;
 }
-.model-title .arrow {
+.build-title .arrow {
   width: 0.55em;
   height: 0.55em;
   flex: none;
 }
-.model-run {
-  justify-self: start;
-  font-size: clamp(0.9375rem, 0.3vw + 0.72rem, 1.125rem);
-  color: var(--ink);
+/* The line that runs it, in a terminal's colours. */
+.build-run {
+  display: block;
+  padding: clamp(12px, 1.2vw, 18px) clamp(14px, 1.6vw, 24px);
+  border-radius: clamp(8px, 0.8vw, 12px);
+  background: #0b1117;
+  color: #f3f7fa;
+  font-size: clamp(0.875rem, 0.4vw + 0.74rem, 1.1875rem);
+  font-weight: 520;
   overflow-wrap: anywhere;
 }
-.model-run .term-p {
-  color: var(--bar);
-}
-.model-pulls {
+.build-pulls {
   font-family: var(--font-mono);
   font-size: clamp(1rem, 0.4vw + 0.86rem, 1.3125rem);
   font-weight: 500;
@@ -1381,15 +1396,21 @@
 
 /* ---------- 06 cc-switch: a terminal session, each command with what it does beside it ---------- */
 
+/* One terminal, and beside every line of it what that line does. The lines
+   stand at one pitch, so the gaps between them are even; each note starts at
+   the top of its own line and is tied to it by a hairline. */
 .session {
+  --cmd: clamp(0.8125rem, 0.62vw + 0.7rem, 1.3125rem);
+  --row-pad: clamp(12px, 1.3vw, 20px);
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  grid-template-rows: auto repeat(var(--n), auto);
+  grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+  grid-template-rows: auto;
+  grid-auto-rows: minmax(clamp(84px, 7.4vw, 118px), auto);
 }
 .session::before {
   content: '';
   grid-column: 1;
-  grid-row: 1 / -1;
+  grid-row: 1 / span calc(var(--n) + 1);
   border-radius: clamp(12px, 1.1vw, 18px);
   background: #0b1117;
   box-shadow:
@@ -1402,22 +1423,11 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 13px 16px;
+  padding: 13px clamp(16px, 2.4vw, 40px) 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.term-dots {
-  display: inline-flex;
-  gap: 7px;
-}
-.term-dots i {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.17);
-}
 .term-title {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: #9aa7b3;
 }
 .session-row {
@@ -1426,17 +1436,14 @@
 .session-cmd {
   grid-column: 1;
   z-index: 1;
-  align-self: center;
+  align-self: start;
   margin: 0;
-  padding: clamp(12px, 1.5vw, 24px) clamp(16px, 2.4vw, 40px);
+  padding: var(--row-pad) clamp(16px, 2.4vw, 40px);
   overflow-x: auto;
   color: #e6edf3;
-  font-size: clamp(0.8125rem, 0.7vw + 0.7rem, 1.375rem);
+  font-size: var(--cmd);
   line-height: 1.8;
   white-space: pre;
-}
-.session-row:nth-child(2) .session-cmd {
-  padding-top: clamp(20px, 2.4vw, 38px);
 }
 .session-row:last-child .session-cmd {
   padding-bottom: clamp(20px, 2.4vw, 38px);
@@ -1448,68 +1455,139 @@
   color: #f3f7fa;
   font-weight: 520;
 }
-/* What the command does stands beside it, tied to it by a hairline. */
+/* (The note's first line stands level with its command's.) */
 .session-note {
   position: relative;
   grid-column: 2;
-  align-self: center;
-  padding-left: clamp(28px, 4.4vw, 84px);
+  align-self: start;
+  padding: calc(var(--row-pad) + 0.9 * var(--cmd) - 0.75 * var(--pg-body)) 0 var(--row-pad) clamp(28px, 4.4vw, 84px);
 }
-.session-note:not(:empty)::before {
+.session-note::before {
   content: '';
   position: absolute;
-  top: 50%;
+  top: calc(var(--row-pad) + 0.9 * var(--cmd));
   left: 0;
   width: clamp(16px, 3.2vw, 60px);
   height: 1px;
   background: var(--ink-3);
 }
-/* 41 templates: a cell each, in their six groups. */
-.prov-strip {
-  display: flex;
-  gap: clamp(5px, 0.9vw, 16px);
-  margin-bottom: clamp(22px, 2.6vw, 40px);
+.session-note .note {
+  max-width: 54ch;
 }
-.prov-group {
-  flex: var(--k) 1 0;
+/* What one switch writes: three lines, each from somewhere to somewhere. */
+.cs-writes {
   display: grid;
-  grid-template-columns: repeat(var(--k), minmax(0, 1fr));
-  gap: clamp(1px, 0.2vw, 3px);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: start;
 }
-.prov-group i {
-  height: clamp(16px, 2vw, 30px);
-  border-radius: 2px;
+.writes {
+  display: grid;
+}
+.write {
+  display: grid;
+  gap: 8px;
+  padding: clamp(16px, 1.7vw, 26px) 0;
+  background: var(--rule);
+}
+.write-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px clamp(12px, 1.4vw, 22px);
+  font-size: clamp(0.9375rem, 0.5vw + 0.8rem, 1.375rem);
+  font-weight: 520;
+  color: var(--ink);
+}
+.write-to {
+  position: relative;
+  flex: 0 1 clamp(28px, 4vw, 72px);
+  min-width: 28px;
+  height: 2px;
+  background: var(--ink);
+}
+.write-to::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  border-left: 9px solid var(--ink);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+.write:nth-child(2) .write-to {
   background: var(--bar);
 }
-.prov-group:nth-child(even) i {
-  background: var(--bar-2);
+.write:nth-child(2) .write-to::after {
+  border-left-color: var(--bar);
 }
-.prov-row {
+.write-what {
+  font-size: var(--pg-body);
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+/* 41 templates: a cell each, in their six groups, each group over its own name. */
+.prov {
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-  column-gap: clamp(24px, 4vw, 80px);
-  align-items: baseline;
-  padding: 16px 0 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(28px, 3.4vw, 56px) clamp(24px, 4vw, 80px);
+}
+.prov-group {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding-top: clamp(16px, 1.6vw, 24px);
   background: var(--rule);
+}
+.prov-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(2px, 0.25vw, 4px);
+  margin-bottom: 6px;
+}
+.prov-cells i {
+  width: clamp(14px, 1.5vw, 26px);
+  height: clamp(14px, 1.5vw, 26px);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+/* (The water's colour once: the group cc-switch is named for.) */
+.prov-group:first-child .prov-cells i {
+  background: var(--bar);
 }
 .prov-name {
   font-family: var(--font-display);
-  font-size: clamp(1.25rem, 0.9vw + 1rem, 1.875rem);
+  font-size: clamp(1.375rem, 1.1vw + 1rem, 2.25rem);
   font-weight: 680;
   letter-spacing: -0.022em;
-  line-height: 1.12;
+  line-height: 1.08;
 }
 .prov-n {
-  margin-left: 0.25em;
+  margin-left: 0.2em;
   font-weight: 480;
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
-.prov-row .body {
-  max-width: 72ch;
+.prov-group .body {
+  max-width: 40ch;
+  color: var(--ink-2);
 }
-.said-s {
-  margin-top: clamp(36px, 5vw, 80px);
+.said-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6) clamp(32px, 6vw, 120px);
+  align-items: start;
+  margin-top: clamp(40px, 5vw, 84px);
+}
+.said-pair .said {
+  align-content: start;
+}
+.said-pair .said + .said .say-s {
+  max-width: 36ch;
+  font-size: clamp(1.25rem, 1vw + 0.95rem, 1.875rem);
+  font-weight: 560;
+  line-height: 1.2;
 }
 
 /* ---------- 07 TensorPoW: set as the paper it is becoming, in three figures ---------- */
@@ -1705,34 +1783,102 @@
   font-size: 0.9375rem;
   color: var(--ink-3);
 }
-/* What is still to do: boxes, and none of them ticked. */
+/* What the implementation holds: four short lists, side by side. */
+.parts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-6) clamp(24px, 3.4vw, 64px);
+}
+.part {
+  display: grid;
+  gap: clamp(12px, 1.2vw, 18px);
+  align-content: start;
+  padding-top: clamp(14px, 1.5vw, 22px);
+  border-top: 1.5px solid var(--ink);
+}
+.part-name {
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
+  font-weight: 520;
+  color: var(--ink-3);
+}
+.part-items {
+  display: grid;
+  gap: 0.3em;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1vw + 0.9rem, 2rem);
+  font-weight: 660;
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+}
+.part-items.mono {
+  gap: 0.5em;
+  font-family: var(--font-mono);
+  font-size: clamp(0.9375rem, 0.5vw + 0.78rem, 1.3125rem);
+  font-weight: 520;
+  letter-spacing: 0;
+}
+.part-items .term-p {
+  color: var(--bar);
+}
+.part .cap {
+  margin-top: 0;
+}
+.tp-node > .cap {
+  margin-top: clamp(22px, 2.6vw, 40px);
+}
+/* What is still to do: four gates on the way to a live network, none of them passed. */
 .tp-status .lead {
-  margin-bottom: clamp(14px, 1.6vw, 24px);
+  margin-bottom: clamp(18px, 2vw, 30px);
   color: var(--ink-2);
 }
-.checks {
+.gates {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: clamp(28px, 5vw, 96px);
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  column-gap: clamp(18px, 2.4vw, 44px);
 }
-.check {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  column-gap: 18px;
-  align-items: start;
-  padding: 18px 0 20px;
-  background: var(--rule);
-  font-size: clamp(1.125rem, 0.6vw + 1rem, 1.5rem);
-  font-weight: 540;
-  line-height: 1.24;
-  letter-spacing: -0.016em;
+.gate {
+  position: relative;
+  padding: 46px 0 6px;
+  font-size: clamp(1.125rem, 0.7vw + 0.95rem, 1.625rem);
+  font-weight: 560;
+  line-height: 1.22;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
 }
-.check-box {
-  width: 22px;
-  height: 22px;
-  margin-top: 0.1em;
-  border-radius: 5px;
+/* (The way runs through every gate.) */
+.gate::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: calc(-1 * clamp(18px, 2.4vw, 44px));
+  height: 2px;
+  background: var(--ink);
+}
+.gate-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--seq-bg);
   box-shadow: inset 0 0 0 2px var(--ink);
+}
+.gate-end {
+  padding-left: 0;
+  min-width: 6.5rem;
+  color: var(--ink-3);
+}
+.gate-end::before {
+  right: auto;
+  width: 0;
+}
+.gate-end .gate-box {
+  border-radius: 50%;
+  background: none;
+  box-shadow: none;
+  border: 2px dashed var(--ink-3);
 }
 
 /* ---------- 08 RydAR: the map, the phone, the two pages ---------- */
@@ -2363,22 +2509,46 @@
   .tp-abs,
   .tp-figs,
   .paper-fig-wide,
-  .checks,
-  .act,
+  .acts,
+  .kb-views,
   .sec-chart,
-  .model,
+  .builds,
   .ry-phone,
   .ry-count,
-  .prov-row,
+  .cs-writes,
+  .said-pair,
   .strip,
   .post-lead {
     grid-template-columns: minmax(0, 1fr);
   }
+  .prov,
+  .parts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* The gates on a phone: one under the other, the way running down the left. */
+  .gates {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gate {
+    padding: 0 0 26px 44px;
+    min-height: 52px;
+  }
+  .gate::before {
+    top: 0;
+    bottom: 0;
+    left: 12px;
+    right: auto;
+    width: 2px;
+    height: auto;
+  }
+  .gate-end {
+    padding-bottom: 0;
+  }
+  .gate-end::before {
+    display: none;
+  }
   .tp-abs .spec {
     order: 0;
-  }
-  .prov-row {
-    row-gap: 6px;
   }
   .figs {
     --cols: 2;
@@ -2486,8 +2656,7 @@
       0 0 0 1px var(--line);
   }
   .session::before,
-  .session-note::before,
-  .session-note:empty {
+  .session-note::before {
     display: none !important;
   }
   .session-cmd {
@@ -2673,6 +2842,9 @@
   .ry-pages {
     grid-template-columns: minmax(0, 1fr);
     row-gap: var(--s-5);
+  }
+  .prov {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

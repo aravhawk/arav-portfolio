@@ -83,6 +83,10 @@ export const KILO_MEASURES: { name: string; judged: boolean }[] = [
   { name: 'Cost', judged: false },
 ];
 export const KILO_VIEWS = ['Leaderboard', 'Mode Breakdown', 'Radar Chart', 'Head-to-Head', 'Cost Optimizer'];
+export const KILO_QUOTE = {
+  text: 'The output is simple: data-driven confidence in which model to use for each mode, on your code.',
+  source: 'Kilo Bench on Devpost',
+};
 
 /** Agent Bridge: the README's message flow, who sends each step to whom, and its limits. */
 export type Peer = 'sender' | 'bridge' | 'recipient';
@@ -100,6 +104,18 @@ export const BRIDGE_FLOW: { from: Peer; to: Peer; title: string; note: string; a
   { from: 'bridge', to: 'sender', title: 'Receives the ACK', note: 'terminal: never acknowledged in turn', ack: true },
 ];
 export const BRIDGE_LIMITS = ['Exactly two peers and one owner', 'At most 4 KiB of text in a message', 'A 60 s claim lease'];
+/** How it is kept, from the README's security model and stack. */
+export const BRIDGE_MORE: { title: string; body: string }[] = [
+  {
+    title: 'A resource server only',
+    body: 'It verifies RS256 JWTs against a pinned issuer, a per-peer audience and a single allowed subject. It never issues or stores tokens.',
+  },
+  {
+    title: 'Outbound HTTP',
+    body: 'HTTPS only, to public unicast addresses, pinned, with no redirects. Subscription secrets are encrypted with AES-256-GCM.',
+  },
+  { title: 'Stack', body: 'TypeScript that Node 24 runs directly, with no build step, on Vercel functions and Vercel Queues, with Postgres.' },
+];
 
 /** Open models: what each build is, as its Ollama page says. */
 export const MODEL_NOTES: Record<string, { what: string; facts: [string, string][]; run: string }> = {
@@ -168,6 +184,32 @@ export const SWITCH_QUOTE = {
   text: 'Templates replace everything tied to the previous provider so settings never leak between providers.',
   source: 'cc-switch README',
 };
+/** What the README says of the commands that have no step of their own, and of what one switch writes. */
+export const SWITCH_INSTALL_NOTE = { title: 'Install', body: 'Or pnpm add -g @aravhawk/cc-switch. It needs Node.js 22.12 or newer.' };
+export const SWITCH_STATE_NOTE = {
+  title: 'Where it lives',
+  body: 'Each profile is a saved settings.json under ~/.cc-switch/profiles. state.json records the active one.',
+};
+export const SWITCH_WRITES: { from: string; to: string; what: string }[] = [
+  { from: 'live settings.json', to: 'profiles/kimi/settings.json', what: 'The live settings are saved into the active profile.' },
+  { from: 'profiles/work/settings.json', to: 'live settings.json', what: 'The target’s settings are written.' },
+  { from: 'work', to: 'state.json', what: 'state.json is updated.' },
+];
+export const SWITCH_CARE: { title: string; body: string }[] = [
+  {
+    title: 'If it fails',
+    body: 'Writes are atomic, symlinked settings.json files are updated in place, and a failed switch or create restores the previous profile.',
+  },
+  {
+    title: 'Keys',
+    body: 'Stored in the profile’s settings.json with 0600 permissions, never printed, and only sent to the profile’s own base URL. The cloud platform templates store no secret.',
+  },
+  { title: 'Full profiles', body: 'With --full a profile also swaps chosen files: CLAUDE.md, agents, skills, rules, commands and more.' },
+];
+export const SWITCH_CAVEAT = {
+  text: 'Anthropic does not support running Claude Code against non-Claude models. Each template follows the provider’s own Claude Code documentation, and that provider is who supports it.',
+  source: 'cc-switch README',
+};
 
 /** TensorPoW: the parts of a node (README), and what stands between it and a live network. */
 export const TENSOR_BACKENDS = ['CPU', 'Apple GPU', 'CUDA GPU'];
@@ -180,6 +222,15 @@ export const TENSOR_STACK: { name: string; does: string }[] = [
   { name: 'libp2p', does: 'networking' },
   { name: 'RocksDB', does: 'state' },
 ];
+/** What the reference implementation holds, and the tools an operator runs (README). */
+export const TENSOR_NODE: { name: string; items: string[] }[] = [
+  { name: 'Consensus', items: ['BlockDAG ordering', 'Anchor difficulty adjustment', 'Dynamic K', 'Finality'] },
+  { name: 'State', items: ['UTXO storage', 'Merkle commitments'] },
+  { name: 'Mempool', items: ['Hierarchical sharding', 'A fee-floor policy'] },
+];
+export const TENSOR_TOOLS = ['tensorpow-mine', 'tensorpow-node', 'tensorpow-wallet'];
+export const TENSOR_TOOLS_MORE = 'The wallet keeps an encrypted keystore. Scripts run the soak test and the genesis ceremony.';
+export const TENSOR_SPEC = 'The protocol is specified in PROTOCOL_SPEC.md, in the repository.';
 export const TENSOR_GATES = [
   'A six hour soak across CPU, Apple GPU and CUDA with matching consensus reports',
   'A public testnet: 30 days, 100 nodes',

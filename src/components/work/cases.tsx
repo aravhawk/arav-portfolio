@@ -9,23 +9,34 @@ import { HALF_SIZES, Note, Outs, Plate, Sec, Spec } from './blocks';
 import {
   BRIDGE_FLOW,
   BRIDGE_LIMITS,
+  BRIDGE_MORE,
   BRIDGE_PEERS,
   INFINIVIEW_PASSES,
   KILO_MEASURES,
   KILO_MODES,
+  KILO_QUOTE,
   KILO_VIEWS,
   MODEL_NOTES,
   RYDAR_CURVES,
   RYDAR_MORE,
   RYDAR_QUOTE,
+  SWITCH_CARE,
+  SWITCH_CAVEAT,
   SWITCH_GROUPS,
   SWITCH_INSTALL,
+  SWITCH_INSTALL_NOTE,
   SWITCH_MORE,
   SWITCH_QUOTE,
+  SWITCH_STATE_NOTE,
+  SWITCH_WRITES,
   T3_PRS,
   TENSOR_BACKENDS,
   TENSOR_GATES,
+  TENSOR_NODE,
+  TENSOR_SPEC,
   TENSOR_STACK,
+  TENSOR_TOOLS,
+  TENSOR_TOOLS_MORE,
   type Peer,
 } from './case-data';
 
@@ -82,7 +93,7 @@ function Infiniview({ p }: { p: Project }) {
               </div>
             </div>
             <div className="run-show">
-              <ul className="lanes" aria-label="The three passes">
+              <ul className="lanes" data-fill aria-label="The three passes">
                 {INFINIVIEW_PASSES.map((x) => (
                   <li key={x.pass} className="lane">
                     <span className="lane-pass">{x.pass}</span>
@@ -181,7 +192,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
       <Sec className="sec-changes" title="In T3 Code: eight of them, change by change" id="p-t3">
         <ol className="changes">
           {T3_PRS.map((x) => (
-            <li key={x.n} className="change">
+            <li key={x.n} className="change" data-row>
               <a className="change-n" href={`https://github.com/pingdotgg/t3code/pull/${x.n}`} target="_blank" rel="noopener noreferrer" aria-label={`Pull request ${x.n} in T3 Code`}>
                 #{x.n}
               </a>
@@ -198,7 +209,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
         </ol>
       </Sec>
       <Sec className="sec-bars sec-rest" title="The rest, by repository" id="p-repos">
-        <ol className="bars">
+        <ol className="bars" data-fill>
           {m.mergedPrs.byRepo.map((r) => {
             const [owner, name] = r.repo.split('/');
             return (
@@ -266,7 +277,7 @@ function KiloBench({ p }: { p: Project }) {
       </Sec>
       <Sec className="kb-board" label="Results">
         <figure className="board">
-          <div className="board-rows" role="img" aria-label="The leaderboard of one run: anthropic/claude-sonnet-4.6 scored 7.6, anthropic/claude-opus-4.6 scored 7.4, openai/gpt-5.2-codex scored 6.3, each with its cost, time and tokens.">
+          <div className="board-rows" data-fill role="img" aria-label="The leaderboard of one run: anthropic/claude-sonnet-4.6 scored 7.6, anthropic/claude-opus-4.6 scored 7.4, openai/gpt-5.2-codex scored 6.3, each with its cost, time and tokens.">
             {SHEET_COLS.map(([x, w]) => (
               <span key={x} className="board-col" style={{ '--x': x, '--w': w, '--y': SHEET_SRC.y, '--h': SHEET_SRC.rows } as React.CSSProperties} />
             ))}
@@ -275,32 +286,29 @@ function KiloBench({ p }: { p: Project }) {
         </figure>
       </Sec>
       <Sec className="kb-acts" label="How it works">
-        <ol className="acts">
-          <li className="act">
+        <div className="acts">
+          {/* The first thing it does, with the screen it starts from. */}
+          <div className="act">
             <div className="act-copy">
               <h3 className="act-title">{read.title}</h3>
               <p className="body">{read.body}</p>
             </div>
             <Plate media={pic(p, 'kilo-bench-start.webp')} sizes="(max-width: 859px) 94vw, 560px" className="act-plate" caption="The Bench tab’s first screen." />
-          </li>
-          <li className="act">
-            <div className="act-copy">
-              <h3 className="act-title">{cover.title}</h3>
-              <p className="body">{cover.body}</p>
-            </div>
-            <ul className="modes" aria-label="The five Kilo modes">
-              {KILO_MODES.map((x) => (
-                <li key={x}>{x}</li>
-              ))}
-            </ul>
-          </li>
-          <li className="act">
-            <div className="act-copy">
-              <h3 className="act-title">{judge.title}</h3>
-              <p className="body">{judge.body}</p>
+          </div>
+          {/* The other two are one table: every mode, against what a run is judged on. */}
+          <div className="act">
+            <div className="act-pair">
+              <div className="act-copy">
+                <h3 className="act-title">{cover.title}</h3>
+                <p className="body">{cover.body}</p>
+              </div>
+              <div className="act-copy">
+                <h3 className="act-title">{judge.title}</h3>
+                <p className="body">{judge.body}</p>
+              </div>
             </div>
             <div className="matrix-wrap">
-              <table className="matrix">
+              <table className="matrix" data-fill>
                 <thead>
                   <tr>
                     <td />
@@ -334,14 +342,22 @@ function KiloBench({ p }: { p: Project }) {
                 </span>
               </p>
             </div>
-          </li>
-        </ol>
+          </div>
+        </div>
       </Sec>
       <Sec className="kb-views" label="Dashboard views">
-        <p className="views">
-          <span className="views-h">The dashboard, in five views</span>
-          {KILO_VIEWS.join(', ')}
-        </p>
+        <figure className="said">
+          <blockquote className="say say-m">“{KILO_QUOTE.text}”</blockquote>
+          <figcaption className="cap">{KILO_QUOTE.source}</figcaption>
+        </figure>
+        <div className="views">
+          <h3 className="views-h">The dashboard, in five views</h3>
+          <ul className="limits">
+            {KILO_VIEWS.map((v) => (
+              <li key={v}>{v}</li>
+            ))}
+          </ul>
+        </div>
       </Sec>
     </>
   );
@@ -381,7 +397,7 @@ function AgentBridge({ p }: { p: Project }) {
         <Spec facts={p.facts} />
       </Sec>
       <Sec className="ab-seq" title="One message, start to finish" id="p-flow">
-        <div className="seq">
+        <div className="seq" data-fill>
           {BRIDGE_PEERS.map((x) => (
             <span key={x.id} className={`seq-head seq-at-${x.id}`} aria-hidden="true">
               {x.name}
@@ -419,7 +435,14 @@ function AgentBridge({ p }: { p: Project }) {
           </ul>
           <p className="cap">Limits, from the README.</p>
         </div>
-        {optional ? <Note title={optional.title}>{optional.body}</Note> : null}
+        <div className="notes">
+          {BRIDGE_MORE.map((x) => (
+            <Note key={x.title} title={x.title}>
+              {x.body}
+            </Note>
+          ))}
+          {optional ? <Note title={optional.title}>{optional.body}</Note> : null}
+        </div>
       </Sec>
     </>
   );
@@ -442,7 +465,7 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
             </span>
           </p>
         </div>
-        <ol className="cols" style={{ '--n': m.ollama.models.length } as React.CSSProperties}>
+        <ol className="cols" data-fill style={{ '--n': m.ollama.models.length } as React.CSSProperties}>
           {m.ollama.models.map((x) => (
             <li key={x.name} className="col" style={{ '--h': x.pulls / max } as React.CSSProperties}>
               <span className="col-n">{formatCount(x.pulls)}</span>
@@ -464,39 +487,37 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
           ))}
         </div>
       </Sec>
-      <Sec className="sec-models" title="The four, and how to run each" id="p-models">
-        <ul className="models">
+      <Sec className="sec-builds" title="The four, and how to run each" id="p-models">
+        <ul className="builds">
           {m.ollama.models.map((x) => {
             const note = MODEL_NOTES[x.name];
             return (
-              <li key={x.name} className="model">
-                <div className="model-head">
-                  <h3 className="model-title">
+              <li key={x.name} className="build">
+                <div className="build-head">
+                  <h3 className="build-title">
                     <a href={x.url} target="_blank" rel="noopener noreferrer">
                       {x.name} <Arrow out />
                     </a>
                   </h3>
-                  <p className="model-pulls">{formatCount(x.pulls)} pulls</p>
-                  <code className="mono model-run">
-                    <span className="term-p" aria-hidden="true">
-                      ${' '}
-                    </span>
-                    {note?.run ?? `ollama run aravhawk/${x.name}`}
-                  </code>
+                  <p className="build-pulls">{formatCount(x.pulls)} pulls</p>
                 </div>
-                <div className="model-main">
-                  {note?.what ? <p className="body">{note.what}</p> : null}
-                  {note ? (
-                    <dl className="spec">
-                      {note.facts.map(([k, v]) => (
-                        <div key={k} className="spec-row">
-                          <dt>{k}</dt>
-                          <dd>{v}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : null}
-                </div>
+                {note?.what ? <p className="body">{note.what}</p> : null}
+                {note ? (
+                  <dl className="spec">
+                    {note.facts.map(([k, v]) => (
+                      <div key={k} className="spec-row" data-row>
+                        <dt>{k}</dt>
+                        <dd>{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+                <code className="mono build-run">
+                  <span className="term-p" aria-hidden="true">
+                    ${' '}
+                  </span>
+                  {note?.run ?? `ollama run aravhawk/${x.name}`}
+                </code>
               </li>
             );
           })}
@@ -510,12 +531,13 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
 
 function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
   const [create, change, test] = p.how;
-  const rows: { cmds: string[]; note?: { title: string; body: string } }[] = [
-    { cmds: [SWITCH_INSTALL] },
+  // Every line of the session has what it does beside it, from the first line down.
+  const rows: { cmds: string[]; note: { title: string; body: string } }[] = [
+    { cmds: [SWITCH_INSTALL], note: SWITCH_INSTALL_NOTE },
     { cmds: ['cc-switch --create kimi --template kimi'], note: create },
     { cmds: ['cc-switch work'], note: change },
     { cmds: ['cc-switch --test'], note: test },
-    { cmds: SWITCH_MORE },
+    { cmds: SWITCH_MORE, note: SWITCH_STATE_NOTE },
   ];
   return (
     <>
@@ -540,13 +562,8 @@ function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
         </div>
       </Sec>
       <Sec className="cs-session" label="In the terminal">
-        <div className="session" style={{ '--n': rows.length } as React.CSSProperties}>
+        <div className="session" data-fill style={{ '--n': rows.length } as React.CSSProperties}>
           <div className="session-bar" aria-hidden="true">
-            <span className="term-dots">
-              <i />
-              <i />
-              <i />
-            </span>
             <span className="term-title mono">cc-switch</span>
           </div>
           {rows.map((r, i) => (
@@ -563,36 +580,60 @@ function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
                 ))}
               </pre>
               <div className="session-note" style={{ gridRow: i + 2 }}>
-                {r.note ? <Note title={r.note.title}>{r.note.body}</Note> : null}
+                <Note title={r.note.title}>{r.note.body}</Note>
               </div>
             </div>
           ))}
         </div>
       </Sec>
-      <Sec className="cs-prov" title="41 provider templates, in six groups" id="p-groups">
-        <div className="prov-strip" aria-hidden="true">
-          {SWITCH_GROUPS.map((g) => (
-            <span key={g.name} className="prov-group" style={{ '--k': g.n } as React.CSSProperties}>
-              {Array.from({ length: g.n }, (_, k) => (
-                <i key={k} />
-              ))}
-            </span>
+      <Sec className="cs-writes" title="What cc-switch work writes" id="p-writes">
+        <ol className="writes" data-fill>
+          {SWITCH_WRITES.map((w) => (
+            <li key={w.to} className="write">
+              <span className="write-path mono">
+                <span>{w.from}</span>
+                <i className="write-to" aria-hidden="true" />
+                <span className="sr-only">to</span>
+                <span>{w.to}</span>
+              </span>
+              <span className="write-what">{w.what}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="notes">
+          {SWITCH_CARE.map((x) => (
+            <Note key={x.title} title={x.title}>
+              {x.body}
+            </Note>
           ))}
         </div>
+      </Sec>
+      <Sec className="cs-prov" title="41 provider templates, in six groups" id="p-groups">
         <ul className="prov">
           {SWITCH_GROUPS.map((g) => (
-            <li key={g.name} className="prov-row">
+            <li key={g.name} className="prov-group">
+              <span className="prov-cells" data-fill aria-hidden="true">
+                {Array.from({ length: g.n }, (_, k) => (
+                  <i key={k} />
+                ))}
+              </span>
               <h3 className="prov-name">
                 {g.name} <span className="prov-n">{g.n}</span>
               </h3>
-              <p className="body">{g.who}</p>
+              {g.who ? <p className="body">{g.who}</p> : null}
             </li>
           ))}
         </ul>
-        <figure className="said said-s">
-          <blockquote className="say say-s">“{SWITCH_QUOTE.text}”</blockquote>
-          <figcaption className="cap">{SWITCH_QUOTE.source}</figcaption>
-        </figure>
+        <div className="said-pair">
+          <figure className="said">
+            <blockquote className="say say-s">“{SWITCH_QUOTE.text}”</blockquote>
+            <figcaption className="cap">{SWITCH_QUOTE.source}</figcaption>
+          </figure>
+          <figure className="said">
+            <blockquote className="say say-s">“{SWITCH_CAVEAT.text}”</blockquote>
+            <figcaption className="cap">{SWITCH_CAVEAT.source}</figcaption>
+          </figure>
+        </div>
       </Sec>
     </>
   );
@@ -619,7 +660,7 @@ function TensorPoW({ p }: { p: Project }) {
       </Sec>
       <Sec className="tp-figs" label="How it fits together">
         <figure className="paper-fig paper-fig-wide">
-          <div className="dia-art dia-tensor" aria-hidden="true">
+          <div className="dia-art dia-tensor" data-fill aria-hidden="true">
             <span className="dia-node dia-node-in mono">INT8 tensor challenge</span>
             <span className="dia-fan">
               {TENSOR_BACKENDS.map((b) => (
@@ -636,7 +677,7 @@ function TensorPoW({ p }: { p: Project }) {
           </figcaption>
         </figure>
         <figure className="paper-fig">
-          <div className="dia-art dia-chain" aria-hidden="true">
+          <div className="dia-art dia-chain" data-fill aria-hidden="true">
             {[3, 4, 2].map((n, i) => (
               <span key={i} className="dia-link">
                 <span className="dia-anchor" />
@@ -661,7 +702,7 @@ function TensorPoW({ p }: { p: Project }) {
           </figcaption>
         </figure>
         <figure className="paper-fig">
-          <ul className="dia-art dia-stack" aria-hidden="true">
+          <ul className="dia-art dia-stack" data-fill aria-hidden="true">
             {TENSOR_STACK.map((x) => (
               <li key={x.name} className="dia-part">
                 <span className="dia-part-name">{x.name}</span>
@@ -675,16 +716,49 @@ function TensorPoW({ p }: { p: Project }) {
           </figcaption>
         </figure>
       </Sec>
+      <Sec className="tp-node" title="What the reference implementation holds" id="p-node">
+        <ul className="parts">
+          {TENSOR_NODE.map((x) => (
+            <li key={x.name} className="part">
+              <h3 className="part-name">{x.name}</h3>
+              <ul className="part-items">
+                {x.items.map((it) => (
+                  <li key={it}>{it}</li>
+                ))}
+              </ul>
+            </li>
+          ))}
+          <li className="part part-tools">
+            <h3 className="part-name">Operator tools</h3>
+            <ul className="part-items mono">
+              {TENSOR_TOOLS.map((t) => (
+                <li key={t}>
+                  <span className="term-p" aria-hidden="true">
+                    ${' '}
+                  </span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+            <p className="cap">{TENSOR_TOOLS_MORE}</p>
+          </li>
+        </ul>
+        <p className="cap">{TENSOR_SPEC}</p>
+      </Sec>
       <Sec className="tp-status" title="Not a live network yet" id="p-gates">
         <p className="lead">Before mainnet, per the README:</p>
-        <ul className="checks">
+        <ol className="gates" data-fill>
           {TENSOR_GATES.map((g) => (
-            <li key={g} className="check">
-              <i className="check-box" aria-hidden="true" />
+            <li key={g} className="gate">
+              <i className="gate-box" aria-hidden="true" />
               {g}
             </li>
           ))}
-        </ul>
+          <li className="gate gate-end">
+            <i className="gate-box" aria-hidden="true" />
+            Mainnet
+          </li>
+        </ol>
       </Sec>
     </>
   );

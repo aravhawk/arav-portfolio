@@ -76,6 +76,7 @@ export function SceneBand({ scene, short, full, index, tribs, cols, slab, sheet,
       <div
         ref={view}
         className="band-view"
+        data-fill
         aria-hidden="true"
         style={stillVars(scene)}
       />

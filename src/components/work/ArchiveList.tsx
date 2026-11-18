@@ -95,7 +95,7 @@ export function ArchiveList({ entries }: { entries: ArchiveEntry[] }) {
       {shown.length ? (
         <ul className="rows">
           {shown.map((e) => (
-            <li key={e.name} className="row">
+            <li key={e.name} className="row" data-row>
               <span className="label">{e.year}</span>
               <span className="row-name">{e.name}</span>
               <span className="row-line">{e.line}</span>
