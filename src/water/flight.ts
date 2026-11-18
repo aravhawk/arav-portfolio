@@ -269,9 +269,7 @@ export class FlightEngine extends WaterEngine {
   private pump() {
     for (const v of this.variants.values()) if (v.pending) return;
     const now = performance.now();
-    // (The first few at once, for where the page now is; the rest a third of a second apart, so the driver's work on
-    // them never crowds the frames.)
-    if (now - this.lastBegin < (this.variants.size < 6 ? 150 : 350)) return;
+    if (now - this.lastBegin < 150) return;
     if (this.warmQ.length) {
       const [mask, mode] = this.warmQ.shift()!;
       this.begin(mask, mode);
@@ -309,7 +307,9 @@ export class FlightEngine extends WaterEngine {
     gl.deleteSync(this.warmFence);
     this.warmFence = null;
     this.warmedAt = performance.now();
-    this.warmHolds = this.warmedAt - this.warmBegan > 70;
+    // (A first draw the driver has in store is over within a frame or two, however busy the GPU is; one it must build
+    // takes a quarter of a second and more.)
+    this.warmHolds = this.warmedAt - this.warmBegan > 150;
     return false;
   }
   /**
@@ -338,9 +338,10 @@ export class FlightEngine extends WaterEngine {
    */
   private rest(now: number) {
     if (this.warming()) return;
-    // (Where a first draw holds the picture it waits for the page to rest, and the picture runs a while between two.)
+    // (A first draw waits for the page to rest: even one the driver has in store takes it a few milliseconds, and a
+    // frame at the edge of its budget is missed for it. Where it holds the picture, the picture runs a while between two.)
     // (Not for the checks' held clock: there a frame is wanted as it will stand, at once.)
-    if (this.warmHolds && this.held === null && (now - this.warmedAt < 500 || now - this.stillSince < 400)) return;
+    if (this.held === null && (now - this.stillSince < 400 || (this.warmHolds && now - this.warmedAt < 500))) return;
     const mode = this.mode();
     const other: Mode = mode === 'day' ? 'night' : 'day';
     let next: Variant | null = null;
@@ -413,7 +414,7 @@ export class FlightEngine extends WaterEngine {
    * nothing that has drawn carries it all, one that has not is used (the driver takes its moment then and there);
    * and where nothing ready carries it all, the one that carries most of it draws until one does.
    */
-  private pick(need: number): Variant {
+  private pick(need: number, sliver = false): Variant {
     if (this.forced) return this.forced;
     const mode = this.mode();
     const fits = (v: Variant) => !!v.prog && (v.mode === mode || v.mode === 'any');
@@ -435,8 +436,12 @@ export class FlightEngine extends WaterEngine {
         wantBits = bits(m);
       }
     }
-    const best = warm ?? cold;
-    if (!best || bits(want) < bits(best.mask) || best.mode !== mode) this.begin(want, mode);
+    // (Where a first draw holds the picture, one that has drawn before is taken first. On a later visit the driver has
+    // these programs and a first draw is a matter of a frame: the leanest is taken, as it comes.)
+    const best = this.warmHolds || !cold || (warm && !leaner(cold, warm)) ? (warm ?? cold) : cold;
+    // (A sliver of the frame that something ready can already draw is not given a variant of its own: slivers come and
+    // go all along the flight, and each new program is work for the driver while the frames run.)
+    if (!best || ((bits(want) < bits(best.mask) || best.mode !== mode) && !sliver)) this.begin(want, mode);
     if (best) {
       best.warm = true;
       return best;
@@ -917,8 +922,8 @@ export class FlightEngine extends WaterEngine {
       variant: this.drawn ? `${maskName(this.drawn.mask)}:${this.drawn.mode}` : '',
       // (The pieces the last frame was drawn in: what each needed, what drew it, and the share of the frame it covers.)
       tiles: this.drawnTiles.map((t) => `${maskName(t.mask)} by ${maskName(t.by.mask)}:${t.by.mode} ${Math.round(t.area * 100)}%`),
-      // (Whether every piece was drawn by its very own variant.)
-      settled: this.drawnTiles.length > 0 && this.drawnTiles.every((t) => t.by.mask === t.mask),
+      // (Whether every piece was drawn by its very own variant; a sliver, by one that carries all of it.)
+      settled: this.drawnTiles.length > 0 && this.drawnTiles.every((t) => t.by.mask === t.mask || (t.area < 0.04 && (t.by.mask & t.mask) === t.mask)),
       needed: maskName(this.needed),
       variants: Array.from(this.variants.values(), (v) => `${maskName(v.mask)}:${v.mode}:${v.failed ? 'failed' : v.pending ? 'pending' : Math.round(v.took)}`),
     };
@@ -1357,7 +1362,7 @@ export class FlightEngine extends WaterEngine {
     // Each piece of the frame by the leanest variant that carries what stands in that piece.
     const tiles = this.tiles(cam, aspect, need);
     for (const t of tiles) {
-      const by = this.pick(t.mask);
+      const by = this.pick(t.mask, t.area < 0.04);
       this.drawnTiles.push({ mask: t.mask, area: t.area, by });
       this.scene(by, cam, aspect, at, tiles.length === 1 ? null : t.px);
     }
