@@ -1158,3 +1158,76 @@ field baked so a pixel does lookups, the canyon's walls as a baked
 field, the 3 to 5 ms the stations need at 1728, leaner governor steps
 for large screens and a busy GPU that keep full resolution, no held
 frame on a theme switch). Then the full gates and panel 10.
+
+### P2 (frame rate, second pass), integrated Nov 18, 12:40 PM CT
+
+Nine signed commits on the branch ending at `b7e15c0`, merged without
+conflict; lint, typecheck and 312 tests pass; production build checked
+(every route 200, `/nope` 404, home 200 words, no dashes or banned
+words). The picture is unchanged: the tree as found against the final
+build at 2x, sixteen positions, both themes, mean difference 0.000 of
+255.
+
+What P2 did: the lake's variant split in three (sheet, swept field,
+letters), each kept only while it is there; **a frame is drawn in
+pieces**, each once, by the leanest variant that carries what stands
+in that piece (a station's code only where the station stands); the
+simulation reads the ice field from a target worked out once; the
+name's field asks nothing twice; the governor begins at a step the
+screen's size suggests and answers heavy overload at once; the theme
+turns under a 480 ms dissolve with no third set of programs.
+
+Same machine (Apple M4, 10 GPU cores), production build, three runs:
+
+| profile | theme | p50 / p95 ms | frames over 25 ms | as P1 left it |
+| --- | --- | --- | --- | --- |
+| desktop-1440-dpr2 | light | 16.7 / 16.8 | 1.58% to 1.79% | 3.04% |
+| desktop-1440-dpr2 | dark | 16.7 / 16.8 | 2.65% to 2.78% | 3.88% |
+| desktop-1728-dpr2 | light | 16.7 / 33.3 | 5.75% to 5.93% | 8.06% |
+| desktop-1728-dpr2 | dark | 16.7 / 33.3 | 9.50% to 9.74% | 13.22% |
+| phone-390-dpr3-cpu4x | both | 16.7 / 16.7 | 0 | 0 |
+| desktop-1440-dpr2-contended | light | 16.7 / 33 to 50 | 43% to 49% | 63% |
+| desktop-1440-dpr2-contended | dark | 33.3 / 33.4 | 67% to 68% | 52% (one run; P1's three gave 52, 85, 52) |
+| desktop-2560-dpr2 | light | 16.7 / 50.0 | 38.6% to 39.1% | 44.4% |
+| desktop-2560-dpr2 | dark | 33.3 / 50.0 | 53.7% to 54.3% | 62.3% |
+
+**The gate is still not met on any desktop profile.** At 1440 every
+slow frame is in screens 0 to 1 (the first frame and the melt) or 24
+to 27 (the canyon); screens 2 to 23 hold 60 on full shading in every
+run. No task over 50 ms after first paint on the uncontended profiles.
+Where the time is: the name is 9 to 10 ms of an 11 ms scene budget at
+1440 (swept field 4.3 to 5.4, the letters' blocks 3.8 to 4.0); the
+canyon 16.3 ms (the march to the wall 6.6, the wall's colour 5.6).
+The plain pass alone (snow, water, sky) is 5.8 ms at 1440, which is
+the whole budget at 2560 at 2x.
+
+**Found, and worse than anything the gate measures: a first visit
+holds frames.** On ANGLE Metal a program is really built at its first
+draw (0.1 s for the plain pass, 0.25 to 0.5 s with one subject, 1.0 to
+1.6 s with four), and the driver keeps it between visits, so the
+harness never saw it. With P1's twenty programs to a theme, one first
+scroll held 20 frames for 18.5 s in all. P2 brought that to 8 holds
+and 7.9 s by day (9.7 s before dawn; the worst 2 to 3 s at 1.6
+screens) by drawing each program's first pixel while the page rests,
+never drawing a piece with an unbuilt program if a built one can,
+and building fewer and smaller programs. It is not solved: a reader
+who scrolls a first visit without pausing still meets each subject's
+program as it comes on. A first visit's theme switch waits 1.4 to
+2.4 s.
+
+Not done by P2, and left to this thread to decide: the name's
+material made cheaper (it judged that this changes the picture's main
+subject); the canyon's plan distance baked (estimated 3 to 4 of 16.3
+ms); leaner governor steps (all of them together bring the melt to
+about 12 ms a draw for a picture with much of the melt's story gone);
+the governor still moves between steps at 1728 before dawn; on a 120
+Hz screen it would sit at the leanest step.
+
+This machine drives a 4K screen at 1920 by 1080 at 2x, which is the
+1728 profile's size: what the tables call 1728 is what the owner sees
+here. So the third pass is owed, and it has to make the name itself
+cheaper. Order decided: **panel 10 first** (round 3 is a full round;
+the frame rate work does not change the picture, and if the critics
+want the name's material changed the bake should follow that, not
+precede it), then the third frame rate pass with the first visit's
+opening, then the rest.
