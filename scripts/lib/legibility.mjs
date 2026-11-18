@@ -47,8 +47,20 @@ function linesOverPicture() {
       if (op < 0.99) continue;
       const px = parseFloat(cs.fontSize);
       const bold = Number(cs.fontWeight) >= 700;
+      // A line that rises through a mask is read only where the mask shows it: until it has risen it is not being read.
+      const mask = el.closest('.fl-rise')?.getBoundingClientRect() ?? null;
+      // (The ending's headline is wiped in from its left: until then it is not there.)
+      const wiped = el.closest('.ending-line');
+      if (wiped && /inset\([^)]* (100|[5-9]\d(\.\d+)?)% /.test(getComputedStyle(wiped).clipPath)) continue;
       range.selectNodeContents(node);
-      for (const r of range.getClientRects()) {
+      for (const whole of range.getClientRects()) {
+        let r = whole;
+        if (mask) {
+          const top = Math.max(whole.top, mask.top);
+          const bottom = Math.min(whole.bottom, mask.bottom);
+          if (bottom - top < whole.height * 0.6) continue;
+          r = { left: whole.left, top, width: whole.width, height: bottom - top, bottom };
+        }
         if (r.width < 1 || r.height < 1 || r.bottom < 0 || r.top > innerHeight) continue;
         out.push({ x: r.left, y: r.top, w: r.width, h: r.height, text: node.nodeValue.trim().slice(0, 40), ink: lum(cs.color), large: px >= 24 || (bold && px >= 18.66) });
       }

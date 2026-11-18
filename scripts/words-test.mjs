@@ -16,6 +16,10 @@
  *   - a line runs out of the frame's sides,
  *   - the nav, where it is shown, is not at its one fixed place.
  *
+ * It then walks the page once more in steps of a tenth of a screen and fails
+ * when, anywhere between the first screen and the ending, more than 0.6
+ * screens of scroll go by with no word of the page's copy in the frame.
+ *
  * A line's rectangle is its glyph box trimmed to where ink can be: display
  * type set at a line height under 1 has glyph boxes taller than its lines.
  *
@@ -26,6 +30,7 @@
  *
  * Options: --widths 1440,768,390  --themes light,dark  --count 80 (positions)
  *          --from 12 --to 15 (screens)  --settle 900 (ms)  --out report.json
+ *          --bare 0.6 (the longest stretch allowed without a word, screens)
  */
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
@@ -75,25 +80,29 @@ function collect(minOpacity) {
         op *= Number(s.opacity);
       }
       if (op < minOpacity) continue;
-      // (The size the reader sees: the set size times any scale the flight has on it.)
+      // (The size the reader sees is the size it is set at: nothing in the flight is scaled.)
       const set = parseFloat(cs.fontSize);
-      const piece = el.closest('[data-w]');
-      const tf = piece ? getComputedStyle(piece).transform : 'none';
-      const scale = tf && tf !== 'none' ? new DOMMatrix(tf).a : 1;
-      const px = set * scale;
+      const px = set;
       // A live number is one figure: its digits are one line. So is a caption.
-      const unit = el.closest('.fl-call-label, [data-w="fig"], .fl-count, .nav-mark, .nav-links') ?? el;
+      const unit = el.closest('.fl-call-label, .fl-fig, .fl-count, .nav-mark, .nav-links') ?? el;
+      // A line that rises through a mask is only seen inside it: what the mask hides is not in the frame.
+      const mask = el.closest('.fl-rise')?.getBoundingClientRect() ?? null;
       const key = unit.dataset.wt ?? (unit.dataset.wt = String(++id));
       const cut = el.closest('.fl-call-label');
       if (cut && (cut.scrollWidth > cut.clientWidth + 1 || /…|\.\.\.$/.test(text))) faults.push({ kind: 'cut short', text });
       range.selectNodeContents(node);
-      for (const r of range.getClientRects()) {
+      for (const whole of range.getClientRects()) {
+        const r = mask ? { left: Math.max(whole.left, mask.left), right: Math.min(whole.right, mask.right), top: Math.max(whole.top, mask.top), bottom: Math.min(whole.bottom, mask.bottom) } : whole;
+        r.width ??= r.right - r.left;
+        r.height ??= r.bottom - r.top;
         if (r.width < 1 || r.height < 1 || r.bottom <= 0 || r.top >= innerHeight) continue;
+        // (A line that has only begun to rise shows a sliver of itself: not yet a line a reader can make out.)
+        if (mask && r.height < whole.height * 0.5) continue;
         if (px < 10.95) faults.push({ kind: `type ${px.toFixed(1)} px`, text });
         if (r.left < -0.5 || r.right > innerWidth + 0.5) faults.push({ kind: 'out of the frame', text });
         // Where ink can be: the glyph box without the room over the capitals and under the descenders.
-        const h = r.height;
-        lines.push({ key, text: text.slice(0, 36), x0: r.left, x1: r.right, y0: r.top + h * 0.16, y1: r.bottom - h * 0.1 });
+        const h = whole.height;
+        lines.push({ key, text: text.slice(0, 36), x0: r.left, x1: r.right, y0: Math.max(r.top, whole.top + h * 0.16), y1: Math.min(r.bottom, whole.bottom - h * 0.1) });
       }
     }
   }
@@ -109,6 +118,36 @@ function collect(minOpacity) {
   const nav = document.querySelector('.nav-links');
   const nr = nav?.getBoundingClientRect();
   return { lines: lines.length, hits, faults, navY: nr && nr.bottom > 0 ? +nr.top.toFixed(1) : null };
+}
+
+/** The longest stretch of scroll that may be without a word of copy, in screens, and the step it is looked for at. */
+const MAX_BARE = Number(arg('bare', '0.6'));
+const BARE_STEP = 0.1;
+
+/** Runs in the page: how many lines of the page's copy (not the nav's) a reader can make out now. */
+function copyLines() {
+  let n = 0;
+  for (const host of document.querySelectorAll('.fl-words[data-on], .fl-call[data-on]')) {
+    const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.nodeValue?.trim()) continue;
+      const el = node.parentElement;
+      if (el.closest('.sr-only, .metric-tip')) continue;
+      let op = 1;
+      let seen = true;
+      for (let e = el; e && e !== document.body; e = e.parentElement) {
+        const s = getComputedStyle(e);
+        if (s.visibility === 'hidden' || s.display === 'none') seen = false;
+        op *= Number(s.opacity);
+        // (A line that has not yet risen into its mask is not in the frame.)
+        if (e.classList.contains('fl-rise-in') && s.transform !== 'none' && new DOMMatrix(s.transform).f > e.offsetHeight * 0.5) seen = false;
+        if (e.classList.contains('ending-line') && /inset\(.* 100% /.test(s.clipPath)) seen = false;
+      }
+      const r = el.getBoundingClientRect();
+      if (seen && op >= 0.6 && r.bottom > 0 && r.top < innerHeight) n++;
+    }
+  }
+  return n;
 }
 
 const rows = [];
@@ -153,6 +192,22 @@ for (const width of widths) {
           }
         }
       }
+      // No stretch of the flight without a word: every tenth of a screen from the top to the foot.
+      let bareFrom = null;
+      row.bare = 0;
+      for (let at = 0; at * vh <= max + 1; at += BARE_STEP) {
+        await page.evaluate((yy) => window.scrollTo(0, yy), Math.round(Math.min(max, at * vh)));
+        await page.waitForTimeout(at * vh >= max - 2 ? 2600 : 520);
+        const n = await page.evaluate(copyLines);
+        if (n === 0 && bareFrom === null) bareFrom = at;
+        if (n > 0 && bareFrom !== null) {
+          const run = at - bareFrom;
+          row.bare = Math.max(row.bare, +run.toFixed(2));
+          if (run > MAX_BARE + 1e-6) row.fails.push({ scroll: +bareFrom.toFixed(1), when: 'rest', kind: 'no word of copy', text: `for ${run.toFixed(1)} screens (to ${at.toFixed(1)})` });
+          bareFrom = null;
+        }
+      }
+      if (bareFrom !== null) row.fails.push({ scroll: +bareFrom.toFixed(1), when: 'rest', kind: 'no word of copy', text: 'to the foot of the page' });
       const ys = [...new Set(row.navYs)];
       if (ys.length > 1) row.fails.push({ scroll: '-', when: 'rest', kind: 'nav moves', text: ys.join(', ') });
       if (row.navYs.length < row.steps) row.fails.push({ scroll: '-', when: 'rest', kind: 'nav away', text: `${row.steps - row.navYs.length} of ${row.steps} positions` });
@@ -168,7 +223,7 @@ for (const width of widths) {
     const bad = row.fails.length > 0 || error || row.lines === 0;
     if (bad) failed = true;
     rows.push({ ...row, error });
-    console.log(`${bad ? 'FAIL' : 'ok  '} ${String(width).padStart(4)} ${theme.padEnd(5)} positions ${row.steps} lines ${row.lines} without copy ${row.empty} nav y ${[...new Set(row.navYs)].join('/')} faults ${row.fails.length}${error ? ' error ' + error : ''}`);
+    console.log(`${bad ? 'FAIL' : 'ok  '} ${String(width).padStart(4)} ${theme.padEnd(5)} positions ${row.steps} lines ${row.lines} without copy ${row.empty} longest run without copy ${row.bare ?? '-'} screens nav y ${[...new Set(row.navYs)].join('/')} faults ${row.fails.length}${error ? ' error ' + error : ''}`);
     for (const f of row.fails.slice(0, 14)) console.log(`     at ${f.scroll} (${f.when}) ${f.kind}: ${f.text}`);
     if (row.fails.length > 14) console.log(`     and ${row.fails.length - 14} more`);
     await ctx.close();

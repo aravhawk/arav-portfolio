@@ -15,6 +15,13 @@
  * over one surface measures near 1; a title that crosses an edge measures 2
  * or more.
  *
+ * A station's frame is not held: the camera makes one slow move through the
+ * whole of the stretch in which the block stands composed (from the moment
+ * its title is in, `data-fl-in`, to the moment it leaves, `data-fl-out`).
+ * So each title is measured three times, near the start, at the middle and
+ * near the end of that stretch (0.1, 0.47 and 0.9 of it): the surface under
+ * it must hold through the move.
+ *
  * Playwright is not a dependency of this repo. Point NODE_PATH at an install
  * that has it:
  *
@@ -22,6 +29,7 @@
  *
  * Options: --widths 1440,390  --themes light,dark  --max 1.5 (the largest
  *          ratio allowed)  --settle 2600 (ms at each stop)  --out report.json
+ *          --points 0.1,0.47,0.9 (where in each composed stretch to measure)
  */
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
@@ -49,12 +57,15 @@ const out = arg('out', '');
 const HEIGHT = { 320: 640, 390: 844, 768: 1024, 1024: 768, 1440: 900, 1920: 1080, 2560: 1440 };
 const HIDE = '.fl-words,.fl-call,.nav,.skip,.fl-rail{visibility:hidden!important}nextjs-portal{display:none!important}';
 
-/** Runs in the page: every composed block's stop, in screens, in page order. */
-function stops() {
-  return Array.from(document.querySelectorAll('.fl-words[data-fl-in]')).map((el) => {
+/** Where in its composed stretch each block is measured: near its start, at its middle, near its end. */
+const POINTS = String(arg('points', '0.1,0.47,0.9')).split(',').map(Number);
+
+/** Runs in the page: every composed block's stops, in screens, in page order. */
+function stops(points) {
+  return Array.from(document.querySelectorAll('.fl-words[data-fl-in]')).flatMap((el) => {
     const a = Number(el.dataset.flIn);
     const b = Number(el.dataset.flOut);
-    return { stop: a + (b - a) * 0.47 };
+    return points.map((p) => ({ stop: a + (b - a) * p, at: p }));
   });
 }
 
@@ -143,8 +154,8 @@ for (const width of widths) {
     await setTheme(page, theme);
     // (Full shading, as on an idle machine.)
     await page.evaluate(() => window.__flight?.engine?.holdLean?.(0));
-    const list = await page.evaluate(stops);
-    for (const { stop } of list) {
+    const list = await page.evaluate(stops, POINTS);
+    for (const { stop, at } of list) {
       await page.evaluate((s) => window.scrollTo(0, s * innerHeight), stop);
       await page.waitForTimeout(settle);
       const boxes = await page.evaluate(titles);
@@ -158,8 +169,8 @@ for (const width of widths) {
         const sp = +((res[i].hi + 0.05) / (res[i].lo + 0.05)).toFixed(2);
         const bad = sp > MAX;
         if (bad) fails++;
-        report.push({ width, theme, stop: +stop.toFixed(2), text: b.text, spread: sp, lo: +res[i].lo.toFixed(3), hi: +res[i].hi.toFixed(3), ok: !bad });
-        console.log(`${bad ? 'FAIL' : 'ok  '} ${String(width).padStart(4)} ${theme.padEnd(5)} at ${stop.toFixed(2).padStart(5)}  spread ${sp.toFixed(2)}  (${res[i].lo.toFixed(2)} to ${res[i].hi.toFixed(2)})  "${b.text}"`);
+        report.push({ width, theme, stop: +stop.toFixed(2), at, text: b.text, spread: sp, lo: +res[i].lo.toFixed(3), hi: +res[i].hi.toFixed(3), ok: !bad });
+        console.log(`${bad ? 'FAIL' : 'ok  '} ${String(width).padStart(4)} ${theme.padEnd(5)} at ${stop.toFixed(2).padStart(5)} (${at} of its stretch)  spread ${sp.toFixed(2)}  (${res[i].lo.toFixed(2)} to ${res[i].hi.toFixed(2)})  "${b.text}"`);
       });
     }
     await ctx.close();
