@@ -2195,11 +2195,14 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     let idle = false;
     {
       const t = mqStill.matches ? ENTER.over : (enterHeld ?? (enterT0 < 0 ? 0 : Math.max(0, (now - enterT0) / 1000)));
-      const live = heldPose || mqStill.matches ? 0 : 1 - smooth(0.02, 0.45, s);
+      const live = heldPose ? 0 : 1 - smooth(0.02, 0.45, s);
       const en = enterAt(t);
+      // (When nothing may move, the first screen stands where its still was taken and only the light is the day's own:
+      // the picture comes up over the still with nothing in it changing place.)
+      if (mqStill.matches) en.eye = 0;
       const rest = Math.max(0, t - ENTER.over);
       const br = breathAt(rest);
-      const brK = smooth(0, 4, rest) * live;
+      const brK = mqStill.matches ? 0 : smooth(0, 4, rest) * live;
       engine.first = 1 - (1 - en.light) * live;
       engine.breath = br.light * brK;
       if (live > 0) {
@@ -2209,7 +2212,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
           const mix = (a: V3, b: V3): V3 => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
           pose = { pos: mix(pose.pos, from.pos), aim: mix(pose.aim, from.aim), fov: pose.fov + (from.fov - pose.fov) * k };
         }
-        if (brK > 0) pose = moved({ at: pose, pivot: [NAME.x, NAME.y, 0], push: 0.012 * br.near * brK, arc: 0.5 * br.sway * brK, rise: 0 }, 1);
+        if (brK > 0) pose = moved({ at: pose, pivot: [NAME.x, NAME.y, 0], push: 0.02 * br.near * brK, arc: 0.9 * br.sway * brK, rise: 0 }, 1);
         idle = t >= ENTER.over;
       }
       if (!heroIn && (t >= ENTER.words || html.dataset.heroWords !== undefined)) {
