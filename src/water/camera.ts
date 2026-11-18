@@ -248,13 +248,14 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ, band = false): Ke
         // The confluence, from over the west bank of the river that comes to it: the streams above, the river across the
         // middle, and the bank at the foot wide enough for the count and, beside it, the seven names.
         // (A squarer upright screen has less height for the bank: it looks down a little more, so the words keep clear of the river.)
-        ...holdKeys(band ? move({ pos: [1700, 5760 + Y, 590], aim: [1730, 7090 + Y - squat, 0], fov: 60 }, 0.5, 0.6, 0.15, 2, 3) : move({ pos: [1000, 5500 + Y, 700], aim: [1750, 7060 + Y - squat, 0], fov: 58 }, 0.5, 0.5, 0.135, 2, 3), s2 + 1.25),
+        ...holdKeys(band ? move({ pos: [1700, 5760 + Y, 590], aim: [1730, 7090 + Y - squat, 0], fov: 60 }, 0.5, 0.6, 0.15, 2, 3) : move({ pos: [1000, 5500 + Y, 700], aim: [1750, 6930 + Y - squat, 0], fov: 58 }, 0.5, 0.53, 0.15, 2, 2), s2 + 1.25),
         { s: s3 + 0.25, pos: [900, 7700 + Y, 380], aim: [1100, 8500 + Y, 0], fov: 58 },
         // The rock pool, looked down into from over its near bank: the plates across the frame, the bank at the foot.
         ...holdKeys(move(benchPose(aspect), 0.5, 0.62, 0.13, 0, -2, -36), s3 + 1.15),
         { s: s4 + 0.3, pos: [1200, 9650 + Y, 360], aim: [1300, 10500 + Y, 0], fov: 58 },
-        // The tarn, from low over its water: both shards stand against the sky above the middle, the words below on still water.
-        ...holdKeys(about({ pos: [1560, 9750 + Y, 70], aim: [1580, 10900 + Y, -25], fov: 58 }, [SHARDS[0].x, SHARDS[0].y, 0], 0.135, -4, 0), s4 + 1.2),
+        // The tarn, from low over its near shore: both shards stand against the sky above the middle, the words below on the bank.
+        // (The eye closes on the point of the shore nearest the name, which keeps its place: the water never comes under the words.)
+        ...holdKeys(move({ pos: [1560, 9750 + Y, 70], aim: [1580, 10900 + Y, -25], fov: 58 }, 0.56, 0.65, 0.3, -4.5, 0), s4 + 1.2),
         { s: s5 + 0.3, pos: [1300, T2 - 250, 400], aim: [1300, T2 + 600, 0], fov: 56 },
         ...laterKeys(aspect, band, s5, s6, s7, s8),
         ...seaKeys(aspect, sunAz, s9, s10, g),
@@ -286,9 +287,9 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ, band = false): Ke
         // The rock pool from low over its near bank: the plates right of the words, the far shore, the tarn and the ranges above.
         ...holdKeys(move(benchPose(aspect), 0.44, 0.8, 0.128, 3, 0), s3 + 1.15),
         { s: s4 + 0.3, pos: [1150, 9700 + Y, 300], aim: [1300, 10500 + Y, 0], fov: 46 },
-        // The tarn, from low over the water of its near bay (see tarnPose): the eye goes round the two shards, so one passes in front of the other.
-        // (It closes on the far shard across the water, which keeps its place; the near one grows past it to the right, away from the words.)
-        ...holdKeys(band ? move(tarnBand(aspect), 0.3, 0.8, 0.1, 2, 0) : about(tarnPose(aspect), [SHARDS[1].x, SHARDS[1].y, 0], 0.11, -3, 0), s4 + 1.2),
+        // The tarn, from low on its south-west bank (see tarnPose).
+        // (The eye goes round the edge of the bank the words stand on, which keeps its place: the two shards and the ranges slide across the water, away from the words.)
+        ...holdKeys(band ? move(tarnBand(aspect), 0.3, 0.8, 0.1, 2, 0) : move(tarnPose(), 0.42, 0.55, 0.1, 9, 0), s4 + 1.2),
         { s: s5 + 0.3, pos: [1300, T2 - 300, 300], aim: [1300, T2 + 600, 0], fov: 44 },
         ...laterKeys(aspect, band, s5, s6, s7, s8),
         ...seaKeys(aspect, sunAz, s9, s10, g),
@@ -428,29 +429,18 @@ function tarnBand(aspect: number): Pose {
 }
 
 /**
- * Station 4's wide frame on the home page, composed from the picture
- * backwards. The words stand at lower left, as at every station, so the
- * lower left must be one calm surface: here it is the tarn's still water.
- * The eye is a man's height over the near bay, as it always was (from that
- * low the water is a mirror, and holds the pale sky near the horizon, light
- * enough for dark words), but looks a little down: the horizon lies just
- * over four tenths of the way down the frame, the ranges' image is a narrow
- * band under it, and everything below that is sky in still water. The two
- * shards stand whole to the right of the words, against the ranges and the
- * sky, each over its own image.
+ * Station 4's wide frame on the home page. The words stand at lower left,
+ * as at every station, so the lower left must be one calm surface: here it
+ * is the snow of the tarn's south-west bank. The eye stands on that bank, a
+ * man's height over it, and looks north-east across the water: from that
+ * low the bank fills the frame's lower left as far up as the words reach,
+ * and over it the tarn is a mirror that holds the ranges, the sky and the
+ * two shards, each whole over its own image.
  */
-function tarnPose(aspect: number): Pose {
-  const fov = 44;
-  const th = Math.tan(rad(fov / 2));
-  const pos: V3 = [TARN_BAY.x - 100, TARN_BAY.y - 140, 40];
-  const near = SHARDS[0];
-  const to = Math.atan2(near.x - TARN_BAY.x + 100, near.y - TARN_BAY.y + 140);
-  // (The nearer shard's middle stands this share of the frame's width right of the frame's middle: it has room to grow.)
-  const head = Math.min(rad(26), Math.max(rad(10), to - Math.atan(0.2 * 2 * th * aspect)));
-  // (Looking down by this much puts the horizon a little over four tenths of the way down.)
-  const down = 0.16 * th;
-  const far = 1000;
-  return { pos, aim: [pos[0] + Math.sin(head) * far, pos[1] + Math.cos(head) * far, pos[2] - down * far], fov };
+function tarnPose(): Pose {
+  const pos: V3 = [TARN_BAY.x - 400, TARN_BAY.y - 220, 50];
+  // (It looks down a little: the bank's far edge stands well over the name, with room to spare through the whole move.)
+  return { pos, aim: [pos[0] + 700, pos[1] + 720, pos[2] - 128], fov: 44 };
 }
 
 /** The last four stations' keys: the columns, the dam, the lattice, the canyon. */
@@ -462,7 +452,7 @@ function laterKeys(aspect: number, band: boolean, s5: number, s6: number, s7: nu
   return upright
     ? [
         // Down the row from its tall end, so all four stand in an upright frame.
-        ...holdKeys(move({ pos: [420, T + 380, 470], aim: [1235, T + 1110, 60], fov: 58 }, 0.5, 0.52, 0.125, -4, 0), s5 + 1.2),
+        ...holdKeys(move({ pos: [420, T + 380, 470], aim: [1235, T + 1110, 60], fov: 58 }, 0.46, 0.72, 0.18, -3, 0), s5 + 1.2),
         // Past the dam's east end, turning to look back at it.
         { s: s6 - 0.1, pos: [1560, T + 1750, 420], aim: [1300, T + 2550, 20], fov: 58 },
         // (Wide of its east end and well over it, already looking back: the wall is never an edge sliding past the lens.)
