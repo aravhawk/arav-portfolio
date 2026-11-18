@@ -158,7 +158,7 @@ export const PROJECTS: Project[] = [
     n: '03',
     name: 'Kilo Bench',
     kicker: 'DeveloperWeek 2026',
-    line: 'Model benchmarking in Kilo Code. Won “Kilo - For Devs, By Devs”.',
+    line: 'Model benchmarking in Kilo Code. A DeveloperWeek 2026 Hackathon prize winner.',
     summary:
       'Kilo Bench is a benchmarking feature built into Kilo Code. It reads your workspace, writes coding challenges that fit your actual codebase, runs the models you pick through them, and tells you which one works best for your code. It won the prize category “Kilo - For Devs, By Devs” at the DeveloperWeek 2026 Hackathon.',
     how: [
@@ -494,14 +494,6 @@ const gh = (repo: string) => `https://github.com/aravhawk/${repo}`;
 
 /** Everything else, one line each. */
 export const ARCHIVE: ArchiveEntry[] = [
-  {
-    name: 'merlin-control',
-    line: 'A wireframe rocket engine you steer with bare hands through the webcam.',
-    href: gh('merlin-control'),
-    group: 'Small',
-    year: '2026',
-    also: [{ label: 'Live', href: 'https://merlin.aravhawk.com' }],
-  },
   { name: 'lite-stats', line: 'A lighter Apple Silicon menu bar monitor, forked from exelban/stats.', href: gh('lite-stats'), group: 'Tools', year: '2026', also: [{ label: 'Upstream', href: 'https://github.com/exelban/stats' }] },
   { name: 'envfetch', line: 'An environment variable vault unlocked with Touch ID.', href: gh('envfetch'), group: 'Tools', year: '2026' },
   { name: 'claude-code-utils', line: 'The Claude Code plugins and config I use daily.', href: gh('claude-code-utils'), group: 'Tools', year: '2026' },

@@ -27,7 +27,6 @@ const ORDER = [
   'Master Coders',
   'typing-game',
   'teamastros',
-  'merlin-control',
   'who-wants-to-be-a-billionaire',
   'escaperoom',
   'workjet',
