@@ -1254,3 +1254,40 @@ eyebrow leading, the tagline carries to the statement, the first paint
 is a still of the scene's own first frame with a designed entrance,
 one anchor, the type scale's middle step, callouts in people's words,
 named controls).
+
+### R4a (motion and words), integrated Nov 18, 5:15 PM CT
+
+Twelve signed commits ending at `62317fd`, merged without conflict;
+lint, typecheck, 315 tests, build and the site checks pass (200
+visible words). I looked at a full motion run of the merged build (a
+frame every 450 px): no two consecutive frames are the same picture.
+
+What changed: each station is one authored camera move about the
+point where the words' ground meets the subject (a push, an arc or a
+rise: 17 to 20 percent of growth across a hold, tested on four screen
+shapes); the tag state is gone, and a block builds in steps at full
+size with its eyebrow leading; the first screen's line stays through
+the melt and hands over to the statement, which sets line by line;
+every station and the delta is anchored lower left on one scale
+(eyebrow 13 px, the line under a title 20 to 22); the first paint is
+a still of the scene's own first frame (one per band of window shape
+and theme) with a 420 ms dissolve and an entrance in which the eye
+comes forward and the light arrives; Upstream's callouts are the
+projects' own names; the sound and haptics controls are icons that
+say what they are; the rail has a lane.
+
+Its own shortfalls, kept: the eye slows to 2 to 14 percent of its
+travelling speed at a station, not a quarter (the growth cap was
+held instead); upright RydAR's title is still not on one calm surface
+(the station is rebuilt later this round); the stills are 92 files
+and 7.7 MB in the repository (a visit fetches one); the share cards
+were not retaken; WebKit, Firefox, 320 and 2560 not run.
+
+After it, this thread: with scripts off every page was a loading
+skeleton (a route-level loading boundary kept the HTML hidden until a
+script swapped it in). The boundary is removed (`0794e5e`); every
+page's HTML now arrives whole.
+
+Running, alone: **R4b**, the name and the melt (capitals as plates of
+clear lake ice lit from behind; the letters stay whole and founder as
+the sheet breaks, then ride on as bergs; no outline or glow anywhere).
