@@ -58,8 +58,20 @@ export function freeboardAt(y: number) {
  * @param features the subjects to keep: bits of F
  * @param defines any further names to define (DAY or NIGHT: the theme, known when it is compiled; and the checks' own)
  */
-export const flightSource = (features: number, defines: string[] = []) =>
-  FLIGHT_SRC.replace('//#DEFS', [...F_DEFINES.filter((_, i) => features & (1 << i)), ...defines].map((n) => `#define ${n}`).join('\n'));
+export const flightSource = (features: number, defines: string[] = []) => {
+  let src = FLIGHT_SRC.replace('//#DEFS', [...F_DEFINES.filter((_, i) => features & (1 << i)), ...defines.filter((d) => !d.includes('='))].map((n) => `#define ${n}`).join('\n'));
+  // (The checks' own experiment, DBG_LIVE=n: n values worked out at the top of main and kept to its end, to weigh what a
+  // value that must be held across the whole pass costs.)
+  const live = defines.find((d) => d.startsWith('DBG_LIVE='));
+  if (live) {
+    const n = Number(live.split('=')[1]);
+    const mk = (i: number) => `vec4(sin(vUv.x * ${i + 1}.0), cos(vUv.y * ${i + 2}.0), sin(vUv.x * ${i + 3}.0 + vUv.y), cos(vUv.x - vUv.y * ${i + 1}.0))`;
+    src = src
+      .replace('//#DBG_A', Array.from({ length: n }, (_, i) => `  vec4 dl${i} = ${mk(i)};`).join('\n'))
+      .replace('//#DBG_B', `  col += (${Array.from({ length: n }, (_, i) => `dl${i}`).join(' + ')}).rgb * 1e-6;`);
+  }
+  return src;
+};
 
 const FLIGHT_SRC = `#version 300 es
 //#DEFS
@@ -1551,7 +1563,9 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
       vec3 rl = vec3(normalize(rf.xy + 1e-6) * cos(elF), sin(elF));
       far = withRidges(skyColor(rl, 0.0), rl, 0.6) * vec3(0.84, 0.92, 1.0);
     }
-    mir = mix(mix(skyAll(rn, 0.0), far, farDay), mir, gL2);
+    // (Where the leaned mirror is all of it, the plain one is not worked out.)
+    vec3 plain = farDay < 1.0 ? skyAll(rn, 0.0) : vec3(0.0);
+    mir = mix(mix(plain, far, farDay), mir, gL2);
   }
   float mirK = fres * gloss * (0.55 + 0.4 * wet) * (1.0 - 0.5 * farK * (1.0 - uNight)) * (1.0 - 0.74 * uNight);
   mirK = mix(mirK, min(fres * 1.25, 0.94) * gloss * (0.75 + 0.25 * wet), farDay);
@@ -2595,9 +2609,13 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   gWash = gL1;
   gSkyQ = 0.0;
   gSunK = 1.0 - sheetK * (1.0 - uNight);
+#ifdef DBG_NO_REFL
+  vec3 refl = S.mid;
+#else
   vec3 refl = skyColor(rf, uQuality > 1.5 ? (1.0 - uNight) * (1.0 - gL1) * (1.0 - pondK) : 0.0);
   // (A pond mirrors the sky alone: the ranges, small and upside down in a letter, would only be a dark torn band.)
   if (pondK < 1.0) refl = mix(withRidges(refl, rf, uQuality > 1.5 ? 1.5 * gL1 : 1.5), refl, pondK);
+#endif
   gWash = 0.0;
   gSkyQ = 1.0;
   gSunK = 1.0;
@@ -3589,6 +3607,19 @@ void main() {
   gL2 = clamp(uLean - 1.0, 0.0, 1.0);
   vec2 ndc = vUv * 2.0 - 1.0;
   vec3 dir = normalize(uCamF + uCamR * (ndc.x * uLens.y * uLens.x) + uCamU * (ndc.y * uLens.x));
+//#DBG_A
+#ifdef DBG_EMPTY
+  o = vec4(vUv, 0.5, 1.0);
+  return;
+#endif
+#ifdef DBG_BED
+  {
+    float tb_ = uCamPos.z / max(-dir.z, 1e-4);
+    vec4 bb_ = bedAt(uCamPos.xy + dir.xy * tb_);
+    o = vec4(bb_.rgb * 0.01, 1.0);
+    return;
+  }
+#endif
   vec3 col;
   // What the name's blocks need to know of the ground at this pixel: how far off its plane is, how much of the pixel is
   // the sheet's top (or land), and how far off the sheet's cut face is, where one is seen.
@@ -3669,7 +3700,11 @@ void main() {
   } else if (dir.z > -0.0006) {
     // ---- above the horizon
     gDirect = true;
+#ifdef DBG_NO_SKY
+    col = vec3(0.5);
+#else
     col = skyAll(dir, 1.0);
+#endif
   } else {
     // (At the confluence the snowfield stands above the land: there the ground under the ray is higher.)
 #ifdef F_CONF
@@ -3782,7 +3817,11 @@ void main() {
 #endif
     float aLand = smoothstep(-aa, aa, sd0);
     col = vec3(0.0);
+#ifdef DBG_NO_LAND
+    if (aLand > 0.0) col = vec3(0.8) * aLand;
+#else
     if (aLand > 0.0) col = (landColor(p, sd0, b0.ba, foot, dir, slabShade) + slabLight * mix(0.5, 1.1, gRock)) * aLand;
+#endif
 #if defined(F_CONF)
     // (The snowfield climbs away from the low sun: its slopes stand in the sky's blue shade, their crests in the light.)
     if (gFieldG != 0.0) col *= mix(vec3(1.0), mix(vec3(0.74, 0.83, 0.96), vec3(1.06, 1.04, 1.0), smoothstep(0.1, -0.05, gFieldG)), (1.0 - uNight) * smoothstep(0.0, 0.03, abs(gFieldG)));
@@ -3860,6 +3899,8 @@ void main() {
         // (By day the shallows along the coast stand in the same clear air as the deep beside them.)
         gSea = max(gSea, smoothstep(${(DELTA.sea - 300).toFixed(1)}, ${(DELTA.sea + 300).toFixed(1)}, pw.y) * (1.0 - gDusk) * (1.0 - uNight) * (1.0 - aWall) * (1.0 - aLand));
         cut += wc * (1.0 - aWall);
+#elif defined(DBG_NO_WATER)
+        cut += vec3(0.05, 0.2, 0.3) * (1.0 - aWall);
 #else
         cut += (waterColor(pw, bw, dir, foot, footL, iceShade, slabOn) + slabLight * 0.26) * (1.0 - aWall);
 #endif
@@ -3868,9 +3909,23 @@ void main() {
     }
 #if defined(F_ICE)
     if (aCut > 0.0) col = mix(col, iceCut(p, cutS, length(tilt) * uIceH * (1.0 - gPond) / max(foot / sinE, 1e-3)), aCut);
+    // (Where the name's swept field lies over all of this pixel the sheet's own top is not seen: it is not worked out.)
+#ifdef DBG_NO_NAME
+    const float nmK = 0.0;
+#else
+    float nmK = nameCover(p, dir, foot);
+#endif
+#ifdef DBG_NO_ICETOP
+    if (aIce > 0.0) col = mix(col, vec3(0.7), aIce);
+#elif defined(DBG_ALL_ICETOP)
     if (aIce > 0.0) col = mix(col, iceTop(p, il, cr, f0, sd0, dir, foot), aIce);
+#else
+    if (aIce > 0.0 && !(aIce >= 1.0 && nmK >= 1.0)) col = mix(col, iceTop(p, il, cr, f0, sd0, dir, foot), aIce);
+#endif
     // The name's blocks stand on the sheet: their shade, their image and the meltwater at their feet lie on it.
+#ifndef DBG_NO_NAME
     col = nameGround(col, p, dir, foot, aIce);
+#endif
 #endif
     gndT = t;
     gndIce = max(aIce, aLand);
@@ -3930,7 +3985,7 @@ void main() {
     }
   }
 #endif
-#ifdef F_ICE
+#if defined(F_ICE) && !defined(DBG_NO_NAME)
   col = nameIce(col, dir, gndT, gndIce, gndWall);
 #endif
 #ifdef F_SHARDS
@@ -4047,6 +4102,7 @@ void main() {
   if (uRay.z > 0.0 && dir.z > -0.0006 && vUv.x > uRib.z && vUv.x < uRib.w) col += ribbonSky(dir);
 #endif
 
+//#DBG_B
   // ---- the finish, in this same pass: the glow of the last frame's
   // highlights, a gentle vignette, the filmic curve, and a fine grain that
   // moves (it is also the dither).

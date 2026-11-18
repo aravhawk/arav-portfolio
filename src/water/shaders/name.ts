@@ -32,6 +32,22 @@
  * keyDir, simUv, stars, sunBloom, RW declared before it.
  */
 export const NAME_ICE = `
+// (The checks' own switches: each takes one part of the name's work out, to weigh it. The engine never sets them.)
+#ifdef DBG_NO_NFLOOR
+#define DBG_FLOOR false &&
+#else
+#define DBG_FLOOR
+#endif
+#ifdef DBG_NO_NMIR
+#define DBG_MIR false &&
+#else
+#define DBG_MIR
+#endif
+#ifdef DBG_NO_NSNAKE
+#define DBG_SNAKE false &&
+#else
+#define DBG_SNAKE
+#endif
 uniform vec4 uNameP;       // x: how far from the blocks' feet meltwater lies on the sheet px, y: 0..1 how wet the blocks are, z: 0..1 the sheet has opened under them, w: 0..1 the pool has opened behind them
 uniform vec4 uNameQ;       // the blocks' slump. x: how far their tops have melted down, in the raster's px, y: 0..1 how rounded and wet they have become, z: 0..1 how much of what stands under the water has gone, w: how far the water they stand in has spread from their feet px
 
@@ -477,8 +493,13 @@ vec3 nameUnder(vec3 col, vec3 dir, float onWater) {
 vec3 nameIce(vec3 col, vec3 dir, float tG, float onIce, float tWall) {
   if (uNameG.w < 0.5) return col;
   nameFrame();
+#ifndef DBG_NO_NFIELD
   if (tG < 1e8 && dir.z < -0.0006) col = nameField(col, uCamPos.xy + dir.xy * tG, dir, tG * uPxAng, onIce, tWall < 1e8 ? 0.0 : 1.0 - onIce);
+#endif
   if (uNameM.w <= 0.0) return col;
+#ifdef DBG_NO_NHIT
+  return col;
+#endif
   // What stands under the water, seen through it: before the blocks themselves, which stand in front of it.
   if (tG < 1e8 && dir.z < -0.0006 && onIce < 1.0 && tWall >= 1e8 && uNameM.z > 0.0) col = nameUnder(col, dir, 1.0 - onIce);
   for (int k = 0; k < 2; k++) {
@@ -603,9 +624,23 @@ vec3 nameCalves(vec3 col, vec2 pw, vec3 dir, float foot, float onWater) {
  * water once it has opened, the meltwater at their feet, and the snow
  * blowing over it.
  */
-vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWater) {
+// What the swept field is at this pixel's place on the lake, worked out once (nameCover) before the sheet's own top is
+// drawn: how far out in the field the place is, how much of the pixel the bare ice covers, and the snow's level there.
+float gNfD = 9.0;
+float gNfK = 0.0;
+float gNfLvlS = 0.0;
+/**
+ * How much of a place on the sheet the swept field's bare ice covers, 0..1. Where it covers all of it the sheet's own
+ * top is not seen at all, so the ground need not work it out. p, foot: the place and a pixel's size there.
+ */
+float nameCover(vec2 p, vec3 dir, float foot) {
+  gNfD = 9.0;
+  gNfK = 0.0;
+  if (uNameG.w < 0.5) return 0.0;
+  nameFrame();
   float d = nameSwept(p);
-  if (d > 1.32 || onIce + onWater <= 0.0) return col;
+  gNfD = d;
+  if (d > 1.32) return 0.0;
   vec2 il = p - uIce.xy;
   vec2 wl = RW * il;
   // The snow's own lie (the sheet's drifts are drawn from the same field): swept, there is less of it, and at the
@@ -638,6 +673,21 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   K *= max(clearW, smoothstep(-1.035, -1.005, nameSeat(p).y) * smoothstep(0.004, 0.012, hv.y - uNameW.z) * (1.0 - uNight));
   // (Before dawn, once the letters have gone and the sheet is plates, the plates here are rimed like the rest: pale tops on dark water.)
   K *= 1.0 - uNight * smoothstep(0.5, 0.64, uIceA.z);
+  gNfK = K;
+  gNfLvlS = lvlS;
+  return K;
+}
+
+vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWater) {
+  float d = gNfD;
+  if (d > 1.32 || onIce + onWater <= 0.0) return col;
+  float K = gNfK;
+  // (Nothing of the field is at this pixel: no bare ice, and no water for the blocks' image to lie in.)
+  if (K * onIce <= 0.0 && onWater <= 0.0) return col;
+  float lvlS = gNfLvlS;
+  vec2 il = p - uIce.xy;
+  vec2 wl = RW * il;
+  float footL = foot / max(-dir.z, 0.05);
   float fd = nameFoot(p);
   // The meltwater on the sheet at the blocks' feet: its edge wanders.
   float wob = (textureLod(uGrain, p / 310.0, 0.0).g - 0.5) * 22.0 + (textureLod(uGrain, p / 71.0 + 0.3, 0.0).b - 0.5) * 7.0;
@@ -653,7 +703,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
     slope += ((textureLod(uGrain, p / 96.0 + vec2(0.011, 0.007) * uTime, 0.0).gb - 0.5) * 0.05 + (textureLod(uGrain, p / 41.0 - vec2(0.017, 0.009) * uTime + 0.4, 0.0).gb - 0.5) * 0.03) * max(pond, onWater);
   }
   vec2 tilt = vec2(0.0);
-  if (K * onIce > 0.0) {
+  if (DBG_FLOOR K * onIce > 0.0) {
     vec3 fl = nameFloor(p, il, dir, foot, gNmShade, pond, slope, tilt);
     // (A dusting lies on the ice ahead of each drift.)
     float dust = smoothstep(0.12, 0.5, lvlS) * 0.18 * (1.0 - uNight);
@@ -665,7 +715,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   // The blocks' image: in the black ice, softened with distance and broken where the plates tilt; clearer in
   // meltwater; and in open water, shaken by its waves.
   float mirK = max(K * onIce, onWater) * uNameM.w;
-  if (mirK > 0.0) {
+  if (DBG_MIR mirK > 0.0) {
     float mir = 0.0;
     vec3 mc = vec3(0.0);
     vec2 g;
@@ -697,7 +747,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   // The pieces that have come away from the letters, afloat.
   if (onWater > 0.0) col = nameCalves(col, pw, dir, foot, onWater * (1.0 - onIce));
   // Snow snakes: thin streamers the wind drives across the bare ice.
-  if (K * onIce > 0.0) {
+  if (DBG_SNAKE K * onIce > 0.0) {
     vec2 ws = wl - vec2(uTime * 85.0, 0.0);
     float wander = textureLod(uSnow, wl / vec2(2600.0, 1900.0) + 0.43, 0.0).g;
     float gust = smoothstep(-0.1, 0.35, textureLod(uSnow, (wl - vec2(uTime * 40.0, 0.0)) / vec2(5200.0, 2300.0) + 0.61, 0.0).b);
