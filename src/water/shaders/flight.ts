@@ -2692,8 +2692,9 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       face = mix(face, mix(0.2, 0.34, uNight), smoothstep(2.0, 9.0, footL));
       float spark = smoothstep(0.7, 0.92, n2(pw / 9.0 + vec2(uTime * 1.1, -uTime * 0.8))) * (1.0 - smoothstep(1.2, 4.0, footL));
       // (By day a glint is the sun itself, white with a little of its gold: a dim tan fleck reads as silt on the water.)
-      vec3 gold = mix(S.band, vec3(2.6, 2.3, 1.8), 0.85 * (1.0 - uNight));
-      col += gold * pathS * (mix(0.05, 0.16, uNight) + mix(16.0, 5.5, uNight) * face * face * face + mix(8.0, 4.0, uNight) * spark * face) * (0.35 + 0.65 * fres) * uSea.x * (1.0 - longShade) * mix(1.0, 0.45, uNight);
+      vec3 gold = mix(S.band, vec3(2.6, 2.3, 1.8), mix(0.85, 0.3, uNight));
+      // (Before dawn the broad faces are faint and it is the fine sparkle that carries the first light: big pale flakes on dark water are confetti.)
+      col += gold * pathS * (mix(0.05, 0.1, uNight) + mix(16.0, 0.2, uNight) * face * face * face + mix(8.0, 3.0, uNight) * spark * face * face) * (0.35 + 0.65 * fres) * uSea.x * (1.0 - longShade) * mix(1.0, 0.45, uNight);
     }
   }
 #endif
@@ -3127,8 +3128,10 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   // (Still water gives the ranges back as sharp as they stand, and the sun as a soft light under them: its path is the glitter's to draw.)
   // (By day a moving sea does not hold the sun's glow as a smooth patch either: every facet throws it or does
   // not, and that is the glitter's to draw. The mirror keeps a little of the glow and none of the disc.)
-  gSunK = mix(mix(0.22, 1.0, uNight), 0.4, still);
-  gDiscK = (1.0 - still) * uNight;
+  // (Before dawn it does, until the first light is on its way: then that light too is carried by glitter.)
+  float blobN = uNight * (1.0 - smoothstep(0.0, 0.22, gDusk));
+  gSunK = mix(mix(0.22, 1.0, blobN), 0.4, still);
+  gDiscK = (1.0 - still) * blobN;
   vec3 refl = withRidges(skyColor(r, 0.0), r, 1.0 - still);
   gSunK = 1.0;
   gDiscK = 1.0;
@@ -3161,11 +3164,11 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     float s90 = pow(sd, 90.0);
     float s900 = pow(sd, 900.0);
     // (By day almost none of it is a smooth lobe: a lobe on calm far water is a column of light standing on the sea.)
-    col += vec3(1.0, 0.86, 0.62) * (s900 * 14.0 + s90 * mix(0.42, 0.55, uNight)) * mix(0.8, 1.0, uNight) * (1.0 - lee) * up * mix(0.6, 1.0, gDusk) * (1.0 - still) * mix(0.1, 1.0, uNight);
+    col += vec3(1.0, 0.86, 0.62) * (s900 * 14.0 + s90 * mix(0.42, 0.55, uNight)) * mix(0.8, 1.0, uNight) * (1.0 - lee) * up * mix(0.6, 1.0, gDusk) * (1.0 - still) * mix(0.1, 1.0, blobN);
     // By day the broad lobe is held back and the light is carried by a path
     // of separate glints: wide and sparse near the eye, narrowing to a thread
     // at the horizon.
-    float day = (1.0 - uNight) * up * (1.0 - still);
+    float day = (1.0 - blobN) * up * (1.0 - still);
     if (day > 0.0) {
       // (A thread under the sun at the far shore, opening toward the eye: never a band of one width.)
       float wide = mix(0.009, mix(0.085, 0.11, gDusk), nearK * nearK) * mix(1.12, 1.0, gDusk);
@@ -3181,6 +3184,8 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
         // or two of the screen, coming and going, with dark water between them. (Level dashes laid out by
         // bearing and by how far under the horizon the eye looks, as on the still sea.)
         float farG = smoothstep(0.35, 1.1, px * 15.0);
+        // (Before dawn the near ones are few and small: broad flashing faces belong to a sun that is up.)
+        glint *= mix(1.0, 0.14 * smoothstep(0.55, 0.9, glint), uNight);
         if (farG > 0.0) {
           float r0 = max(0.0006, 0.85 * uPxAng);
           vec2 spA = vec2(sin(da), em);
