@@ -382,16 +382,30 @@ vec3 starSky(vec3 d) {
 
 vec3 skyColor(vec3 d, float clouds) {
   float h = max(d.z, 0.0);
+  // Where a station's words stand in the night sky, the sky is composed for them: the band they stand in holds
+  // the one tone of its own upper edge, so the horizon's glow keeps lower, under the words, and the curtains
+  // hang to either side and above. It is the sky's own fall of light, held level there and eased back to itself
+  // over a wide margin: there is no shape to see.
+  float calmS = 0.0;
+  if (gDirect && uNight > 0.0 && uCalmK.x > 0.0 && uCalmK.y < 0.5) {
+    vec2 cs = max(abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5, 0.0);
+    calmS = (1.0 - smoothstep(0.0, 0.36, cs.x * uLens.y)) * (1.0 - smoothstep(0.0, 0.2, cs.y)) * uCalmK.x * uNight;
+    if (calmS > 0.0) {
+      vec3 dt = normalize(uCamF + uCamR * ((vUv.x * 2.0 - 1.0) * uLens.y * uLens.x) + uCamU * ((uCalmBox.w * 2.0 - 1.0) * uLens.x));
+      h = mix(h, max(h, dt.z), calmS);
+    }
+  }
   // (Under the light ending's low sun the gold climbs further before it gives way to the blue: a long even fall, not a band.)
   vec3 col = mix(S.hor, S.mid, smoothstep(0.0, mix(0.24, mix(0.17, 0.2, gDusk * (1.0 - uNight)), max(uNight, gDusk)), h));
   col = mix(col, S.zen, smoothstep(0.07, 0.62, h));
   float az = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
   // Warmth pools on the sun's side of the horizon; it is not a stripe.
-  float warm = mix(0.45, 1.0, max(uNight, gDusk));
+  // (And the warmth that pools toward the dawn is thinner in that band: it is one tone from end to end.)
+  float warm = mix(0.45, 1.0, max(uNight, gDusk)) * (1.0 - 0.65 * calmS);
   col += S.band * exp(-h * 15.0) * pow(az, 5.0) * 0.5 * warm;
   col += S.band * exp(-h * 30.0) * pow(az, 2.0) * 0.14 * warm;
   float sd = max(dot(d, S.sun), 0.0);
-  col += sunBloom(sd) * (1.0 - 0.5 * uNight * (1.0 - gDusk)) * gSunK;
+  col += sunBloom(sd) * (1.0 - 0.5 * uNight * (1.0 - gDusk)) * gSunK * (1.0 - 0.65 * calmS);
 #ifdef SEA
   // (At the ending the sun is a clean limb standing on the crest: a small hard disc, and the glow round it is the bloom's.)
   float disc = mix(smoothstep(0.9996, 0.99999, sd) * 2.4 + smoothstep(0.9999, 1.0, sd) * 1.6, smoothstep(0.999838, 0.999888, sd) * 5.0, gDusk);
@@ -406,7 +420,7 @@ vec3 skyColor(vec3 d, float clouds) {
     // (Where a station's words stand in the sky, the sky there is quiet.)
     if (gDirect && uCalmK.x > 0.0) {
       vec2 cq = max(abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5, 0.0);
-      au *= 1.0 - 0.8 * uCalmK.x * (1.0 - smoothstep(0.0, 0.14, length(cq * vec2(uLens.y, 1.0))));
+      au *= 1.0 - 0.95 * uCalmK.x * (1.0 - smoothstep(0.0, 0.2, length(cq * vec2(uLens.y, 1.0))));
     }
     col += au * uNight;
     // (The stars show between the rays, and thin as the first light comes.)
@@ -1269,10 +1283,11 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   if (uNight > 0.0) {
     float kc = 1.0 - 0.9 * calm;
     vec3 Lc = vec3(SH_A * 0.9917, 0.1289);
-    coolN = mix(1.0, clamp(dot(n, Lc) / Lc.z, 0.0, 2.4), 0.42) * mix(1.0, litC, kc);
+    coolN = mix(1.0, clamp(dot(n, Lc) / Lc.z, 0.0, 2.4), 0.42 * (1.0 - 0.6 * calm)) * mix(1.0, litC, kc);
     // (The first light is low and far: level snow has little of it, and a face turned to it a great deal.)
     float wr = clamp(ndl / max(L.z, 0.05), 0.0, 2.6);
-    warmN = wr * wr / 2.6 * mix(1.0, lit, kc) * slabShade;
+    // (Under the words it lies evenly: a light this low would pick out every ripple the calm ground has left.)
+    warmN = mix(wr * wr / 2.6, 0.385, 0.85 * calm) * mix(1.0, lit, kc) * slabShade;
     float ambL = dot(S.amb, vec3(0.2126, 0.7152, 0.0722));
     // (The curtains' colour breathes on the slopes that face them: faintly, in the cold light, never a green ground.)
     vec3 coolC = ambL * vec3(0.42, 0.9, 1.32) * 1.5 + uAurora * 0.024;
@@ -1301,7 +1316,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
     float toDawn = max(dot(normalize(rr.xy + 1e-5), normalize(S.sun.xy)), 0.0);
     float low = exp(-max(rr.z, 0.0) * 9.0);
     float td = toDawn * toDawn; td *= td;
-    col += (S.band * 0.11 * td * td * warmN + S.mid * 0.5 * coolN) * glance * low * uNight * (1.0 - 0.6 * bare) * (1.0 - 0.7 * calm);
+    col += (S.band * 0.11 * td * td * warmN + S.mid * 0.5 * coolN) * glance * low * uNight * (1.0 - 0.6 * bare) * (1.0 - 0.9 * calm);
   }
   return col;
 }
