@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
+import { Arrow } from '@/components/bits';
 import { Footer } from '@/components/ending/Ending';
 import { SceneBand } from '@/components/SceneBand';
 import { haptic } from '@/lib/haptics';
@@ -24,8 +25,8 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             <button type="button" className="btn" onClick={() => reset()}>
               Try again
             </button>
-            <Link className="btn btn-quiet" href="/">
-              Go home
+            <Link className="way" href="/">
+              Go home <Arrow />
             </Link>
           </div>
         </SceneBand>

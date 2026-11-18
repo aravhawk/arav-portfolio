@@ -17,7 +17,7 @@ export default function PostNotFound() {
           <h1 className="display band-title">No such post</h1>
           <p className="lead band-lead">That post does not exist, or it is not published.</p>
           <div className="state-actions">
-            <Link className="btn" href="/blog">
+            <Link className="way" href="/blog">
               All writing <Arrow />
             </Link>
           </div>

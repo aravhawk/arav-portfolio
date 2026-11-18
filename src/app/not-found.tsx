@@ -18,10 +18,10 @@ export default function NotFound() {
           <h1 className="display band-title">Dry land</h1>
           <p className="lead band-lead">Nothing flows to this address. It may have moved, or it never existed.</p>
           <div className="state-actions">
-            <Link className="btn" href="/">
+            <Link className="way" href="/">
               Go home <Arrow />
             </Link>
-            <Link className="btn btn-quiet" href="/work">
+            <Link className="way" href="/work">
               See the work <Arrow />
             </Link>
           </div>
