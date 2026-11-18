@@ -24,7 +24,7 @@ import { flightSource, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
-import { F, F_ALL, type Mode, bits, maskName, passNeeds, seaNear, slabInFrame, tarnNear } from './variants';
+import { F, F_ALL, type Mode, type Rect, bits, farParts, maskName, passNeeds, seaNear, slabInFrame, tarnNear } from './variants';
 import { NAV_CLEAR, composedAt } from './words';
 import { COLS, LAKE, LATTICE, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
@@ -590,10 +590,20 @@ export class FlightEngine extends WaterEngine {
    * solve. (The snow is never made leaner: it is the largest surface in the
    * frame, and all of it is baked, so there is nothing in it to drop that
    * would not show as softness.)
+   *
+   * It keeps to the stretch of the flight it is in. Each stretch is drawn
+   * by its own variant of the pass and costs what that variant costs, so a
+   * step taken for one says nothing of the next: a new stretch is entered
+   * at the step it last held (full shading, the first time), and what it
+   * settles at is remembered for the visit. So one heavy stretch does not
+   * leave the rest of the page lean, and coming back to a stretch does not
+   * try again at once what did not hold there.
    */
   private lean = 0;
   private leanNow = 0;
-  private gov = { n: 0, missed: 0, prev: 0, clean: 0, need: 10000, lastUp: -1e9, age: 0 };
+  private gov = { n: 0, missed: 0, prev: 0, clean: 0, need: 10000, lastUp: -1e9, age: 0, stretch: -1 };
+  /** The step each stretch last held, by the subjects it shows. */
+  private leanAt = new Map<number, number>();
   /** When the governor stepped, and to what: seconds of running time, step. */
   private leanLog: [number, number][] = [];
 
@@ -615,6 +625,19 @@ export class FlightEngine extends WaterEngine {
     // (The first seconds are the page settling, not the picture's cost.)
     if (g.age < 2500) return;
     const s = this.samples;
+    if (this.needed !== g.stretch) {
+      // A new stretch: what was settled for the last is kept, and this one is entered at the step it last held.
+      if (g.stretch >= 0) this.leanAt.set(g.stretch, this.lean);
+      g.stretch = this.needed;
+      const to = this.leanAt.get(this.needed) ?? 0;
+      if (to !== this.lean) {
+        this.lean = to;
+        this.leanLog.push([+this.time.toFixed(1), this.lean]);
+      }
+      g.missed = g.prev = g.clean = 0;
+      s.length = 0;
+      return;
+    }
     s.push(ms);
     if (ms > Math.max(this.base * 1.45, 12)) g.missed++;
     // Looked at twice a second.
@@ -709,6 +732,9 @@ export class FlightEngine extends WaterEngine {
       // The variant of the pass that drew the last frame, what that frame needed, and every variant asked for so far
       // (how long the driver took over it, in ms; 'pending' while it is still at it).
       variant: this.drawn ? `${maskName(this.drawn.mask)}:${this.drawn.mode}` : '',
+      // (Where the frame was drawn in parts: the variant that drew all of it but its far subjects' own rectangles.)
+      variantLean: this.drawnLean ? `${maskName(this.drawnLean.mask)}:${this.drawnLean.mode}` : '',
+      parts: this.drawnParts.map((q) => q.map((v) => +v.toFixed(4))),
       needed: maskName(this.needed),
       variants: Array.from(this.variants.values(), (v) => `${maskName(v.mask)}:${v.mode}:${v.failed ? 'failed' : v.pending ? 'pending' : Math.round(v.took)}`),
     };
@@ -1076,13 +1102,54 @@ export class FlightEngine extends WaterEngine {
     return false;
   }
 
+  /** The variant that drew the frame outside its far parts, when it was drawn in parts: for the checks. */
+  private drawnLean: Variant | null = null;
+  private drawnParts: Rect[] = [];
+
   private draw(cam: Basis, aspect: number, at: FlightMoment) {
-    const gl = this.gl;
     // The variant of the pass this frame is drawn by: the leanest that carries all it can show.
     const need = this.needs(cam, aspect);
     const variant = this.pick(need);
     this.needed = need;
     this.drawn = variant;
+    this.drawnLean = null;
+    this.drawnParts = [];
+    const night = Math.min(1, Math.max(0, this.theme));
+    // A subject that is looked for by place and stands far off needs only a small part of the frame: the frame is
+    // drawn by a variant without it, and that part again by the one that carries it.
+    if (!this.forced && (variant.mask & need) === need) {
+      const far = farParts(cam, aspect, need);
+      if (far.rects.length) {
+        const lean = this.leaner(far.lean, variant);
+        if (lean) {
+          this.drawnLean = lean;
+          this.drawnParts = far.rects;
+          this.scene(lean, cam, aspect, at, null);
+          this.scene(variant, cam, aspect, at, far.rects);
+          this.glow(night);
+          return;
+        }
+      }
+    }
+    this.scene(variant, cam, aspect, at, null);
+    this.glow(night);
+  }
+
+  /** A ready variant that carries `mask` and is leaner than `than`; where the leanest is not there yet it is asked for. */
+  private leaner(mask: number, than: Variant): Variant | null {
+    const mode = this.mode();
+    let best: Variant | null = null;
+    for (const v of this.variants.values()) {
+      if (!v.prog || (v.mode !== mode && v.mode !== 'any') || (v.mask & mask) !== mask || bits(v.mask) >= bits(than.mask)) continue;
+      if (!best || bits(v.mask) < bits(best.mask) || (bits(v.mask) === bits(best.mask) && v.mode === mode && best.mode !== mode)) best = v;
+    }
+    if (!best || best.mask !== mask || best.mode !== mode) this.begin(mask, mode);
+    return best;
+  }
+
+  /** The scene, drawn by one variant: the whole frame, or only the given parts of it. */
+  private scene(variant: Variant, cam: Basis, aspect: number, at: FlightMoment, parts: Rect[] | null) {
+    const gl = this.gl;
     // (The open sea is only worked out when the camera is near enough to see it, and by a variant that carries it.)
     const seaOn = variant.mask & F.SEA ? seaNear(cam) : 0;
     const r = variant.prog!;
@@ -1199,7 +1266,36 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 11, ((this.faceOn ? this.faceTex : null) ?? this.slabTex ?? this.grain.tex) as WebGLTexture, r.u.uSlabTex);
     bindTex(gl, 12, this.ground.tex, r.u.uGround);
     bindTex(gl, 13, this.pano.tex, r.u.uPano);
-    this.finish(r, night);
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    // (Making a texture binds it: on a unit the scene does not use.)
+    gl.activeTexture(gl.TEXTURE15);
+    this.filmTargets(w, h);
+    bindTex(gl, 14, this.film[3].tex, r.u.uGlowTex);
+    // (Unit 15 is the scratch unit: the pool's picture is put back on it for each draw.)
+    bindTex(gl, 15, (this.sheetTex ?? this.grain.tex) as WebGLTexture, r.u.uSheetTex);
+    gl.uniform1f(r.u.uSheetOn, this.sheetTex ? 1 : 0);
+    gl.uniform1f(r.u.uBloom, this.bloomNow(night));
+    if (!parts) {
+      drawTo(gl, null, w, h);
+      return;
+    }
+    gl.enable(gl.SCISSOR_TEST);
+    for (const q of parts) {
+      const x0 = Math.max(0, Math.floor(q[0] * w) - 2);
+      const y0 = Math.max(0, Math.floor(q[1] * h) - 2);
+      gl.scissor(x0, y0, Math.min(w, Math.ceil(q[2] * w) + 2) - x0, Math.min(h, Math.ceil(q[3] * h) + 2) - y0);
+      drawTo(gl, null, w, h);
+    }
+    gl.disable(gl.SCISSOR_TEST);
+  }
+
+  /** How much of the last frame's glow this frame adds. */
+  private bloomNow(night: number) {
+    // Leanest: by day, when only the sun blooms, the halo is let go.
+    const l2 = Math.min(1, Math.max(0, this.leanNow - 1));
+    // (At the ending the sun itself is in the frame: its own skirts carry it, and the glow is held back.)
+    return 0.55 * (1 - l2 * (1 - night)) * (1 - 0.45 * this.dusk);
   }
 
   /**
@@ -1219,30 +1315,16 @@ export class FlightEngine extends WaterEngine {
   }
 
   /**
-   * Draw the scene straight to the screen, finished, in one full-size pass.
-   * Then take this frame's highlights, small, for the next frame's glow: a
-   * frame's delay in a soft halo is not seen.
+   * The scene is drawn straight to the screen, finished, in one full-size
+   * pass (see `scene`). This then takes the frame's highlights, small, for
+   * the next frame's glow: a frame's delay in a soft halo is not seen.
    */
-  private finish(r: Program, night: number) {
+  private glow(night: number) {
     const gl = this.gl;
     const w = this.canvas.width;
     const h = this.canvas.height;
-    // (Making a texture binds it: on a unit the scene does not use.)
-    gl.activeTexture(gl.TEXTURE15);
-    this.filmTargets(w, h);
     const f = this.film;
-    // Leanest: by day, when only the sun blooms, the halo is let go.
-    const l2 = Math.min(1, Math.max(0, this.leanNow - 1));
-    // (At the ending the sun itself is in the frame: its own skirts carry it, and the glow is held back.)
-    const bloom = 0.55 * (1 - l2 * (1 - night)) * (1 - 0.45 * this.dusk);
-    gl.useProgram(r.prog);
-    bindTex(gl, 14, f[3].tex, r.u.uGlowTex);
-    // (Unit 15 is the scratch unit: the pool's picture is put back on it for each draw.)
-    bindTex(gl, 15, (this.sheetTex ?? this.grain.tex) as WebGLTexture, r.u.uSheetTex);
-    gl.uniform1f(r.u.uSheetOn, this.sheetTex ? 1 : 0);
-    gl.uniform1f(r.u.uBloom, bloom);
-    drawTo(gl, null, w, h);
-    if (bloom <= 0.001) return;
+    if (this.bloomNow(night) <= 0.001) return;
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, f[0].fbo);
     gl.blitFramebuffer(0, 0, w, h, 0, 0, f[0].w, f[0].h, gl.COLOR_BUFFER_BIT, gl.LINEAR);

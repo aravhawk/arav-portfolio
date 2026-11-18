@@ -130,6 +130,88 @@ export const tarnNear = (cam: Basis) => Math.hypot(cam.pos[0] - TARN.x, cam.pos[
 
 /** The water lies at most this far below the land (the walled basin's freeboard, with room). */
 const WATER_LOW = -64;
+/**
+ * The ground under a ray can stand this far above the land: at the confluence the pass takes the place where the ray
+ * comes down on the snowfield for the ground's (confLift), and looks for whatever lies by place from there. So a
+ * subject near the snowfield can be found by a ray that is still this high over it.
+ */
+const FIELD_HIGH = LIP.h * 3.3;
+
+type Box = [V3, V3];
+/** Where the block's shade, its light, its image and its white water can lie: the ground and water within four widths of it. */
+const SLAB_REACH = SLAB.w * 4 + 8;
+const SLAB_GROUND: Box = [
+  [SLAB.x - SLAB_REACH, SLAB.y - SLAB_REACH, WATER_LOW],
+  [SLAB.x + SLAB_REACH, SLAB.y + SLAB_REACH, 2],
+];
+/** Where the confluence's trails lie in the river (the water looks for them by place). */
+const CONF_RIVER_BOX: Box = [
+  [700, lipY(LIP.x0) - 900, WATER_LOW],
+  [2500, lipY(700) + 40, FIELD_HIGH],
+];
+/** Where the pool's water is (the bed under a ray lies up to a few hundred units on). */
+const POOL_BOX: Box = [
+  [POOL.x - 560, POOL.y - 560, WATER_LOW],
+  [POOL.x + POOL.w + 560, POOL.y + POOL.h + 560, FIELD_HIGH],
+];
+const confNearCam = (cam: Basis) => cam.pos[1] > CONF_Y - 3300 && cam.pos[1] < CONF_Y + 1500;
+const poolNearCam = (cam: Basis) => Math.abs(cam.pos[0] - (POOL.x + POOL.w / 2)) < 2300 && Math.abs(cam.pos[1] - (POOL.y + POOL.h / 2)) < 2300;
+
+/** A part of the frame, in the pass's own vUv (u right, v up): x0, y0, x1, y1. */
+export type Rect = [number, number, number, number];
+/**
+ * The part of the frame a box of the world can be seen in, with a little
+ * room; null when any of it is behind the eye (then it is not known).
+ */
+export function boxRect(cam: Basis, aspect: number, [lo, hi]: Box): Rect | null {
+  let x0 = 1e9;
+  let y0 = 1e9;
+  let x1 = -1e9;
+  let y1 = -1e9;
+  for (let i = 0; i < 8; i++) {
+    const pr = projectPoint(cam, [i & 1 ? hi[0] : lo[0], i & 2 ? hi[1] : lo[1], i & 4 ? hi[2] : lo[2]], aspect);
+    if (pr[2] < 1) return null;
+    x0 = Math.min(x0, pr[0]);
+    x1 = Math.max(x1, pr[0]);
+    y0 = Math.min(y0, 1 - pr[1]);
+    y1 = Math.max(y1, 1 - pr[1]);
+  }
+  return [x0 - 0.004, y0 - 0.004, x1 + 0.004, y1 + 0.004];
+}
+
+/**
+ * The subjects a frame needs only in a small part of itself: a subject the
+ * pass looks for by place (the block and what it does to the ground and
+ * water round it, the confluence's trails, the pool's water) and that is
+ * far enough off to stand in a small rectangle of the frame. The frame is
+ * then drawn by a variant without them (`lean`), and only those rectangles
+ * again by the variant that carries them: every pixel is still drawn by a
+ * variant that carries all it can show.
+ * @param need what the whole frame needs (passNeeds)
+ */
+export function farParts(cam: Basis, aspect: number, need: number): { lean: number; rects: Rect[] } {
+  let lean = need;
+  const rects: Rect[] = [];
+  const take = (bit: number, r: Rect | null) => {
+    if (!r) return;
+    const x0 = Math.max(0, r[0]);
+    const y0 = Math.max(0, r[1]);
+    const x1 = Math.min(1, r[2]);
+    const y1 = Math.min(1, r[3]);
+    // (A subject that fills much of the frame is the frame's own.)
+    if (x1 <= x0 || y1 <= y0 || (x1 - x0) * (y1 - y0) > 0.3) return;
+    lean &= ~bit;
+    rects.push([x0, y0, x1, y1]);
+  };
+  if (need & F.SLAB) {
+    const s = slabInFrame(cam, aspect);
+    const g = boxRect(cam, aspect, SLAB_GROUND);
+    if (s.behind === 0 && g) take(F.SLAB, [Math.min(s.box[0], g[0]), Math.min(s.box[1], g[1]), Math.max(s.box[2], g[2]), Math.max(s.box[3], g[3])]);
+  }
+  if (need & F.CONF && !confNearCam(cam)) take(F.CONF, boxRect(cam, aspect, CONF_RIVER_BOX));
+  if (need & F.POOL && !poolNearCam(cam)) take(F.POOL, boxRect(cam, aspect, POOL_BOX));
+  return { lean, rects };
+}
 
 /**
  * What the pass needs to carry to draw this frame whole.
@@ -138,7 +220,8 @@ const WATER_LOW = -64;
  */
 export function passNeeds(cam: Basis, aspect: number, ice: boolean, slab: boolean): number {
   let need = 0;
-  const [cx, cy] = cam.pos;
+  const cx = cam.pos[0];
+  const cy = cam.pos[1];
   // The sheet and the name: `hasIce`, `uGlow`, `uNameG.w` in the pass are all nothing once the melt is done.
   if (ice) need |= F.ICE;
   // The block (main: `slabNear`, the ground's `uSlabSize.x > 0.0 && length(uCamPos.xy - uSlabPos.xy) < 5200.0`).
@@ -151,18 +234,15 @@ export function passNeeds(cam: Basis, aspect: number, ice: boolean, slab: boolea
       const reachOut = Math.hypot(SLAB.w * 0.5 + SLAB.thick, SLAB.thick, SLAB.h + SLAB.lift);
       if (onScreen && Math.hypot(dist, cam.pos[2]) < 2500 + reachOut) need |= F.SLAB;
       // Its shade, its light, its image and its white water: on the ground and water within four widths of it.
-      const reach = SLAB.w * 4 + 8;
-      if (dist < 5200 && boxInView(cam, aspect, [SLAB.x - reach, SLAB.y - reach, WATER_LOW], [SLAB.x + reach, SLAB.y + reach, 2])) need |= F.SLAB;
+      if (dist < 5200 && boxInView(cam, aspect, SLAB_GROUND[0], SLAB_GROUND[1])) need |= F.SLAB;
     }
   }
   // The confluence (`confNear`), and its trails in the river, which the water looks for by place.
-  if (cy > CONF_Y - 3300 && cy < CONF_Y + 1500) need |= F.CONF;
-  else if (boxInView(cam, aspect, [700, lipY(LIP.x0) - 900, WATER_LOW], [2500, lipY(700) + 40, 2])) need |= F.CONF;
+  if (confNearCam(cam)) need |= F.CONF;
+  else if (boxInView(cam, aspect, CONF_RIVER_BOX[0], CONF_RIVER_BOX[1])) need |= F.CONF;
   // The rock pool (`poolNear`), and its water, looked for by place (the bed under a ray lies up to a few hundred units on).
-  const pcx = POOL.x + POOL.w / 2;
-  const pcy = POOL.y + POOL.h / 2;
-  if (Math.abs(cx - pcx) < 2300 && Math.abs(cy - pcy) < 2300) need |= F.POOL;
-  else if (boxInView(cam, aspect, [POOL.x - 560, POOL.y - 560, WATER_LOW], [POOL.x + POOL.w + 560, POOL.y + POOL.h + 560, 2])) need |= F.POOL;
+  if (poolNearCam(cam)) need |= F.POOL;
+  else if (boxInView(cam, aspect, POOL_BOX[0], POOL_BOX[1])) need |= F.POOL;
   if (tarnNear(cam)) need |= F.SHARDS;
   // The last four stations (`uSt`).
   const st = stationsNear(cam.pos);

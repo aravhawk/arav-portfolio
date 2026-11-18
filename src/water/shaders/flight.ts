@@ -2027,6 +2027,16 @@ float poolAt(vec2 p) {
   vec2 pq = abs(p - POOL_C) - POOL_H;
   return 1.0 - smoothstep(-10.0, 40.0, max(pq.x, pq.y));
 }
+/**
+ * 0..1: the bed under this water is the pool's. pb: the place on the bed the eye's bent ray reaches; pw: the place
+ * on the water. (Only for water that lies by the pool itself: under deep open water the bed's place is taken a long
+ * way from the water's, and a far reach of open water whose bed place happens to fall here is not the pool. 560 is
+ * the reach variants.ts allows the pool's water.)
+ */
+float poolUnder(vec2 pb, vec2 pw) {
+  vec2 pq = abs(pw - POOL_C) - POOL_H;
+  return max(pq.x, pq.y) < 560.0 ? poolAt(pb) : 0.0;
+}
 /** 1 while the pool is near enough to be seen. */
 bool poolNear() { return abs(uCamPos.x - POOL_C.x) < 2300.0 && abs(uCamPos.y - POOL_C.y) < 2300.0; }
 // The results lie on the bed as one dark slab, the table set on it in type. (The type is a mask drawn for the screen
@@ -2268,9 +2278,14 @@ vec3 rockColor(vec3 hp, vec3 n, float t) {
   return col;
 }
 
+#ifdef DBG_POOL0
+#define poolAt(p) 0.0
+#define poolUnder(pb, pw) 0.0
+#endif
 #else
 // (No pool in this variant of the pass: nowhere is inside its reach.)
 #define poolAt(p) 0.0
+#define poolUnder(pb, pw) 0.0
 #endif
 /* ---------- water ---------- */
 
@@ -2387,7 +2402,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 #endif
   if (shalK > 0.0) depth = mix(depth, min(depth, 13.0 + 12.0 * textureLod(uDetail, pb / 900.0 + 0.2, 0.0).r), shalK);
   // The clear pool: a foot of still water over a pale bed, and the picture lying on it.
-  float poolK = poolAt(pb);
+  float poolK = poolUnder(pb, pw);
   float picK = 0.0;
   float deepP = 0.0;
   vec3 sheetC = vec3(0.0);
