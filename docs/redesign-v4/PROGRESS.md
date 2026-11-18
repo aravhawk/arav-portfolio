@@ -1072,3 +1072,40 @@ no longer matches the dark theme's dawn; cost not measured.
 
 Round 3's picture work (R3a to R3f) is in. Next, alone: the rest of
 R3b (inner pages), then the frame-rate task.
+
+### R3g (the rest of the inner pages' round 3), integrated Nov 18, 1:20 AM CT
+
+Eight signed commits on the branch ending at `e7063e9`, merged without
+conflict; looked at in the merged build.
+
+- A new **fill test** (`scripts/fill-test.mjs`): no screenful of an
+  inner page may be under a third filled. 428 screens at 1440 and 1920
+  in both themes, 0 under (it began at 52 in the light theme alone).
+  Layout work on cc-switch (every command annotated, "what a switch
+  writes", the provider groups as a grid), TensorPoW (what the
+  reference implementation holds beside the gates before mainnet),
+  Kilo Bench, Open models and Agent Bridge.
+- **Each page ends in the world**: a full-bleed band of the next
+  project's own station (2880 x 1200, one picture a theme), the name
+  large over its calm zone, the whole band the link. The work index,
+  the blog and the post end the same way.
+- **All 44 scene stills retaken** from the current picture (wide ones
+  now 2400 x 1464).
+- The post's margin carries its date, tags and a contents list of its
+  headings; pills are kept for true controls only; the plain (no
+  WebGL) ending matches each theme's own hour.
+- Every new sentence on the project pages was checked here against
+  `.tools/assets/project-facts.md`: all are in it.
+
+Its checks: lint, typecheck, build, 312 tests; contrast over twelve
+pages at 390, 768, 1024 and 1440 in both themes, 15,362 lines, 0
+failures; no sideways scroll at eleven widths; 200 words. Its
+shortfalls: the indexes' bands were paired by where they link (work
+ends on the tarn, the blog on the delta) and not as the brief said;
+between head and foot the ground is still the drawn snow; the bands
+are stills, sharp up to 1440 at 2x; the pictures add about 13 MB to
+the repository.
+
+Round 3 is in. Next, alone: the frame-rate task; then the sharing
+cards, the two phone framings the titles test still fails, the full
+gates, and panel 10.
