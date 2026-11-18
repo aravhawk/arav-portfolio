@@ -18,6 +18,11 @@
  *     --base http://localhost:3142 --out .tools/out/traces
  *
  * Options: --path /  --profile 1728 (a part of a profile's name)  --speed 0.8
+ *   --theme light|dark (the colour scheme the page is opened in; light)
+ *   --keep-trace (write each profile's trace beside the report: hundreds of
+ *     megabytes a profile, so it is not written unless asked for)
+ *
+ * The 2560 x 1440 profile runs only when it is named (`--profile 2560`).
  */
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -44,6 +49,8 @@ const outDir = arg('out', '.tools/out/traces').replace(/^~/, homedir());
 const only = arg('profile', '');
 /** Screens of scroll a second: a reader's pace through a long page. */
 const speed = Number(arg('speed', '0.8'));
+const theme = arg('theme', 'light') === 'dark' ? 'dark' : 'light';
+const keepTrace = process.argv.includes('--keep-trace');
 mkdirSync(outDir, { recursive: true });
 
 const PROFILES = [
@@ -53,7 +60,9 @@ const PROFILES = [
   // The same desktop run while a second copy of the site renders its own
   // water in another window: frame rate may fall, sharpness may not.
   { name: 'desktop-1440-dpr2-contended', viewport: { width: 1440, height: 900 }, dpr: 2, throttle: 1, touch: false, contend: true },
-].filter((p) => !only || p.name.includes(only));
+  // A large desktop screen: the governor is allowed to lean here.
+  { name: 'desktop-2560-dpr2', viewport: { width: 2560, height: 1440 }, dpr: 2, throttle: 1, touch: false, extra: true },
+].filter((p) => (only ? p.name.includes(only) : !p.extra));
 
 const pct = (sorted, p) => (sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] : 0);
 
@@ -72,7 +81,7 @@ function summarise(intervals) {
 
 /** Installed before any page script: frame log, long tasks, backing size. */
 function instrument() {
-  const log = { frames: [], at: [], sizes: [], longTasks: [], marks: [] };
+  const log = { frames: [], at: [], sizes: [], longTasks: [], marks: [], on: 0 };
   window.__perf = log;
   let last = 0;
   const tick = (t) => {
@@ -84,6 +93,8 @@ function instrument() {
     last = t;
     const c = document.querySelector('.water-canvas, .flight-canvas');
     if (c) log.sizes.push(c.width * 10000 + c.height);
+    // When the picture first stood on the page.
+    if (!log.on && document.documentElement.dataset.flight === 'on') log.on = Math.round(t);
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -106,9 +117,10 @@ for (const prof of PROFILES) {
     deviceScaleFactor: prof.dpr,
     hasTouch: prof.touch,
     isMobile: prof.touch,
+    colorScheme: theme,
   });
   if (prof.contend) {
-    const other = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+    const other = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: theme });
     const rival = await other.newPage();
     await rival.goto(base + '/', { waitUntil: 'load' });
     await rival.waitForTimeout(1500);
@@ -175,6 +187,7 @@ for (const prof of PROFILES) {
   }
   await page.waitForTimeout(1200);
   await mark('scroll-end');
+  const leanAtFoot = await page.evaluate(() => window.__flight?.engine.info.lean ?? null);
   const scrolled = await page.evaluate(() => ({ y: window.scrollY, max: document.documentElement.scrollHeight - innerHeight }));
   // Hold at the foot: the ending at rest, and its light event.
   await mark('end-start');
@@ -203,10 +216,14 @@ for (const prof of PROFILES) {
   const traceDone = new Promise((r) => cdp.once('Tracing.tracingComplete', r));
   await cdp.send('Tracing.end');
   await traceDone;
-  const tracePath = join(outDir, `${prof.name}.trace.json`);
-  writeFileSync(tracePath, JSON.stringify({ traceEvents: chunks }));
+  const tracePath = keepTrace ? join(outDir, `${prof.name}-${theme}.trace.json`) : null;
+  if (tracePath) writeFileSync(tracePath, JSON.stringify({ traceEvents: chunks }));
 
-  const perf = await page.evaluate(() => ({ ...window.__perf, info: window.__water ? window.__water.engine.info : null }));
+  const perf = await page.evaluate(() => ({
+    ...window.__perf,
+    info: window.__water ? window.__water.engine.info : null,
+    paint: Math.round(performance.getEntriesByType('paint').find((e) => e.name === 'first-contentful-paint')?.startTime ?? 0),
+  }));
   const at = (n) => (perf.marks.find((m) => m.n === n) || { frame: 0 }).frame;
   const scroll = perf.frames.slice(at('scroll-start'), at('scroll-end'));
   const hero = perf.frames.slice(at('hero-start'), at('hero-end'));
@@ -234,8 +251,11 @@ for (const prof of PROFILES) {
   }
   const frames = scroll.length + hero.length || 1;
 
+  // Long tasks once the page has painted: what a reader could feel.
+  const late = perf.longTasks.filter((t) => t.start > perf.paint);
   const row = {
     profile: prof.name,
+    theme,
     water: state,
     scroll: summarise(scroll),
     scrolled: `${(scrolled.y / prof.viewport.height).toFixed(1)} of ${(scrolled.max / prof.viewport.height).toFixed(1)} screens${scrolled.y >= scrolled.max - 2 ? '' : ' (DID NOT REACH THE FOOT)'}`,
@@ -243,6 +263,10 @@ for (const prof of PROFILES) {
     ending: summarise(ending),
     hero: summarise(hero),
     longTasks: { count: perf.longTasks.length, totalMs: perf.longTasks.reduce((a, b) => a + b.dur, 0), worstMs: Math.max(0, ...perf.longTasks.map((t) => t.dur)) },
+    longTasksAfterPaint: { count: late.length, worstMs: Math.max(0, ...late.map((t) => t.dur)), list: late.slice(0, 12).map((t) => `${t.start}:${t.dur}`).join(' ') },
+    firstPaintMs: perf.paint,
+    pictureOnMs: perf.on,
+    leanAtFoot,
     gpuMsPerFrame: +(gpuMicros / 1000 / frames).toFixed(2),
     gpuTasks,
     backingSizes: sizes,
@@ -254,6 +278,6 @@ for (const prof of PROFILES) {
   await browser.close();
 }
 
-const reportPath = join(outDir, 'report.json');
+const reportPath = join(outDir, `report-${theme}${only ? `-${only}` : ''}.json`);
 writeFileSync(reportPath, JSON.stringify({ base, when: new Date().toISOString(), report }, null, 1));
 console.log('report', reportPath);
