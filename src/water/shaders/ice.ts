@@ -38,6 +38,10 @@ uniform sampler2D uSnow;   // three draws of one smooth field, in half floats: a
 
 // How far the last place asked about lies from the letters' own box, in the name's frame px (the first camera's picture).
 float gIceBoxD = 1e4;
+// The last place on the lake the field asked how far the standing letters' feet are, and the answer (nameFoot): the
+// name's own shader asks the same of the same place, and takes it from here.
+vec2 gFootAt = vec2(-1e9);
+float gFootD = 1e3;
 
 #ifndef NO_ICE_FIELD
 vec2 ih2(vec2 p) {
@@ -215,6 +219,8 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   if (uNameG.w > 0.5) {
     // The letters stand on the sheet: it opens from under their feet.
     lsd = nameFoot(u);
+    // (Kept while the sheet's own frame is the lake's: once it gathers toward the outlet the two places part.)
+    if (uIceB.z == 1.0) { gFootAt = w; gFootD = lsd; }
     // (All the water they stand in is their pond, lying flush with the sheet: on a phone the near line's water reaches
     // well out of the letters' own box toward the eye.)
     gIceBoxD = min(boxD, max(lsd - 1.6 * uNameS - 40.0, 0.0));

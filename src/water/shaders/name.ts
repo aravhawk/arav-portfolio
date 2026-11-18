@@ -121,8 +121,9 @@ float nameSd(int i, float x, float z, float yd, out vec2 g) {
     if (sd2 > sd) gNmGrad = normalize(s2.ba + s3.ba + vec2(0.0, 1e-4));
     sd = smax(sd, sd2, 1.2 * uNameQ.x + 0.5);
   }
-  // (A melting block is smooth: what was hewn has run off it.)
-  sd += nameHew(g.x, g.y, yd) * clamp(1.0 - 1.6 * uNameQ.y, 0.0, 1.0);
+  // (A melting block is smooth: what was hewn has run off it, and is then not worked out.)
+  float hewK = clamp(1.0 - 1.6 * uNameQ.y, 0.0, 1.0);
+  if (hewK > 0.0) sd += nameHew(g.x, g.y, yd) * hewK;
   // (Two lines are two rows: each is only its own letters.)
   return max(sd, i == 0 ? uNameG.z - g.y : g.y - uNameG.z);
 }
@@ -415,12 +416,15 @@ vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, ve
   // Bubbles: white beads frozen in columns, the deeper ones seen nearer the eye and dimmer.
   if (nearK > 0.0) {
     float cl = smoothstep(0.5, 0.8, textureLod(uGrain, il / 1100.0 + 0.7, 0.0).b);
-    float bub = 0.0;
-    for (int k = 0; k < 3; k++) {
-      float fk = float(k);
-      bub += (1.0 - smoothstep(0.05, 0.13, textureLod(uGrain, (il + vd * (3.0 + 8.0 * fk)) / 640.0 + 0.13 + fk * 0.31, 0.0).a)) * (1.0 - 0.3 * fk);
+    // (They hang in clusters: between the clusters none is looked for.)
+    if (cl > 0.0) {
+      float bub = 0.0;
+      for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        bub += (1.0 - smoothstep(0.05, 0.13, textureLod(uGrain, (il + vd * (3.0 + 8.0 * fk)) / 640.0 + 0.13 + fk * 0.31, 0.0).a)) * (1.0 - 0.3 * fk);
+      }
+      col += white * bub * cl * nearK * 0.4;
     }
-    col += white * bub * cl * nearK * 0.4;
   }
   // The sky on it: little from above, more and more toward the horizon; all of it where meltwater lies.
   vec3 nr = normalize(vec3(-slope - tiltOut * (1.0 - wet), 1.0));
@@ -636,6 +640,9 @@ vec3 nameCalves(vec3 col, vec2 pw, vec3 dir, float foot, float onWater) {
 float gNfD = 9.0;
 float gNfK = 0.0;
 float gNfLvlS = 0.0;
+// The snow's three fields at that place (the broad drifts, the middle ones, the fine), as nameCover read them: the
+// sheet's own top is drawn from the same three and takes them from here (w: 1 when they have been read).
+vec4 gNfSnow = vec4(0.0);
 /**
  * How much of a place on the sheet the swept field's bare ice covers, 0..1. Where it covers all of it the sheet's own
  * top is not seen at all, so the ground need not work it out. p, foot: the place and a pixel's size there.
@@ -653,7 +660,10 @@ float nameCover(vec2 p, vec3 dir, float foot) {
   // The snow's own lie (the sheet's drifts are drawn from the same field): swept, there is less of it, and at the
   // field's heart none. What is left at the edges is the crests of the drifts, reaching in along the wind.
   float fin = textureLod(uSnow, wl / vec2(420.0, 110.0) + vec2(0.71, 0.29), 0.0).b;
-  float lvl = 0.5 + 0.26 * textureLod(uSnow, wl / vec2(2290.0, 790.0), 0.0).r + 0.18 * textureLod(uSnow, wl / vec2(860.0, 195.0) + vec2(0.37, 0.11), 0.0).g + 0.085 * fin;
+  float bigS = textureLod(uSnow, wl / vec2(2290.0, 790.0), 0.0).r;
+  float midS = textureLod(uSnow, wl / vec2(860.0, 195.0) + vec2(0.37, 0.11), 0.0).g;
+  gNfSnow = vec4(bigS, midS, fin, 1.0);
+  float lvl = 0.5 + 0.26 * bigS + 0.18 * midS + 0.085 * fin;
   float lvlS = lvl - 0.44 * (1.0 - smoothstep(0.5, 1.0, d)) - 0.12 * (1.0 - smoothstep(0.15, 0.6, d));
   // (How much of the sheet a pixel covers along the eye's line: far off, the finest of the drifts is under a pixel and is let go.)
   float footL = foot / max(-dir.z, 0.05);
@@ -695,11 +705,16 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   vec2 il = p - uIce.xy;
   vec2 wl = RW * il;
   float footL = foot / max(-dir.z, 0.05);
-  float fd = nameFoot(p);
+  // (Where the sheet's own field has just asked this of this very place, its answer is taken.)
+  float fd = all(lessThan(abs(gFootAt - p), vec2(0.01))) ? gFootD : nameFoot(p);
   // The meltwater on the sheet at the blocks' feet: its edge wanders.
-  float wob = (textureLod(uGrain, p / 310.0, 0.0).g - 0.5) * 22.0 + (textureLod(uGrain, p / 71.0 + 0.3, 0.0).b - 0.5) * 7.0;
   float aaF = max(foot * 1.6, 1.2);
-  float pond = (1.0 - smoothstep(uNameP.x - aaF, uNameP.x + aaF, fd + wob)) * onIce;
+  float pond = 0.0;
+  // (It wanders by no more than fifteen units: further than that from the feet there is none, and its edge is not looked for.)
+  if (fd < uNameP.x + aaF + 15.0 && onIce > 0.0) {
+    float wob = (textureLod(uGrain, p / 310.0, 0.0).g - 0.5) * 22.0 + (textureLod(uGrain, p / 71.0 + 0.3, 0.0).b - 0.5) * 7.0;
+    pond = (1.0 - smoothstep(uNameP.x - aaF, uNameP.x + aaF, fd + wob)) * onIce;
+  }
   vec2 slope = vec2(0.0);
   vec2 pw = p + dir.xy / max(-dir.z, 1e-3) * gFree;
   // (A film of it lies on the ice well out in front of them, thinner with distance: the pointer's waves run in all of it.)
@@ -736,11 +751,13 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
       if (from.y >= y0) continue;
       float s2 = (y0 - from.y) / max(rf.y, 0.05);
       float z2 = from.z + rf.z * s2;
-      if (z2 > uNameB.z * 1.3 || s2 > 900.0) continue;
+      // (It is short: the image of a letter's foot and a little more, never a second word under the first.)
+      float tall = mix(i == 0 && uNameG.z > -5e3 ? 0.34 : 0.56, 0.4, onWater * (1.0 - onIce)) * uNameB.z;
+      // (Higher up the letter than its image reaches, the letter is not looked for.)
+      if (z2 >= tall || s2 > 900.0) continue;
       float sdm = nameSd(i, from.x + rf.x * s2, z2, 0.0, g);
       float blur = mix(0.05, 0.13, onWater * (1.0 - onIce));
-      // (It is short: the image of a letter's foot and a little more, never a second word under the first.)
-      float m = (1.0 - smoothstep(-1.0 - s2 * 0.4 * blur, 1.0 + s2 * blur, sdm)) * (1.0 - smoothstep(0.05 * uNameB.z, mix(i == 0 && uNameG.z > -5e3 ? 0.34 : 0.56, 0.4, onWater * (1.0 - onIce)) * uNameB.z, z2));
+      float m = (1.0 - smoothstep(-1.0 - s2 * 0.4 * blur, 1.0 + s2 * blur, sdm)) * (1.0 - smoothstep(0.05 * uNameB.z, tall, z2));
       if (m > mir) {
         mir = m;
         mc = nameLook(vec3(from.x + rf.x * s2, y0, z2), rf, s2 + length(from - uCamPos), i, g, sdm, gNmGrad, 1.0, uNameM.y, 1.0);
@@ -757,14 +774,17 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
 #endif
   // Snow snakes: thin streamers the wind drives across the bare ice.
   if (DBG_SNAKE K * onIce > 0.0) {
-    vec2 ws = wl - vec2(uTime * 85.0, 0.0);
-    float wander = textureLod(uSnow, wl / vec2(2600.0, 1900.0) + 0.43, 0.0).g;
     float gust = smoothstep(-0.1, 0.35, textureLod(uSnow, (wl - vec2(uTime * 40.0, 0.0)) / vec2(5200.0, 2300.0) + 0.61, 0.0).b);
-    float sn = textureLod(uSnow, (ws + vec2(0.0, wander * 260.0)) / vec2(1500.0, 150.0) + vec2(0.13, 0.57), 0.0).r + 0.5 * textureLod(uSnow, (ws * 1.3 + vec2(0.0, wander * 180.0)) / vec2(640.0, 64.0) + vec2(0.7, 0.2), 0.0).g;
-    // (Far off a streamer is thinner than a pixel: there it is a soft veil, not a dotted line.)
-    float thinK = clamp(footL / 50.0, 0.0, 0.35);
-    float snake = smoothstep(0.42 - thinK, 0.78 + 0.3 * thinK, sn) * gust * (1.0 - 1.6 * thinK);
-    col = mix(col, mix(vec3(0.9, 0.92, 0.95) * (S.key * 0.24 * (1.0 - 0.5 * gNmShade) + S.amb * 0.8), vec3(0.36, 0.44, 0.58) * (S.amb * 1.5), uNight), snake * 0.34 * K * onIce * (1.0 - pond));
+    // (They come in gusts: between two gusts, and under the meltwater, there is none to look for.)
+    if (gust > 0.0 && pond < 1.0) {
+      vec2 ws = wl - vec2(uTime * 85.0, 0.0);
+      float wander = textureLod(uSnow, wl / vec2(2600.0, 1900.0) + 0.43, 0.0).g;
+      float sn = textureLod(uSnow, (ws + vec2(0.0, wander * 260.0)) / vec2(1500.0, 150.0) + vec2(0.13, 0.57), 0.0).r + 0.5 * textureLod(uSnow, (ws * 1.3 + vec2(0.0, wander * 180.0)) / vec2(640.0, 64.0) + vec2(0.7, 0.2), 0.0).g;
+      // (Far off a streamer is thinner than a pixel: there it is a soft veil, not a dotted line.)
+      float thinK = clamp(footL / 50.0, 0.0, 0.35);
+      float snake = smoothstep(0.42 - thinK, 0.78 + 0.3 * thinK, sn) * gust * (1.0 - 1.6 * thinK);
+      col = mix(col, mix(vec3(0.9, 0.92, 0.95) * (S.key * 0.24 * (1.0 - 0.5 * gNmShade) + S.amb * 0.8), vec3(0.36, 0.44, 0.58) * (S.amb * 1.5), uNight), snake * 0.34 * K * onIce * (1.0 - pond));
+    }
   }
   return col;
 }

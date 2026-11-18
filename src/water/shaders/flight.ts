@@ -1419,6 +1419,9 @@ float nameRow(float y) {
   return (tv - (uIceBox.y - uIce.w * 0.5) * kk) / max(uIceBox.w * kk, 1e-5);
 }
 
+// The snow's three fields at this pixel's place on the lake, where the swept field has already read them (gSnowHad: 1).
+vec3 gSnowWas = vec3(0.0);
+float gSnowHad = 0.0;
 // How much of the snow's finer drifting is drawn (1 by day). Before dawn, far down the lake, thin pale streaks
 // on dark ice read as ripples on a sea: there only the broad drifts are kept.
 float gSnowFine = 1.0;
@@ -1438,7 +1441,10 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   vec3 L = keyDir();
   vec2 LXY = normalize(L.xy);
   vec2 wl = RW * il;
-  float big = textureLod(uSnow, wl / vec2(2290.0, 790.0), 0.0).r;
+  // (Where the swept field has just read the snow's three fields at this very place, they are taken from it.)
+  // (While the sheet's own frame is the lake's: late in the melt it gathers toward the outlet, and the two places part.)
+  bool snowHad = gSnowHad > 0.5 && uIceB.z == 1.0;
+  float big = snowHad ? gSnowWas.x : textureLod(uSnow, wl / vec2(2290.0, 790.0), 0.0).r;
   vec2 huv = vec2(p.x / uWorldW, (p.y - uLake.x) / max(uLake.y - uLake.x, 1.0));
   float heat = textureLod(uHeat, huv, 0.0).r;
   float bank = 1.0 - smoothstep(3.0, 70.0, -shore);
@@ -1462,7 +1468,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   // By day wind-packed snow lies thickest round the name: bright ground for dark letters.
   less -= 0.11 * (1.0 - smoothstep(60.0, 520.0, nameD)) * (1.0 - uLake.z) * (1.0 - uNight);
   gSnowFine = 1.0 - uNight * smoothstep(1.2, 7.0, foot / pow(max(-dir.z, 0.02), 0.75));
-  float lvl = snowAt(wl, big) - less;
+  float lvl = (snowHad ? 0.5 + big * 0.26 + gSnowWas.y * 0.18 * gSnowFine + gSnowWas.z * 0.085 * gSnowFine : snowAt(wl, big)) - less;
   // (A lean frame does not measure how soft each drift's edge should be. Before dawn a hard-edged drift on dark ice
   // is a ripple on a sea: there its edges are all taken soft.)
   float ew = 0.006 + 0.03 * uNight * gL2;
@@ -3936,6 +3942,8 @@ void main() {
     const float nmK = 0.0;
 #else
     float nmK = nameCover(p, dir, foot);
+    gSnowWas = gNfSnow.xyz;
+    gSnowHad = gNfSnow.w;
 #endif
 #ifdef DBG_NO_ICETOP
     if (aIce > 0.0) col = mix(col, vec3(0.7), aIce);
