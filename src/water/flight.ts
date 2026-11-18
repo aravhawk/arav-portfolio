@@ -593,15 +593,18 @@ export class FlightEngine extends WaterEngine {
    *
    * It keeps to the stretch of the flight it is in. Each stretch is drawn
    * by its own variant of the pass and costs what that variant costs, so a
-   * step taken for one says nothing of the next: a new stretch is entered
-   * at the step it last held (full shading, the first time), and what it
-   * settles at is remembered for the visit. So one heavy stretch does not
-   * leave the rest of the page lean, and coming back to a stretch does not
-   * try again at once what did not hold there.
+   * step taken for one says nothing of the next. A stretch that has been
+   * visited is entered at the step it last held. One that has not is
+   * entered at the step the last one needed and tried a step richer after
+   * a second and a half without a miss (and again, down to full shading):
+   * so one heavy stretch does not leave the rest of the page lean, and no
+   * stretch is ever jumped to a richer picture it cannot hold. Where two
+   * stretches meet the camera may cross back and forth: a stretch counts
+   * once it has held for half a second.
    */
   private lean = 0;
   private leanNow = 0;
-  private gov = { n: 0, missed: 0, prev: 0, clean: 0, need: 10000, lastUp: -1e9, age: 0, stretch: -1 };
+  private gov = { n: 0, missed: 0, prev: 0, clean: 0, need: 10000, lastUp: -1e9, age: 0, stretch: -1, cand: -1, candAge: 0, quick: false };
   /** The step each stretch last held, by the subjects it shows. */
   private leanAt = new Map<number, number>();
   /** When the governor stepped, and to what: seconds of running time, step. */
@@ -626,18 +629,26 @@ export class FlightEngine extends WaterEngine {
     if (g.age < 2500) return;
     const s = this.samples;
     if (this.needed !== g.stretch) {
-      // A new stretch: what was settled for the last is kept, and this one is entered at the step it last held.
-      if (g.stretch >= 0) this.leanAt.set(g.stretch, this.lean);
-      g.stretch = this.needed;
-      const to = this.leanAt.get(this.needed) ?? 0;
-      if (to !== this.lean) {
-        this.lean = to;
-        this.leanLog.push([+this.time.toFixed(1), this.lean]);
+      if (this.needed !== g.cand) {
+        g.cand = this.needed;
+        g.candAge = 0;
       }
-      g.missed = g.prev = g.clean = 0;
-      s.length = 0;
-      return;
-    }
+      g.candAge += ms;
+      if (g.candAge > 500) {
+        // A new stretch: what was settled for the last is kept. One that has been visited is entered at the step it
+        // held; one that has not keeps the step it is handed, and tries a richer one soon.
+        if (g.stretch >= 0) this.leanAt.set(g.stretch, this.lean);
+        g.stretch = this.needed;
+        const held = this.leanAt.get(this.needed);
+        if (held !== undefined && held !== this.lean) {
+          this.lean = held;
+          this.leanLog.push([+this.time.toFixed(1), this.lean]);
+        }
+        g.quick = held === undefined && this.lean > 0;
+        g.missed = g.prev = g.clean = 0;
+        s.length = 0;
+      }
+    } else g.cand = g.stretch;
     s.push(ms);
     if (ms > Math.max(this.base * 1.45, 12)) g.missed++;
     // Looked at twice a second.
@@ -655,6 +666,7 @@ export class FlightEngine extends WaterEngine {
       this.lean++;
       this.leanLog.push([+this.time.toFixed(1), this.lean]);
       g.clean = 0;
+      g.quick = false;
       // Stepped back up not long ago and it did not hold: wait longer before trying again.
       if (this.time - g.lastUp < 40) g.need = Math.min(g.need * 2, 80000);
       g.prev = 0;
@@ -663,11 +675,12 @@ export class FlightEngine extends WaterEngine {
     g.prev = missed;
     if (missed === 0) g.clean += span;
     else g.clean = 0;
-    if (g.clean >= g.need && this.lean > 0) {
+    if (g.clean >= (g.quick ? 1500 : g.need) && this.lean > 0) {
       this.lean--;
       this.leanLog.push([+this.time.toFixed(1), this.lean]);
       g.clean = 0;
-      g.lastUp = this.time;
+      // (A quick trial in a new stretch that does not hold is not held against the next one.)
+      if (!g.quick) g.lastUp = this.time;
     }
   }
 
