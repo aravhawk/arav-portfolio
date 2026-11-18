@@ -1109,3 +1109,52 @@ the repository.
 Round 3 is in. Next, alone: the frame-rate task; then the sharing
 cards, the two phone framings the titles test still fails, the full
 gates, and panel 10.
+
+### P1 (frame rate, first pass), integrated Nov 18, 5:05 AM CT
+
+Seven signed commits on the branch ending at `aa470bc`, merged without
+conflict; the merged build looked at (24 positions): the picture is as
+it was.
+
+As found, every desktop frame was over 25 ms (about 10 frames a second
+at 1440 at 2x, 6.7 at 1728) and the phone ran at 30: two nights of
+picture work on one shader. What P1 did: the pass is compiled in **a
+variant per stretch of the flight and per theme**
+(`src/water/variants.ts`: about 106 ms a frame down to about 13); a
+far-off subject costs only its own rectangle; the governor keeps its
+step per stretch and no longer flaps; the old top-down pass and what
+only it used are removed. Picture: 36 of 37 frames a theme have no
+pixel in ten thousand differing by more than 2 of 255.
+
+On an Apple M4 (10 GPU cores), production build, alone on the GPU:
+
+| profile | theme | as found p50 / p95 ms | now p50 / p95 ms | frames over 25 ms now |
+| --- | --- | --- | --- | --- |
+| desktop-1440-dpr2 | light | 100.0 / 133.4 | 16.7 / 16.8 | 2.91% |
+| desktop-1440-dpr2 | dark | 100.0 / 133.4 | 16.7 / 16.8 | 3.96% |
+| desktop-1728-dpr2 | light | 150.0 / 200.0 | 16.7 / 33.3 | 7.89% |
+| desktop-1728-dpr2 | dark | 150.0 / 200.1 | 16.7 / 33.4 | 13.21% |
+| phone-390-dpr3-cpu4x | both | 33.3 / 33.4 | 16.7 / 16.7 | 0 |
+| desktop-1440-dpr2-contended | light / dark | 166.6 / 400 | 16.8 to 33.3 / 50 | about 50% |
+| desktop-2560-dpr2 | light / dark | not run | 16.7 to 33.3 / 50 | 45% / 62% |
+
+**The gate is not met.** The phone holds 60 on full shading; 1440
+holds 60 on 26 of 32 screens (every slow frame is in the first frame
+and melt, or in the canyon); 1728 on about 20; the large and contended
+profiles are slow about half the time. What is left is real work on
+pixels: the name about 11 ms of an 18 ms first frame, the canyon's
+march 14 of 21. Also: the first theme switch of a visit can hold a
+frame for 1.0 to 1.4 s; one task of 50 to 74 ms at start-up.
+
+After it, this thread (GPU free): cc-switch's and RydAR's names on one
+calm surface on phones (`8a20ba9`; the titles test now passes at 390,
+1440, 1920 and 2560 in both themes; it still fails at 320 wide, where
+the short frame leaves the words over the subject); the eleven card
+pictures retaken and the cards given the stations' label system
+(`ce9da67`).
+
+Running, alone: **P2**, the frame rate's second pass (the name and its
+field baked so a pixel does lookups, the canyon's walls as a baked
+field, the 3 to 5 ms the stations need at 1728, leaner governor steps
+for large screens and a busy GPU that keep full resolution, no held
+frame on a theme switch). Then the full gates and panel 10.
