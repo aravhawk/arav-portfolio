@@ -55,9 +55,11 @@ describe('the world’s plan is read from the calls that carve the bed', () => {
     expect(front.white).toBeCloseTo(0.22, 6);
     expect(groundAt(SLAB.x, SLAB.y - 40, 1, open).wet).toBe(1);
     // Out in the basin, upstream of the island, the water is open from wall to wall and unbroken.
-    const beside = groundAt(BASIN.x + 120, BASIN.y + 250, 1, open);
+    const beside = groundAt(BASIN.x + 330, BASIN.y + 120, 1, open);
     expect(beside.wet).toBe(1);
     expect(beside.white).toBe(0);
+    // (The near bank stands out into the basin's south-west corner in a round point: the station's name stands on it.)
+    expect(groundAt(BASIN.x + 120, BASIN.y + 250, 1, open).wet).toBe(0);
   });
 
   it('the streams fall into the river where world.ts says, as wide as their counts', () => {
