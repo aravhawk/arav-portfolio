@@ -547,7 +547,7 @@ export const place = (s: Seen, width = 0.9) => ({ pan: clamp(s.pan * width, -0.9
  * ice at their feet (`pond`), the ice under them opens to water (`hole`),
  * they thin and sink, and the last of each goes between `left`'s two ends.
  */
-export const NAME_MELT = { pond: [0.04, 0.45], hole: [0.1, 0.47], left: [0.5, 0.57] } as const;
+export const NAME_MELT = { pond: [0.04, 0.45], hole: [0.3, 0.5], left: [0.5, 0.586] } as const;
 export const nameMelt = (melt: number) => ({
   pond: smooth(NAME_MELT.pond[0], NAME_MELT.pond[1], melt),
   hole: smooth(NAME_MELT.hole[0], NAME_MELT.hole[1], melt),

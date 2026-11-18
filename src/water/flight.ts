@@ -18,7 +18,7 @@ import { makeCallouts } from './callouts';
 import { type Basis, END_AT, HOLDS, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, heroStart, moved, poseAt, posterBand, posterBands, stillScroll, type Key, type Pose, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Pending, type Program, type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
-import { DAWN, ENTER, GATE, LAP, PULSE, RIBBON, breathAt, dawnLight, enterAt, firstLight, nextDrip, stationsNear, stepGates } from './moments';
+import { DAWN, ENTER, GATE, LAP, PULSE, RIBBON, breathAt, dawnLight, enterAt, firstLight, heroLight, heroLightAt, nextDrip, stationsNear, stepGates } from './moments';
 import { opening } from './opening';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT_FREEBOARD, flightSource, freeboardAt } from './shaders/flight';
@@ -26,7 +26,8 @@ import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } fro
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
 import { type Box, F, type Mode, NO_ICE, type Tile, bits, frameTiles, iceParts, maskName, passNeeds, seaNear, slabInFrame, tarnNear } from './variants';
-import { COLS, LAKE, LATTICE, NAME, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
+import { CELL as GLYPH_CELL, FOUNDER, NAME_CUT, PLATES, type NameCut, type Plate, type PlatePose, founderAt, layoutName, plateAt, rasterGlyphs } from './name';
+import { COLS, LAKE, LATTICE, NAME, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TRIBS, WORLD, paintWorld, tribWidth } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -39,12 +40,8 @@ const CELL = [4, 5, 6, 8];
 const SPAN = 2300;
 /** How thick the lake's sheet stands above the water, world units. */
 const ICE_H = 16;
-/** The melt at which the last of the name's blocks goes under (see bindIce: they fade from 0.5 to 0.57). */
-const NAME_GONE = 0.555;
-/** How far the name's blocks sink by then, in capitals' heights. */
-const NAME_SINK = 0.57;
-/** How far the water the blocks stand in has spread from their feet at a point in the melt, world units. */
-const nameReach = (m: number) => 110 * smooth(0.03, 0.26, m) + 150 * smooth(0.2, 0.56, m) + 50 * smooth(0.56, 0.8, m);
+/** How far the water under the name has spread from where its rows stood at a point in the melt, world units: it opens as the plates founder. */
+const nameReach = (m: number) => 150 * smooth(0.52, 0.74, m) + 120 * smooth(0.7, 0.9, m);
 
 /** The light event at the ending happens once in a visit: after it, the sun stays up and the line of light holds. */
 let dawned = false;
@@ -984,12 +981,13 @@ export class FlightEngine extends WaterEngine {
   /** The camera the name is cut for (see the ice field). */
   nameCut: [number, number, number, number] = [0, 0, 1, 0];
   /**
-   * The name as blocks standing on the sheet (see the ice field and the
-   * name's own shader): the upright plane each line's faces stand in, each
-   * line's baseline and the height that parts the two lines in the raster,
-   * the capitals' height, and a block's depth.
+   * The name as plates standing on the sheet (see name.ts, the ice field and the name's own shader): the eight
+   * plates as they stand, the rows they stand in (each a strip of the lake: its middle and half size), the name's
+   * box in the first camera's picture (the height of its middle, its half width and half height, as tangents), the
+   * raster's measures (uv to a capital's height, and how far from a cell's middle an outline is looked for), and
+   * where the lead that carries the lake's water off leaves the name.
    */
-  nameStand: { yf: [number, number]; base: [number, number]; split: number; cap: number; depth: number } | null = null;
+  nameStand: { plates: Plate[]; rows: [number, number, number, number][]; seat: [number, number, number]; tex: [number, number, number, number]; cells: [number, number][]; lead: [number, number] } | null = null;
   /**
    * Where the first frame's words stand, as shares of the frame: the right end of the left block, the left end of the
    * right one (both 1 when they are stacked), and how far up the frame their top is. The bare ice round the name keeps clear of them.
@@ -1004,23 +1002,67 @@ export class FlightEngine extends WaterEngine {
 
   /** When the next drop falls from the melting letters. */
   private nameDripAt = 0;
-  /** The rings the last blades leave, each with its own moment. */
+  /** The rings a foundering plate leaves, each with its own moment. */
   private ringQ: { at: number; x: number; y: number }[] = [];
-  private nameRings() {
+  /** Plate `i` goes down into the water: a ring where it stood, and a second as it rolls. */
+  private nameRings(i: number) {
     const st = this.nameStand;
-    const r = this.iceRect;
-    if (!st || r.w <= 0) return;
-    const two = st.split > -5e3;
-    const per = two ? 4 : 8;
-    this.ringQ.length = 0;
-    for (let row = 0; row < (two ? 2 : 1); row++) {
-      for (let i = 0; i < per; i++) {
-        // (Across the letters' own width: the raster has room round them.)
-        const x = r.x + r.w * (0.14 + (0.72 * (i + 0.5)) / per);
-        this.ringQ.push({ at: this.time + 0.05 + 0.11 * ((i * 5 + row * 3) % per) + 0.04 * row, x, y: st.yf[row] + st.depth * 0.5 });
-      }
-    }
+    if (!st) return;
+    const p = st.plates[i];
+    this.ringQ.push({ at: this.time + 0.02, x: p.x, y: p.y + p.d * 0.5 }, { at: this.time + 0.34, x: p.x + p.hw * 0.4, y: p.y + p.h * 0.3 });
     this.ringQ.sort((a, b) => a.at - b.at);
+  }
+
+  /** The name's plates are laid out anew (a new shape of screen): the stretch of the lake they stand on, as the sheet's own frame has it, and the half size of the ground their rows cover. */
+  private nameSerial = 0;
+  setNameRect(rect: { x: number; y: number; w: number; h: number }, half: [number, number]) {
+    this.iceRect = rect;
+    this.iceBox = [0.5, 0.5, half[0] / rect.w, half[1] / rect.h];
+    this.nameSerial++;
+    this.dirty = true;
+  }
+
+  /** The plates at this frame's melt, worked out once a frame (and once more, without the swell, for what the simulation is given). */
+  private poseKey = '';
+  private poses: PlatePose[] = [];
+  private posesStill: PlatePose[] = [];
+  private ltA = new Float32Array(PLATES * 4);
+  private ltQ = new Float32Array(PLATES * 4);
+  private ltG = new Float32Array(PLATES * 4);
+  private ltF = new Float32Array(PLATES * 4);
+  private ltR = new Float32Array(PLATES * 4);
+  private ltFS = new Float32Array(PLATES * 4);
+  private ltRS = new Float32Array(PLATES * 4);
+  private nameBounds = new Float32Array(4);
+  private namePoses() {
+    const st = this.nameStand;
+    if (!st) return;
+    const key = `${this.melt}|${this.quiet ? 0 : this.time}|${this.nameSerial}`;
+    if (key === this.poseKey) return;
+    this.poseKey = key;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (let i = 0; i < PLATES; i++) {
+      const p = st.plates[i];
+      const a = plateAt(p, i, this.melt, this.quiet ? 0 : this.time, st.lead);
+      const b = plateAt(p, i, this.melt, 0, st.lead);
+      this.poses[i] = a;
+      this.posesStill[i] = b;
+      this.ltA.set([a.pos[0], a.pos[1], a.pos[2], p.h], i * 4);
+      this.ltQ.set(a.q, i * 4);
+      this.ltG.set([st.cells[i][0], st.cells[i][1], p.hw, p.d / 2], i * 4);
+      this.ltF.set(a.foot, i * 4);
+      // (w: how much of it stands in the light, to throw a shade and have an image in the ice: less once it has foundered, none afloat.)
+      this.ltR.set([Math.cos(a.yaw), Math.sin(a.yaw), a.open, (1 - a.flat) * (1 - 0.8 * a.down)], i * 4);
+      this.ltFS.set(b.foot, i * 4);
+      this.ltRS.set([Math.cos(b.yaw), Math.sin(b.yaw), b.open, (1 - b.flat) * (1 - 0.8 * b.down)], i * 4);
+      // (A plate is nowhere further from its middle than half its diagonal.)
+      const r = Math.hypot(p.h / 2, p.hw, p.d / 2) + 8;
+      x0 = Math.min(x0, a.pos[0] - r);
+      x1 = Math.max(x1, a.pos[0] + r);
+      y0 = Math.min(y0, a.pos[1] - r);
+      y1 = Math.max(y1, a.pos[1] + r);
+    }
+    this.nameBounds.set([x0, y0, x1, y1]);
   }
 
   protected bindIce(prog: Parameters<WaterEngine['bindIce']>[0], ice: Parameters<WaterEngine['bindIce']>[1], sdfUnit: number, snowUnit: number) {
@@ -1037,57 +1079,68 @@ export class FlightEngine extends WaterEngine {
     if (!st || !this.iceMeta || ice.rect[2] <= 0) {
       gl.uniform4f(prog.u.uNameG, 0, 0, -1e4, 0);
       if (prog.u.uNameS) gl.uniform1f(prog.u.uNameS, 0);
-      // (Once the sheet has gone, the lead its water left by is still where the lake's current is drawn from: these two
+      // (Once the sheet has gone, the lead its water left by is still where the lake's current is drawn from: these
       // stand as the last frame of the melt left them, whichever variant of the pass draws.)
       if (st && this.iceMeta && this.iceTex && prog.u.uNameL) {
         gl.uniform2f(prog.u.uNameL, 1, 220);
-        if (prog.u.uNameB) gl.uniform4f(prog.u.uNameB, st.base[0], st.base[1], st.cap, st.depth);
+        if (prog.u.uNameB) gl.uniform4f(prog.u.uNameB, st.lead[0], st.lead[1], st.plates[PLATES - 1].h, st.plates[PLATES - 1].d);
       }
       return;
     }
-    // The blocks' melt, as the sheet's is: every number a function of the melt alone, so it reverses exactly.
-    // They sweat, then thin evenly from every face and through their depth, sink into the water that has
-    // opened under them, and the last of each is a thin clear blade.
+    // The plates, as the sheet's melt is: every number a function of the melt alone, so it reverses exactly.
     const m = this.melt;
-    const half = -this.iceMeta.minSd;
-    // (Whole, a face is cut a hair outside the drawn letter: its lit arris is the hair, and the letter itself is all deep ice.)
-    // (They keep their drawn weight to the end: a block of ice in the sun does not grow thin, it grows low and round.)
-    const back = -1.4 + half * 0.07 * smooth(0.1, 0.52, m);
-    const depth = st.depth * (1 - 0.2 * smooth(0.12, 0.52, m));
-    // (They go down steadily into the water that has opened under them, lower with every step of the scroll: by the end
-    // only low rounded humps stand over it. What has gone under is still seen, through the water.)
-    const sink = NAME_SINK * st.cap * Math.min(1, Math.max(0, (m - 0.06) / 0.49)) ** 1.15;
-    const left = 1 - smooth(0.5, 0.57, m);
-    gl.uniform4f(prog.u.uNameG, st.yf[0], st.yf[1], st.split, 1);
-    gl.uniform4f(prog.u.uNameB, st.base[0], st.base[1], st.cap, st.depth);
-    gl.uniform4f(prog.u.uNameM, back, depth, sink, left);
-    // Their tops melt down unevenly and their shoulders round; they gloss with running water; what stands under the
-    // water goes first at the very end; and the water they stand in spreads from their own feet.
-    const reach = nameReach(m);
-    if (prog.u.uNameQ) gl.uniform4f(prog.u.uNameQ, half * 0.36 * smooth(0.06, 0.5, m), smooth(0.02, 0.4, m), smooth(0.47, 0.57, m), reach);
-    // The sheet opens from under their feet. First the meltwater lies on the ice round them (the simulation
-    // takes that for open water, so the pointer wakes it); then the ice under it goes, the pools join, and
-    // from half way the one pool they have become is the sheet's own.
+    this.namePoses();
     const shade = this.shading.has(prog);
-    const old = ice.a[0] + 3;
-    const hole = -30 + 78 * smooth(0.1, 0.47, m);
+    const near = st.plates[PLATES - 1];
+    const two = st.plates[0].row !== near.row;
+    // How many of them still stand: the stretch of the melt in which they founder, one by one.
+    const left = 1 - smooth(0.5, 0.586, m);
+    gl.uniform4f(prog.u.uNameG, st.plates[0].y, near.y, two ? 1 : -1e4, 1);
+    gl.uniform4f(prog.u.uNameB, st.lead[0], st.lead[1], near.h, near.d);
+    // (z: something of them stands under the water; w: how much of them stands, of all eight.)
+    if (prog.u.uNameM) gl.uniform4f(prog.u.uNameM, 0, near.d, m > FOUNDER.from - 0.26 ? 1 : 0, left);
+    if (prog.u.uNameV) gl.uniform4f(prog.u.uNameV, st.seat[0], st.seat[1], st.seat[2], 0);
+    if (prog.u.uRowA) gl.uniform4fv(prog.u.uRowA, st.rows[0]);
+    if (prog.u.uRowB) gl.uniform4fv(prog.u.uRowB, st.rows[1]);
+    if (prog.u.uLtA) gl.uniform4fv(prog.u.uLtA, this.ltA);
+    if (prog.u.uLtQ) gl.uniform4fv(prog.u.uLtQ, this.ltQ);
+    if (prog.u.uLtG) gl.uniform4fv(prog.u.uLtG, this.ltG);
+    if (prog.u.uLtT) gl.uniform4fv(prog.u.uLtT, st.tex);
+    if (prog.u.uNameBx) gl.uniform4fv(prog.u.uNameBx, this.nameBounds);
+    // The sheet under them. First meltwater lies on the ice round their feet and spreads (the simulation takes all
+    // of that film for open water, so the pointer wakes it and shakes their image in it); then, plate by plate,
+    // the ice under each goes and it founders; the water under the rows joins and spreads; and from there on
+    // the sheet's own breaking is the story.
+    const hole = -30 + 78 * smooth(0.3, 0.5, m);
     const pond = 32 + 34 * smooth(0.04, 0.45, m);
-    const k = smooth(0.5, 0.6, m);
-    // (A film of meltwater lies on the black ice well out in front of them, where their image is: the simulation is given
-    // all of it, so the pointer's breath shakes that image.)
-    gl.uniform4f(prog.u.uIceA, (shade ? hole : pond * 8) * (1 - k) + old * k, ice.a[1], ice.a[2], ice.a[3]);
+    const film = smooth(0.02, 0.5, m);
+    if (shade) {
+      if (prog.u.uLtF) gl.uniform4fv(prog.u.uLtF, this.ltF);
+      if (prog.u.uLtR) gl.uniform4fv(prog.u.uLtR, this.ltR);
+    } else {
+      // (What the simulation is given: the plates without the swell they ride on, and the film as water.)
+      const r = this.ltRS.slice();
+      for (let i = 0; i < PLATES; i++) r[i * 4 + 2] = Math.max(r[i * 4 + 2], pond * 5 * film * r[i * 4 + 3]);
+      if (prog.u.uLtF) gl.uniform4fv(prog.u.uLtF, this.ltFS);
+      if (prog.u.uLtR) gl.uniform4fv(prog.u.uLtR, r);
+    }
+    gl.uniform4f(prog.u.uIceA, hole, ice.a[1], ice.a[2], ice.a[3]);
     gl.uniform4f(prog.u.uIceC, ice.c[0], ice.c[1], smooth(0.36, 0.57, m), ice.c[3]);
-    if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (1 - k), smooth(0, 0.14, m), smooth(0.12, 0.3, m), smooth(0.41, 0.49, m));
-    // The water spreads from their feet (see the ice field), and leaves by one lead down the lake to the outlet: how
-    // far along the lake that lead has opened, and how wide it has become.
+    // x: how far from their feet the meltwater lies on the sheet, y: 0..1 how wet the plates and the ice round them are, z: 0..1 the
+    // first fractures have run out from their feet, w: 0..1 the sheet has begun to open under them.
+    if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (0.4 + 2.6 * film), smooth(0, 0.3, m), smooth(0.16, 0.5, m), smooth(0.44, 0.56, m));
+    // The water spreads from where the rows stood (see the ice field), and leaves by one lead down the lake to the
+    // outlet: how far along the lake that lead has opened, and how wide it has become. (It is wide enough for the
+    // plates to ride down.)
+    const reach = nameReach(m);
     if (prog.u.uNameS) gl.uniform1f(prog.u.uNameS, reach);
-    if (prog.u.uNameL) gl.uniform2f(prog.u.uNameL, smooth(0.13, 0.5, m), 26 + 44 * smooth(0.16, 0.56, m) + 150 * smooth(0.56, 0.9, m));
+    if (prog.u.uNameL) gl.uniform2f(prog.u.uNameL, smooth(0.4, 0.66, m), 26 + 70 * smooth(0.46, 0.6, m) + near.h * 0.9 * smooth(0.54, 0.74, m) + 60 * smooth(0.6, 0.9, m));
   }
 
   /** What this engine's own part of the ice field depends on (see bindIce): the melt, the name as it stands, the first frame's words, the governor's step. */
   protected iceKey() {
     const st = this.nameStand;
-    return `${this.melt}|${this.nameCut.join()}|${this.nameWords.join()}|${this.nameTan}|${this.leanNow}|${st ? `${st.yf.join()},${st.base.join()},${st.split},${st.cap},${st.depth}` : ''}`;
+    return `${this.melt}|${this.nameCut.join()}|${this.nameWords.join()}|${this.nameTan}|${this.leanNow}|${st ? `${st.plates.map((p) => `${p.x},${p.y},${p.h}`).join()}` : ''}`;
   }
 
   protected simCell() {
@@ -1228,17 +1281,21 @@ export class FlightEngine extends WaterEngine {
     this.meltRate += (Math.min(rate, 1.1) - this.meltRate) * (1 - Math.exp(-dt * 6));
     // While the letters melt, water runs off them and falls into the pool at their feet: a small ring, here and there,
     // every little while. (They are real rings in the simulation, and only while there is water there for them.)
-    if (this.nameStand && !this.quiet && m > 0.035 && m < NAME_GONE - 0.02 && this.time >= this.nameDripAt) {
+    if (this.nameStand && !this.quiet && m > 0.035 && m < FOUNDER.to && this.time >= this.nameDripAt) {
       const st = this.nameStand;
-      const r = this.iceRect;
-      const two = st.split > -5e3;
-      const row = two && Math.random() < 0.5 ? 0 : two ? 1 : 0;
-      const x = r.x + r.w * (0.14 + 0.72 * Math.random());
-      this.splash(x, st.yf[row] - 5 - 14 * Math.random(), 9 + 6 * Math.random(), 0.28 + 0.3 * Math.random());
+      const i = Math.floor(Math.random() * PLATES);
+      const p = st.plates[i];
+      // (Only from a plate that still stands, into the water at its own foot.)
+      if (m < founderAt(i)) this.splash(p.x + (Math.random() - 0.5) * 1.6 * p.hw, p.y - 5 - 14 * Math.random(), 9 + 6 * Math.random(), 0.28 + 0.3 * Math.random());
       this.nameDripAt = this.time + 0.16 + 0.5 * Math.random();
     }
-    // The last of the letters goes under: a ring leaves where each blade stood.
-    if (this.nameStand && !this.quiet && this.melt < NAME_GONE && m >= NAME_GONE && this.melt > NAME_GONE - 0.08) this.nameRings();
+    // A plate founders: real rings where it goes down. (Scrolled back, it comes up through the same water.)
+    if (this.nameStand && !this.quiet && Math.abs(m - this.melt) < 0.08) {
+      for (let i = 0; i < PLATES; i++) {
+        const at = founderAt(i) + 0.3 * FOUNDER.each;
+        if (this.melt < at !== m < at) this.nameRings(i);
+      }
+    }
     this.melt = m;
     const want = this.iceTex && !this.still && m > 0.12 && m < ICE_GONE ? Math.min(1, this.meltRate * 2.4) : 0;
     this.meltAct += (want - this.meltAct) * (1 - Math.exp(-dt * (want > this.meltAct ? 9 : 4.2)));
@@ -1347,14 +1404,17 @@ export class FlightEngine extends WaterEngine {
   /** The pieces the last frame was drawn in, and what drew each: for the checks. */
   private drawnTiles: { mask: number; area: number; by: Variant }[] = [];
 
-  /** The box the letters stand in (the pass's nameHit), with room: where in the frame they can be. */
+  /** The box the plates are in, standing or afloat (the pass's own test of it), with room: where in the frame they can be. */
   private nameBox(): Box | null {
     const st = this.nameStand;
-    const r = this.iceRect;
-    if (!st || r.w <= 0) return null;
+    if (!st) return null;
+    this.namePoses();
+    const b = this.nameBounds;
+    let top = 0;
+    for (const p of st.plates) top = Math.max(top, p.h);
     return [
-      [r.x - 30, Math.min(st.yf[0], st.yf[1]) - 30, -FLIGHT_FREEBOARD - 70],
-      [r.x + r.w + 30, Math.max(st.yf[0], st.yf[1]) + st.depth + 30, st.cap * 1.3 + 20],
+      [b[0] - 30, b[1] - 30, -FLIGHT_FREEBOARD - top * 0.5],
+      [b[2] + 30, b[3] + 30, top * 1.1 + 20],
     ];
   }
 
@@ -1470,6 +1530,9 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uShoal, this.shoalY);
     // The light: the hour's keys, worked out here once a frame.
     const sky = skyAt(night, at.day, this.lift, this.sunAz, this.ridge);
+    // (The first screen has its own sun and moon, behind the name: let go as the eye leaves the lake.)
+    const moon = heroLight(sky, heroLightAt(MELT.from + at.melt * (MELT.to - MELT.from)), night);
+    if (r.u.uMoon) gl.uniform4fv(r.u.uMoon, moon);
     if (this.first < 1 || this.breath !== 0) firstLight(sky, this.first, night, this.breath);
     gl.uniform3fv(r.u.uSkyZen, sky.zen);
     gl.uniform3fv(r.u.uSkyMid, sky.mid);
@@ -1908,36 +1971,59 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     return true;
   }
 
-  /** The name is one line on a wide screen and two on a tall one. */
+  /** The letters' outlines, drawn once: the display face's capitals, each in its own cell of one raster. */
+  let glyphs: ReturnType<typeof rasterGlyphs> | null = null;
+  /** The cut the letters are given (the checks may set another before the page starts, to compare). */
+  const cut: NameCut = { ...NAME_CUT, ...((window as unknown as { __nameCut?: Partial<NameCut> }).__nameCut ?? {}) };
+  /** The name is one row of eight plates on a wide screen and two rows of four on an upright one: where each stands, for this screen's first camera. */
   async function buildName() {
     const token = ++buildToken;
-    const host = document.querySelector<HTMLElement>('[data-ice]');
-    const family = host ? getComputedStyle(host).fontFamily : 'system-ui, sans-serif';
+    if (!glyphs) {
+      const family = getComputedStyle(document.documentElement).getPropertyValue('--f-orbiter').trim() || getComputedStyle(document.body).fontFamily;
+      const g = rasterGlyphs(family, cut.weight);
+      // (Distances in capitals' heights.)
+      const sd = await solver.solve({ alpha: g.alpha, w: g.tw, h: g.th, clamp: g.cap * 0.6, scale: 1 / g.cap });
+      if (destroyed || token !== buildToken) return;
+      glyphs = g;
+      engine.setIce({ sd: sd.sd, w: g.tw, h: g.th, minSd: sd.min });
+    }
+    const g = glyphs;
     const hero = heroDesign(aspect);
-    const ice = rasterName(hero.name, family);
-    const sd = await solver.solve({ alpha: ice.alpha, w: ice.tw, h: ice.th, clamp: 400, scale: ice.scale });
-    if (destroyed || token !== buildToken) return;
-    engine.iceRect = ice.rect;
+    const plates = layoutName(hero.rows, g, cut);
     engine.nameCut = hero.cut;
     engine.nameTan = Math.tan((hero.pose.fov * Math.PI) / 360);
-    // The blocks: each line stands where the first camera sees its baseline meet the sheet.
+    // The rows, each as a strip of the lake; and the name's box in the first camera's picture.
     const [cy, ch, cc, cs] = hero.cut;
-    const dy0 = ice.rect.y + ice.rect.h / 2 - cy;
-    const z0 = dy0 * cc + ch * cs;
-    const ty0 = (dy0 * cs - ch * cc) / z0;
-    const footOf = (base: number) => {
-      const ty = base / z0 + ty0;
-      return cy + (ch * (cc + ty * cs)) / (cs - ty * cc);
+    const rowOf = (r: number): [number, number, number, number] => {
+      const ps = plates.filter((p) => p.row === r);
+      const x0 = Math.min(...ps.map((p) => p.x - p.hw));
+      const x1 = Math.max(...ps.map((p) => p.x + p.hw));
+      return [(x0 + x1) / 2, ps[0].y + ps[0].d / 2, (x1 - x0) / 2, ps[0].d / 2];
     };
-    const far = ice.lines[0];
-    const near = ice.lines[ice.lines.length - 1];
-    const cap = near.cap - near.base;
-    const yf: [number, number] = [footOf(far.base), footOf(near.base)];
-    // (A block is about a third as deep as its capitals are tall, in the world's own units at the plane it stands in;
-    // less on a tall screen, where the far line's feet stand just over the near line's tops.)
-    const scale = ((yf[1] - cy) * cc + ch * cs) / z0;
-    engine.nameStand = { yf, base: [far.base, near.base], split: ice.lines.length > 1 ? (far.base + near.cap) / 2 : -1e4, cap, depth: (ice.lines.length > 1 ? 0.22 : 0.3) * cap * scale };
-    engine.setIce({ sd: sd.sd, w: ice.tw, h: ice.th, minSd: sd.min });
+    const rows: [number, number, number, number][] = [rowOf(0), rowOf(plates[PLATES - 1].row)];
+    const seen = (y: number, z: number) => {
+      const depth = (y - cy) * cc - (z - ch) * cs;
+      return { depth, ty: ((y - cy) * cs + (z - ch) * cc) / depth };
+    };
+    const foot = seen(plates[PLATES - 1].y, 0);
+    const top = seen(plates[0].y, plates[0].h);
+    const halfX = Math.max(rows[0][2] / seen(plates[0].y, plates[0].h / 2).depth, rows[1][2] / seen(plates[PLATES - 1].y, plates[PLATES - 1].h / 2).depth);
+    const far = plates[0];
+    engine.nameStand = {
+      plates,
+      rows,
+      seat: [(foot.ty + top.ty) / 2, halfX, (top.ty - foot.ty) / 2],
+      tex: [g.cap / g.tw, g.cap / g.th, GLYPH_CELL.w / 2 - 0.03, 0.5 + Math.min(GLYPH_CELL.foot, GLYPH_CELL.h - 1 - GLYPH_CELL.foot) - 0.03],
+      cells: plates.map((_, i) => [((i % GLYPH_CELL.cols) + 0.5) / GLYPH_CELL.cols, (Math.floor(i / GLYPH_CELL.cols) * GLYPH_CELL.h + GLYPH_CELL.foot + 0.5) / (GLYPH_CELL.rows * GLYPH_CELL.h)]),
+      // (The lead leaves from behind the far row, between the two words where they stand side by side.)
+      lead: [far.y + far.d, NAME.x + (rows[0] === rows[1] || plates[0].row === plates[PLATES - 1].row ? (plates[3].x + plates[3].hw + plates[4].x - plates[4].hw) / 2 - NAME.x : 0)],
+    };
+    // The stretch of the lake the name stands on, as the sheet's own frame has it: the rows, with room round them.
+    const padX = 0.5 * plates[PLATES - 1].h;
+    const y0 = rows[1][1] - rows[1][3];
+    const y1 = rows[0][1] + rows[0][3];
+    const hx = Math.max(rows[0][2], rows[1][2]);
+    engine.setNameRect({ x: NAME.x - hx - padX, y: y0 - padX, w: 2 * (hx + padX), h: y1 - y0 + 2 * padX }, [hx, (y1 - y0) / 2]);
   }
 
   let boardFor = '';
@@ -1954,7 +2040,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
       measureView();
-      // The name is cut for this screen's first camera: a new shape, a new cut.
+      // The name is laid out for this screen's first camera: a new shape, a new layout.
       if (Math.abs(aspect - cutFor) > 0.004) {
         cutFor = aspect;
         void buildName();
@@ -1970,7 +2056,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   // The name's own face may not have been asked for yet: ask.
   try {
     const host = document.querySelector<HTMLElement>('[data-ice]');
-    if (host) await Promise.race([document.fonts.load(`800 100px ${getComputedStyle(host).fontFamily}`, 'Arav Jain'), new Promise((r) => setTimeout(r, 1500))]);
+    const face = getComputedStyle(document.documentElement).getPropertyValue('--f-orbiter').trim();
+    if (host && face) await Promise.race([document.fonts.load(`${cut.weight} 100px ${face}`, 'ARAVJIN'), new Promise((r) => setTimeout(r, 1500))]);
   } catch {
     // The fallback face is drawn instead.
   }

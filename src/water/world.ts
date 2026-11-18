@@ -428,15 +428,6 @@ export const CANYON_LINE: Pt[] = [
 export const HALL = { x0: 1800, y0: T2 + 6110, x1: 2020 + CANYON.w / 2 - 16, y1: T2 + 6510 };
 export const FACE = { x: 2020 + CANYON.w / 2 - 15, y: T2 + 6275, w: 320, h: 200, z: 14 };
 
-export interface NameLayout {
-  /** the words, one per line */
-  lines: string[];
-  /** the width of the widest line, world units */
-  width: number;
-  /** how much taller than true the letters are drawn */
-  stretch: number;
-}
-
 /** Carve the bed. Land runs on past every edge except the last, which is open water. */
 export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1], gate = 0) {
   // The lake: one broad body with bays, so its shore is never a ruled curve.
@@ -676,70 +667,4 @@ function paintDelta(b: BedPainter) {
   ]) {
     b.channel([pt(x0, Y + y0), pt(x1, Y + y1)], { width: 700, speed: 0.22, flowOnly: true, straight: true });
   }
-}
-
-export interface NameRaster {
-  alpha: Uint8ClampedArray;
-  tw: number;
-  th: number;
-  /** world units per texel */
-  scale: number;
-  rect: Rect;
-  /** each line of letters, in the raster's true units up from its middle: where its baseline and the top of its capitals lie */
-  lines: { base: number; cap: number }[];
-}
-
-/**
- * The name, drawn at a fixed size in world units. Its tops point along +y
- * (away from the first camera), which on the raster is a flip.
- */
-export function rasterName(layout: NameLayout, fontFamily: string): NameRaster {
-  const probe = document.createElement('canvas').getContext('2d')!;
-  const fontPx = 200;
-  const font = `800 ${fontPx}px ${fontFamily}`;
-  const ls = -0.045 * fontPx;
-  probe.font = font;
-  const runOf = (text: string) => probe.measureText(text).width + ls * (text.length - 1);
-  const widest = Math.max(...layout.lines.map(runOf));
-  // Text space to world: k units per font px across, k * stretch up.
-  const k = layout.width / widest;
-  const lineH = fontPx * 0.9;
-  const textH = lineH * layout.lines.length;
-  const pad = fontPx * 0.24 * k;
-  const w = layout.width + pad * 2;
-  const h = textH * k * layout.stretch + pad * 2;
-  const rect = { x: NAME.x - w / 2, y: NAME.y - h / 2, w, h };
-  const tw = Math.min(1536, Math.max(256, Math.round(w)));
-  const scale = w / tw;
-  // The raster is the name at its true proportions: a texel is `scale`
-  // units across and `scale * stretch` units deep on the lake. Distances
-  // measured in it are therefore the ones the first camera sees, so an
-  // opening that grows as the ice melts grows evenly round every stroke
-  // in the picture, and the letters keep their shape while they do.
-  const th = Math.max(16, Math.round(h / (scale * layout.stretch)));
-  const c = document.createElement('canvas');
-  c.width = tw;
-  c.height = th;
-  const ctx = c.getContext('2d', { willReadFrequently: true })!;
-  // World x grows with text x; world y falls as text y grows.
-  ctx.setTransform(k / scale, 0, 0, -k / scale, tw / 2, th / 2);
-  ctx.font = font;
-  ctx.fillStyle = '#fff';
-  ctx.textBaseline = 'alphabetic';
-  const lines: NameRaster['lines'] = [];
-  layout.lines.forEach((text, i) => {
-    const m = ctx.measureText(text);
-    const asc = m.actualBoundingBoxAscent || fontPx * 0.72;
-    // Each line's capitals are centred in its band.
-    const mid = -textH / 2 + lineH * (i + 0.5);
-    const baseline = mid + asc / 2;
-    lines.push({ base: -baseline * k, cap: (asc - baseline) * k });
-    const start = -runOf(text) / 2;
-    let x = start;
-    for (let n = 0; n < text.length; n++) {
-      ctx.fillText(text[n], x, baseline);
-      x = start + ctx.measureText(text.slice(0, n + 1)).width + ls * (n + 1);
-    }
-  });
-  return { alpha: ctx.getImageData(0, 0, tw, th).data, tw, th, scale, rect, lines };
 }

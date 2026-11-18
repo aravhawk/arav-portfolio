@@ -9,7 +9,8 @@
  * stand, and its composed frame is one moment of that move.
  */
 
-import { BENDS, BOARD_DEPTH, CANYON, DY, FACE, NAME, type NameLayout, REST, RIVER, SHARDS, SHEET, SLAB, T2, TARN_BAY, boardSpan, sheetCols } from './world';
+import type { NameRow } from './name';
+import { BENDS, BOARD_DEPTH, CANYON, DY, FACE, NAME, REST, RIVER, SHARDS, SHEET, SLAB, T2, TARN_BAY, boardSpan, sheetCols } from './world';
 
 export type V3 = [number, number, number];
 
@@ -74,44 +75,83 @@ const rad = (d: number) => (d * Math.PI) / 180;
 
 export interface Hero {
   pose: Pose;
-  name: NameLayout;
-  /** the camera the name is cut for: its y, its height, and the cosine and sine of its pitch */
+  /** the name's rows as the frame composes them, the far one first (see name.ts) */
+  rows: NameRow[];
+  /** the name as it is read, a line to a row, and the near row's width in world units */
+  name: { lines: string[]; width: number };
+  /** the first camera, in whose picture the swept ice and the first frame's words are measured: its y, its height, and the cosine and sine of its pitch */
   cut: [number, number, number, number];
 }
 
+/** How wide a row of the name is for its capitals' height: near enough to compose the frame with (the plates are then laid to the row's width exactly). */
+const ROW_WIDE = { one: 6.6, far: 3.45, near: 2.65 };
+
 /**
  * The first frame, composed from the picture backwards: the horizon a fifth
- * of the way down, the name a set share of the frame's width with its middle
- * below the frame's. The camera looks straight along +y, and the name is cut
- * for exactly this camera (see the ice field), so it reads square-on.
+ * of the way down, the name a set share of the frame's width, its feet a set
+ * way down the frame. The camera looks straight along +y. The name is eight
+ * upright plates on the lake, so the eye can move on them.
+ *
+ * On a wide frame the name is one row. On an upright one it is two rows of
+ * four: JAIN in front, ARAV behind and above it, further off and larger, so
+ * the two stand as wide as each other in the frame and the far one's feet
+ * and its image in the ice stand clear over the near one's tops. The rows'
+ * places on the lake are the same for every upright frame of a kind (they
+ * are composed for one, `canon`): only the camera differs.
  */
 export function heroDesign(aspect: number): Hero {
+  const two = aspect < 0.9;
   const tall = aspect < 0.7;
   const fov = tall ? 64 : aspect >= 1.2 ? 50 : 56;
   // (A phone's frame is tall: it keeps a real band of sky and ranges over the lake.)
   const horizon = tall ? 0.235 : 0.21;
-  // (Two shapes of screen leave the first frame's words no room under the letters: a phone that is squat for its width,
-  // and a frame far wider than it is tall. On both the name stands a little higher, and on the wide one a little
-  // smaller, so bare ice lies under the letters' feet and snow under the words.)
-  const squat = tall ? Math.min(1, Math.max(0, (aspect - 0.465) / 0.035)) : 0;
-  const shallow = Math.min(1, Math.max(0, (aspect - 2.1) / 0.7));
-  const middle = tall ? 0.565 - 0.034 * squat : 0.585 - 0.03 * shallow;
-  const share = tall ? 0.72 : Math.min(0.62, Math.max(0.56, 0.3 + 0.19 * aspect)) - 0.1 * shallow;
-  const width = tall ? 860 : 1500;
   const th = Math.tan(rad(fov / 2));
   const pitch = Math.atan((1 - 2 * horizon) * th);
-  const sight = pitch + Math.atan((2 * middle - 1) * th);
-  // The name's depth along the view axis, then its range and the camera's height.
-  const depth = width / (share * 2 * th * aspect);
-  const range = depth / Math.cos(sight - pitch);
-  const z = range * Math.sin(sight);
-  const y = NAME.y - range * Math.cos(sight);
-  const pose: Pose = { pos: [NAME.x, y, z], aim: [NAME.x, y + z / Math.tan(pitch), 0], fov };
-  return {
-    pose,
-    name: { lines: tall ? ['Arav', 'Jain'] : ['Arav Jain'], width, stretch: depth / z },
-    cut: [y, z, Math.cos(pitch), Math.sin(pitch)],
+  /** The camera whose frame holds a row `width` wide at `share` of its width, with the row's feet `foot` of the way down it. */
+  const eye = (a: number, width: number, share: number, foot: number) => {
+    const depth = width / (share * 2 * th * a);
+    const under = pitch + Math.atan((2 * foot - 1) * th);
+    const z = depth / (Math.cos(pitch) / Math.tan(under) + Math.sin(pitch));
+    return { z, ground: z / Math.tan(under) };
   };
+  let rows: NameRow[];
+  let width: number;
+  let at: { z: number; ground: number };
+  if (two) {
+    width = 860;
+    const canon = tall ? 0.46 : 0.78;
+    const share = tall ? 0.7 : 0.6;
+    const near = tall ? 0.652 : 0.7;
+    const far = tall ? 0.425 : 0.425;
+    const c = eye(canon, width, share, near);
+    // The far row: where its feet stand in that frame, and how wide it must be on the lake to stand as wide in the frame.
+    const underF = pitch + Math.atan((2 * far - 1) * th);
+    const groundF = c.z / Math.tan(underF);
+    const depthF = groundF * Math.cos(pitch) + c.z * Math.sin(pitch);
+    rows = [
+      { text: 'ARAV', y: NAME.y + groundF - c.ground, width: share * 2 * th * canon * depthF },
+      { text: 'JAIN', y: NAME.y, width },
+    ];
+    // (A phone that is squat for its width leaves the words less room under the name: it stands a little higher.)
+    const squat = tall ? Math.min(1, Math.max(0, (aspect - 0.465) / 0.035)) : 0;
+    at = eye(aspect, width, share, near - 0.03 * squat);
+  } else {
+    width = 1500;
+    // (A frame far wider than it is tall leaves the first frame's words no room under the letters: the name stands a
+    // little higher and smaller there, so bare ice lies under the letters' feet and snow under the words.)
+    const shallow = Math.min(1, Math.max(0, (aspect - 2.1) / 0.7));
+    const share = Math.min(0.72, Math.max(0.6, 0.37 + 0.2 * aspect)) - 0.16 * shallow;
+    rows = [{ text: 'ARAV JAIN', y: NAME.y, width }];
+    at = eye(aspect, width, share, 0.672 - 0.05 * shallow);
+  }
+  const y = NAME.y - at.ground;
+  const pose: Pose = { pos: [NAME.x, y, at.z], aim: [NAME.x, y + at.z / Math.tan(pitch), 0], fov };
+  return { pose, rows, name: { lines: rows.map((r) => r.text), width }, cut: [y, at.z, Math.cos(pitch), Math.sin(pitch)] };
+}
+
+/** The capitals' height of a row, near enough (see ROW_WIDE). */
+export function rowHeight(rows: NameRow[], i: number): number {
+  return rows[i].width / (rows.length > 1 ? (i === 0 ? ROW_WIDE.far : ROW_WIDE.near) : ROW_WIDE.one);
 }
 
 /**
@@ -216,7 +256,8 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ, band = false): Ke
 
   // The first frame, and the slow push toward the name it begins: the foot of the letters keeps its place.
   const hero = heroDesign(aspect).pose;
-  const first: Move = { at: hero, pivot: [NAME.x, NAME.y, 0], push: HERO_PUSH * g, arc: 0, rise: 0 };
+  // (On an upright frame the far row stands a long way behind the near one: the eye goes round less there, so the two keep in line.)
+  const first: Move = { at: hero, pivot: [NAME.x, NAME.y, 0], push: (aspect < 0.9 ? 0.15 : HERO_PUSH) * g, arc: (aspect < 0.9 ? -1.5 : HERO_ARC) * g, rise: HERO_RISE * g };
 
   // An upright screen that is not a phone (a tablet held tall) flies the
   // phone's path after the hero: its copy sits at the foot, where that
@@ -234,6 +275,9 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ, band = false): Ke
   const keys: Key[] = upright
     ? [
         ...moveKeys(first, HOLD, [0, HOLD], (s) => s),
+        // Up over the two rows as they founder: the plates afloat below and ahead, the far shore beyond.
+        { s: 1.5, pos: [1320, 900, 1200], aim: [1400, 3500, 0], fov: wideFov },
+        { s: 1.61, pos: [1380, 2900, 800], aim: [1450, 5200, 0], fov: wideFov },
         // Low over the lake's south end, looking down the river.
         { s: OUTLET_AT - 0.12, pos: [1440, 1560 + DY, 250], aim: [1530, 2200 + DY, 0], fov: wideFov },
         // The statement: the near bank fills the foot of the frame, the river crosses beyond it; the eye goes on down the reach.
@@ -262,8 +306,11 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ, band = false): Ke
       ]
     : [
         ...moveKeys(first, HOLD, [0, HOLD], (s) => s),
-        // Out over the breaking lake, still high: the plates, the far shore and the outlet ahead, the name's water left behind.
-        { s: 1.46, pos: [1345, 2700, 430], aim: [1480, 5300, 0], fov: wideFov },
+        // Up and out over the breaking lake: the name's plates have foundered and lie afloat among the floes just
+        // ahead and below, riding down the lead toward the outlet; the far shore beyond them.
+        { s: 1.5, pos: [1330, 700, 700], aim: [1400, 2500, 0], fov: wideFov },
+        // Down the lake after them: the plates ride the current ahead, the outlet beyond.
+        { s: 1.61, pos: [1350, 2500, 560], aim: [1450, 5000, 0], fov: wideFov },
         // Low over the lake's south end, looking down the river toward the ranges.
         { s: OUTLET_AT - 0.12, pos: [1380, 1640 + DY, 200], aim: [1500, 2190 + DY, 0], fov: wideFov },
         // Over the river's mouth, already turned to the first reach: the bank his sentence stands on fills the lower
@@ -343,8 +390,11 @@ export function posterBands(): PosterBand[] {
       lo = a;
     }
   };
+  // (Each kind of frame has its own first frame: two rows on an upright one, composed for a phone and for a tablet held
+  // tall; one row from there on, through two lenses.)
   cut('tall', 0.4, 0.7);
-  cut('square', 0.7, 1.2);
+  cut('mid', 0.7, 0.9);
+  cut('square', 0.9, 1.2);
   cut('wide', 1.2, 3.2);
   return out;
 }
@@ -361,8 +411,14 @@ export function heroStart(band: PosterBand, back: number, high: number): Pose {
   return moved({ at, pivot: [NAME.x, NAME.y, 0], push: back, arc: 0, rise: -high }, -1);
 }
 
-/** How far the first camera closes on the name while the letters melt, as a share of its distance. */
-const HERO_PUSH = 0.05;
+/**
+ * The first screen's move, over its hold: the eye closes on the name's foot by this share of its distance, goes round
+ * it to its own left (toward the low sun, so the plates' lit flanks and their depth come into view) and rises a
+ * little over it. The plates are true objects: the eye can move on them.
+ */
+const HERO_PUSH = 0.16;
+const HERO_ARC = -7;
+const HERO_RISE = 1.5;
 
 /**
  * Station 3's frame, composed from the plates backwards: they are set a

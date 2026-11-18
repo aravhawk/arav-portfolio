@@ -81,6 +81,42 @@ export function firstLight(sky: { sun: number[]; key: number[]; keyDir: number[]
   if (breath) for (let i = 0; i < 3; i++) sky.key[i] *= 1 + 0.07 * breath * (1 - w);
 }
 
+/**
+ * The first screen's own light. The name is plates of clear ice, and what
+ * lights them stands behind them and to one side, low: by day the sun, so
+ * they are rim lit and lit through and throw their shade toward the eye;
+ * before dawn a low moon in the same place, cold. `az`: its bearing from +y
+ * toward +x, radians; `el`: how high it stands. (The rest of the flight has
+ * the hour's own sun: this is let go as the eye leaves the lake.)
+ */
+export const HERO_SUN = { az: -0.2, el: 0.11, moonAz: -0.23, moonEl: 0.125, moon: [0.105, 0.135, 0.19] };
+/** How much of the first screen's light there is at a scroll position (screens): all of it while the name stands, none once the eye has turned to the river. */
+export const heroLightAt = (s: number) => 1 - smooth(1.3, 1.95, s);
+/**
+ * Bring the hour's light round to the first screen's (see HERO_SUN): `k` 0 leaves it, 1 is the first screen's own.
+ * Changes `sky` in place; returns where the moon stands and how much of it there is (none by day).
+ */
+export function heroLight(sky: { sun: number[]; key: number[]; keyDir: number[] }, k: number, night: number): [number, number, number, number] {
+  const day = 1 - night;
+  const turn = (d: number[], az1: number, el1: number, w: number) => {
+    const az = Math.atan2(d[0], d[1]);
+    const el = Math.asin(Math.max(-1, Math.min(1, d[2])));
+    const a = az + (az1 - az) * w;
+    const e = el + (el1 - el) * w;
+    d[0] = Math.sin(a) * Math.cos(e);
+    d[1] = Math.cos(a) * Math.cos(e);
+    d[2] = Math.sin(e);
+  };
+  if (k > 0) {
+    // By day the sun itself comes round. Before dawn the sun stays where it will rise; the ground's light becomes the moon's.
+    turn(sky.sun, HERO_SUN.az, HERO_SUN.el, k * day);
+    turn(sky.keyDir, HERO_SUN.az + (HERO_SUN.moonAz - HERO_SUN.az) * night, HERO_SUN.el + (HERO_SUN.moonEl - HERO_SUN.el) * night, k);
+    for (let i = 0; i < 3; i++) sky.key[i] += (HERO_SUN.moon[i] - sky.key[i]) * k * night;
+  }
+  const c = Math.cos(HERO_SUN.moonEl);
+  return [Math.sin(HERO_SUN.moonAz) * c, Math.cos(HERO_SUN.moonAz) * c, Math.sin(HERO_SUN.moonEl), k * night];
+}
+
 /** The light event at the ending, `t` seconds after the camera comes to rest: the sun's last lift and the line of light, 0..1 each. */
 // (The line of light runs out over the first two thirds of `ray`; the ribbon of light climbs, `rise`, from where it ends.)
 export const DAWN = { lift: [0, 2.6], ray: [0.7, 4.4], rise: [2.7, 4.9], over: 5.2 } as const;

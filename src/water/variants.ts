@@ -187,7 +187,8 @@ const MELT_GONE = 0.9;
  */
 export function iceParts(melt: number, night: number, stands: boolean): IceParts {
   const on = melt < MELT_GONE;
-  return { on, blocks: on && stands && melt < 0.57, field: on && stands && !(night >= 1 && melt >= 0.64) };
+  // (The plates founder one by one and then ride on as bergs while any of the sheet is left: they are there as long as it is.)
+  return { on, blocks: on && stands, field: on && stands };
 }
 
 /**
