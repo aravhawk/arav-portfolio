@@ -7,8 +7,9 @@ import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import { getPostBySlug, getAllPostSlugs, getAdjacentPosts } from '@/lib/blog';
-import { Arrow } from '@/components/bits';
+import { postContents } from '@/components/blog/contents';
 import { mdxComponents } from '@/components/blog/MDXComponents';
+import { WAY_TO_WRITING } from '@/components/NextBand';
 import { PageShell } from '@/components/PageShell';
 import { formatPostDate } from '@/lib/dates';
 import { pageMeta } from '@/lib/meta';
@@ -55,6 +56,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   });
 
   const { prev, next } = getAdjacentPosts(slug);
+  const contents = postContents(post.content);
+  const contentsList = (
+    <ol>
+      {contents.map((h) => (
+        <li key={h.id}>
+          <a href={`#${h.id}`}>{h.text}</a>
+        </li>
+      ))}
+    </ol>
+  );
 
   const articleLd = {
     '@context': 'https://schema.org',
@@ -84,15 +95,34 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         vt: `post-${slug}`,
         titleLong: true,
       }}
+      next={WAY_TO_WRITING}
     >
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
       <article className="article wrap">
+        {/* The margin: when it was written, what it is filed under, and its own headings. It stays beside the
+            text while the post is read; on a narrow screen it is folded above the text. */}
         <aside className="article-rail" aria-label="About this post">
+          <p className="rail-when">
+            <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date)}</time>
+            <span>{post.readingTime}</span>
+          </p>
           <ul className="tags" aria-label="Tags">
             {post.frontmatter.tags.map((tag) => (
               <li key={tag}>{tag}</li>
             ))}
           </ul>
+          {contents.length ? (
+            <>
+              <nav className="toc toc-wide" aria-label="Contents">
+                <p className="toc-h">Contents</p>
+                {contentsList}
+              </nav>
+              <details className="toc toc-fold">
+                <summary>Contents</summary>
+                {contentsList}
+              </details>
+            </>
+          ) : null}
         </aside>
         <div className="article-main">
           <p className="article-lead">{post.frontmatter.description}</p>
@@ -115,11 +145,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               ) : null}
             </nav>
           ) : null}
-          <p className="article-back">
-            <Link className="link" href="/blog">
-              All writing <Arrow />
-            </Link>
-          </p>
         </div>
       </article>
     </PageShell>
