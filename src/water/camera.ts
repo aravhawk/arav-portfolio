@@ -289,7 +289,7 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ, band = false): Ke
         { s: s4 + 0.3, pos: [1150, 9700 + Y, 300], aim: [1300, 10500 + Y, 0], fov: 46 },
         // The tarn, from low on its south-west bank (see tarnPose).
         // (The eye goes round the edge of the bank the words stand on, which keeps its place: the two shards and the ranges slide across the water, away from the words.)
-        ...holdKeys(band ? move(tarnBand(aspect), 0.3, 0.8, 0.1, 2, 0) : move(tarnPose(), 0.42, 0.55, 0.1, 9, 0), s4 + 1.2),
+        ...holdKeys(band ? move(tarnBand(aspect), 0.3, 0.8, 0.1, 2, 0) : move(tarnPose(), 0.5, 0.51, 0.1, 9, 0), s4 + 1.2),
         { s: s5 + 0.3, pos: [1300, T2 - 300, 300], aim: [1300, T2 + 600, 0], fov: 44 },
         ...laterKeys(aspect, band, s5, s6, s7, s8),
         ...seaKeys(aspect, sunAz, s9, s10, g),
@@ -441,7 +441,7 @@ function tarnPose(): Pose {
   // (This near the water the tarn is most of what the frame holds, and the sound reads it so: see the scene reader's `tarn`.)
   const pos: V3 = [TARN_BAY.x - 350, TARN_BAY.y - 170, 42];
   // (It looks down a little: the bank's far edge stands well over the name, with room to spare through the whole move.)
-  return { pos, aim: [pos[0] + 700, pos[1] + 720, pos[2] - 128], fov: 44 };
+  return { pos, aim: [pos[0] + 700, pos[1] + 720, pos[2] - 165], fov: 44 };
 }
 
 /** The last four stations' keys: the columns, the dam, the lattice, the canyon. */
