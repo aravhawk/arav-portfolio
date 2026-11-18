@@ -81,6 +81,13 @@ const FLIGHT_SRC = `#version 300 es
 #if defined(F_STATION) || defined(F_SLAB) || defined(F_CONF) || defined(F_POOL) || defined(F_SHARDS)
 #define F_GLACIER
 #endif
+// (The letters stand on the swept field, and the field lies on the sheet.)
+#if defined(F_NAME) && !defined(F_FIELD)
+#define F_FIELD
+#endif
+#if defined(F_FIELD) && !defined(F_ICE)
+#define F_ICE
+#endif
 precision highp float;
 in vec2 vUv;
 out vec4 o;
@@ -144,15 +151,15 @@ uniform sampler2D uGround; // the baked snow: its slope, and its horizon toward 
 uniform sampler2D uGlowTex; // the last frame's highlights, small and soft
 uniform float uBloom;
 uniform float uIceH;
-#ifdef F_ICE
-uniform float uIceOn;      // 0 once the whole sheet has melted: the field is not asked at all
+// (What the melt does to the lake's water and to the glow is told to every variant: one that does not carry the sheet
+// may draw the lake once the sheet has gone, or the valley while the lake is behind the eye.)
 uniform float uGlow;       // 0..1: how much of the lake's sheet is still there to glow under
 uniform float uMeltAct;
+#ifdef F_ICE
+uniform float uIceOn;      // 0 once the whole sheet has melted: the field is not asked at all
 #else
 // (A variant of the pass for where the lake's sheet has gone: what the engine would send, known when it is compiled.)
 const float uIceOn = 0.0;
-const float uGlow = 0.0;
-const float uMeltAct = 0.0;
 #endif
 
 uniform vec3 uSlabPos;     // the middle of the slab's foot
@@ -761,7 +768,7 @@ float slabHit(vec3 ro, vec3 rd, out vec3 hl, out float face) {
 // 1 while the block is drawn as a mirror image in moving water: no hairline survives that.
 float gSlabSoft = 0.0;
 
-#if defined(F_SLAB) || defined(F_ICE)
+#if defined(F_SLAB) || defined(F_NAME)
 /**
  * What is seen inside a piece of glacier ice. Three depths are looked at
  * along the eye's ray, each a little further across the face than the last,
@@ -3437,7 +3444,7 @@ ${STATION_COMMON}
 #ifdef F_GLACIER
 ${GLACIER_ICE}
 #endif
-#ifdef F_ICE
+#ifdef F_FIELD
 ${NAME_ICE}
 #else
 float gNmCov = 0.0;
@@ -3925,7 +3932,7 @@ void main() {
 #if defined(F_ICE)
     if (aCut > 0.0) col = mix(col, iceCut(p, cutS, length(tilt) * uIceH * (1.0 - gPond) / max(foot / sinE, 1e-3)), aCut);
     // (Where the name's swept field lies over all of this pixel the sheet's own top is not seen: it is not worked out.)
-#ifdef DBG_NO_NAME
+#if defined(DBG_NO_NAME) || !defined(F_FIELD)
     const float nmK = 0.0;
 #else
     float nmK = nameCover(p, dir, foot);
@@ -3938,7 +3945,7 @@ void main() {
     if (aIce > 0.0 && !(aIce >= 1.0 && nmK >= 1.0)) col = mix(col, iceTop(p, il, cr, f0, sd0, dir, foot), aIce);
 #endif
     // The name's blocks stand on the sheet: their shade, their image and the meltwater at their feet lie on it.
-#ifndef DBG_NO_NAME
+#if defined(F_NAME) && !defined(DBG_NO_NAME)
     col = nameGround(col, p, dir, foot, aIce);
 #endif
 #endif
@@ -4000,7 +4007,7 @@ void main() {
     }
   }
 #endif
-#if defined(F_ICE) && !defined(DBG_NO_NAME)
+#if defined(F_FIELD) && !defined(DBG_NO_NAME)
   col = nameIce(col, dir, gndT, gndIce, gndWall);
 #endif
 #ifdef F_SHARDS

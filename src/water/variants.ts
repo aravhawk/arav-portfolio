@@ -18,14 +18,14 @@
 
 import { type Basis, type V3, projectPoint } from './camera';
 import { stationsNear } from './moments';
-import { CONF_Y, DELTA, LIP, POOL, SLAB, TARN, lipY } from './world';
+import { CONF_Y, DELTA, LAKE, LIP, POOL, SLAB, TARN, lipY } from './world';
 
 /** The theme a variant is compiled for: the day's, the night's, or neither (it is told each frame, and draws the turn between them). */
 export type Mode = 'day' | 'night' | 'any';
 
 /** One bit to a subject. The ground, the water, the sky and the ranges are in every variant. */
 export const F = {
-  /** the lake's sheet of ice and the name standing on it */
+  /** the lake's sheet of ice */
   ICE: 1,
   /** the block with the product picture, its shade, its image and the white water at its foot */
   SLAB: 2,
@@ -45,10 +45,14 @@ export const F = {
   CANYON: 256,
   /** the delta's light, the open sea, the ending */
   SEA: 512,
+  /** the name's letters standing on the sheet: the blocks, their shade, their image, what stands under the water, the pieces that come away (only with FIELD) */
+  NAME: 1024,
+  /** the stretch of bare swept ice the name stands on (only with ICE) */
+  FIELD: 2048,
 } as const;
-export const F_ALL = 1023;
+export const F_ALL = 4095;
 /** The name each bit is known by in the pass's source. */
-export const F_DEFINES = ['F_ICE', 'F_SLAB', 'F_CONF', 'F_POOL', 'F_SHARDS', 'F_COLS', 'F_DAM', 'F_LAT', 'F_CANYON', 'SEA'];
+export const F_DEFINES = ['F_ICE', 'F_SLAB', 'F_CONF', 'F_POOL', 'F_SHARDS', 'F_COLS', 'F_DAM', 'F_LAT', 'F_CANYON', 'SEA', 'F_NAME', 'F_FIELD'];
 
 /** For the checks: a mask as words. */
 export const maskName = (mask: number) =>
@@ -157,6 +161,55 @@ const POOL_BOX: Box = [
 const confNearCam = (cam: Basis) => cam.pos[1] > CONF_Y - 3300 && cam.pos[1] < CONF_Y + 1500;
 const poolNearCam = (cam: Basis) => Math.abs(cam.pos[0] - (POOL.x + POOL.w / 2)) < 2300 && Math.abs(cam.pos[1] - (POOL.y + POOL.h / 2)) < 2300;
 
+/**
+ * What of the lake's ice there is to draw at a point in its melt.
+ *  - on: the sheet, in any part. From the melt at which the last floe has gone (the engine's ICE_GONE) the pass asks
+ *    nothing of the ice field: `hasIce` is false everywhere, the name's pond and the sheet's own water are nothing
+ *    (`sheetK`, `pondK` and `gDeep` in the water are all 0 by then). What the melt still does to the lake's water after
+ *    that (`uGlow`, `uMeltAct`) is told to every variant.
+ *  - blocks: the letters. They have gone under when `uNameM.w` is 0 (bindIce: `left`), and with it their shade, their
+ *    image, what stands under the water and the pieces afloat are all nothing.
+ *  - field: the swept ice. By day it lies on whatever of the sheet is left; before dawn it is rimed over once the sheet
+ *    is plates (nameCover: `K *= 1.0 - uNight * smoothstep(0.5, 0.64, uIceA.z)`).
+ */
+export interface IceParts {
+  on: boolean;
+  blocks: boolean;
+  field: boolean;
+}
+export const NO_ICE: IceParts = { on: false, blocks: false, field: false };
+/** The melt at which the last floe is gone (the engine's ICE_GONE). */
+const MELT_GONE = 0.9;
+/**
+ * @param melt 0..1
+ * @param night 0 by day, 1 before dawn, between while the theme turns
+ * @param stands whether the name stands on the sheet as blocks (the home page; an inner page's lake has none)
+ */
+export function iceParts(melt: number, night: number, stands: boolean): IceParts {
+  const on = melt < MELT_GONE;
+  return { on, blocks: on && stands && melt < 0.57, field: on && stands && !(night >= 1 && melt >= 0.64) };
+}
+
+/**
+ * Where anything of the lake's ice can be, along the valley: the sheet lies on the lake (`hasIce`: within 80 units of
+ * its two shores), the water it shades or stands in is the lake's (`lakeK`: to 290 units past the south shore, found
+ * up to a few hundred units on under a bent ray), and the letters stand on it. Across the valley it has no end.
+ */
+const LAKE_Y: [number, number] = [LAKE.y0 - 600, LAKE.y1 + 900];
+/**
+ * Whether any ray of the frame can reach a stretch of the valley (all that lies between two distances down it, at any
+ * height, however far to either side). From inside it, yes. From outside, only if some ray of the frame heads back
+ * toward it: the frame's rays are spanned by its four corners, so if none of those does, none does.
+ */
+export function reachInView(cam: Basis, aspect: number, y0: number, y1: number): boolean {
+  const cy = cam.pos[1];
+  if (cy >= y0 && cy <= y1) return true;
+  const tx = cam.tan * aspect * 1.03 + 0.002;
+  const ty = cam.tan * 1.03 + 0.002;
+  const side = Math.abs(cam.r[1]) * tx + Math.abs(cam.u[1]) * ty;
+  return cy > y1 ? cam.f[1] - side < 0 : cam.f[1] + side > 0;
+}
+
 /** A part of the frame, in the pass's own vUv (u right, v up): x0, y0, x1, y1. */
 export type Rect = [number, number, number, number];
 /**
@@ -215,15 +268,19 @@ export function farParts(cam: Basis, aspect: number, need: number): { lean: numb
 
 /**
  * What the pass needs to carry to draw this frame whole.
- * @param ice the lake's sheet is still there in any part (melt under 1, or its meltwater still running)
+ * @param ice what of the lake's ice there is to draw (iceParts)
  * @param slab the block has its picture and is drawn
  */
-export function passNeeds(cam: Basis, aspect: number, ice: boolean, slab: boolean): number {
+export function passNeeds(cam: Basis, aspect: number, ice: IceParts, slab: boolean): number {
   let need = 0;
   const cx = cam.pos[0];
   const cy = cam.pos[1];
-  // The sheet and the name: `hasIce`, `uGlow`, `uNameG.w` in the pass are all nothing once the melt is done.
-  if (ice) need |= F.ICE;
+  // The sheet, the swept field and the letters: each while it is there, and only while the lake can be in the frame.
+  if (ice.on && reachInView(cam, aspect, LAKE_Y[0], LAKE_Y[1])) {
+    need |= F.ICE;
+    if (ice.field) need |= F.FIELD;
+    if (ice.field && ice.blocks) need |= F.NAME;
+  }
   // The block (main: `slabNear`, the ground's `uSlabSize.x > 0.0 && length(uCamPos.xy - uSlabPos.xy) < 5200.0`).
   if (slab) {
     const s = slabInFrame(cam, aspect);

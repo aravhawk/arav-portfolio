@@ -24,7 +24,7 @@ import { flightSource, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
-import { F, F_ALL, type Mode, type Rect, bits, farParts, maskName, passNeeds, seaNear, slabInFrame, tarnNear } from './variants';
+import { F, F_ALL, type Mode, type Rect, bits, farParts, NO_ICE, iceParts, maskName, passNeeds, seaNear, slabInFrame, tarnNear } from './variants';
 import { NAV_CLEAR, composedAt } from './words';
 import { COLS, LAKE, LATTICE, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
@@ -194,7 +194,7 @@ export class FlightEngine extends WaterEngine {
    * one a frame wants is there, the best of those that are draws.
    */
   /** What the first frame will need: set before `prepare`, so the one variant the first frame waits for is its own. */
-  firstNeed: number = F.ICE;
+  firstNeed: number = F.ICE | F.FIELD | F.NAME;
   private firstMode: Mode = 'any';
   private variants = new Map<string, Variant>();
   /** Every program that is the shading pass, whichever variant. */
@@ -1117,7 +1117,7 @@ export class FlightEngine extends WaterEngine {
 
   /** What the pass must carry to draw a frame from this camera whole (see variants.ts). */
   needs(cam: Basis, aspect: number): number {
-    return passNeeds(cam, aspect, !!this.iceTex && (this.melt < 1 || this.meltAct > 0), !!this.slabTex);
+    return passNeeds(cam, aspect, this.iceTex ? iceParts(this.melt, this.theme, !!this.nameStand) : NO_ICE, !!this.slabTex);
   }
   /** Whether a variant that carries all of that is ready. Where none is, it is asked for. */
   carries(need: number): boolean {
@@ -1431,7 +1431,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const s0 = window.scrollY / Math.max(u0, 1);
     const at = mqStill.matches ? stillScroll(s0) : s0;
     // (The block's picture has not been asked for yet: the first frame is drawn without it.)
-    engine.firstNeed = passNeeds(basisOf(poseAt(flightKeys(a0), at)), a0, (at - MELT.from) / (MELT.to - MELT.from) < 1, false);
+    engine.firstNeed = passNeeds(basisOf(poseAt(flightKeys(a0), at)), a0, iceParts((at - MELT.from) / (MELT.to - MELT.from), themeNow(), true), false);
   }
   await engine.prepare();
   if (isCancelled()) {
@@ -1849,7 +1849,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const out: { s: number; mask: number }[] = [];
     for (let s = 0; s <= END_AT + 1e-6; s += 0.05) {
       const at = mqStill.matches ? stillScroll(s) : s;
-      const mask = passNeeds(basisOf(poseAt(keys, at)), aspect, (at - MELT.from) / (MELT.to - MELT.from) < 1, true);
+      const mask = passNeeds(basisOf(poseAt(keys, at)), aspect, iceParts((at - MELT.from) / (MELT.to - MELT.from), themeNow(), true), true);
       if (!out.some((o) => o.mask === mask)) out.push({ s, mask });
     }
     return out;

@@ -69,6 +69,7 @@ vec2 gNmGrad = vec2(0.0, 1.0);
 // The blocks' shade on the sheet at this pixel, found once (before the air) and used again on the swept ice.
 float gNmShade = 0.0;
 
+#ifdef F_NAME
 /**
  * The hew: how far the block's surface stands in from the drawn outline at a
  * place, in the raster's px. The faces wander by a hair, here and there a
@@ -177,6 +178,7 @@ float nameHit(vec3 ro, vec3 rd, int i, out float tH, out vec2 g, out float sd, o
   // (An edge that the ray only grazes covers part of the pixel; one it goes in by covers it all.)
   return 1.0 - smoothstep(-aa, aa, min(best, hit ? min(sI, sB) : best));
 }
+#endif
 
 /** The sky as a dark, glassy mirror gives it back: its colours, the sun's glow, and before dawn the curtain's wash and the stars. */
 vec3 nameSky(vec3 rn, float starK) {
@@ -193,6 +195,7 @@ vec3 nameSky(vec3 rn, float starK) {
   return sky;
 }
 
+#ifdef F_NAME
 /** The swept ice as it lies round the blocks, taken broadly: what is seen through clear ice and what lies on a wet face. */
 vec3 nameLake() {
   return mix(vec3(0.05, 0.085, 0.14), vec3(0.012, 0.02, 0.034) + uAurora * 0.03, uNight);
@@ -357,6 +360,7 @@ vec3 nameLook(vec3 p, vec3 rd, float t, int i, vec2 g, float sd, vec2 grad, floa
   col += mix(vec3(0.8, 0.93, 1.0) * S.amb * 0.9, uAurora * 0.3, uNight) * (1.0 - smoothstep(0.0, 1.6, abs(zw - 1.2))) * uNameP.z * (1.0 - soft);
   return col;
 }
+#endif
 
 /**
  * The swept ice: bare lake ice, nearly black, that the sky slides on. White
@@ -439,6 +443,7 @@ vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, ve
  */
 vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWater);
 
+#ifdef F_NAME
 /**
  * What stands under the water. A block that has sunk is still all there:
  * the eye's ray goes into the water in front of it, is bent down by the
@@ -489,6 +494,7 @@ vec3 nameUnder(vec3 col, vec3 dir, float onWater) {
   }
   return col;
 }
+#endif
 
 vec3 nameIce(vec3 col, vec3 dir, float tG, float onIce, float tWall) {
   if (uNameG.w < 0.5) return col;
@@ -496,10 +502,8 @@ vec3 nameIce(vec3 col, vec3 dir, float tG, float onIce, float tWall) {
 #ifndef DBG_NO_NFIELD
   if (tG < 1e8 && dir.z < -0.0006) col = nameField(col, uCamPos.xy + dir.xy * tG, dir, tG * uPxAng, onIce, tWall < 1e8 ? 0.0 : 1.0 - onIce);
 #endif
+#if defined(F_NAME) && !defined(DBG_NO_NHIT)
   if (uNameM.w <= 0.0) return col;
-#ifdef DBG_NO_NHIT
-  return col;
-#endif
   // What stands under the water, seen through it: before the blocks themselves, which stand in front of it.
   if (tG < 1e8 && dir.z < -0.0006 && onIce < 1.0 && tWall >= 1e8 && uNameM.z > 0.0) col = nameUnder(col, dir, 1.0 - onIce);
   for (int k = 0; k < 2; k++) {
@@ -527,9 +531,11 @@ vec3 nameIce(vec3 col, vec3 dir, float tG, float onIce, float tWall) {
     col = mix(col, mix(c, inAir(c, dir, tH), 0.04), cov * uNameM.w);
     gNmCov = max(gNmCov, cov * uNameM.w);
   }
+#endif
   return col;
 }
 
+#ifdef F_NAME
 /**
  * What the blocks do to the sheet they stand on, before the air: each
  * throws a long soft blue shade toward the eye, away from the low sun.
@@ -616,6 +622,7 @@ vec3 nameCalves(vec3 col, vec2 pw, vec3 dir, float foot, float onWater) {
   }
   return col;
 }
+#endif
 
 /**
  * The swept field, laid over the sheet after the air (it lies close under
@@ -714,6 +721,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   }
   // The blocks' image: in the black ice, softened with distance and broken where the plates tilt; clearer in
   // meltwater; and in open water, shaken by its waves.
+#ifdef F_NAME
   float mirK = max(K * onIce, onWater) * uNameM.w;
   if (DBG_MIR mirK > 0.0) {
     float mir = 0.0;
@@ -746,6 +754,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   }
   // The pieces that have come away from the letters, afloat.
   if (onWater > 0.0) col = nameCalves(col, pw, dir, foot, onWater * (1.0 - onIce));
+#endif
   // Snow snakes: thin streamers the wind drives across the bare ice.
   if (DBG_SNAKE K * onIce > 0.0) {
     vec2 ws = wl - vec2(uTime * 85.0, 0.0);

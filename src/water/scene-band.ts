@@ -19,8 +19,11 @@ import { boardMask, boardReady } from './board';
 import { FlightEngine, scenePicture } from './flight';
 import { freeboardAt } from './shaders/flight';
 import { makeSolver } from './stage';
-import { passNeeds } from './variants';
+import { type IceParts, NO_ICE, passNeeds } from './variants';
 import { LAKE, NAME, OUTLET, SHOAL_Y, TRIBS, WORLD, paintWorld, tribWidth } from './world';
+
+/** An inner page's lake: the sheet whole, and no name on it (the name in ice is the home page's alone). */
+const LAKE_ICE: IceParts = { on: true, blocks: false, field: false };
 
 export type SceneId = 'infiniview' | 'open-source' | 'kilo-bench' | 'agent-bridge' | 'ollama' | 'cc-switch' | 'tensorpow' | 'rydar' | 'delta' | 'lake' | 'snow';
 
@@ -187,7 +190,7 @@ function start(first: BandOpts, aspect: number): Promise<Shared | null> {
       // Throws when WebGL2 or float targets are missing: the still stays.
       engine = new FlightEngine(canvas, { theme: themeNow(), still: mqStill.matches, coarse });
       // The one variant of the pass this start waits for is the first scene's own: its station and nothing else.
-      engine.firstNeed = passNeeds(basisOf(firstPose(first.scene, aspect)), aspect, first.scene === 'lake', false);
+      engine.firstNeed = passNeeds(basisOf(firstPose(first.scene, aspect)), aspect, first.scene === 'lake' ? LAKE_ICE : NO_ICE, false);
       await engine.prepare();
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') console.warn(err);
@@ -289,7 +292,7 @@ function start(first: BandOpts, aspect: number): Promise<Shared | null> {
       }
       cam = basisOf(pose);
       // (A scene is not shown until a variant of the pass that carries all of it is ready: until then the still stays.)
-      if (!a.drawn && !engine.carries(passNeeds(cam, a.aspect, a.opts.scene === 'lake', engine.hasSlab))) return;
+      if (!a.drawn && !engine.carries(passNeeds(cam, a.aspect, a.opts.scene === 'lake' ? LAKE_ICE : NO_ICE, engine.hasSlab))) return;
       const b = a.boxOn ? a.box : box;
       engine.frame(now, cam, a.aspect, {
         // Only the lake's own frame shows the sheet; from every station it has long gone.
