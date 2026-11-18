@@ -9,6 +9,7 @@ import { ProfileSwitch } from '@/components/home/ProfileSwitch';
 import { FlightStage } from '@/components/FlightStage';
 import { LiveNumber } from '@/components/LiveNumber';
 import { INTERESTS, PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
+import { KIND } from '@/content/kinds';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
 import { SECTIONS, SETTLE_AT, sectionStarts, stillStops } from '@/water/camera';
@@ -81,16 +82,6 @@ const win = (from: number, to: number, at?: number, until?: number) => ({
   'data-fl-to': +to.toFixed(3),
   ...(at === undefined ? {} : { 'data-fl-in': +at.toFixed(3), 'data-fl-out': +(until ?? to).toFixed(3) }),
 });
-
-/** The label over each station says one kind of thing: what it is. */
-const KIND: Record<string, string> = {
-  infiniview: 'Security agents',
-  'kilo-bench': 'Benchmark',
-  'agent-bridge': 'MCP server',
-  'cc-switch': 'CLI',
-  tensorpow: 'Protocol',
-  rydar: 'iOS app',
-};
 
 /** Where each stream's caption lands: on the stream itself. */
 const STREAMS = streamAnchors();

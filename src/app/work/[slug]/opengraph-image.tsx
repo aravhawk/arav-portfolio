@@ -1,5 +1,6 @@
 import { PROJECTS, projectBySlug } from '@/content/projects';
 import { OG_SIZE, OG_TYPE, PICTURES, type Picture, ogAlt, renderOg } from '@/lib/og';
+import { KIND } from '@/content/kinds';
 
 export const alt = ogAlt('A project by Arav Jain', 'work');
 export const size = OG_SIZE;
@@ -24,5 +25,5 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const p = projectBySlug(slug);
   if (!p) return renderOg({ kicker: 'Work', title: 'Arav Jain', picture: 'work' });
   // The name keeps its non-breaking hyphen so it never splits across lines.
-  return renderOg({ kicker: p.kicker || 'Work', title: p.name, line: p.line, picture: pictureFor(slug) });
+  return renderOg({ kicker: KIND[p.slug] ?? 'Work', title: p.name, line: p.line, picture: pictureFor(slug) });
 }
