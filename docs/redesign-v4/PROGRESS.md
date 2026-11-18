@@ -1316,3 +1316,19 @@ Replacing the numeric critic gate; not a lowered bar.
 Applied: the round's common brief tells helpers of the change; panel
 11's package asks each critic for a verdict, its reasons, and the
 ranked faults, with no scores.
+
+### One parallel helper on API credits (Arav, t299u and t301u, Nov 18, 5:51 PM CT)
+
+Arav allowed one exception to "one helper at a time": while R4b runs
+on the subscription, the next brief whose files R4b does not touch
+runs as a command-line helper billed to his API credits, in its own
+worktree and branch (`t3/r4e-inner-ending-api`, cut from `3974696`),
+and is integrated after R4b like any other helper. I chose **R4e**
+(the inner pages and the ending) and not the light: the light edits
+the same shader and depends on the first screen's sun and moon that
+R4b is setting, while the inner pages and the ending share no file
+with R4b and are light on the GPU R4b is measuring on. R4e's last
+part (retaking the stills, bands, cards and posters) is taken out of
+it and done once at the end of the round, when the home page's
+picture is final. The key is kept in a private file outside the
+repository and is deleted when the helper finishes.
