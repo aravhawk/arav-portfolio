@@ -73,6 +73,8 @@ export const STREAM: Pt[] = [
 
 /** The walled basin (the sandbox) and the island in it. */
 export const BASIN: Rect = { x: 1050, y: 4520 + DY, w: 1120, h: 1080 };
+/** The round point of bank that stands out into the basin's south-west corner: its middle and its radius. */
+export const BANK = { x: 866, y: 4890 + DY, r: 367 };
 /**
  * The block stands at the island's near shore with its foot in the water: the
  * island is the ice-bound rock behind it and to either side, so the basin's
@@ -430,6 +432,10 @@ export function paintWorld(b: BedPainter, tribs: number[] = [9, 5, 3, 2, 1, 1, 1
   b.pool(BASIN, 300);
   b.disc(pt(BASIN.x + 240, BASIN.y + BASIN.h - 300), 260);
   b.disc(pt(BASIN.x + BASIN.w - 250, BASIN.y + 330), 270);
+  // The near bank comes out into the basin's south-west corner in one broad round point: the station's name, its
+  // arrow and its lines stand on that snow, and the water begins a good way past them.
+  b.dry({ x: BANK.x - BANK.r, y: BANK.y - BANK.r, w: BANK.r * 2, h: BANK.r * 2 }, 0, BANK.r);
+  b.dry({ x: BASIN.x - 50, y: BASIN.y - 40, w: 170, h: 170 }, 0, 50);
   // (Where the river comes in the basin's wall opens to it in a curve, not a square corner.)
   b.disc(pt(1380, BASIN.y + 70), 150);
   b.disc(pt(1830, BASIN.y + 60), 140);
