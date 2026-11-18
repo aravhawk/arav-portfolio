@@ -15,7 +15,7 @@
  */
 
 import { type Pose, basisOf, flightKeys, poseAt, projectPoint, stillStops } from './camera';
-import { BOARD, BOARD_CH, BOARD_DEPTH, BOARD_DOT, BOARD_HEAD, BOARD_ROWS, SHEET, boardEdges, boardRun, boardSpan, sheetCols } from './world';
+import { BOARD, BOARD_CH, BOARD_DEPTH, BOARD_DOT, BOARD_HEAD, BOARD_KERN, BOARD_ROWS, SHEET, boardEdges, boardRun, boardSpan, sheetCols } from './world';
 
 /** How far under the land the table is seen to lie (the water's surface, and the water over it as the eye sees it). */
 const SEEN_DEPTH = 46;
@@ -81,8 +81,11 @@ export function drawBoard(family: string, perUnit: number, stretch: number[]): H
     // (Every character stands in its own cell: the table keeps its measure whatever face the browser has drawn it in.)
     const set = (text: string, x0: number) => {
       let x = x0;
+      let prev = '';
       for (const ch of text) {
         const cell = ch === '.' ? BOARD_DOT : BOARD_CH;
+        if (ch === '.' && prev === '7') x -= BOARD_KERN;
+        prev = ch;
         if (ch === '7') {
           line(x);
           ctx.transform(BOARD.em / 2000, 0, 0, -BOARD.em / 2000, 0, base);

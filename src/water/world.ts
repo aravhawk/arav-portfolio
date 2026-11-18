@@ -243,8 +243,10 @@ export const BOARD = { em: 15, pad: 12, head: 41, row: 49, gap: [0, 2.5, 2.5, 2.
 export const BOARD_CH = BOARD.em * 0.6;
 /** A point stands in a narrower cell than a letter, so a figure holds together ("7.6", not "7 .6"). */
 export const BOARD_DOT = BOARD.em * 0.42;
+/** A point after a seven is drawn in under the seven's bar by this much: the seven's stem leans away from it. */
+export const BOARD_KERN = BOARD.em * 0.1;
 /** How wide a run of the table's type is. */
-export const boardRun = (text: string) => [...text].reduce((w, c) => w + (c === '.' ? BOARD_DOT : BOARD_CH), 0);
+export const boardRun = (text: string) => [...text].reduce((w, c, i, all) => w + (c === '.' ? BOARD_DOT - (all[i - 1] === '7' ? BOARD_KERN : 0) : BOARD_CH), 0);
 /** How deep the whole table lies. */
 export const BOARD_DEPTH = BOARD.head + BOARD.row * BOARD_ROWS.length;
 /**
