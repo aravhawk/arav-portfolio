@@ -7,7 +7,7 @@
  * so a held frame still drifts.
  */
 
-import { BENDS, CANYON, DY, FACE, NAME, type NameLayout, REST, SHEET, SHEET_SRC, SLAB, T2, sheetCols, sheetSpan } from './world';
+import { BENDS, BOARD_DEPTH, CANYON, DY, FACE, NAME, type NameLayout, REST, SHEET, SLAB, T2, boardSpan, sheetCols } from './world';
 
 export type V3 = [number, number, number];
 
@@ -199,8 +199,8 @@ function benchPose(aspect: number, drift: number): Pose {
   const fov = upright ? 52 : 62;
   const th = Math.tan(rad(fov / 2));
   const n = sheetCols(aspect);
-  const w = sheetSpan(n) * SHEET.upp;
-  const half = (SHEET_SRC.rows * SHEET.upp) / 2;
+  const w = boardSpan(n);
+  const half = BOARD_DEPTH / 2;
   // (The plates lie under the water: this far below the land.)
   const bed = 36;
   if (upright) {
@@ -217,13 +217,15 @@ function benchPose(aspect: number, drift: number): Pose {
   }
   const pitch = rad(28);
   // The plates' near edge takes this share of the frame's width, and stands this far in from its left side.
-  const share = Math.min(0.56, Math.max(0.36, 0.95 - 0.69 / aspect));
+  // (It leaves the bank at lower left wide enough for the station's name, its arrow and its lines to stand on snow alone.)
+  const share = Math.min(0.51, Math.max(0.36, 0.9 - 0.69 / aspect));
   const left = 1 - share - 0.03;
   const depth = w / (2 * aspect * th * share);
   // (The camera stands a little further back from the plates' middle than it is high.)
   const BACK = 1.07;
   const z = (depth + half * Math.cos(pitch) - bed * Math.sin(pitch)) / (BACK * Math.cos(pitch) + Math.sin(pitch));
-  const x = SHEET.x0 - (left - 0.5) * 2 * aspect * th * depth + 12 * drift;
+  // (Through the hold the eye drifts toward the bank, so the pool only ever moves away from the words.)
+  const x = SHEET.x0 - (left - 0.5) * 2 * aspect * th * depth - 10 * drift;
   const y = SHEET.y - z * BACK + 8 * drift;
   const zc = z - 5 * drift;
   return { pos: [x, y, zc], aim: [x, y + zc / Math.tan(pitch), 0], fov };

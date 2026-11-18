@@ -179,12 +179,68 @@ export const confRiverWidth = (x: number, widths: number[]) =>
 /**
  * Station 3, the rock pool beside the river, and the results on its bed.
  *
- * The picture is the leaderboard's table, shown as plates lying side by
- * side on the bed: one plate to a column of the table, each a crop of the
- * picture's own pixels (SHEET_COLS, in the picture's pixels: x, width),
- * every row at the same height in all of them. A narrow frame is shown
- * the first plates (the models and their scores), a wide one all five, so
- * the rows are always large enough to be read.
+ * The results are set as type. BOARD_HEAD and BOARD_ROWS are a transcription
+ * of the leaderboard in the published picture (public/media/
+ * kilo-bench-results-2324.webp, the Devpost gallery's "kilo-bench complete
+ * results"): its header and its three rows, character for character. Nothing
+ * is added and nothing is rounded; the picture itself stays the source of
+ * truth on the project page. (Its rank medals and its "Use" control are not
+ * results and are left out. The header's sort arrow after "Score" is drawn.)
+ *
+ * The table lies on the bed as one dark slab. A narrow frame is shown its
+ * first columns (the models and their scores), a wide one all five, so its
+ * type is always large enough to be read.
+ */
+export const BOARD_HEAD = ['Model', 'Score', 'Cost', 'Time', 'Tokens'];
+export const BOARD_ROWS = [
+  ['anthropic/claude-sonnet-4.6', '7.6', '$0.7726', '719.9s', '53.3k'],
+  ['anthropic/claude-opus-4.6', '7.4', '$1.1007', '832.3s', '45.8k'],
+  ['openai/gpt-5.2-codex', '6.3', '$0.3207', '410.1s', '24.7k'],
+];
+/**
+ * The table's measure, in world units. `em` is its type's size (the mono
+ * face advances 0.6 of it a character); `pad` its margin at either side;
+ * `head` and `row` how deep the header and each row lie; `gap` the clear
+ * space before a column, in characters (the scores stand close to the names
+ * they belong to).
+ */
+export const BOARD = { em: 15, pad: 12, head: 41, row: 49, gap: [0, 2.5, 2.5, 2.5, 2.5] };
+/** How wide a character of the table's type is. */
+export const BOARD_CH = BOARD.em * 0.6;
+/** A point stands in a narrower cell than a letter, so a figure holds together ("7.6", not "7 .6"). */
+export const BOARD_DOT = BOARD.em * 0.42;
+/** How wide a run of the table's type is. */
+export const boardRun = (text: string) => [...text].reduce((w, c) => w + (c === '.' ? BOARD_DOT : BOARD_CH), 0);
+/** How deep the whole table lies. */
+export const BOARD_DEPTH = BOARD.head + BOARD.row * BOARD_ROWS.length;
+/**
+ * Where each column ends, from the table's west edge. The models are set
+ * from the left; every figure ends at its column's right edge, under its
+ * heading's last letter. (The heading of the scores is wider than a score:
+ * it reaches back over the end of the names' column, where the header row
+ * is empty.)
+ */
+export const boardEdges = (): number[] => {
+  const out: number[] = [];
+  let x = BOARD.pad;
+  BOARD_HEAD.forEach((head, i) => {
+    const widest = Math.max(...BOARD_ROWS.map((r) => boardRun(r[i])), i < 2 ? 0 : boardRun(head));
+    x += BOARD.gap[i] * BOARD_CH + widest;
+    out.push(x);
+  });
+  return out;
+};
+/** How many columns a frame of this shape is shown. */
+export const sheetCols = (aspect: number) => (aspect < 0.62 ? 2 : aspect < 1.72 ? (aspect < 0.9 ? 3 : 2) : aspect < 2.2 ? 3 : aspect < 2.7 ? 4 : 5);
+/** How wide the table lies when it shows its first n columns. */
+export const boardSpan = (n: number) => boardEdges()[n - 1] + BOARD.pad;
+/** The table: where its west edge and its middle lie. */
+export const SHEET = { x0: 1800, y: 9330 + DY };
+/**
+ * The project page shows the picture itself, as plates side by side: one to
+ * a column of the table, each a crop of the picture's own pixels
+ * (SHEET_COLS, in the picture's pixels at 2000 wide: x, width; SHEET_SRC:
+ * the picture's size, and where the table's rows lie in it).
  */
 export const SHEET_SRC = { w: 2000, h: 1088, y: 246, rows: 198 };
 export const SHEET_COLS: [number, number][] = [
@@ -194,17 +250,9 @@ export const SHEET_COLS: [number, number][] = [
   [1378, 80],
   [1610, 78],
 ];
-/** The seam between two plates, in the picture's pixels. */
-export const SHEET_GAP = 9;
-/** How many plates a frame of this shape is shown. */
-export const sheetCols = (aspect: number) => (aspect < 0.62 ? 2 : aspect < 1.72 ? (aspect < 0.9 ? 3 : 2) : aspect < 2.2 ? 3 : aspect < 2.7 ? 4 : 5);
-/** How wide n plates lie, in the picture's pixels. */
-export const sheetSpan = (n: number) => SHEET_COLS.slice(0, n).reduce((w, c) => w + c[1], 0) + SHEET_GAP * (n - 1);
-/** The plates: where their west edge and their middle row lie, and how many world units one of the picture's pixels is. */
-export const SHEET = { x0: 1800, y: 9330 + DY, upp: 0.95 };
 /** The pool's shore, a closed line: bays and points, no ruled side. (POOL is the box round it.) */
 export const POOL_SHORE: [number, number][] = [
-  [1738, 9250],
+  [1776, 9244],
   [1772, 9160],
   [1840, 9128],
   [1930, 9150],
@@ -224,8 +272,8 @@ export const POOL_SHORE: [number, number][] = [
   [1846, 9668],
   [1780, 9590],
   [1790, 9500],
-  [1754, 9420],
-  [1768, 9330],
+  [1774, 9420],
+  [1780, 9334],
 ];
 export const POOL: Rect = { x: 1712, y: 9104 + DY, w: 764, h: 596 };
 /**

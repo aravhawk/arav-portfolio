@@ -13,6 +13,7 @@ import { onFrame } from '@/lib/frame';
 import { haptic } from '@/lib/haptics';
 import { emit, flightSignal, pictureSignal, pointerSignal, signals } from '@/lib/signals';
 import { BedPainter } from './bed';
+import { boardMask, boardReady } from './board';
 import { makeCallouts } from './callouts';
 import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
@@ -81,14 +82,13 @@ export interface FlightMoment {
  * public source at the source's own resolution (nothing is redrawn):
  *  - the block: Infiniview's own card (infiniview.dev/opengraph-image.jpg,
  *    1200 x 630), its headline and its mark and nothing smaller;
- *  - the pool: the results at the size they were published (2324 x 1264;
- *    the page's copy is the same picture at 2000);
+ *  - the pool: no picture. Its results are set as type (board.ts), from
+ *    the published picture's own words and figures;
  *  - the hall: the top of rydar.org/iphone-app, cut to the page's column
  *    (1680 x 1050 of the 2880 x 1800 capture).
  */
 const SCENE_PICS: Record<string, string> = {
   '/media/infiniview-hero.webp': '/media/infiniview-card.jpg',
-  '/media/kilo-bench-results.webp': '/media/kilo-bench-results-2324.webp',
   '/media/rydar-app.webp': '/media/rydar-app-hero.webp',
 };
 export const scenePicture = (src: string) => SCENE_PICS[src] ?? src;
@@ -648,10 +648,36 @@ export class FlightEngine extends WaterEngine {
     return tex;
   }
 
-  /** The picture that lies on the pool's bed. */
-  setSheet(img: HTMLImageElement) {
-    if (this.sheetTex) this.gl.deleteTexture(this.sheetTex);
-    this.sheetTex = this.pictureTex(img);
+  /**
+   * The results that lie on the pool's bed: their type, as a mask (see board.ts). One channel, with its chain of
+   * smaller copies, read along the tilt, so the type keeps its counters when it is seen small and at an angle.
+   */
+  setBoard(mask: HTMLCanvasElement) {
+    const gl = this.gl;
+    const max = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    let src = mask;
+    if (mask.width > max) {
+      // (A device with small textures is given the same mask, smaller.)
+      src = document.createElement('canvas');
+      src.width = max;
+      src.height = Math.max(1, Math.round((mask.height * max) / mask.width));
+      const ctx = src.getContext('2d')!;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(mask, 0, 0, src.width, src.height);
+    }
+    if (this.sheetTex) gl.deleteTexture(this.sheetTex);
+    const tex = gl.createTexture()!;
+    gl.activeTexture(gl.TEXTURE15);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, src);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const ext = gl.getExtension('EXT_texture_filter_anisotropic');
+    if (ext) gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(16, gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number));
+    this.sheetTex = tex;
     this.dirty = true;
   }
 
@@ -1385,6 +1411,15 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     engine.setIce({ sd: sd.sd, w: ice.tw, h: ice.th, minSd: sd.min });
   }
 
+  let boardFor = '';
+  function buildBoard() {
+    if (!root.dataset.sheet || destroyed) return;
+    const key = `${aspect.toFixed(3)}:${canvas.width}`;
+    if (key === boardFor) return;
+    boardFor = key;
+    engine.setBoard(boardMask(aspect, canvas.width));
+  }
+
   let resizeTimer = 0;
   const onResize = () => {
     window.clearTimeout(resizeTimer);
@@ -1395,6 +1430,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
         cutFor = aspect;
         void buildName();
       }
+      buildBoard();
     }, 120);
   };
 
@@ -1442,14 +1478,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     };
     pic.src = scenePicture(root.dataset.face);
   }
-  if (root.dataset.sheet) {
-    const pic = new Image();
-    pic.decoding = 'async';
-    pic.onload = () => {
-      if (!destroyed) engine.setSheet(pic);
-    };
-    pic.src = scenePicture(root.dataset.sheet);
-  }
+  // The results on the pool's bed are set as type, for this screen (see board.ts): again when the screen changes.
+  if (root.dataset.sheet) void boardReady().then(buildBoard);
 
   // The switch: the chosen option's sluice opens at once (the gates, the surge and each channel's water are drawn).
   // Nothing is carved again: every channel's bed already runs, so a change costs no frame.

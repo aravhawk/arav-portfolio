@@ -24,7 +24,7 @@ import { ICE_FIELD } from './ice';
 import { NAME_ICE } from './name';
 import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
 import { PANO, SHADE_AZ, WIND } from './terrain';
-import { BASIN, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, SHEET_COLS, SHEET_GAP, SHEET_SRC, sheetSpan, slabFaces, STREAM, T2, TARN, TRIBS } from '../world';
+import { BASIN, BOARD, BOARD_DEPTH, boardSpan, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, slabFaces, STREAM, T2, TARN, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -634,6 +634,12 @@ float lodFor(float foot, float scale, float n);
 float gSlabThick;
 float shallowsAt(vec2 p);
 vec3 fracture(vec2 x);
+// (Stations 1 to 4 are made of the same glacier ice as the later ones: it is written with them, further on.)
+vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky, float sun, float cups, float edge, float seed);
+vec3 corniceOn(vec3 col, vec3 n, float dz, float hang, float px);
+vec3 iciclesOn(vec3 col, float along, float dz, float px, float reach);
+vec3 waterlineOn(vec3 col, float z, float g);
+vec3 snowOn(vec3 n, float lump);
 
 // The block's faces, in its own frame (x across its front, y into it, z up from the water): the way each looks, and how far
 // it is from the middle of the front's foot. 0 is the polished front, 5 the foot; 4, 6, 7 and 10 look up and carry the snow.
@@ -1849,46 +1855,64 @@ float poolAt(vec2 p) {
 }
 /** 1 while the pool is near enough to be seen. */
 bool poolNear() { return abs(uCamPos.x - POOL_C.x) < 2300.0 && abs(uCamPos.y - POOL_C.y) < 2300.0; }
-// The results lie on the bed as plates, one to a column of the table: where each column is in the picture, and how wide.
-const float SH_UPP = ${SHEET.upp.toFixed(3)};
-const float SH_X[5] = float[5](${SHEET_COLS.map((c) => c[0].toFixed(1)).join(', ')});
-const float SH_W[5] = float[5](${SHEET_COLS.map((c) => c[1].toFixed(1)).join(', ')});
-// (A narrow frame is shown the first plates, a wide one all five. This is world.ts's sheetCols.)
+// The results lie on the bed as one dark slab, the table set on it in type. (The type is a mask drawn for the screen
+// it is seen on: uSheetTex holds how much of each place a letter covers, all five columns of it.)
+// (A narrow frame is shown the first columns, a wide one all five. This is world.ts's sheetCols.)
 #define SH_N (uLens.y < 0.62 ? 2 : (uLens.y < 0.9 ? 3 : (uLens.y < 1.72 ? 2 : (uLens.y < 2.2 ? 3 : (uLens.y < 2.7 ? 4 : 5)))))
-const float SH_SPAN[6] = float[6](0.0, ${[1, 2, 3, 4, 5].map((n) => (sheetSpan(n) * SHEET.upp).toFixed(1)).join(', ')});
+const float SH_SPAN[6] = float[6](0.0, ${[1, 2, 3, 4, 5].map((n) => boardSpan(n).toFixed(1)).join(', ')});
 const vec2 SH_O = vec2(${SHEET.x0.toFixed(1)}, ${SHEET.y.toFixed(1)});
-const float SH_HALF = ${((SHEET_SRC.rows * SHEET.upp) / 2).toFixed(1)};
-/** How far outside the plates a place on the bed is (negative on them). */
+const float SH_HALF = ${(BOARD_DEPTH / 2).toFixed(1)};
+const float SH_HEAD = ${BOARD.head.toFixed(1)};
+const float SH_ROW = ${BOARD.row.toFixed(1)};
+/** How far outside the slab a place on the bed is (negative on it). Its corners are round. */
 float sheetEdge(vec2 pb) {
   float w = SH_SPAN[SH_N];
-  vec2 sq = abs(pb - vec2(SH_O.x + w * 0.5, SH_O.y)) - vec2(w * 0.5, SH_HALF);
-  return max(sq.x, sq.y);
+  vec2 sq = abs(pb - vec2(SH_O.x + w * 0.5, SH_O.y)) - vec2(w * 0.5, SH_HALF) + 7.0;
+  return length(max(sq, 0.0)) + min(max(sq.x, sq.y), 0.0) - 7.0;
 }
-/** The picture where it lies: the table's own pixels. a: 1 on a plate, 0 in the seam between two. */
+/**
+ * The table where it lies: a dark slab, a hairline under the header and between the rows, and the type. The type is
+ * read so that it stays type at every size: smaller than it was drawn, along the tilt and a little finer than the
+ * plain rule; larger, its edge is put where the mask says it is and drawn as narrow as a device pixel allows.
+ * a: 1 on the slab.
+ */
 vec4 sheetPic(vec2 pb, float footL) {
-  float sx = (pb.x - SH_O.x) / SH_UPP;
-  float at = 0.0;
-  float x = -1.0;
-  float seam = 0.0;
-  int n = SH_N;
-  for (int i = 0; i < 5; i++) {
-    if (i >= n) break;
-    float l = sx - at;
-    if (l >= 0.0 && l < SH_W[i]) { x = SH_X[i] + l; seam = min(l, SH_W[i] - l); }
-    at += SH_W[i] + ${SHEET_GAP.toFixed(1)};
+  // From the slab's far west corner: x east, y toward the eye (down the table).
+  vec2 l = vec2(pb.x - SH_O.x, SH_O.y + SH_HALF - pb.y);
+  vec2 full = vec2(SH_SPAN[5], 2.0 * SH_HALF);
+  vec2 uv = l / full;
+  // (How far the table moves under one device pixel: the ground's own measure of a pixel.)
+  vec2 dx = gGx * vec2(1.0, -1.0) / full;
+  vec2 dy = gGy * vec2(1.0, -1.0) / full;
+  vec2 size = vec2(textureSize(uSheetTex, 0));
+  float px = max(length(dx * size), length(dy * size));
+  float cov = 0.0;
+  if (px < 1.0) {
+    float k = clamp(0.35 * px, 0.04, 0.5);
+    cov = smoothstep(0.5 - k, 0.5 + k, textureLod(uSheetTex, uv, 0.0).r);
   }
-  if (x < 0.0) return vec4(0.0);
-  float px = max(footL, 1e-3) / SH_UPP;
-  vec2 uv = vec2(x, ${SHEET_SRC.y.toFixed(1)} + (SH_O.y + SH_HALF - pb.y) / SH_UPP) / vec2(${SHEET_SRC.w.toFixed(1)}, ${SHEET_SRC.h.toFixed(1)});
-  // (How far the picture moves under one device pixel: the ground's own measure of a pixel, in the picture's.)
-  vec2 perU = vec2(1.0 / (SH_UPP * ${SHEET_SRC.w.toFixed(1)}), -1.0 / (SH_UPP * ${SHEET_SRC.h.toFixed(1)}));
-  vec3 pic = picRead(uSheetTex, uv, gGx * perU, gGy * perU);
-  return vec4(pic * pic, smoothstep(0.0, 1.0 + px, seam));
+  if (px > 0.7) cov = mix(cov, textureGrad(uSheetTex, uv, dx * 0.8, dy * 0.8).r, smoothstep(0.7, 1.0, px));
+  // (Nothing is set in the slab's margin, or past the last column shown.)
+  cov *= step(0.0, l.x) * step(l.x, SH_SPAN[SH_N] - 4.0);
+  float aa = max(footL, 0.25);
+  // The rules: one under the header, a fainter one between two rows.
+  float ry = l.y - SH_HEAD;
+  float rule = (1.0 - smoothstep(0.45, 0.45 + aa, abs(ry))) * 0.75;
+  if (ry > 0.5 * SH_ROW) rule = (1.0 - smoothstep(0.35, 0.35 + aa, abs(mod(ry + 0.5 * SH_ROW, SH_ROW) - 0.5 * SH_ROW))) * 0.45 * step(ry, 2.5 * SH_ROW);
+  rule *= min(1.0, 0.9 / aa);
+  float edge = -sheetEdge(pb);
+  // (A fine pale line runs round the slab just inside its edge: it is a made thing lying on the silt.)
+  float rim = (1.0 - smoothstep(0.5, 0.5 + aa, abs(edge - 1.6))) * min(1.0, 0.9 / aa);
+  float head = 1.0 - smoothstep(-0.5, 0.5, ry);
+  vec3 ground = vec3(0.0085, 0.011, 0.0145) * (1.0 + 0.5 * head);
+  vec3 col = ground + vec3(0.05, 0.058, 0.066) * max(rule, rim * 0.8);
+  // The header is quieter than the results under it.
+  col = mix(col, mix(vec3(0.74, 0.77, 0.79), vec3(0.4, 0.44, 0.47), head), cov);
+  return vec4(col, 1.0 - smoothstep(-aa, aa, -edge));
 }
-/** The mean colour of the picture: the light it gives off before dawn. */
+/** The light the table gives off before dawn. */
 vec3 sheetGlow() {
-  vec3 m = textureLod(uSheetTex, vec2(0.5, ${((SHEET_SRC.y + SHEET_SRC.rows / 2) / SHEET_SRC.h).toFixed(4)}), 6.0).rgb;
-  return m * m + vec3(0.03, 0.075, 0.09);
+  return vec3(0.036, 0.082, 0.098);
 }
 /**
  * The pool's bed. Round the shore pale glacial silt drawn into ripple marks,
@@ -1975,19 +1999,23 @@ vec4 poolRim(vec2 pw, float inside, float footL, vec3 sky) {
   col += sheetGlow() * (0.5 + 1.2 * edge) * exp(-dS / 150.0) * uNight * uSheetOn;
   return vec4(col, a * (0.82 + 0.18 * edge));
 }
-// The boulders that stand in the pool. xy: where, z: a sphere round each that holds all of it above the water.
+// The blocks of ice that stand in the pool. xy: where, z: a sphere round each that holds all of it above the water.
 const vec3 RK[${ROCKS.length}] = vec3[${ROCKS.length}](${ROCKS.map((r) => `vec3(${r.x.toFixed(1)}, ${r.y.toFixed(1)}, ${(Math.hypot(r.a, r.h) * 1.08).toFixed(1)})`).join(', ')});
-// Each one's faces: the way the face looks, and how far it is from the boulder's middle at the waterline.
+// Each one's faces: the way the face looks, and how far it is from the block's middle at the waterline.
 const vec4 RKF[${ROCKS.length * ROCK_FACES}] = vec4[${ROCKS.length * ROCK_FACES}](${ROCKS.map((_, i) =>
   rockFaces(i)
     .map((f) => `vec4(${f.map((v) => v.toFixed(4)).join(', ')})`)
     .join(', '),
 ).join(', ')});
-// How much of the pixel the boulder last met covers (its outline is blended over a pixel), and how near an arris it was met.
+// How much of the pixel the block last met covers (its outline is blended over a pixel), and how near an arris it was met.
 float gRockA = 0.0;
 float gRockE = 1e3;
+// Which block that was, how much of its ice the ray crosses, and the ray.
+int gRockI = 0;
+float gRockThick = 0.0;
+vec3 gRockRd = vec3(0.0, 1.0, 0.0);
 /**
- * A ray against the boulders: each a solid cut by flat faces, standing in
+ * A ray against the blocks: each a solid cut by flat faces, standing in
  * the water. Returns the distance to the nearest (or -1), and its face's
  * normal there.
  */
@@ -2015,60 +2043,55 @@ float rockHit(vec3 ro, vec3 rd, out vec3 n) {
       best = tN;
       gRockA = clamp((tF - tN) / (3.0 * tN * uPxAng), 0.0, 1.0);
       gRockE = tN - tN2;
-      // (Its arrises are worn round: near one the face turns toward its neighbour.)
-      n = normalize(mix(nn + nn2, nn * 2.0, smoothstep(0.0, 9.0, gRockE)));
+      gRockI = i;
+      gRockThick = tF - tN;
+      gRockRd = rd;
+      // (An arris is a break, a hair worn: near one the face turns a little toward its neighbour.)
+      n = normalize(mix(nn + nn2, nn * 2.0, smoothstep(0.0, 2.5, gRockE)));
     }
   }
   return best < 1e8 ? best : -1.0;
 }
 /**
- * A boulder: frost-broken granite in flat faces, each turned its own way to
- * the light, its arrises worn pale; dark and wet where the water laps it,
- * with a collar of ice there; and snow lying on every face level enough to
- * hold it.
+ * A block of ice in the pool: a piece of the glacier, the same ice as the
+ * seracs and the dam, lying where it grounded, so its strata lie at its own
+ * tilt. Snow lies whole on every face level enough to hold it and hangs a
+ * hand over the faces below in one clean line; the water has cut a dark wet
+ * notch round its foot.
  */
 vec3 rockColor(vec3 hp, vec3 n, float t) {
-  vec3 L = keyDir();
-  float foot = t * uPxAng;
-  // (The stone's grain lies in the face's own plane.)
-  vec3 tu = normalize(vec3(-n.y, n.x, 1e-3));
-  vec2 q = vec2(dot(hp, tu), dot(hp, cross(n, tu)));
-  vec4 g = textureLod(uGrain, q / 110.0 + n.xy * 3.0, lodFor(foot, 110.0, 256.0));
-  vec4 g2 = textureLod(uGrain, q / 31.0 + n.yx * 5.0, lodFor(foot, 31.0, 256.0));
-  vec3 nf = normalize(n + (g2.gbr - 0.5) * 0.5 + (g.gbr - 0.5) * 0.3);
+  float px = max(t * uPxAng, 0.02);
   float up = hp.z + FREEBOARD;
-  // (Each face has weathered to its own tone; the stone is speckled, and cracked along its grain.)
-  float tone = fract(n.x * 5.3 + n.y * 8.1 + n.z * 2.7);
-  vec3 stone = mix(vec3(0.05, 0.052, 0.058), vec3(0.2, 0.2, 0.2), 0.2 + 0.55 * tone) * (0.66 + 0.5 * g.g + 0.34 * g2.a);
-  // (Darker toward the water, where it is seldom dry.)
-  stone *= 0.62 + 0.38 * smoothstep(0.0, 34.0, up + 14.0 * (g.a - 0.5));
-  vec3 c = stone * (lightOn(nf, 1.0) * 1.3 + S.amb * 0.34);
-  if (uNight > 0.0) {
-    // Before dawn a boulder is a dark wet stone: the sky lies on its glazed faces as on the ice, and the dawn finds the side turned to it.
-    vec3 nc = stone * S.amb * (0.9 + 0.6 * max(nf.z, 0.0));
-    float cosN = max(dot(normalize(uCamPos - hp), n), 0.0);
-    vec3 rrN = reflect(normalize(hp - uCamPos), n);
-    nc = mix(nc, skyNightOn(vec3(rrN.xy, abs(rrN.z))), (0.03 + 0.97 * pow(1.0 - cosN, 4.0)) * 0.5);
-    nc += S.band * 0.02 * stone * 4.0 * max(dot(n, dawnDir()), 0.0);
-    c = mix(c, nc, uNight);
+  float fi = float(gRockI);
+  vec3 o = hp - vec3(RK[gRockI].xy, -FREEBOARD);
+  // How far under the nearest face that carries snow this place is.
+  float dTop = 1e3;
+  for (int j = 5; j < ${ROCK_FACES}; j++) {
+    vec4 pl = RKF[gRockI * ${ROCK_FACES} + j];
+    if (pl.z > 0.62) dTop = min(dTop, pl.w - dot(o, pl.xyz));
   }
-  // (An arris is worn a shade paler: no more.)
-  c += mix(vec3(0.3, 0.31, 0.33) * (S.amb * 0.5 + S.key * 0.1), S.amb * 0.2, uNight) * (1.0 - smoothstep(0.2 + foot, 1.4 + 1.5 * foot, gRockE)) * (0.3 + 0.7 * g2.g);
-  // Wet at the waterline, and a collar of ice round it.
-  c *= 1.0 - 0.55 * (1.0 - smoothstep(2.0, 9.0 + 6.0 * g.b, up));
-  c = mix(c, mix(vec3(0.72, 0.88, 0.95) * (S.amb * 0.95 + S.key * 0.16), vec3(0.3, 0.4, 0.5) * S.amb * 2.0 + vec3(0.006, 0.016, 0.03), uNight), (1.0 - smoothstep(1.0, 2.6 + 2.0 * g.g, up)) * 0.85);
-  // Snow on what is level enough to hold it: whole on the crown, broken toward a face's foot.
-  // (Its edge is the drift's own: soft lobes, never a speckle.)
-  float lobe = textureLod(uGrain, q / 420.0 + n.xy * 2.0, 0.0).g;
-  float snowK = smoothstep(0.42, 0.56, n.z + (lobe - 0.5) * 0.7 + 0.003 * up) * smoothstep(4.0, 10.0, up);
-  vec3 nS = normalize(n + vec3((g.gb - 0.5) * 0.4, 0.5));
-  float toSun = dot(normalize(nS.xy + 1e-4), normalize(L.xy));
-  vec3 snow = vec3(0.93, 0.94, 0.96) * (S.key * 0.24 * (0.86 + 0.6 * toSun * (1.0 - nS.z)) + S.amb * 0.8 * (0.62 + 0.38 * nS.z));
-  if (uNight > 0.0) snow = mix(snow, snowNight(nS), uNight);
-  c = mix(c, snow * (0.94 + 0.12 * g.r), snowK);
-  // Before dawn the picture's light reaches the faces turned to it.
-  c += sheetGlow() * stone * 3.0 * exp(-max(sheetEdge(hp.xy), 0.0) / 200.0) * (1.0 - snowK * 0.6) * uNight * uSheetOn;
-  return c;
+  // (It tipped as it grounded: its strata lie at its own tilt.)
+  vec3 axis = normalize(vec3(0.42 * sin(fi * 2.4 + 0.7), 0.42 * cos(fi * 1.7 + 0.2), 1.0));
+  vec3 tu = abs(n.z) > 0.9 ? vec3(1.0, 0.0, 0.0) : normalize(vec3(-n.y, n.x, 0.0));
+  float along = dot(o, tu);
+  vec2 q = vec2(along + fi * 91.0, dot(o, axis) * 1.6);
+  // (Before dawn the pool lies low between its banks: less of the sky's light reaches a block than a wall that stands in the open.)
+  vec3 col = iceGlacier(hp, n, gRockRd, t, q, gRockThick, mix(1.0, 0.62, uNight), 1.0, 0.7, gRockE * 2.0, 3.1 + fi * 1.37);
+  bool top = n.z > 0.62;
+  // Snow. On a level face it lies whole, in soft low drifts; over the faces below it hangs in one clean line.
+  if (top) {
+    float lump = 0.22 * sin(o.x * 0.11 + fi * 2.0) * sin(o.y * 0.13 + fi) + 0.1 * sin(o.x * 0.31 - o.y * 0.27);
+    col = snowOn(n, lump);
+  } else {
+    float hang = 3.2 + 1.3 * sin(along * 0.09 + fi * 3.0) + 0.6 * sin(along * 0.23 + fi);
+    col = iciclesOn(col, along + fi * 40.0, dTop - hang, px, 7.0);
+    col = corniceOn(col, n, dTop - hang, hang * 1.6, px);
+  }
+  // Where it stands in the water.
+  if (!top) col = waterlineOn(col, up, 0.5 + 0.5 * sin(along * 0.07 + fi));
+  // Before dawn the table's light reaches the faces turned to it.
+  col += sheetGlow() * vec3(0.3, 0.5, 0.6) * 2.2 * exp(-max(sheetEdge(hp.xy), 0.0) / 200.0) * (top ? 0.5 : 1.0) * uNight * uSheetOn;
+  return col;
 }
 
 /* ---------- water ---------- */
@@ -2192,7 +2215,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     if (se < 2.0 && uSheetOn > 0.5) {
       vec4 sp = sheetPic(pb, footL);
       sheetC = sp.rgb;
-      picK = (1.0 - smoothstep(-1.5, 1.5, se)) * sp.a * poolK;
+      picK = sp.a * poolK;
     }
   }
   float dn = clamp(depth / DEEP, 0.0, 1.0);
