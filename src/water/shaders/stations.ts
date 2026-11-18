@@ -1395,8 +1395,8 @@ vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
   vec2 uv = faceUv(p, rd);
   vec3 img;
   if (gMirror > 0.5) {
-    // (Its image in the moving water is its light, not its words.)
-    img = pow(textureLod(uSlabTex, vec2(uv.x, 1.0 - uv.y), 5.0).rgb, vec3(2.2));
+    // (Its image in the moving water is its light, not its words: one even glow, with no dark marks where its lines were.)
+    img = pow(textureLod(uSlabTex, mix(vec2(0.5), vec2(uv.x, 1.0 - uv.y), 0.12), 10.0).rgb, vec3(2.2));
   } else if (pane > 0.0) {
     // (Where the two rays beside this one meet the wall: how far the picture moves under one device pixel.)
     vec3 d1 = normalize(rd + uCamR * uPxAng);
@@ -1411,6 +1411,8 @@ vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
   // page as it is, alight, its ground bright enough that its dark words are read against it; a little brighter at its middle.)
   vec3 lamp = FACE_LAMP * (0.86 + 0.14 * smoothstep(0.0, 80.0, -wd));
   vec3 lit = img * mix(S.amb * 1.05 + S.key * 0.2, lamp, uNight);
+  // (Before dawn its image in the water is a low afterglow: the water under the words stays dark and calm.)
+  if (gMirror > 0.5) lit *= mix(1.0, 0.22, uNight);
   // (The page lies a hand inside the ice: the pane's own thickness shades its rim, and a breath of the ice's blue lies over it.)
   lit *= 1.0 - 0.22 * (1.0 - smoothstep(0.0, 7.0, -wd));
   lit = mix(lit, lit * vec3(0.8, 0.94, 1.0) + iceBody(0.5) * S.amb * 0.08 * (1.0 - uNight), 0.08);

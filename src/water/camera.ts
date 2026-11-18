@@ -270,8 +270,9 @@ function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: num
         // (Wide of its east end and well over it, already looking back: the wall is never an edge sliding past the lens.)
         { s: s6 + 0.75, pos: [2330, T + 3420, 720], aim: [1340, T + 2850, 0], fov: 60 },
         // From the east bank below it: the dam across the frame, its three sluices, the channels running out toward the eye; the bank at the foot.
-        { s: s6 + 1.2, pos: [2300, T + 4250, 860], aim: [1330, T + 3000, 0], fov: 62 },
-        { s: s7 - 0.6, pos: [2290, T + 4275, 850], aim: [1333, T + 3010, 0], fov: 62 },
+        // (Further out on the bank, so the running channel passes above the words and snow lies under them.)
+        { s: s6 + 1.2, pos: [2520, T + 4380, 900], aim: [1330, T + 2960, 0], fov: 62 },
+        { s: s7 - 0.6, pos: [2510, T + 4405, 890], aim: [1333, T + 2970, 0], fov: 62 },
         // Across the three channels where they meet, turning with the water to look down the river again.
         { s: s7 - 0.05, pos: [1400, T + 3620, 700], aim: [700, T + 3720, 0], fov: 60 },
         // The lattice from up the west bank: all sixteen above the middle, the bank at the foot.
