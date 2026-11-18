@@ -175,7 +175,7 @@
 }
 /* (A date is set in the text face with tabular figures: in the mono, its comma stands in a cell of its own.) */
 .foot-note {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
@@ -199,6 +199,10 @@
 .foot-meta a,
 .foot-meta .end-haptics {
   color: inherit;
+}
+/* (At the foot of a long page the ground is in the day's last shade: the small capitals take the stronger ink.) */
+.pg-ground .foot-meta {
+  color: var(--ink-3);
 }
 @media (max-width: 1100px) {
   .foot-row {
