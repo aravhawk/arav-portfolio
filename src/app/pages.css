@@ -708,6 +708,19 @@
     transform: translateX(4px);
   }
 }
+/* Between a phone and a desk the words are large against the picture and no longer stand wholly inside the calm
+   it was photographed with: a soft veil of the ground's own tone stands behind them, as at the head of a page
+   before its engine arrives. */
+@media (min-width: 720px) and (max-width: 1100px) {
+  .next-view::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 78% 125% at 0% 100%, var(--veil) 0%, var(--veil) 44%, transparent 78%);
+    opacity: 0.78;
+    pointer-events: none;
+  }
+}
 @media (max-width: 719px) {
   .next-link {
     height: min(123.08vw, 560px);
