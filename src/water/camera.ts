@@ -2,12 +2,14 @@
  * The flight's camera: a short list of key poses at scroll positions, joined
  * smoothly. It is a pure function of scroll, so it reverses exactly.
  *
- * Scroll is measured in screens (scrollY over the viewport's height). Each
- * station is held for a stretch of scroll by two keys that differ a little,
- * so a held frame still drifts.
+ * Scroll is measured in screens (scrollY over the viewport's height). The
+ * eye never stands still. Between stations it travels; at a station it
+ * slows to one authored move (a push toward the subject, an arc round it, a
+ * rise over it: see `Move`) that runs the whole time the station's words
+ * stand, and its composed frame is one moment of that move.
  */
 
-import { BENDS, BOARD_DEPTH, CANYON, DY, FACE, NAME, type NameLayout, REST, SHARDS, SHEET, SLAB, T2, TARN_BAY, boardSpan, sheetCols } from './world';
+import { BENDS, BOARD_DEPTH, CANYON, DY, FACE, NAME, type NameLayout, REST, RIVER, SHARDS, SHEET, SLAB, T2, TARN_BAY, boardSpan, sheetCols } from './world';
 
 export type V3 = [number, number, number];
 
@@ -23,7 +25,32 @@ export interface Pose {
 export interface Key extends Pose {
   /** scroll position in screens */
   s: number;
+  /** how the pose is changing here, per screen of scroll, where the key says so itself (a station's move); otherwise the path works it out */
+  v?: Pose;
 }
+
+/**
+ * A station's move. The eye turns about one point of the world and closes
+ * on it, so that point keeps its place in the frame for the whole of the
+ * move. The point is chosen where the ground the words stand on meets the
+ * subject: the subject then grows and turns away from the words and never
+ * comes under them.
+ */
+export interface Move {
+  /** the composed frame */
+  at: Pose;
+  /** the point that keeps its place */
+  pivot: V3;
+  /** how far the eye closes on it over the whole move, as a share of its distance (negative: it draws back) */
+  push: number;
+  /** degrees the eye goes round it, to its own right (so what lies beyond the point slides right in the frame) */
+  arc: number;
+  /** degrees the eye rises over it (so what lies beyond the point climbs the frame) */
+  rise: number;
+}
+
+/** How long before its composed frame a station's move begins, and how long after it ends, in screens. */
+export const MOVE = { before: 0.55, after: 0.75 };
 
 /** How long each section of the page is, in screens. */
 export const SECTIONS = { hero: 2.4, say: 2.2, infiniview: 2.6, upstream: 2.8, bench: 2.6, bridge: 2.8, models: 2.8, fork: 2.8, lattice: 2.6, canyon: 3.6, delta: 2.6, sea: 2.3 };
@@ -36,7 +63,7 @@ export const SETTLE_AT = END_AT - 0.3;
 export const SUN_END_AZ = 0.62;
 /** Scroll (in screens) over which the lake's ice melts. */
 export const MELT = { from: 0.1, to: 2.0 };
-/** Until here the first camera only drifts: the name is still letters. */
+/** Until here the first camera only closes on the name: the name is still letters. */
 // (The name is cut for that camera alone, so the camera stays with it until the letters have run together into one pool.)
 const HOLD = 1.22;
 
@@ -87,8 +114,88 @@ export function heroDesign(aspect: number): Hero {
   };
 }
 
-/** The key poses for a screen of this shape. */
-export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
+/**
+ * A station's move at t. 0 is its composed frame, and the whole move is one
+ * unit of t long: it begins at a negative t and ends at a positive one.
+ */
+export function moved(m: Move, t: number): Pose {
+  if (t === 0) return m.at;
+  const a = rad(m.arc * t);
+  const b = -rad(m.rise * t);
+  const k = 1 - m.push * t;
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
+  const cb = Math.cos(b);
+  const sb = Math.sin(b);
+  // The level line across the line of sight, once the eye has gone round.
+  const fx = m.at.aim[0] - m.at.pos[0];
+  const fy = m.at.aim[1] - m.at.pos[1];
+  const fl = Math.hypot(fx, fy) || 1;
+  const rx = (fy / fl) * ca + (fx / fl) * sa;
+  const ry = (fy / fl) * sa - (fx / fl) * ca;
+  const turn = (p: V3): V3 => {
+    const x0 = p[0] - m.pivot[0];
+    const y0 = p[1] - m.pivot[1];
+    const z = p[2] - m.pivot[2];
+    // Round the upright through the point, then over that level line, then nearer.
+    const x = x0 * ca - y0 * sa;
+    const y = x0 * sa + y0 * ca;
+    const along = (rx * x + ry * y) * (1 - cb);
+    return [m.pivot[0] + k * (x * cb + ry * z * sb + rx * along), m.pivot[1] + k * (y * cb - rx * z * sb + ry * along), m.pivot[2] + k * (z * cb + (rx * y - ry * x) * sb)];
+  };
+  return { pos: turn(m.at.pos), aim: turn(m.at.aim), fov: m.at.fov };
+}
+
+/**
+ * A move's keys: one at each of the scroll positions `at`, each with the move's own speed there. `when` says how far
+ * through the move the eye is at a scroll position (in screens of the move's steady pace, 0 at its composed frame), and
+ * `len` is how many such screens make the whole move.
+ */
+function moveKeys(m: Move, len: number, at: number[], when: (s: number) => number): Key[] {
+  const e = 1e-3;
+  return at.map((s) => {
+    const a = moved(m, when(s - e) / len);
+    const b = moved(m, when(s + e) / len);
+    const d = (i: number, get: (p: Pose) => V3) => (get(b)[i] - get(a)[i]) / (2 * e);
+    const v3 = (get: (p: Pose) => V3): V3 => [d(0, get), d(1, get), d(2, get)];
+    return { s, ...moved(m, when(s) / len), v: { pos: v3((p) => p.pos), aim: v3((p) => p.aim), fov: 0 } };
+  });
+}
+/**
+ * A station's hold: its move from `MOVE.before` its composed frame to `MOVE.after` it. The eye is still slowing as
+ * the move begins (it comes in at `1 + SLOW.by` times the move's steady pace and has settled to that pace within
+ * about `SLOW.in` screens), so the last of its arrival and the first of its move are one motion.
+ */
+const SLOW = { by: 1.2, in: 0.22 };
+function holdKeys(m: Move, stop: number, before = MOVE.before, after = MOVE.after): Key[] {
+  const from = stop - before;
+  const lead = (s: number) => SLOW.by * SLOW.in * Math.exp(-(s - from) / SLOW.in);
+  const when = (s: number) => s - stop - (lead(s) - lead(stop));
+  return moveKeys(m, before + after, [from, from + before * 0.4, stop, stop + after], when);
+}
+
+/** The point of the level ground (at height z) that a place in a pose's frame looks at: where a move turns. */
+function under(at: Pose, aspect: number, sx: number, sy: number, z = 0): V3 {
+  const g = groundUnder(basisOf(at), sx, sy, aspect, z);
+  return g ? [g.x, g.y, z] : at.aim;
+}
+
+/** The west bank of the river's first reach at y: where the snow meets the water. */
+function reachBank(y: number): number {
+  const w = [300, 250, 285, 240, 280, 300];
+  let i = 0;
+  while (i < RIVER.length - 2 && y > RIVER[i + 1].y) i++;
+  const t = Math.min(1, Math.max(0, (y - RIVER[i].y) / (RIVER[i + 1].y - RIVER[i].y)));
+  return RIVER[i].x + (RIVER[i + 1].x - RIVER[i].x) * t - (w[i] + (w[i + 1] - w[i]) * t) / 2;
+}
+
+/**
+ * The key poses for a screen of this shape. `band`: for an inner page's
+ * scene, which stands at one station and only drifts: each move is a tenth
+ * of itself, and the two stations the home page has recomposed for its own
+ * words keep the frames those pages were laid out on.
+ */
+export function flightKeys(aspect: number, sunAz = SUN_END_AZ, band = false): Key[] {
   const h = SECTIONS.hero;
   const s1 = h + SECTIONS.say;
   const s2 = s1 + SECTIONS.infiniview;
@@ -101,10 +208,15 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
   const s9 = s8 + SECTIONS.canyon;
   const s10 = s9 + SECTIONS.delta;
   const Y = DY;
+  const g = band ? 0.1 : 1;
+  /** A station's move: its composed frame, the place in that frame that holds still, and how the eye goes. */
+  const move = (at: Pose, sx: number, sy: number, push: number, arc: number, rise: number, z = 0): Move => ({ at, pivot: under(at, aspect, sx, sy, z), push: push * g, arc: arc * g, rise: rise * g });
+  /** The same, about a named point of the world. */
+  const about = (at: Pose, pivot: V3, push: number, arc: number, rise: number): Move => ({ at, pivot, push: push * g, arc: arc * g, rise: rise * g });
 
-  // The poster, held (with a slow push) until the letters have run together.
+  // The first frame, and the slow push toward the name it begins: the foot of the letters keeps its place.
   const hero = heroDesign(aspect).pose;
-  const hero2: Pose = { pos: [hero.pos[0], hero.pos[1] + 26, hero.pos[2] * 0.988], aim: [hero.aim[0], hero.aim[1] + 24, 0], fov: hero.fov };
+  const first: Move = { at: hero, pivot: [NAME.x, NAME.y, 0], push: HERO_PUSH * g, arc: 0, rise: 0 };
 
   // An upright screen that is not a phone (a tablet held tall) flies the
   // phone's path after the hero: its copy sits at the foot, where that
@@ -113,78 +225,143 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
   const squat = 250 * Math.min(1, Math.max(0, (aspect - 0.465) / 0.035));
   const wideFov = upright ? 62 : 50;
   const slabAim: V3 = [SLAB.x, SLAB.y, SLAB.h * 0.5];
+  // Down the first reach, low along its west bank: the river runs past on the right, the bank his sentence stands on
+  // keeps the lower left (the foot, on an upright screen), and the ranges rise ahead.
+  const reach = (s: number, y: number): Key =>
+    upright
+      ? { s, pos: [reachBank(y + 390) - 300, y + DY, 250 - (y - 2180) * 0.012], aim: [reachBank(y + 390) - 10, y + 640 + DY, 0], fov: wideFov }
+      : { s, pos: [reachBank(y + 500) - 350, y + DY, 158 - (y - 2250) * 0.012], aim: [reachBank(y + 500) - 110, y + 490 + DY, 0], fov: 48 };
   const keys: Key[] = upright
     ? [
-        { s: 0, ...hero },
-        { s: HOLD, ...hero2 },
+        ...moveKeys(first, HOLD, [0, HOLD], (s) => s),
         // Low over the lake's south end, looking down the river.
-        { s: OUTLET_AT, pos: [1440, 1560 + DY, 250], aim: [1530, 2200 + DY, 0], fov: wideFov },
-        // The statement: the near bank fills the foot of the frame, the river crosses beyond it.
-        { s: h + 0.75, pos: [1180, 2180 + DY, 250], aim: [1470, 2820 + DY, 0], fov: wideFov },
-        { s: s1 - 0.5, pos: [1200, 2400 + DY, 240], aim: [1500, 3020 + DY, 0], fov: wideFov },
+        { s: OUTLET_AT - 0.12, pos: [1440, 1560 + DY, 250], aim: [1530, 2200 + DY, 0], fov: wideFov },
+        // The statement: the near bank fills the foot of the frame, the river crosses beyond it; the eye goes on down the reach.
+        reach(1.98, 2060),
+        reach(h + 0.7, 2640),
+        reach(s1 - 0.5, 3150),
         // The basin: the slab stands above the middle, bank at the foot.
-        { s: s1 + 1.0, pos: [1010, 3450 + DY, 460], aim: [slabAim[0] - 20, slabAim[1] - 60, 40], fov: 50 },
-        { s: s2 - 0.55, pos: [1030, 3530 + DY, 445], aim: [slabAim[0] - 10, slabAim[1] - 40, 40], fov: 50 },
+        ...holdKeys(move({ pos: [1010, 3450 + DY, 460], aim: [slabAim[0] - 20, slabAim[1] - 60, 40], fov: 50 }, 0.5, 0.6, 0.14, 3, 2), s1 + 1.0),
         // Out past the island's left side, so the slab is never flown through.
         { s: s2 - 0.1, pos: [900, 4900 + DY, 330], aim: [1250, 5900 + DY, 0], fov: 54 },
-        { s: s2 + 0.4, pos: [1380, 5700 + Y, 330], aim: [1560, 6300 + Y, 0], fov: 56 },
-        // The confluence: streams above, the river across the middle, the bank at the foot.
+        { s: s2 + 0.35, pos: [1380, 5700 + Y, 330], aim: [1560, 6300 + Y, 0], fov: 56 },
+        // The confluence, from over the west bank of the river that comes to it: the streams above, the river across the
+        // middle, and the bank at the foot wide enough for the count and, beside it, the seven names.
         // (A squarer upright screen has less height for the bank: it looks down a little more, so the words keep clear of the river.)
-        { s: s2 + 1.25, pos: [1700, 5760 + Y, 590], aim: [1730, 7090 + Y - squat, 0], fov: 60 },
-        { s: s3 - 0.6, pos: [1704, 5810 + Y, 578], aim: [1732, 7120 + Y - squat, 0], fov: 60 },
-        { s: s3 + 0.3, pos: [900, 7700 + Y, 380], aim: [1100, 8500 + Y, 0], fov: 58 },
+        ...holdKeys(band ? move({ pos: [1700, 5760 + Y, 590], aim: [1730, 7090 + Y - squat, 0], fov: 60 }, 0.5, 0.6, 0.15, 2, 3) : move({ pos: [1000, 5500 + Y, 700], aim: [1750, 7060 + Y - squat, 0], fov: 58 }, 0.5, 0.5, 0.135, 2, 3), s2 + 1.25),
+        { s: s3 + 0.25, pos: [900, 7700 + Y, 380], aim: [1100, 8500 + Y, 0], fov: 58 },
         // The rock pool, looked down into from over its near bank: the plates across the frame, the bank at the foot.
-        { s: s3 + 1.15, ...benchPose(aspect, 0) },
-        { s: s4 - 0.6, ...benchPose(aspect, 1) },
+        ...holdKeys(move(benchPose(aspect), 0.5, 0.62, 0.13, 0, -2, -36), s3 + 1.15),
         { s: s4 + 0.3, pos: [1200, 9650 + Y, 360], aim: [1300, 10500 + Y, 0], fov: 58 },
-        // The tarn: both shards, the far shore, the ranges.
         // The tarn, from low over its water: both shards stand against the sky above the middle, the words below on still water.
-        { s: s4 + 1.2, pos: [1560, 9750 + Y, 70], aim: [1580, 10900 + Y, -25], fov: 58 },
-        { s: s5 - 0.6, pos: [1562, 9790 + Y, 68], aim: [1581, 10920 + Y, -25], fov: 58 },
+        ...holdKeys(about({ pos: [1560, 9750 + Y, 70], aim: [1580, 10900 + Y, -25], fov: 58 }, [SHARDS[0].x, SHARDS[0].y, 0], 0.135, -4, 0), s4 + 1.2),
         { s: s5 + 0.3, pos: [1300, T2 - 250, 400], aim: [1300, T2 + 600, 0], fov: 56 },
-        ...laterKeys(true, s5, s6, s7, s8),
-        ...seaKeys(aspect, sunAz, s9, s10),
+        ...laterKeys(aspect, band, s5, s6, s7, s8),
+        ...seaKeys(aspect, sunAz, s9, s10, g),
       ]
     : [
-        { s: 0, ...hero },
-        { s: HOLD, ...hero2 },
+        ...moveKeys(first, HOLD, [0, HOLD], (s) => s),
         // Out over the breaking lake, still high: the plates, the far shore and the outlet ahead, the name's water left behind.
         { s: 1.46, pos: [1345, 2700, 430], aim: [1480, 5300, 0], fov: wideFov },
         // Low over the lake's south end, looking down the river toward the ranges.
         { s: OUTLET_AT - 0.12, pos: [1380, 1640 + DY, 200], aim: [1500, 2190 + DY, 0], fov: wideFov },
         // Over the river's mouth, already turned to the first reach: the bank his sentence stands on fills the lower
-        // left of the frame from here, so the sentence can be in its place this early, and the eye glides on to its frame.
-        { s: 1.96, pos: [1130, 2140 + DY, 166], aim: [1350, 2640 + DY, 0], fov: 48 },
-        // The statement: gliding down the first reach, river on the right, the bank on the left.
-        { s: h + 0.7, pos: [1080, 2250 + DY, 158], aim: [1320, 2740 + DY, 0], fov: 48 },
-        { s: s1 - 0.5, pos: [1090, 2440 + DY, 152], aim: [1325, 2930 + DY, 0], fov: 48 },
-        // The basin: slab and island right of centre, the bank at lower left.
-        { s: s1 + 1.0, pos: [930, 4110 + DY, 300], aim: [slabAim[0] - 250, slabAim[1], 105], fov: 42 },
-        { s: s2 - 0.55, pos: [955, 4180 + DY, 288], aim: [slabAim[0] - 235, slabAim[1] + 20, 105], fov: 42 },
+        // left of the frame from here, so the sentence can begin this early; and the eye goes on down the reach the
+        // whole time the sentence sets, the river running past on its right.
+        reach(1.96, 2140),
+        reach(h + 0.7, 2720),
+        reach(s1 - 0.5, 3230),
+        // The basin: slab and island right of centre, the bank at lower left. The eye closes on the block and goes a little round it.
+        ...holdKeys(move({ pos: [930, 4110 + DY, 300], aim: [slabAim[0] - 250, slabAim[1], 105], fov: 42 }, 0.4, 0.72, 0.14, 4.5, 0), s1 + 1.0),
 
         // Out wide of the island's left side: the slab leaves the frame whole
         // and at a distance, never as an edge sliding past the lens.
         { s: s2 - 0.1, pos: [780, 4950 + DY, 250], aim: [1180, 5900 + DY, 0], fov: 42 },
-        { s: s2 + 0.4, pos: [1400, 5720 + Y, 230], aim: [1620, 6350 + Y, 0], fov: 46 },
-        // The confluence: the river crosses the frame, the streams fan down to it from the snowfield.
+        { s: s2 + 0.35, pos: [1400, 5720 + Y, 230], aim: [1620, 6350 + Y, 0], fov: 46 },
         // The confluence: the cliff and its seven falls across the frame, the river along its foot, the near bank below.
-        { s: s2 + 1.25, pos: [1380, 5950 + Y, 330], aim: [1730, 7000 + Y, -118], fov: 52 },
-        { s: s3 - 0.6, pos: [1392, 5990 + Y, 322], aim: [1735, 7020 + Y, -118], fov: 52 },
+        // The eye rises over the bank and closes on the cliff: the snowfield and its streams open out above the falls.
+        ...holdKeys(move({ pos: [1380, 5950 + Y, 330], aim: [1730, 7000 + Y, -118], fov: 52 }, 0.48, 0.52, 0.18, 2, 3), s2 + 1.25),
         // Down the bigger river.
-        { s: s3 + 0.3, pos: [860, 7650 + Y, 300], aim: [1000, 8500 + Y, 0], fov: 46 },
+        { s: s3 + 0.25, pos: [860, 7650 + Y, 300], aim: [1000, 8500 + Y, 0], fov: 46 },
         // The rock pool from low over its near bank: the plates right of the words, the far shore, the tarn and the ranges above.
-        { s: s3 + 1.15, ...benchPose(aspect, 0) },
-        { s: s4 - 0.6, ...benchPose(aspect, 1) },
+        ...holdKeys(move(benchPose(aspect), 0.44, 0.8, 0.128, 3, 0), s3 + 1.15),
         { s: s4 + 0.3, pos: [1150, 9700 + Y, 300], aim: [1300, 10500 + Y, 0], fov: 46 },
-        // The tarn, from low over the water of its near bay, looking a little up (see tarnPose).
-        { s: s4 + 1.2, ...tarnPose(aspect, 0) },
-        { s: s5 - 0.6, ...tarnPose(aspect, 1) },
+        // The tarn, from low over the water of its near bay (see tarnPose): the eye goes round the two shards, so one passes in front of the other.
+        // (It closes on the far shard across the water, which keeps its place; the near one grows past it to the right, away from the words.)
+        ...holdKeys(band ? move(tarnBand(aspect), 0.3, 0.8, 0.1, 2, 0) : about(tarnPose(aspect), [SHARDS[1].x, SHARDS[1].y, 0], 0.11, -3, 0), s4 + 1.2),
         { s: s5 + 0.3, pos: [1300, T2 - 300, 300], aim: [1300, T2 + 600, 0], fov: 44 },
-        ...laterKeys(false, s5, s6, s7, s8),
-        ...seaKeys(aspect, sunAz, s9, s10),
+        ...laterKeys(aspect, band, s5, s6, s7, s8),
+        ...seaKeys(aspect, sunAz, s9, s10, g),
       ];
   return keys;
 }
+
+/**
+ * The first frame's stills (see scripts/capture-poster.mjs). The first camera
+ * stands nearer the name the wider the window is, so one still cannot be the
+ * first frame of every window. There is one to a band of window shapes: it is
+ * taken from the band's own first camera (the camera of the band's narrowest
+ * window, a little back and high: where the entrance begins) on a frame as
+ * wide as the band's widest window, so every window in the band sees a part
+ * of that very frame, cut at its sides, and the live picture's first frame
+ * is drawn from that same camera. The entrance then brings the eye forward
+ * to the window's own first camera. Each band is `POSTER_STEP` times nearer
+ * than the one before.
+ */
+export const POSTER_STEP = 1.1;
+export interface PosterBand {
+  /** the still's name: its shape and its place among that shape's bands */
+  id: string;
+  /** the narrowest window of the band (its camera is the band's), and the widest (the still is this wide) */
+  lo: number;
+  hi: number;
+}
+export function posterBands(): PosterBand[] {
+  const out: PosterBand[] = [];
+  // How large the name stands against the frame's height: the camera's distance goes as one over this.
+  const size = (a: number) => (heroDesign(a).name.width / (heroDesign(a).pose.pos[2] || 1)) * 1;
+  const cut = (shape: string, from: number, to: number) => {
+    let lo = from;
+    for (let n = 0; lo < to - 1e-6 && n < 40; n++) {
+      // The next edge: where the name stands POSTER_STEP larger (found by halving; the size only grows with the width).
+      let a = lo;
+      let b = to;
+      const want = size(lo) * POSTER_STEP;
+      if (size(to - 1e-6) <= want) a = to;
+      else {
+        for (let i = 0; i < 40; i++) {
+          const m = (a + b) / 2;
+          if (size(m) < want) a = m;
+          else b = m;
+        }
+        a = Math.round(a * 1000) / 1000;
+      }
+      // (A last sliver is not a band of its own: the band before it runs on to the end.)
+      if (out.length && out[out.length - 1].id.startsWith(shape) && a >= to - 1e-6 && size(to - 1e-6) < size(lo) * Math.sqrt(POSTER_STEP)) out[out.length - 1].hi = to;
+      else out.push({ id: `${shape}-${n}`, lo, hi: a });
+      lo = a;
+    }
+  };
+  cut('tall', 0.4, 0.7);
+  cut('square', 0.7, 1.2);
+  cut('wide', 1.2, 3.2);
+  return out;
+}
+/** The band a window of this shape is in. */
+export function posterBand(aspect: number, bands = posterBands()): PosterBand {
+  return bands.find((b) => aspect >= b.lo && aspect < b.hi) ?? (aspect < bands[0].lo ? bands[0] : bands[bands.length - 1]);
+}
+/**
+ * Where the entrance begins on a window of this shape: its band's first camera, a little back from the name and
+ * high over it. `back` and `high`: how far back (a share of the distance) and how high (degrees).
+ */
+export function heroStart(band: PosterBand, back: number, high: number): Pose {
+  const at = heroDesign(band.lo).pose;
+  return moved({ at, pivot: [NAME.x, NAME.y, 0], push: back, arc: 0, rise: -high }, -1);
+}
+
+/** How far the first camera closes on the name while the letters melt, as a share of its distance. */
+const HERO_PUSH = 0.05;
 
 /**
  * Station 3's frame, composed from the plates backwards: they are set a
@@ -192,9 +369,9 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
  * screen. A wide screen looks across the pool from low over its near bank
  * (the plates right of the words, the tarn and the ranges above); an
  * upright one looks down into it (the plates above the middle, the bank at
- * the foot). `drift`: 0 at the start of the hold, 1 at its end.
+ * the foot).
  */
-function benchPose(aspect: number, drift: number): Pose {
+function benchPose(aspect: number): Pose {
   const upright = aspect < 0.9;
   const fov = upright ? 52 : 62;
   const th = Math.tan(rad(fov / 2));
@@ -211,9 +388,9 @@ function benchPose(aspect: number, drift: number): Pose {
     const range = w / (2 * aspect * th * share) / Math.cos(lift);
     const z = range * Math.sin(pitch - lift) - bed;
     const back = range * Math.cos(pitch - lift);
-    const x = SHEET.x0 + w / 2 + 6 * drift;
-    const y = SHEET.y - back + 10 * drift;
-    return { pos: [x, y, z - 8 * drift], aim: [x, y + z / Math.tan(pitch), 0], fov };
+    const x = SHEET.x0 + w / 2;
+    const y = SHEET.y - back;
+    return { pos: [x, y, z], aim: [x, y + z / Math.tan(pitch), 0], fov };
   }
   const pitch = rad(28);
   // The plates' near edge takes this share of the frame's width, and stands this far in from its left side.
@@ -224,29 +401,22 @@ function benchPose(aspect: number, drift: number): Pose {
   // (The camera stands a little further back from the plates' middle than it is high.)
   const BACK = 1.07;
   const z = (depth + half * Math.cos(pitch) - bed * Math.sin(pitch)) / (BACK * Math.cos(pitch) + Math.sin(pitch));
-  // (Through the hold the eye drifts toward the bank, so the pool only ever moves away from the words.)
-  const x = SHEET.x0 - (left - 0.5) * 2 * aspect * th * depth - 10 * drift;
-  const y = SHEET.y - z * BACK + 8 * drift;
-  const zc = z - 5 * drift;
-  return { pos: [x, y, zc], aim: [x, y + zc / Math.tan(pitch), 0], fov };
+  const x = SHEET.x0 - (left - 0.5) * 2 * aspect * th * depth;
+  const y = SHEET.y - z * BACK;
+  return { pos: [x, y, z], aim: [x, y + z / Math.tan(pitch), 0], fov };
 }
 
 /**
- * Station 4's wide frame, composed from the picture backwards. The eye is a
- * man's height over the water of the tarn's near bay and looks a little up,
- * so the horizon lies six tenths of the way down the frame: the station's
- * name, its lines and the film's control stand in clear sky over the ranges,
- * and the water under the horizon is a mirror that holds the ranges, the sky
- * and the two shards. The shards stand whole against the sky to the right
- * of the words: the eye is turned until the nearer one is just inside the
- * frame's right side, but never so far west of north that the low sun
- * comes in under the words on a screen of ordinary shape. `drift`: 0 at the
- * start of the hold, 1 at its end.
+ * Station 4's frame as an inner page's scene keeps it (the home page set its
+ * words in the sky here until its fourth round): the eye a man's height over
+ * the water of the tarn's near bay, looking a little up, so the horizon lies
+ * six tenths of the way down the frame and the two shards stand whole
+ * against the sky to the right.
  */
-function tarnPose(aspect: number, drift: number): Pose {
+function tarnBand(aspect: number): Pose {
   const fov = 44;
   const th = Math.tan(rad(fov / 2));
-  const pos: V3 = [TARN_BAY.x - 100 + 4 * drift, TARN_BAY.y - 140 + 26 * drift, 40 - 2 * drift];
+  const pos: V3 = [TARN_BAY.x - 100, TARN_BAY.y - 140, 40];
   // (The nearer shard's middle stands a third of the frame's width right of the frame's middle.)
   const near = SHARDS[0];
   const to = Math.atan2(near.x - TARN_BAY.x + 100, near.y - TARN_BAY.y + 140);
@@ -257,50 +427,82 @@ function tarnPose(aspect: number, drift: number): Pose {
   return { pos, aim: [pos[0] + Math.sin(head) * far, pos[1] + Math.cos(head) * far, pos[2] + up * far], fov };
 }
 
+/**
+ * Station 4's wide frame on the home page, composed from the picture
+ * backwards. The words stand at lower left, as at every station, so the
+ * lower left must be one calm surface: here it is the tarn's still water.
+ * The eye is a man's height over the near bay, as it always was (from that
+ * low the water is a mirror, and holds the pale sky near the horizon, light
+ * enough for dark words), but looks a little down: the horizon lies just
+ * over four tenths of the way down the frame, the ranges' image is a narrow
+ * band under it, and everything below that is sky in still water. The two
+ * shards stand whole to the right of the words, against the ranges and the
+ * sky, each over its own image.
+ */
+function tarnPose(aspect: number): Pose {
+  const fov = 44;
+  const th = Math.tan(rad(fov / 2));
+  const pos: V3 = [TARN_BAY.x - 100, TARN_BAY.y - 140, 40];
+  const near = SHARDS[0];
+  const to = Math.atan2(near.x - TARN_BAY.x + 100, near.y - TARN_BAY.y + 140);
+  // (The nearer shard's middle stands this share of the frame's width right of the frame's middle: it has room to grow.)
+  const head = Math.min(rad(26), Math.max(rad(10), to - Math.atan(0.2 * 2 * th * aspect)));
+  // (Looking down by this much puts the horizon a little over four tenths of the way down.)
+  const down = 0.16 * th;
+  const far = 1000;
+  return { pos, aim: [pos[0] + Math.sin(head) * far, pos[1] + Math.cos(head) * far, pos[2] - down * far], fov };
+}
+
 /** The last four stations' keys: the columns, the dam, the lattice, the canyon. */
-function laterKeys(upright: boolean, s5: number, s6: number, s7: number, s8: number): Key[] {
+function laterKeys(aspect: number, band: boolean, s5: number, s6: number, s7: number, s8: number): Key[] {
   const T = T2;
+  const upright = aspect < 0.9;
+  const g = band ? 0.1 : 1;
+  const move = (at: Pose, sx: number, sy: number, push: number, arc: number, rise: number, z = 0): Move => ({ at, pivot: under(at, aspect, sx, sy, z), push: push * g, arc: arc * g, rise: rise * g });
   return upright
     ? [
         // Down the row from its tall end, so all four stand in an upright frame.
-        { s: s5 + 1.2, pos: [420, T + 380, 470], aim: [1235, T + 1110, 60], fov: 58 },
-        { s: s6 - 0.6, pos: [440, T + 400, 460], aim: [1240, T + 1115, 58], fov: 58 },
+        ...holdKeys(move({ pos: [420, T + 380, 470], aim: [1235, T + 1110, 60], fov: 58 }, 0.5, 0.52, 0.125, -4, 0), s5 + 1.2),
         // Past the dam's east end, turning to look back at it.
-        { s: s6 + 0.3, pos: [1560, T + 1750, 420], aim: [1300, T + 2550, 20], fov: 58 },
+        { s: s6 - 0.1, pos: [1560, T + 1750, 420], aim: [1300, T + 2550, 20], fov: 58 },
         // (Wide of its east end and well over it, already looking back: the wall is never an edge sliding past the lens.)
-        { s: s6 + 0.75, pos: [2330, T + 3420, 720], aim: [1340, T + 2850, 0], fov: 60 },
+        { s: s6 + 0.38, pos: [2330, T + 3420, 720], aim: [1340, T + 2850, 0], fov: 60 },
         // From the east bank below it: the dam across the frame, its three sluices, the channels running out toward the eye; the bank at the foot.
         // (Further out on the bank, so the running channel passes above the words and snow lies under them.)
-        { s: s6 + 1.2, pos: [2520, T + 4380, 900], aim: [1330, T + 2960, 0], fov: 62 },
-        { s: s7 - 0.6, pos: [2510, T + 4405, 890], aim: [1333, T + 2970, 0], fov: 62 },
+        ...holdKeys(move({ pos: [2520, T + 4380, 900], aim: [1330, T + 2960, 0], fov: 62 }, 0.5, 0.56, 0.145, 3, 0), s6 + 1.2, FORK_BEFORE),
         // Across the three channels where they meet, turning with the water to look down the river again.
-        { s: s7 - 0.05, pos: [1400, T + 3620, 700], aim: [700, T + 3720, 0], fov: 60 },
+        { s: s7 - 0.2, pos: [1400, T + 3620, 700], aim: [700, T + 3720, 0], fov: 60 },
         // The lattice from up the west bank: all sixteen above the middle, the bank at the foot.
-        { s: s7 + 1.15, pos: [500, T + 2930, 930], aim: [1350, T + 4480, 0], fov: 58 },
-        { s: s8 - 0.6, pos: [506, T + 2958, 920], aim: [1352, T + 4490, 0], fov: 58 },
+        ...holdKeys(move({ pos: [500, T + 2930, 930], aim: [1350, T + 4480, 0], fov: 58 }, 0.5, 0.62, 0.14, 4, 0), s7 + 1.15),
         { s: s8 + 0.3, pos: [1300, T + 4900, 230], aim: [1300, T + 5700, 90], fov: 60 },
-        ...canyonKeys(s8, 66),
+        ...canyonKeys(s8, 66, g),
       ]
     : [
-        { s: s5 + 1.2, pos: [760, T + 60, 250], aim: [1310, T + 1080, 96], fov: 42 },
-        { s: s6 - 0.6, pos: [772, T + 95, 243], aim: [1316, T + 1090, 94], fov: 42 },
+        // The four seracs from over the shallows' west bank; the eye goes round the row, so each stands clear of the next.
+        ...holdKeys(band ? move({ pos: [760, T + 60, 250], aim: [1310, T + 1080, 96], fov: 42 }, 0.3, 0.8, 0.1, 2, 0) : move(colsPose(), 0.46, 0.62, 0.175, 5, 0), s5 + 1.2),
         // Past the dam's east end, turning to look back at it.
-        { s: s6 + 0.3, pos: [1520, T + 1720, 280], aim: [1300, T + 2520, 20], fov: 46 },
+        { s: s6 - 0.1, pos: [1520, T + 1720, 280], aim: [1300, T + 2520, 20], fov: 46 },
         // (Wide of its east end and well over it, already looking back: the wall is never an edge sliding past the lens.)
-        { s: s6 + 0.75, pos: [2200, T + 3150, 500], aim: [1420, T + 2810, 10], fov: 45 },
+        { s: s6 + 0.38, pos: [2200, T + 3150, 500], aim: [1420, T + 2810, 10], fov: 45 },
         // From the east bank below it: the dam across the frame, the open sluice's water coming toward the eye, the bank at lower left.
-        { s: s6 + 1.2, pos: [2130, T + 3800, 640], aim: [1520, T + 2900, 0], fov: 42 },
-        { s: s7 - 0.6, pos: [2122, T + 3824, 630], aim: [1522, T + 2908, 0], fov: 42 },
+        ...holdKeys(move({ pos: [2130, T + 3800, 640], aim: [1520, T + 2900, 0], fov: 42 }, 0.45, 0.58, 0.175, -4, 0), s6 + 1.2, FORK_BEFORE),
         // Across the three channels where they meet, turning with the water to look down the river again.
-        { s: s7 - 0.05, pos: [1620, T + 3560, 400], aim: [1120, T + 3840, 0], fov: 45 },
-        { s: s7 + 0.45, pos: [820, T + 3640, 400], aim: [900, T + 4350, 10], fov: 44 },
-        // The lattice from over its west bank, corner on: every cube and its mirror image.
+        { s: s7 - 0.25, pos: [1620, T + 3560, 400], aim: [1120, T + 3840, 0], fov: 45 },
+        { s: s7 + 0.3, pos: [800, T + 3660, 420], aim: [920, T + 4380, 10], fov: 44 },
+        // The lattice from over its west bank, corner on: every cube and its mirror image. The eye goes round it, and the rows open and close.
         // (Turned a little to the left, so the bank at lower left is wide enough for the name to stand on snow alone.)
-        { s: s7 + 1.15, pos: [500, T + 3800, 640], aim: [1085, T + 4625, 0], fov: 45 },
-        { s: s8 - 0.6, pos: [512, T + 3828, 630], aim: [1088, T + 4635, 0], fov: 45 },
+        ...holdKeys(move({ pos: [500, T + 3800, 640], aim: [1085, T + 4625, 0], fov: 45 }, 0.4, 0.7, 0.14, 6, 0), s7 + 1.15),
         { s: s8 + 0.3, pos: [1300, T + 4960, 170], aim: [1300, T + 5700, 90], fov: 48 },
-        ...canyonKeys(s8, 50),
+        ...canyonKeys(s8, 50, g),
       ];
+}
+
+/**
+ * Station 5's wide frame on the home page: the four seracs across the middle and right, each with its name over it, the
+ * shallows running out to the right, and the west bank's snow filling the lower left, where the count stands.
+ */
+function colsPose(): Pose {
+  return { pos: [640, T2 - 20, 300], aim: [1260, T2 + 1090, 20], fov: 42 };
 }
 
 /** The ending's lens, and where its horizon and its sun stand in the frame (the old ending's composition). */
@@ -325,7 +527,7 @@ export function endLens(aspect: number) {
  * horizon above the middle and the sun off to the right, wherever in the
  * world the sun has been found to rise.
  */
-function seaKeys(aspect: number, sunAz: number, s9: number, s10: number): Key[] {
+function seaKeys(aspect: number, sunAz: number, s9: number, s10: number, g = 1): Key[] {
   const T = T2;
   const upright = aspect < 0.9;
   const L = endLens(aspect);
@@ -343,23 +545,23 @@ function seaKeys(aspect: number, sunAz: number, s9: number, s10: number): Key[] 
     aim: [REST.x - fx * d + fx * 1600, REST.y - fy * d + fy * 1600, h - drop],
     fov,
   });
+  const move = (at: Pose, sx: number, sy: number, push: number, arc: number, rise: number): Move => ({ at, pivot: under(at, aspect, sx, sy), push: push * g, arc: arc * g, rise: rise * g });
   return upright
     ? [
         // Out of the glacier and up over the west bank.
-        { s: s9 + 0.25, pos: [1900, T + 7300, 260], aim: [1800, T + 8200, 0], fov: 60 },
+        { s: s9 + 0.2, pos: [1900, T + 7300, 260], aim: [1800, T + 8200, 0], fov: 60 },
         // The delta, looked at across its west shore: the bank fills the foot of the frame, the channels fan away above it.
-        { s: s9 + 1.1, pos: [700, T + 7500, 500], aim: [1458, T + 8258, 0], fov: 60 },
-        { s: s10 - 0.55, pos: [716, T + 7522, 492], aim: [1468, T + 8274, 0], fov: 60 },
+        ...holdKeys(move({ pos: [700, T + 7500, 500], aim: [1458, T + 8258, 0], fov: 60 }, 0.5, 0.6, 0.125, 3, 2), s9 + 1.1),
         { s: s10 + 0.35, ...back(1750, 250, 52, 330) },
         { s: s10 + 0.95, ...back(620, 105, 42, 90) },
         { s: SETTLE_AT, ...rest },
         { s: END_AT, ...held },
       ]
     : [
-        { s: s9 + 0.25, pos: [1960, T + 7330, 210], aim: [1800, T + 8200, 0], fov: 48 },
+        { s: s9 + 0.2, pos: [1960, T + 7330, 210], aim: [1800, T + 8200, 0], fov: 48 },
         // The delta from over its west bank: the bank at lower left, the channels to the right, the light beyond them.
-        { s: s9 + 1.1, pos: [1100, T + 7450, 400], aim: [1500, T + 8750, 0], fov: 46 },
-        { s: s10 - 0.55, pos: [1112, T + 7480, 393], aim: [1508, T + 8772, 0], fov: 46 },
+        // The eye rises over the bank and closes on the channels, toward the light.
+        ...holdKeys(move({ pos: [1100, T + 7450, 400], aim: [1500, T + 8750, 0], fov: 46 }, 0.44, 0.7, 0.132, 4, 2), s9 + 1.1),
         { s: s10 + 0.35, ...back(1750, 230, 42, 250) },
         { s: s10 + 0.95, ...back(620, 100, 38, 78) },
         { s: SETTLE_AT, ...rest },
@@ -410,6 +612,9 @@ export function dayAt(s: number): number {
   return 1;
 }
 
+/** How far along the canyon the eye goes toward the face for each screen of scroll while its hall is held. */
+const PAST = 54;
+
 /** A place on the canyon's middle line, d along it from the glacier's front. */
 function canyonAt(d: number): [number, number] {
   const r = CANYON.r;
@@ -432,22 +637,24 @@ function canyonAt(d: number): [number, number] {
  * shows at the far end), banking into each bend; held on the straight
  * between them, where the polished face is seen whole.
  */
-function canyonKeys(s8: number, fov: number): Key[] {
-  // (An upright screen keeps its words at the foot: the face is held above the middle, from further back so it is seen whole.
-  // A wide one keeps them at upper left: the eye looks a little lower, so the wall's crest is over the frame and the name stands on the wall alone.)
+function canyonKeys(s8: number, fov: number, g = 1): Key[] {
+  // (An upright screen keeps its words at the foot: the face is held above the middle, from further back so it is seen whole.)
   const tall = fov > 60;
-  const face: V3 = tall ? [FACE.x, FACE.y, FACE.z + FACE.h * 0.5 - 44] : [FACE.x, FACE.y + 105, FACE.z + FACE.h * 0.5 - 24];
+  // (On a wide screen the eye looks up a little: the wall's foot is under the frame, so the lower left, where the words stand, is the wall's own ice alone.)
+  const face: V3 = tall ? [FACE.x, FACE.y, FACE.z + FACE.h * 0.5 - 44] : [FACE.x, FACE.y + 105, FACE.z + FACE.h * 0.5 + (g < 1 ? -24 : 36)];
+  const past = tall ? 75 : PAST;
   //            scroll, along, height, bank, looks at the face, how far left of the middle line (the outside of a bend sees furthest down the next reach)
   const run: [number, number, number, number, boolean, number][] = [
     [0.8, 40, 112, 0, false, 0],
     [1.05, 300, 98, 0, false, 20],
     [1.25, 500, 96, 4, false, 46],
     [1.45, 700, 94, 5, false, 30],
-    [1.7, tall ? 778 : 950, 92, 0, true, 0],
+    // (Through the hall the eye goes on toward the face the whole time its words stand: the picture in the wall grows.)
+    [1.65, (tall ? 796 : 972) - past * 0.55 * g, 93, 0, true, 0],
     [2.2, tall ? 796 : 972, 94, 0, true, 0],
-    [2.65, tall ? 812 : 990, 94, 0, true, 0],
-    [2.9, 1200, 94, -4, false, -40],
-    [3.1, 1380, 94, -5, false, -24],
+    [2.8, (tall ? 796 : 972) + past * 0.6 * g, 94, 0, true, 0],
+    [2.98, 1200, 94, -4, false, -40],
+    [3.15, 1380, 94, -5, false, -24],
     [3.35, 1580, 112, 0, false, 0],
   ];
   return run.map(([ds, d, z, roll, toFace, left]) => {
@@ -456,9 +663,34 @@ function canyonKeys(s8: number, fov: number): Key[] {
     const x = x0 - ((y1 - y0) / 2) * left;
     const y = y0 + ((x1 - x0) / 2) * left;
     const [ax, ay] = canyonAt(d + 340);
-    return { s: s8 + ds, pos: [x, y, z] as V3, aim: toFace ? face : ([ax, ay, z - 4] as V3), fov, roll };
+    const key: Key = { s: s8 + ds, pos: [x, y, z] as V3, aim: toFace ? face : ([ax, ay, z - 4] as V3), fov, roll };
+    // (In the hall the eye goes at one steady pace toward the face: these keys say so themselves, as a station's move does.)
+    if (toFace) key.v = { pos: [((x1 - x0) / 2) * past * g, ((y1 - y0) / 2) * past * g, 0], aim: [0, 0, 0], fov: 0, roll: 0 };
+    return key;
   });
 }
+
+/**
+ * Each station's hold: the stretch of scroll its move takes, and where in it the station stands composed.
+ * (The dam is come at round its east end, a long way: its move begins later. The canyon's hall is its own run of keys.)
+ */
+export function HOLDS(): { name: string; from: number; stop: number; to: number }[] {
+  const [, , view, up, bench, bridge, models, fork, lattice, canyon, delta] = sectionStarts();
+  const hold = (name: string, stop: number, before = MOVE.before, after = MOVE.after) => ({ name, from: stop - before, stop, to: stop + after });
+  return [
+    hold('Infiniview', view + 1.0),
+    hold('Upstream', up + 1.25),
+    hold('Kilo Bench', bench + 1.15),
+    hold('Agent Bridge', bridge + 1.2),
+    hold('Open models', models + 1.2),
+    hold('cc-switch', fork + 1.2, FORK_BEFORE),
+    hold('TensorPoW', lattice + 1.15),
+    hold('RydAR', canyon + 2.2, 0.55, 0.6),
+    hold('Interests', delta + 1.1),
+  ];
+}
+/** The dam's move begins this long before its composed frame. */
+const FORK_BEFORE = 0.45;
 
 /** Where each section begins, in screens. */
 export function sectionStarts(): number[] {
@@ -487,10 +719,12 @@ export function stillScroll(s: number): number {
 }
 
 /**
- * The pose at a scroll position: a cubic through the keys whose slope at
- * each key is the mean of the slopes either side (zero at the two ends and
- * wherever the path turns back), so it eases through every station and
- * never overshoots one.
+ * The pose at a scroll position: one cubic through all the keys, so the
+ * eye's speed never jumps. At a station's keys the speed is the move's own
+ * (so the eye arrives already going the way the move goes, slows to it and
+ * leaves from it, and never stops); at every other key it is the mean of
+ * the slopes either side that cannot overshoot (zero only where a
+ * coordinate turns back, and at the flight's last frame, where it rests).
  */
 export function poseAt(keys: Key[], s: number): Pose {
   const n = keys.length;
@@ -509,11 +743,13 @@ export function poseAt(keys: Key[], s: number): Pose {
   const h01 = -2 * t3 + 3 * t2;
   const h11 = t3 - t2;
   const slope = (k: number, get: (p: Key) => number) => {
+    const own = keys[k].v;
+    if (own) return get(own as Key);
     if (k === 0 || k === n - 1) return 0;
     const d0 = (get(keys[k]) - get(keys[k - 1])) / (keys[k].s - keys[k - 1].s);
     const d1 = (get(keys[k + 1]) - get(keys[k])) / (keys[k + 1].s - keys[k].s);
     if (d0 * d1 <= 0) return 0;
-    // Harmonic mean: gentle into a hold, never past it.
+    // (The harmonic mean: between two unequal slopes it keeps nearer the gentler, and so never carries past a key.)
     return (2 * d0 * d1) / (d0 + d1);
   };
   const at = (get: (p: Key) => number) => h00 * get(a) + h10 * span * slope(i, get) + h01 * get(b) + h11 * span * slope(i + 1, get);
