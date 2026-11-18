@@ -1231,3 +1231,26 @@ the frame rate work does not change the picture, and if the critics
 want the name's material changed the bake should follow that, not
 precede it), then the third frame rate pass with the first visit's
 opening, then the rest.
+
+### Panel 10 and the start of round 4 (Nov 18, about 1:35 PM CT)
+
+Panel 10 in the owner's format (nine fixed categories, ours beside
+Igloo, Lando Norris and Lusion at the same viewports, three critics
+one after another): **7.3, 7.0, 7.1, median 7.1**. The same critics
+put the references at 8.6 to 9.3. Table, shared findings and the
+round's plan are in `design-review.md`. Two content flags fixed at
+once (`9fd1a1b`): `merlin-control` leaves the archive; Kilo Bench's
+line names the hackathon instead of quoting the prize title.
+
+Page tests at `b7e15c0` before the round (stopped part way to free the
+GPU; all rerun after the round): titles fail only at 320 wide (the ten
+known cases); words pass at 390, 768 and 1440; fill passes; overlap
+found one real fault (320 wide, dark, `/work/open-source`: the "Next"
+label at 2.96 against 4.5), which goes to the inner pages' task.
+
+Round 4 runs one helper at a time. Running now: **R4a**, motion and
+words (no hold is still, the words build at full size with the
+eyebrow leading, the tagline carries to the statement, the first paint
+is a still of the scene's own first frame with a designed entrance,
+one anchor, the type scale's middle step, callouts in people's words,
+named controls).
