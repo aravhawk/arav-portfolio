@@ -1,13 +1,12 @@
 /**
- * The geometry of the home page's words, kept free of the DOM so it can be
- * tested across the whole scroll range (tests/water/words.test.ts).
+ * The geometry of the home page's captions, kept free of the DOM so it can
+ * be tested across the whole scroll range (tests/water/words.test.ts).
  *
- * Two rules live here. A station's block of words has exactly two states, a
- * small tag and its composed place, and never anything between them. And a
- * station's captions are one system: the whole name in small mono type, a
+ * A station's captions are one system: the whole name in small mono type, a
  * hairline leader and a ring on the thing it names, laid out so that no
  * caption meets another, no leader crosses another or runs behind a
- * caption, and all of it stands clear of the nav.
+ * caption, and all of it stands clear of the nav. (How a station's block of
+ * words builds, step by step, is in src/app/page.tsx and flight.css.)
  */
 
 import { TRIBS, tribPoint } from './world';
@@ -15,12 +14,6 @@ import type { V3 } from './camera';
 
 /** The nav is 44 px tall, 14 px from the top of the frame: nothing of the words' layer stands nearer than 24 px under it. */
 export const NAV_CLEAR = 84;
-
-/** How far before its composed stretch a block takes its composed place, and how far after it leaves it, in screens. */
-export const LEAD = 0.3;
-export const TAIL = 0.18;
-/** True where a travelling block stands composed; everywhere else in its stretch it is a tag. */
-export const composedAt = (s: number, inAt: number, outAt: number) => s >= inAt - LEAD && s < outAt + TAIL;
 
 /** Where each stream's caption lands: on the stream itself as it is drawn (the world says where: tribPoint). */
 export const streamAnchors = (): V3[] => TRIBS.map((_, i) => tribPoint(i));

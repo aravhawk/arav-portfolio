@@ -31,6 +31,56 @@ export function stepGates(gate: { [i: number]: number }, surge: { [i: number]: n
   }
 }
 
+/**
+ * The first screen's entrance, in seconds from the moment the live picture stands over its still: the eye
+ * settles forward from a little back and high (`eye`), the light arrives (`light`), then the first line and
+ * its sentence set (`words`). After `over` the first screen is at rest and only breathes.
+ */
+export const ENTER = { eye: [0, 2.4], light: [0.25, 2.0], words: 1.45, over: 2.4, back: 0.04, high: 1.1 } as const;
+/** How far the entrance has come at `t` seconds: the eye's settle and the light's arrival, 0..1 each. */
+export const enterAt = (t: number) => {
+  const e = Math.min(1, Math.max(0, (t - ENTER.eye[0]) / (ENTER.eye[1] - ENTER.eye[0])));
+  // (The eye comes to rest as a thing with weight does: fast at first, then long in settling.)
+  return { eye: 1 - (1 - e) ** 3, light: smooth(ENTER.light[0], ENTER.light[1], t) };
+};
+/**
+ * The first screen at rest breathes: the eye sways a little about the name, and the light comes and goes as thin
+ * cloud passes. Each -1..1, slow and never in step, from the picture's clock.
+ */
+export const breathAt = (t: number) => ({ sway: Math.sin(t / 3.7) * 0.6 + Math.sin(t / 2.3 + 1.1) * 0.4, near: Math.sin(t / 5.1 + 0.4), light: Math.sin(t / 4.3 + 2.0) * 0.6 + Math.sin(t / 1.9) * 0.4 });
+
+/**
+ * The light before it has arrived, as the keys the shading pass is given (see skyAt): `k` 0 is the first frame,
+ * 1 the day's (or the night's) own light, untouched. By day the sun is still behind the ranges at first: the
+ * ground is lit low, warm and weak, and the band along the horizon is strong; it clears them and the light
+ * comes down the lake. Before dawn the aurora is faint at first and comes up. Changes `sky` in place.
+ */
+export function firstLight(sky: { sun: number[]; key: number[]; keyDir: number[]; amb: number[]; band: number[]; aurora: number }, k: number, night: number, breath = 0) {
+  const w = 1 - Math.min(1, Math.max(0, k));
+  const day = 1 - night;
+  const lower = (d: number[], by: number) => {
+    const az = Math.atan2(d[0], d[1]);
+    const el = Math.asin(Math.max(-1, Math.min(1, d[2]))) - by;
+    d[0] = Math.sin(az) * Math.cos(el);
+    d[1] = Math.cos(az) * Math.cos(el);
+    d[2] = Math.sin(el);
+  };
+  if (w > 0) {
+    lower(sky.sun, 0.062 * w * day);
+    lower(sky.keyDir, 0.05 * w * day);
+    const dim = 1 - w * (0.5 * day + 0.42 * night);
+    const warm = [1, 1 - 0.12 * w * day, 1 - 0.3 * w * day];
+    for (let i = 0; i < 3; i++) {
+      sky.key[i] *= dim * warm[i];
+      sky.amb[i] *= 1 - 0.1 * w;
+      sky.band[i] *= 1 + 0.45 * w * day - 0.3 * w * night;
+    }
+    sky.aurora *= 1 - 0.72 * w;
+  }
+  // At rest the light comes and goes a little, as thin cloud passes.
+  if (breath) for (let i = 0; i < 3; i++) sky.key[i] *= 1 + 0.07 * breath * (1 - w);
+}
+
 /** The light event at the ending, `t` seconds after the camera comes to rest: the sun's last lift and the line of light, 0..1 each. */
 // (The line of light runs out over the first two thirds of `ray`; the ribbon of light climbs, `rise`, from where it ends.)
 export const DAWN = { lift: [0, 2.6], ray: [0.7, 4.4], rise: [2.7, 4.9], over: 5.2 } as const;

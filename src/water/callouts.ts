@@ -69,8 +69,9 @@ export function makeCallouts(): Callouts {
     group: el.parentElement,
     loose: null,
   }));
-  /** Where each station's line of captions stands on a narrow screen: just over its words. */
+  /** Where each station's list of captions stands on a narrow screen: in the room its block of words keeps for it (left, top; px in the frame), or -1 where it keeps none. */
   const lineY = new Map<HTMLElement, number>();
+  const lineX = new Map<HTMLElement, number>();
 
   const measure = () => {
     for (const c of calls) {
@@ -78,11 +79,15 @@ export function makeCallouts(): Callouts {
       c.h = c.label.offsetHeight;
     }
     lineY.clear();
+    lineX.clear();
     for (const c of calls) {
       if (!c.group || lineY.has(c.group)) continue;
-      // (The first line of the words that share this frame: its place in the layout, which no transform moves.)
-      const first = c.group.parentElement?.querySelector<HTMLElement>('.fl-words > *');
-      lineY.set(c.group, first ? first.offsetTop : -1);
+      // (The room is a part of the block's own layout, which no transform moves: read against the frame the captions are set in.)
+      const slot = c.group.parentElement?.querySelector<HTMLElement>('[data-calls-slot]');
+      const r = slot?.getBoundingClientRect();
+      const host = c.group.getBoundingClientRect();
+      lineY.set(c.group, r && r.width > 2 && r.height > 2 ? r.top - host.top : -1);
+      lineX.set(c.group, r ? r.left - host.left : 16);
     }
   };
 
@@ -97,7 +102,7 @@ export function makeCallouts(): Callouts {
     for (const c of calls) {
       const inStretch = s >= c.from && s < c.to;
       // A station with more captions than a narrow frame can tie to their points sets them all as one list.
-      const loose = narrow && !!c.group && c.group.children.length > MANY && (lineY.get(c.group) ?? -1) > 0;
+      const loose = narrow && !!c.group && c.group.children.length > MANY && (lineY.get(c.group) ?? -1) >= 0;
       if (loose !== c.loose) {
         c.loose = loose;
         c.el.toggleAttribute('data-loose', loose);
@@ -125,11 +130,12 @@ export function makeCallouts(): Callouts {
       }
       live.push({ c, x, y });
     }
-    // The list: a name to a line, in the streams' own order, standing just over the station's words.
+    // The list: a name to a line, in the streams' own order, in the room the station's block keeps for it.
     // (The streams run right to left in the page's order: the list reads as they stand in the frame, left to right.)
     for (const [group, all] of lists) {
       const list = all.slice().reverse();
-      const at = layoutList(list, 16, lineY.get(group)! - 14);
+      const top = lineY.get(group)!;
+      const at = layoutList(list, lineX.get(group) ?? 16, top + list.reduce((sum, c) => sum + c.h, 0) + (list.length - 1) * 5, 5);
       list.forEach((c, i) => {
         c.label.style.transform = `translate3d(${at[i].lx.toFixed(1)}px,${at[i].ly.toFixed(1)}px,0)`;
       });

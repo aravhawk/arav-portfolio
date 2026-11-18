@@ -33,13 +33,13 @@ export function Film({ media }: { media: ProjectMedia }) {
   if (media.kind !== 'video') return null;
   return (
     <>
-      <button type="button" className="fl-play" onClick={open} aria-haspopup="dialog">
+      <button type="button" className="fl-play" onClick={open} aria-haspopup="dialog" aria-label="Play the launch film">
         <span className="fl-play-disc" aria-hidden="true">
           <svg width="12" height="12" viewBox="0 0 14 14">
             <path d="M3.5 1.8v10.4L12 7z" fill="currentColor" />
           </svg>
         </span>
-        <span>Launch film</span>
+        <span>Film</span>
       </button>
       <dialog
         ref={dialog}

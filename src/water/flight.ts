@@ -15,18 +15,18 @@ import { emit, flightSignal, pictureSignal, pointerSignal, signals } from '@/lib
 import { BedPainter } from './bed';
 import { boardMask, boardReady } from './board';
 import { makeCallouts } from './callouts';
-import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, poseAt, stillScroll, type Key, type V3 } from './camera';
+import { type Basis, END_AT, HOLDS, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, heroStart, moved, poseAt, posterBand, posterBands, stillScroll, type Key, type Pose, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Pending, type Program, type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
-import { DAWN, GATE, LAP, PULSE, RIBBON, dawnLight, nextDrip, stationsNear, stepGates } from './moments';
+import { DAWN, ENTER, GATE, LAP, PULSE, RIBBON, breathAt, dawnLight, enterAt, firstLight, nextDrip, stationsNear, stepGates } from './moments';
+import { opening } from './opening';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT_FREEBOARD, flightSource, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
 import { type Box, F, type Mode, NO_ICE, type Tile, bits, frameTiles, iceParts, maskName, passNeeds, seaNear, slabInFrame, tarnNear } from './variants';
-import { NAV_CLEAR, composedAt } from './words';
-import { COLS, LAKE, LATTICE, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
+import { COLS, LAKE, LATTICE, NAME, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -48,6 +48,9 @@ const nameReach = (m: number) => 110 * smooth(0.03, 0.26, m) + 150 * smooth(0.2,
 
 /** The light event at the ending happens once in a visit: after it, the sun stays up and the line of light holds. */
 let dawned = false;
+
+/** From here down the first screen its words are given a lee: the lake is breaking under them (screens of scroll). */
+const HERO_LEE = 0.35;
 
 /** What the page tells the picture each frame, beyond the camera. */
 /** No rectangle: nothing in the frame is calmed. */
@@ -73,6 +76,8 @@ export interface FlightMoment {
   /** where the captions tied to their points stand, in the frame (u, v from the foot), and 0..1 how much the picture is calmed behind them */
   cap?: [number, number, number, number];
   capK?: number;
+  /** the camera moves only as the first screen breathes: the page is at rest all the same */
+  idle?: boolean;
 }
 
 /**
@@ -669,6 +674,15 @@ export class FlightEngine extends WaterEngine {
   private dawnT = -1;
   /** Called once, when the sun's edge first clears the ranges. */
   onDawn: (() => void) | null = null;
+  /**
+   * The first screen's light: how far it has arrived (0: the first frame, before it; 1: the day's own), and how
+   * the light breathes at rest, -1..1. The page sets both each frame (see the entrance); everywhere but the first
+   * screen they are 1 and 0, and the light is the hour's own.
+   */
+  first = 1;
+  breath = 0;
+  /** Whether a frame of the picture has been drawn. */
+  drew = false;
   private runDawn(rest: boolean) {
     if (this.still) {
       // Nothing moves by the clock: at the ending the light is simply there.
@@ -1242,7 +1256,7 @@ export class FlightEngine extends WaterEngine {
     if (key !== this.camKey) {
       this.camKey = key;
       this.dirty = true;
-      this.stillSince = clock;
+      if (!at.idle) this.stillSince = clock;
     }
 
     // The simulation's window follows where the camera looks: from a little
@@ -1382,6 +1396,7 @@ export class FlightEngine extends WaterEngine {
     }
     this.coldDrew = false;
     this.glow(night);
+    this.drew = true;
   }
 
   /** The scene, drawn by one variant: the whole frame, or only the given parts of it. */
@@ -1455,6 +1470,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uShoal, this.shoalY);
     // The light: the hour's keys, worked out here once a frame.
     const sky = skyAt(night, at.day, this.lift, this.sunAz, this.ridge);
+    if (this.first < 1 || this.breath !== 0) firstLight(sky, this.first, night, this.breath);
     gl.uniform3fv(r.u.uSkyZen, sky.zen);
     gl.uniform3fv(r.u.uSkyMid, sky.mid);
     gl.uniform3fv(r.u.uSkyHor, sky.hor);
@@ -1615,6 +1631,13 @@ export interface FlightHandle {
   rebuild(): void;
   /** The camera's scroll position in screens and where it is, for the checks. */
   state(): { s: number; pos: V3; unit: number; day: number };
+  /** For the checks: the pose the flight has at a scroll position on this screen, and a pose held in place of the flight's own (null hands it back). */
+  poseAt(s: number): Pose;
+  holdPose(pose: Pose | null): void;
+  /** Each station's hold: where its move begins, stands composed and ends, in screens. */
+  holds: ReturnType<typeof HOLDS>;
+  /** For the checks and the stills: hold the entrance at `t` seconds into it (0: its first frame; null lets it run from where it is). */
+  holdEntrance(t: number | null): void;
 }
 
 /**
@@ -1668,85 +1691,50 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   let buildToken = 0;
   let cam: Basis = basisOf(keys[0]);
   let sNow = 0;
+  let heldPose: Pose | null = null;
+  // The entrance (see ENTER): it begins once the live picture stands over its still and the opening lets it.
+  const gate = opening();
+  const bands = posterBands();
+  /** The band of first-frame stills this window is in: the page's first script chose it, so the still and the picture agree. */
+  const bandNow = () => bands.find((b) => b.id === html.dataset.poster) ?? posterBand(aspect, bands);
+  let pictureUp = false;
+  let enterT0 = -1;
+  let enterHeld: number | null = null;
+  let opened = false;
 
   const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-fl]'));
-  // The words. A block is on for a stretch of scroll (from, to). A block that
-  // travels (it has `in` and `out`) stands at its composed place between
-  // those two and, either side of them, is a small tag in a corner of the
-  // frame: its label, its name or figure and its line, set small. Those are
-  // its only two states, and each is a layout in which no line meets
-  // another. It never passes through anything between them: it goes out,
-  // takes the other state while it cannot be seen, and comes back in
-  // (transform only), so a station is named from the moment it is in view
-  // until the camera has left it and no two of its lines ever cross.
-  type Box4 = [number, number, number, number];
+  // The words. A block is on for a stretch of scroll (from, to), and builds
+  // in steps: each of its pieces has a scroll position of its own (`data-at`,
+  // in screens) past which it is in. A piece is only ever out or in, at its
+  // own size and in its own place; the stylesheet makes the short transition
+  // between the two. The first frame's pieces are the opening's: they wait
+  // for its cue, not for scroll.
   interface Piece {
     el: HTMLElement;
-    /** where it stands at rest, in the block: left, top, width, height */
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    /** as a tag: its scale, and how far its corner moves */
-    k: number;
-    dx: number;
-    dy: number;
+    at: number;
+    in: boolean | null;
   }
   interface Words {
     el: HTMLElement;
     from: number;
     to: number;
-    inAt: number;
-    outAt: number;
-    moves: boolean;
     on: boolean | null;
-    /** 0: the tag, 1: composed */
-    p: number;
-    /** the state it is going to, and the timer of the change while it is out */
-    goal: number;
-    swap: number;
+    hero: boolean;
     pieces: Piece[];
-    /** the ink's bounds at rest and as a tag, px in the frame: x0, y0, x1, y1 */
-    rest: Box4 | null;
-    tag: Box4 | null;
   }
   const words: Words[] = Array.from(document.querySelectorAll<HTMLElement>('[data-fl-from]')).map((el) => ({
     el,
     from: Number(el.dataset.flFrom),
     to: Number(el.dataset.flTo),
-    inAt: Number(el.dataset.flIn),
-    outAt: Number(el.dataset.flOut),
-    moves: el.dataset.flIn !== undefined,
     on: null,
-    p: -1,
-    goal: -1,
-    swap: 0,
-    pieces: Array.from(el.querySelectorAll<HTMLElement>('[data-w]')).map((piece) => ({ el: piece, x: 0, y: 0, w: 0, h: 0, k: 1, dx: 0, dy: 0 })),
-    rest: null,
-    tag: null,
+    hero: el.dataset.hero !== undefined,
+    pieces: Array.from(el.querySelectorAll<HTMLElement>('[data-at]')).map((piece) => ({ el: piece, at: Number(piece.dataset.at), in: null })),
   }));
   /** Lines that leave before their block does: each is gone from its own point of the scroll on. */
   const early = Array.from(document.querySelectorAll<HTMLElement>('[data-fl-until]')).map((el) => ({ el, until: Number(el.dataset.flUntil), gone: false }));
-  /** How long a block is out while it changes from one state to the other, ms. */
-  const SWAP_MS = 240;
-  const settle = (w: Words) => {
-    w.swap = 0;
-    w.el.removeAttribute('data-swap');
-    place(w, w.goal);
-  };
-  /** Take a travelling block to a state: at once while it cannot be seen, otherwise out, changed, and back in. */
-  const go = (w: Words, to: number) => {
-    if (to === w.goal) return;
-    w.goal = to;
-    if (!w.on || w.p < 0 || mqStill.matches) {
-      window.clearTimeout(w.swap);
-      settle(w);
-    } else if (!w.swap) {
-      w.el.setAttribute('data-swap', '');
-      w.swap = window.setTimeout(() => settle(w), SWAP_MS);
-    }
-  };
   const heroWords = document.querySelector<HTMLElement>('.fl-hero-words');
+  /** Whether the first frame's words may set: the opening says when (see `enter`). */
+  let heroIn = html.dataset.heroWords !== undefined;
 
   // The rail: one tick to a section, the current one marked.
   const railEl = document.querySelector<HTMLElement>('.fl-rail');
@@ -1798,93 +1786,35 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     box[2] = (x1 + pad) / viewW;
     box[3] = 1 - (y0 - pad - rise) / viewH;
   };
-  /** A block that stays where it is set: its ink is read where it stands. */
+  /** Where the block the lee stands behind has its words now: the pieces that are in (or, for a block that does not build, its ink). */
   const measureBox = () => {
     const w = leeFor;
-    if (!w || w.moves) return;
-    const u = inkOf(w.el);
+    if (!w) return;
+    let u: { x0: number; y0: number; x1: number; y1: number } | null = null;
+    if (!w.pieces.length) u = inkOf(w.el);
+    else {
+      for (const it of w.pieces) {
+        if (!it.in || it.el.dataset.gone !== undefined) continue;
+        const r = it.el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) continue;
+        u = u ? { x0: Math.min(u.x0, r.left), y0: Math.min(u.y0, r.top), x1: Math.max(u.x1, r.right), y1: Math.max(u.y1, r.bottom) } : { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom };
+      }
+      // (On a narrow frame a station with many captions sets them as a list just over its words: the lee takes the list in.)
+      const list = Array.from(w.el.parentElement?.querySelectorAll<HTMLElement>('.fl-call[data-loose][data-on] .fl-call-label') ?? []);
+      for (const el of list) {
+        const r = el.getBoundingClientRect();
+        if (u && r.width > 2) u = { x0: Math.min(u.x0, r.left), y0: Math.min(u.y0, r.top), x1: Math.max(u.x1, r.right), y1: Math.max(u.y1, r.bottom) };
+      }
+    }
     boxOn = !!u && w.on === true;
-    // (And room for the short rise such a block arrives with.)
-    if (u) setBox(u.x0, u.y0, u.x1, u.y1, 16);
+    // (And room for the short rise a step arrives with.)
+    if (u) setBox(u.x0, u.y0, u.x1, u.y1, 12);
   };
   const scheduleBox = () => {
     measureBox();
     window.clearTimeout(boxTimer);
-    // Again once the words have arrived where they rest.
-    boxTimer = window.setTimeout(measureBox, 760);
-  };
-  /** A block that travels: its ink is known at both ends of its travel, and it moves in a straight line between them. */
-  const leeOf = (w: Words) => {
-    const a = w.tag;
-    const b = w.rest;
-    if (!a || !b) return false;
-    const p = Math.max(0, w.p);
-    setBox(a[0] + (b[0] - a[0]) * p, a[1] + (b[1] - a[1]) * p, a[2] + (b[2] - a[2]) * p, a[3] + (b[3] - a[3]) * p, 0);
-    return true;
-  };
-  /** Put a travelling block's pieces where they stand at p (transform only). */
-  const place = (w: Words, p: number) => {
-    const k = 1 - p;
-    for (const it of w.pieces) {
-      it.el.style.transform = k < 0.0005 ? '' : `translate3d(${(it.dx * k).toFixed(1)}px,${(it.dy * k).toFixed(1)}px,0) scale(${(1 + (it.k - 1) * k).toFixed(4)})`;
-    }
-    // (What is not part of the tag goes as soon as the block begins to move: it does not travel, and the lee does.)
-    w.el.toggleAttribute('data-tag', p < 0.985);
-    w.p = p;
-  };
-  /**
-   * Where every travelling block's pieces stand at rest, and where they
-   * stand as a tag: stacked in the corner the block names (`--tag-at`: bl,
-   * br, tl or tr), each at the size its `--tag` gives (px of type at the
-   * reader's own text size; none: as set). Read on resize, never per frame.
-   */
-  const measureWords = () => {
-    const root = parseFloat(getComputedStyle(html).fontSize) / 16 || 1;
-    const foot = (heroWords && parseFloat(getComputedStyle(heroWords).paddingBottom)) || 40;
-    for (const w of words) {
-      if (!w.moves) continue;
-      for (const it of w.pieces) it.el.style.transform = '';
-      const host = w.el.getBoundingClientRect();
-      const cs = getComputedStyle(w.el);
-      const gutter = parseFloat(cs.paddingLeft) || 16;
-      const at = cs.getPropertyValue('--tag-at').trim() || 'bl';
-      const top = at[0] === 't';
-      const right = at[1] === 'r';
-      const ink = inkOf(w.el);
-      w.rest = ink ? [ink.x0 - host.left, ink.y0 - host.top, ink.x1 - host.left, ink.y1 - host.top] : null;
-      // (On a narrow frame a station with many captions sets them as a list just over its words: the lee takes the list in.)
-      const list = Array.from(w.el.parentElement?.querySelectorAll<HTMLElement>('.fl-call-label') ?? []);
-      if (w.rest && list.length > 4 && (viewW < 720 || (viewW < 900 && aspect < 0.9))) {
-        w.rest[1] -= list.reduce((sum, el) => sum + el.offsetHeight + 4, 0) + 14;
-        w.rest[2] = Math.max(w.rest[2], ...list.map((el) => 16 + el.offsetWidth));
-      }
-      // (Under the nav at the top; on the first frame's own foot at the bottom.)
-      let cursor = top ? NAV_CLEAR : host.height - foot;
-      const tag: Box4 = [1e9, 1e9, -1e9, -1e9];
-      for (const it of top ? w.pieces : w.pieces.slice().reverse()) {
-        const r = it.el.getBoundingClientRect();
-        const st = getComputedStyle(it.el);
-        const want = (parseFloat(st.getPropertyValue('--tag')) || 0) * root;
-        it.x = r.left - host.left;
-        it.y = r.top - host.top;
-        it.w = r.width;
-        it.h = r.height;
-        it.k = want > 0 ? Math.min(1, want / (parseFloat(st.fontSize) || 16)) : 1;
-        const tw = it.w * it.k;
-        const th = it.h * it.k;
-        const x = right ? host.width - gutter - tw : gutter;
-        const y = top ? cursor : cursor - th;
-        cursor = top ? y + th + 7 : y - 7;
-        it.dx = x - it.x;
-        it.dy = y - it.y;
-        tag[0] = Math.min(tag[0], x);
-        tag[1] = Math.min(tag[1], y);
-        tag[2] = Math.max(tag[2], x + tw);
-        tag[3] = Math.max(tag[3], y + th);
-      }
-      w.tag = tag[2] > tag[0] ? tag : null;
-      if (w.p >= 0) place(w, w.p);
-    }
+    // Again once the step has set.
+    boxTimer = window.setTimeout(measureBox, 420);
   };
   // One light tick, once, when the camera settles and the sun's edge clears the ranges.
   engine.onDawn = () => {
@@ -1904,7 +1834,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   /** How far up the frame the first frame's words reach: with both lines standing, and once the second has gone. */
   let wordsTop: [number, number] = [0.2, 0.2];
   let secondGone = false;
-  /** Where the first frame's two blocks of words stand (measured while the page is at its top, where they are). */
+  /** Where the first frame's words stand (measured while the page is at its top, where they are): one block at the foot on the left, his line and the sentence under it. */
   function measureHero() {
     if (destroyed) return;
     const role = document.querySelector<HTMLElement>('.fl-hero-words .fl-role');
@@ -1913,13 +1843,14 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const a = role.getBoundingClientRect();
     const b = intro.getBoundingClientRect();
     if (a.width < 2 || b.width < 2) return;
-    const side = b.left > a.right;
-    // (Where they are stacked, the first line settles to the foot of the frame once the second has gone: the water the
-    // letters stand in has that much more room to spread toward the eye.)
-    const drop = side ? 0 : Math.max(0, b.bottom - a.bottom);
+    // (The line settles to the foot of the frame once the sentence has gone: the water the letters stand in has that
+    // much more room to spread toward the eye.)
+    const drop = Math.max(0, b.bottom - a.bottom);
     heroWords?.style.setProperty('--role-drop', `${drop.toFixed(1)}px`);
     wordsTop = [1 - Math.min(a.top, b.top) / viewH, 1 - (a.top + drop) / viewH];
-    engine.nameWords = [side ? a.right / viewW : 1, side ? b.left / viewW : 1, wordsTop[secondGone ? 1 : 0]];
+    // (Right of the block the frame is the picture's: the bare ice comes on to the frame's foot there.)
+    const right = Math.max(a.right, b.right) / viewW;
+    engine.nameWords = [right < 0.82 ? right : 1, right < 0.82 ? 1.2 : 1, wordsTop[secondGone ? 1 : 0]];
     engine.touch();
   }
 
@@ -1935,7 +1866,6 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     // (Each section but the last is one screen longer than its stretch of scroll, so its words can stay pinned to the end of it.)
     unit = first ? first.offsetHeight / (SECTIONS.hero + 1) : viewH;
     callouts.measure();
-    measureWords();
     scheduleBox();
     measureHero();
     // The ending's words keep to the left (on a narrow screen, to the foot): the water there is kept calm for them.
@@ -2050,8 +1980,6 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   measureView();
   built = true;
   html.dataset.flight = 'on';
-  // (Each station's composition is set once the picture is there: its words are read where they then stand.)
-  measureWords();
   // (The first frame's words take their places once the flight is on, and settle a moment later: they are measured then.)
   const heroTimers = [0, 450, 1300].map((ms) => window.setTimeout(measureHero, ms));
   // The other variants of the pass are compiled once the first frames are out: the one for every stretch of the
@@ -2174,26 +2102,37 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     // stretch (they are set for that frame, so nothing is ever hidden).
     const s = mqStill.matches ? stillScroll(raw) : raw;
     sNow = s;
-    // Each block of words comes in and goes out with its stretch of scroll,
-    // and a travelling block grows and shrinks with it.
+    // Each block of words is on for its stretch of scroll, and each of its
+    // pieces is in from its own position in it. (When nothing may glide a
+    // block stands whole for the whole of its stretch.)
     let active: Words | null = null;
+    let stepped = false;
     for (const w of words) {
       const on = s >= w.from && s < w.to;
       if (on !== w.on) {
         w.on = on;
         w.el.toggleAttribute('data-on', on);
+        if (w === leeFor) stepped = true;
       }
-      if (w.moves) {
-        go(w, composedAt(s, w.inAt, w.outAt) ? 1 : 0);
+      for (const it of w.pieces) {
+        // (A block that has left keeps its pieces as they stood: it goes as one.)
+        const is = w.hero ? heroIn : s >= w.to ? it.in === true : mqStill.matches ? on : s >= it.at;
+        if (is !== it.in) {
+          it.in = is;
+          it.el.toggleAttribute('data-in', is);
+          if (w === leeFor || !leeFor) stepped = true;
+        }
       }
-      // (The first frame's two lines stand at opposite ends of the near ice, which is calm already.)
-      if (on && !active && w.el !== heroWords) active = w;
+      // (The first frame's words stand on the near snow, which is calm of itself: they are given a lee only once the
+      // lake is breaking under them.)
+      if (on && !active && (!w.hero || s > HERO_LEE)) active = w;
     }
     for (const e of early) {
       const gone = s >= e.until;
       if (gone !== e.gone) {
         e.gone = gone;
         e.el.toggleAttribute('data-gone', gone);
+        stepped = true;
         if (e.el.parentElement === heroWords) {
           secondGone = gone;
           heroWords?.toggleAttribute('data-second-gone', gone);
@@ -2217,11 +2156,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       leeFor = active;
       boxOn = false;
       boxLight = !!active && active.el.classList.contains('fl-end-words');
-      if (active && !active.moves) scheduleBox();
-    }
-    // (While a block is out between its two states the lee goes out behind it, and comes in where it then stands.)
-    if (leeFor && leeFor === active && leeFor.moves) boxOn = !leeFor.swap && leeOf(leeFor);
-    else if (leeFor !== active) boxOn = false;
+      if (active) scheduleBox();
+    } else if (stepped && leeFor === active && active) scheduleBox();
+    if (leeFor !== active) boxOn = false;
     boxK = boxOn ? Math.min(1, boxK + dtBox / (mqStill.matches ? 0.001 : 0.35)) : Math.max(0, boxK - dtBox / (mqStill.matches ? 0.001 : 0.25));
     // The rail: which section this is; out of the way on the first frame and at the ending.
     if (rail.length) {
@@ -2238,9 +2175,40 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
         railEl?.toggleAttribute('data-off', off);
       }
     }
-    const pose = poseAt(keys, s);
+    let pose = heldPose ?? poseAt(keys, s);
     // (Nothing banks when motion is reduced.)
     if (mqStill.matches) pose.roll = 0;
+    // The first screen's own life, by the clock: the entrance (the eye comes forward from where the still was taken,
+    // the light arrives, the words set), and after it the frame breathes. All of it is let go as the page scrolls.
+    let idle = false;
+    {
+      const t = mqStill.matches ? ENTER.over : (enterHeld ?? (enterT0 < 0 ? 0 : Math.max(0, (now - enterT0) / 1000)));
+      const live = heldPose || mqStill.matches ? 0 : 1 - smooth(0.02, 0.45, s);
+      const en = enterAt(t);
+      const rest = Math.max(0, t - ENTER.over);
+      const br = breathAt(rest);
+      const brK = smooth(0, 4, rest) * live;
+      engine.first = 1 - (1 - en.light) * live;
+      engine.breath = br.light * brK;
+      if (live > 0) {
+        const k = (1 - en.eye) * live;
+        if (k > 0) {
+          const from = heroStart(bandNow(), ENTER.back, ENTER.high);
+          const mix = (a: V3, b: V3): V3 => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+          pose = { pos: mix(pose.pos, from.pos), aim: mix(pose.aim, from.aim), fov: pose.fov + (from.fov - pose.fov) * k };
+        }
+        if (brK > 0) pose = moved({ at: pose, pivot: [NAME.x, NAME.y, 0], push: 0.012 * br.near * brK, arc: 0.5 * br.sway * brK, rise: 0 }, 1);
+        idle = t >= ENTER.over;
+      }
+      if (!heroIn && (t >= ENTER.words || html.dataset.heroWords !== undefined)) {
+        heroIn = true;
+        html.dataset.heroWords = '';
+      }
+      if (!opened && t >= ENTER.over) {
+        opened = true;
+        gate.over();
+      }
+    }
     cam = basisOf(pose);
     const melt = (s - MELT.from) / (MELT.to - MELT.from);
     dayNow = dayAt(s);
@@ -2259,24 +2227,37 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       cap[3] = 1 - (span[1] - pad) / viewH;
     }
     capK = span ? Math.min(1, capK + dtCap / (mqStill.matches ? 0.001 : 0.3)) : Math.max(0, capK - dtCap / (mqStill.matches ? 0.001 : 0.25));
-    engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK });
+    engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle });
+    // The live picture stands over its still once a frame of it is drawn; the entrance begins when the dissolve is done.
+    if (!pictureUp && engine.drew) {
+      pictureUp = true;
+      html.dataset.picture = '';
+      void gate.ready.then(() => {
+        enterT0 = performance.now() + (mqStill.matches ? 0 : 440);
+      });
+    }
   }, 10);
 
   return {
     engine,
     rebuild: onResize,
     state: () => ({ s: sNow, pos: cam.pos, unit, day: dayNow }),
+    holds: HOLDS(),
+    holdEntrance(t) {
+      enterHeld = t;
+      engine.touch();
+    },
+    poseAt: (s) => poseAt(keys, s),
+    holdPose(pose) {
+      heldPose = pose ? { ...pose } : null;
+      engine.touch();
+    },
     destroy() {
       destroyed = true;
       off();
       ro.disconnect();
       forkWatch.disconnect();
       railEl?.removeEventListener('click', onRail);
-      for (const w of words) {
-        window.clearTimeout(w.swap);
-        w.el.removeAttribute('data-swap');
-        for (const it of w.pieces) it.el.style.transform = '';
-      }
       window.clearTimeout(boxTimer);
       heroTimers.forEach((t) => window.clearTimeout(t));
       window.clearTimeout(warm);
@@ -2292,6 +2273,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       engine.destroy();
       canvas.remove();
       delete html.dataset.flight;
+      delete html.dataset.picture;
     },
   };
 }

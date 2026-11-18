@@ -11,15 +11,16 @@
   pointer-events: none;
   contain: layout paint;
 }
+/* The live picture comes up over the still in a short dissolve, once its first frame is drawn. */
 .flight-canvas {
   position: absolute;
   top: 0;
   left: 0;
   display: block;
   opacity: 0;
-  transition: opacity 900ms var(--ease-out);
+  transition: opacity 420ms cubic-bezier(0.3, 0, 0.2, 1);
 }
-html[data-flight='on'] .flight-canvas {
+html[data-picture] .flight-canvas {
   opacity: 1;
 }
 
@@ -50,131 +51,196 @@ html[data-flight='on'] .flight-canvas {
   overflow: hidden;
 }
 
+/* ---------- the words' one scale ----------
+   Every size the flight's words are set in. Between a station's name (the
+   display size) and its small print there is a line at 20 to 22 px, so the
+   scale has a middle; the mono eyebrow is 13 px, tracked wide; nothing a
+   reader reads is under 12 px, on any screen. */
+.fl {
+  --fl-eyebrow: 0.8125rem;
+  --fl-eyebrow-track: 0.16em;
+  --fl-line: clamp(1.25rem, 0.42vw + 0.87rem, 1.375rem);
+  --fl-unit: clamp(1.375rem, 1.1vw + 0.75rem, 1.875rem);
+  --fl-meta: clamp(0.875rem, 0.2vw + 0.7rem, 0.9375rem);
+  --fl-cap: 0.75rem;
+  /* One foot: every block of words stands this far over the frame's lower edge. */
+  --fl-foot: max(clamp(28px, 7.6vh, 92px), env(safe-area-inset-bottom));
+  /* One easing, and how long a step takes to set. */
+  --fl-ease: var(--ease-out);
+  --fl-set: 280ms;
+  --fl-rise: 320ms;
+  --fl-go: 200ms;
+}
+@media (max-width: 720px) {
+  .fl {
+    --fl-eyebrow: 0.75rem;
+    --fl-eyebrow-track: 0.14em;
+    --fl-line: 1.0625rem;
+    --fl-unit: 1.25rem;
+    --fl-meta: 0.875rem;
+    --fl-foot: max(clamp(22px, 5.4vh, 56px), env(safe-area-inset-bottom));
+  }
+}
+.fl-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fl-eyebrow);
+  font-weight: 520;
+  line-height: 1.3;
+  letter-spacing: var(--fl-eyebrow-track);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums slashed-zero;
+  color: var(--ink);
+}
+.fl-line {
+  font-size: var(--fl-line);
+  line-height: 1.36;
+  letter-spacing: -0.012em;
+  font-weight: 460;
+  color: var(--ink);
+}
+.fl-meta {
+  font-size: var(--fl-meta);
+  line-height: 1.4;
+  font-weight: 480;
+  color: var(--ink);
+}
+.fl-unit {
+  font-family: var(--font-display);
+  font-size: var(--fl-unit);
+  font-weight: 620;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+.fl-more {
+  font-size: var(--fl-line);
+  color: var(--ink);
+}
+
 /* ---------- words ---------- */
 
+/* A block of words is in the frame for a stretch of scroll. It leaves as
+   one, quickly, and comes back as one. */
 .fl-words {
   position: absolute;
   inset: 0;
   display: flex;
   padding: 0 var(--gutter);
   color: var(--ink);
-}
-.fl-words > * {
   opacity: 0;
-  transform: translate3d(0, 16px, 0);
-  transition:
-    opacity 320ms var(--ease-out),
-    transform 320ms var(--ease-out);
+  transition: opacity var(--fl-go) var(--fl-ease);
 }
-.fl-words[data-on] > * {
+.fl-words[data-on] {
+  opacity: 1;
+}
+
+/* It builds in steps, each at a scroll position of its own (`data-at`).
+   Past it the step sets, by itself, in a quarter of a second; back past it
+   the step is undone. So a reader who stops anywhere sees a finished state
+   of some step, and nothing is ever shown at any size but its own. Opacity
+   and transform only. */
+.fl-words [data-at] {
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+  pointer-events: none;
+  transition:
+    opacity var(--fl-go) var(--fl-ease),
+    transform var(--fl-go) var(--fl-ease);
+}
+.fl-words [data-at][data-in] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--fl-set) var(--fl-ease),
+    transform var(--fl-set) var(--fl-ease);
+}
+.fl-words[data-on] [data-at][data-in] {
+  pointer-events: auto;
+}
+/* A title, a figure and each line of a sentence rise through a mask, at
+   their own size: the mask is the line's own box (with room for what hangs
+   under the baseline), and the line comes up into it. */
+.fl-words .fl-rise[data-at] {
+  display: block;
+  opacity: 1;
+  transform: none;
+  overflow: hidden;
+  padding: 0.12em 0.08em 0.2em;
+  margin: -0.12em -0.08em -0.2em;
+}
+.fl-rise > .fl-rise-in {
+  display: block;
+  transform: translate3d(0, 150%, 0);
+  transition: transform var(--fl-go) var(--fl-ease);
+}
+.fl-rise[data-in] > .fl-rise-in {
+  transform: none;
+  transition: transform var(--fl-rise) var(--fl-ease);
+}
+
+/* The first frame's words set on the opening's cue, not on scroll (`data-hero-words`: the flight gives it at its
+   moment in the entrance; the page's first script gives it at the latest a moment later, picture or no picture). */
+html[data-hero-words] .fl-hero-words [data-at] {
   opacity: 1;
   transform: none;
   pointer-events: auto;
   transition:
-    opacity 620ms var(--ease-out),
-    transform 700ms var(--ease-out);
+    opacity var(--fl-set) var(--fl-ease),
+    transform var(--fl-set) var(--fl-ease);
 }
-.fl-words[data-on] > :nth-child(2) {
-  transition-delay: 70ms;
-}
-/* (Where the first frame's two lines are stacked, the first settles to the foot once the second has gone. The flight
-   measures how far.) */
-.fl .fl-hero-words[data-on][data-second-gone] > .fl-role {
-  transform: translate3d(0, var(--role-drop, 0px), 0);
-  transition:
-    opacity 620ms var(--ease-out),
-    transform 900ms var(--ease-out);
-}
-/* A line that leaves before its block does (the first frame's second line: the first stays through the melt). */
-.fl .fl-words[data-on] > [data-gone] {
-  opacity: 0;
-  transform: translate3d(0, 16px, 0);
-  pointer-events: none;
-  transition:
-    opacity 320ms var(--ease-out),
-    transform 320ms var(--ease-out);
-  transition-delay: 0ms;
-}
-.fl-words[data-on] > :nth-child(3) {
-  transition-delay: 140ms;
+html[data-hero-words] .fl-hero-words .fl-rise > .fl-rise-in {
+  transform: none;
+  transition: transform var(--fl-rise) var(--fl-ease);
 }
 
-/* A station's words have two states and nothing between them. From the
-   moment the station is in view they are a small tag in a corner of the
-   frame (label, name or figure, line); as the camera settles they stand at
-   their composed place; as it leaves they are the tag again. Between the
-   two the block goes out, changes while it cannot be seen, and comes back
-   in: no line is ever seen part-way, so no line can meet another. The
-   flight writes the transforms; here they only fade. */
-.fl .fl-words[data-fl-in] > * {
-  transform: none;
-  transition: opacity 220ms var(--ease-out);
-}
-.fl .fl-words[data-fl-in][data-on] > * {
-  transition: opacity 520ms var(--ease-out) 200ms;
-}
-.fl-words [data-w] {
-  transform-origin: 0 0;
-}
-.fl .fl-words[data-fl-in][data-on][data-swap] > *,
-.fl .fl-words[data-fl-in][data-on][data-swap] [data-x] {
+/* A line that leaves before its block does (the first frame's sentence: the line over it stays through the melt). */
+.fl .fl-words [data-at][data-gone] {
   opacity: 0;
+  transform: translate3d(0, 12px, 0);
   pointer-events: none;
-  transition: opacity 170ms var(--ease-out);
+  transition:
+    opacity var(--fl-go) var(--fl-ease),
+    transform var(--fl-go) var(--fl-ease);
 }
-/* The size each piece is set at as a tag, px (none: as set). */
-.fl-words [data-w='name'] {
-  --tag: 38;
+
+/* The first frame's line and his sentence stand in the same place, one
+   after the other: one has gone before the other comes. */
+.fl-hero-words[data-on],
+.fl-say-words[data-on] {
+  transition: opacity var(--fl-go) var(--fl-ease) var(--fl-go);
 }
-.fl-words [data-w='fig'] {
-  --tag: 46;
-}
-.fl-words [data-w='unit'],
-.fl-words [data-w='line'] {
-  --tag: 17;
-}
-.fl-words [data-w='list'] {
-  --tag: 20;
-}
-/* What is not part of the tag (a link, a control, a second line) waits for the composed place. */
-.fl-words [data-x] {
-  transition: opacity 260ms var(--ease-out);
-}
-.fl .fl-words[data-on][data-tag] [data-x] {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 180ms var(--ease-out);
-}
-@media (max-width: 720px) {
-  .fl-words [data-w='name'] {
-    --tag: 27;
-  }
-  .fl-words [data-w='fig'] {
-    --tag: 36;
-  }
-  .fl-words [data-w='unit'],
-  .fl-words [data-w='line'] {
-    --tag: 16;
-  }
-  .fl-words [data-w='list'] {
-    --tag: 18;
-  }
+.fl-say-words .fl-rise[data-in] > .fl-rise-in {
+  transition: transform var(--fl-rise) var(--fl-ease) calc(var(--fl-go) * 0.6);
 }
 
 /* ---------- the rail ----------
-   One tick to a section at the frame's right edge, the current one drawn
-   out: where in the flight this is, and a way to any part of it. No words.
-   Each tick is ink with a hair of the land's colour round it, so it reads
-   over snow and over night water alike. */
+   One tick to a section, the current one drawn out: where in the flight
+   this is, and a way to any part of it. It has a lane of its own: a narrow
+   strip of the same glass as the nav, set in from the frame's right edge,
+   so its ticks stand on one ground over snow and over night ice alike and
+   never over a subject or a crack at the frame's side. No words at rest;
+   each tick names its section when it is pointed at or has focus. */
 .fl-rail {
   position: fixed;
   z-index: 40;
   top: 50%;
-  right: max(4px, env(safe-area-inset-right));
+  right: max(14px, env(safe-area-inset-right));
   display: none;
   flex-direction: column;
+  padding: 10px 0;
+  border-radius: var(--r-pill);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: var(--glass-shadow), inset 0 0 0 1px var(--glass-edge);
   transform: translate3d(0, -50%, 0);
   transition: opacity 320ms var(--ease-out);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .fl-rail {
+    background: var(--land-2);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 html[data-flight='on'] .fl-rail {
   display: flex;
@@ -186,26 +252,24 @@ html[data-flight='on'] .fl-rail {
 .fl-rail a {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  width: 40px;
-  height: 20px;
-  padding-right: 10px;
+  justify-content: center;
+  width: 34px;
+  height: 18px;
 }
 .fl-rail a span {
-  width: 9px;
+  width: 8px;
   height: 2px;
   border-radius: 1px;
   background: var(--ink);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--land) 62%, transparent);
-  opacity: 0.6;
-  transform-origin: 100% 50%;
+  opacity: 0.5;
   transition:
     transform 320ms var(--ease-out),
     opacity 200ms var(--ease-out);
 }
+/* The current one: more than twice as long, and heavier. */
 .fl-rail a[aria-current] span {
   opacity: 1;
-  transform: scaleX(2.6);
+  transform: scale(2.4, 1.5);
 }
 .fl-rail a:focus-visible {
   outline-offset: -2px;
@@ -217,7 +281,7 @@ html[data-flight='on'] .fl-rail {
 .fl-rail a::after {
   content: attr(aria-label);
   position: absolute;
-  right: 100%;
+  right: calc(100% + 8px);
   top: 50%;
   padding: 5px 9px;
   border-radius: var(--r-1);
@@ -243,10 +307,10 @@ html[data-flight='on'] .fl-rail {
 @media (hover: hover) and (pointer: fine) {
   .fl-rail a:hover span {
     opacity: 1;
-    transform: scaleX(1.8);
+    transform: scaleX(1.7);
   }
   .fl-rail a[aria-current]:hover span {
-    transform: scaleX(2.6);
+    transform: scale(2.4, 1.5);
   }
   .fl-rail a:hover::after {
     opacity: 1;
@@ -261,7 +325,10 @@ html[data-flight='on'] .fl-rail {
 }
 @media (max-height: 540px) {
   .fl-rail a {
-    height: 16px;
+    height: 14px;
+  }
+  .fl-rail {
+    padding: 6px 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -277,46 +344,83 @@ html[data-flight='on'] .fl-rail {
   }
 }
 
-/* The first frame: two lines at the foot, over the near ice, clear of the name. */
+/* The first frame: his line and, under it in the same block, one sentence;
+   at the foot on the left, over the near snow, clear of the name. The right
+   of the frame is the picture's. */
 .fl-hero-words {
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--s-7);
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: clamp(10px, 1.5vh, 16px);
   padding-bottom: max(clamp(22px, 5.2vh, 56px), env(safe-area-inset-bottom));
 }
 .fl-role {
-  max-width: 14ch;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.26em;
+}
+.fl-role .fl-rise[data-at] {
+  display: block;
+}
+/* (The second half of the line comes a moment after the first, and the sentence after both.) */
+.fl-role .fl-rise:nth-child(2)[data-in] > .fl-rise-in {
+  transition-delay: 70ms;
+}
+.fl-hero-words .fl-intro[data-in] {
+  transition-delay: 180ms;
 }
 .fl-intro {
-  max-width: 34ch;
-  color: var(--ink);
-  font-weight: 500;
+  max-width: 54ch;
+}
+/* (When the sentence has gone, the line settles to the foot. The flight measures how far.) */
+.fl .fl-hero-words[data-second-gone] > .fl-role {
+  transform: translate3d(0, var(--role-drop, 0px), 0);
+}
+.fl .fl-hero-words > .fl-role {
+  transition: transform 320ms var(--fl-ease);
 }
 
 /* (His sentence is in its place sooner than its section begins: from the moment the bank it stands on is in the frame.) */
 .fl-sec.fl-say {
   --early: 50svh;
 }
-/* His sentence stands on the bank, left of the river. */
+/* His sentence stands on the bank, left of the river: five lines, each its own. */
 .fl-say-words {
   align-items: flex-end;
-  padding-bottom: clamp(40px, 11vh, 120px);
+  padding-bottom: var(--fl-foot);
 }
-.fl-say-text {
-  max-width: min(15ch, 47vw);
+.fl .fl-say-text {
+  max-width: none;
+  text-wrap: nowrap;
 }
 
-/* The project's label, name and one line, lower left, over the bank. */
-.fl-view-words {
+/* ---------- where a station's words stand ----------
+   One anchor. On a wide frame every station's block, and the delta's,
+   stands at lower left, on the same left margin and the same foot; on an
+   upright frame, at the foot. One order: eyebrow, name or figure, the line
+   under it, its small print, its action. */
+.fl-block {
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-end;
-  gap: var(--s-4);
-  padding-bottom: max(clamp(28px, 8vh, 96px), env(safe-area-inset-bottom));
+  padding-bottom: var(--fl-foot);
 }
-.fl-label,
-.fl-words .fl-label {
-  color: var(--ink);
+.fl-block > .fl-eyebrow {
+  margin-bottom: clamp(10px, 1.5vh, 16px);
+}
+.fl-block > .fl-line,
+.fl-block > .fl-into-next {
+  margin-top: clamp(12px, 2vh, 20px);
+  max-width: 30ch;
+}
+.fl-block > .fl-meta {
+  margin-top: clamp(8px, 1.2vh, 12px);
+}
+.fl-block > .fl-more,
+.fl-block > .fl-film,
+.fl-block > .fl-fork,
+.fl-block > .fl-into-btn {
+  margin-top: clamp(14px, 2.2vh, 22px);
 }
 .fl-view-name {
   padding-bottom: 0.06em;
@@ -327,97 +431,113 @@ html[data-flight='on'] .fl-rail {
   color: var(--ink);
   opacity: 1;
 }
-.fl-view-line {
-  max-width: 26ch;
-  color: var(--ink);
-}
 
-/* ---------- the name ---------- */
+/* ---------- the first paint ---------- */
 
-/* The heading stays in the document for assistive tech, selection and
-   search. It shows as type until the canvas is running (and for good where
-   it cannot run); the canvas then draws the name cut through the ice. */
+/* The first paint is the scene's own first frame: a still of it, by theme
+   and by the window's shape, under the canvas and framed as the live camera
+   frames it, so the name stands where it will stand. The live picture comes
+   up over it in a short dissolve once its first frame is drawn. The still
+   lies in the picture's own fixed layer, under the canvas; where the picture
+   cannot run (no WebGL, no scripts) the page is a plain page and the same
+   still stands in its first section instead. The name itself is the
+   picture's; the heading stays in the document for readers and for search. */
 .fl-lake {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  display: none;
+  background: #dfeaf1;
 }
-/* Until the canvas is running (and for good where it cannot run) the lake
-   is a still sheet of pale ice with the name set in it as deep water. It
-   fades out as the picture fades in. */
-.fl-lake::before {
-  content: '';
+:root[data-theme='dark'] .fl-lake {
+  background: #0a1422;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-lake {
+  display: block;
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .flight-root {
+  display: none;
+}
+.flight-root {
+  background: #dfeaf1;
+}
+:root[data-theme='dark'] .flight-root {
+  background: #0a1422;
+}
+.fl-poster {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.5) 46%, rgba(255, 255, 255, 0) 62%),
-    linear-gradient(180deg, #e3eef3, #edf5f8 40%, #dcebf1);
-  box-shadow: inset 0 10px 24px -14px rgba(20, 60, 75, 0.45);
-  transition: opacity 900ms var(--ease-out);
+  /* (The still is as wide as the widest window of its band and is fitted to the frame's height: a narrower window
+     sees its middle. See posterBands in camera.ts.) */
+  background: center / auto 100% no-repeat;
+  background-image: var(--poster, none);
 }
-:root[data-theme='dark'] .fl-lake::before {
-  background:
-    linear-gradient(101deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.22) 46%, rgba(255, 255, 255, 0) 62%),
-    linear-gradient(180deg, #a9c0ca, #b6cbd3 40%, #9fb9c4);
+/* Without scripts nothing has chosen a still: one of three stands in, by the window's shape and the system's theme. */
+html:not([data-scripted]) .fl-poster {
+  background-size: cover;
+  background-image: image-set(url('/media/poster/wide-3-light.avif') type('image/avif'), url('/media/poster/wide-3-light.webp') type('image/webp'));
 }
-html[data-flight='on'] .fl-lake::before {
-  opacity: 0;
+@media (max-aspect-ratio: 1.2) {
+  html:not([data-scripted]) .fl-poster {
+    background-image: image-set(url('/media/poster/square-3-light.avif') type('image/avif'), url('/media/poster/square-3-light.webp') type('image/webp'));
+  }
 }
-/* (Over that pale ground the first frame's words are dark in both themes, until the picture is there.) */
-html:not([data-flight='on']) .fl-hero-words,
-html:not([data-flight='on']) .fl-hero-words .fl-intro {
-  color: #0a0c0e;
+@media (max-aspect-ratio: 0.7) {
+  html:not([data-scripted]) .fl-poster {
+    background-image: image-set(url('/media/poster/tall-1-light.avif') type('image/avif'), url('/media/poster/tall-1-light.webp') type('image/webp'));
+  }
 }
-.fl .fl-name {
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
+@media (prefers-color-scheme: dark) {
+  html:not([data-scripted]) .fl-lake {
+    background: #0a1422;
+  }
+  html:not([data-scripted]) .fl-poster {
+    background-image: image-set(url('/media/poster/wide-3-dark.avif') type('image/avif'), url('/media/poster/wide-3-dark.webp') type('image/webp'));
+  }
+  @media (max-aspect-ratio: 1.2) {
+    html:not([data-scripted]) .fl-poster {
+      background-image: image-set(url('/media/poster/square-3-dark.avif') type('image/avif'), url('/media/poster/square-3-dark.webp') type('image/webp'));
+    }
+  }
+  @media (max-aspect-ratio: 0.7) {
+    html:not([data-scripted]) .fl-poster {
+      background-image: image-set(url('/media/poster/tall-1-dark.avif') type('image/avif'), url('/media/poster/tall-1-dark.webp') type('image/webp'));
+    }
+  }
 }
-html[data-flight='on'] .fl-name [data-ice-line] {
-  opacity: 0;
+/* (Once the live picture stands over it the still is let go: it is never seen through the melt.) */
+html[data-picture] .flight-root > .fl-poster {
+  visibility: hidden;
+  transition: visibility 0s 600ms;
 }
 .fl .fl-still {
   display: none;
 }
 
-@media (max-width: 720px) {
-  .fl .fl-name {
-    white-space: normal;
-    font-size: var(--ice-size-stacked);
-    line-height: 0.9;
-  }
-  .fl-name [data-ice-line] {
+@media (max-width: 720px), (max-aspect-ratio: 9/10) {
+  .fl-role {
     display: block;
   }
-  .fl-hero-words {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-end;
-    gap: var(--s-3);
-  }
-  .fl-say-words {
-    align-items: flex-end;
-    padding-top: 0;
-    padding-bottom: 9vh;
+  .fl-intro {
+    max-width: 34ch;
   }
   /* On a phone the sentence is set about as wide as the name. */
   .fl .fl-say .fl-say-text {
-    max-width: 100%;
     font-size: clamp(34px, 10.4vw, 56px);
     line-height: 1.04;
   }
-  .fl-view-words {
-    gap: var(--s-3);
-  }
 }
 
+/* Reduced motion: each step is there at once. */
 @media (prefers-reduced-motion: reduce) {
-  .fl-words > *,
-  .fl-words[data-on] > *,
-  .fl .fl-words[data-fl-in] > *,
-  .fl .fl-words[data-fl-in][data-on] > * {
+  .fl .fl-words,
+  .fl .fl-words [data-at],
+  .fl .fl-rise > .fl-rise-in,
+  .fl .fl-hero-words > .fl-role {
+    transition: none !important;
+  }
+  .fl .fl-words [data-at]:not(.fl-rise) {
     transform: none;
-    transition: opacity 200ms linear;
-    transition-delay: 0s;
   }
   .flight-canvas {
     transition: none;
@@ -472,9 +592,9 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   transform-origin: 0 50%;
   opacity: 0.7;
 }
-/* A caption is small mono text at the end of a hairline: the whole name, no plate, no box, the same in both
-   themes and at every width. A hair of the ground's own colour stands round the letters, so a leader that has
-   to pass near them stops short of them. */
+/* A caption is a name in mono at the end of a hairline: the name as its own project writes it, in sentence case,
+   whole, no plate, no box, the same in both themes and at every width. A hair of the ground's own colour stands
+   round the letters, so a leader that has to pass near them stops short of them. */
 .fl-call-label {
   z-index: 1;
   padding: 1px 0;
@@ -484,10 +604,10 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     0 0 2px var(--land),
     0 0 4px var(--land),
     0 0 6px var(--land);
-  font-size: 11px;
-  line-height: 1.2;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: var(--fl-cap);
+  font-weight: 520;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   color: inherit;
   text-decoration: none;
@@ -507,39 +627,80 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   display: none;
 }
 
-/* ---------- the later stations' words ---------- */
-
-/* Upstream: the figure and its words on the near bank, lower left. */
-.fl-up-words {
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: var(--s-3);
-  padding-bottom: max(clamp(28px, 7vh, 84px), env(safe-area-inset-bottom));
-}
-.fl-up-words .fl-figure {
+/* ---------- the two stations that are a count ----------
+   Upstream and Open models share one layout exactly: the figure, huge;
+   what it counts set beside it on its baseline (under it, on an upright
+   frame); then its small print and its link. */
+.fl-count-words .fl-figure {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--s-2);
   color: var(--ink);
 }
-.fl-up-words .beat-unit {
+.fl-count-words .fl-unit {
   max-width: 18ch;
   color: var(--ink);
 }
-.fl-up-words .fl-sub,
-.fl-up-words .fl-more {
-  color: var(--ink);
+.fl-count-words .fl-fig.fl-rise[data-at] {
+  padding-top: 0.16em;
+  margin-top: -0.16em;
+  padding-bottom: 0.06em;
+  margin-bottom: -0.06em;
 }
-.fl-words[data-on] > :nth-child(4) {
-  transition-delay: 210ms;
+/* On a wide frame the captions stand at their points in the scene: the block keeps no room for them. */
+.fl-calls-slot {
+  display: none;
+}
+/* On a narrow frame a station with many captions (the seven repositories) sets them as one list, a name to a line,
+   in the streams' own order. The list stands in the block itself, beside the count it itemises, on the same snow:
+   the figure and what it counts at the left, the names in a column at the right. (The flight puts the names there:
+   see callouts.ts.) */
+@media (max-width: 720px), (max-aspect-ratio: 9/10) {
+  html[data-flight='on'] .fl-out-words .fl-figure {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 16px;
+    row-gap: var(--s-2);
+    align-items: start;
+    width: 100%;
+  }
+  html[data-flight='on'] .fl-out-words .fl-unit {
+    grid-column: 1;
+    max-width: 9.5ch;
+  }
+  html[data-flight='on'] .fl-out-words .fl-calls-slot {
+    display: block;
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: end;
+    height: calc(7 * (var(--fl-cap) * 1.25 + 2px) + 6 * 5px);
+  }
+}
+/* (On the narrowest phones the longest name does not fit beside the count: the list stands under what it counts.) */
+@media (max-width: 370px) {
+  html[data-flight='on'] .fl-out-words .fl-figure {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html[data-flight='on'] .fl-out-words .fl-calls-slot {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+@media (min-width: 721px) and (min-aspect-ratio: 9/10) {
+  html[data-flight='on'] .fl-count-words .fl-figure {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: clamp(14px, 1.7vw, 30px);
+  }
+  html[data-flight='on'] .fl-count-words .fl-unit {
+    max-width: 13ch;
+    padding-bottom: 0.2em;
+  }
 }
 
 /* Agent Bridge: the launch film is one play control under the line; pressed, the film itself opens over the page
    at a size it can be read at. */
-.fl-film {
-  margin-top: var(--s-1);
-}
 .fl-play {
   display: inline-flex;
   align-items: center;
@@ -609,12 +770,6 @@ html[data-flight='on'] .fl-name [data-ice-line] {
 .fl-film-close:focus-visible {
   outline-color: #f1f4f5;
 }
-@media (max-width: 720px) {
-  .fl-up-words {
-    gap: var(--s-2);
-  }
-}
-
 /* The small counts in a line of text: the text's own face with figures of one width, so a comma sits where a comma sits. */
 .fl-count {
   font-family: var(--font-display);
@@ -675,114 +830,17 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   }
 }
 
-/* ---------- where a station's words stand (wide frames) ----------
-   Three places, held: a stack at lower left (the rule); a stack at upper
-   left, in the sky under the nav (Agent Bridge, RydAR); a figure across the
-   top over what it counts (Open models). One type scale and one order
-   everywhere: label, name or figure, line, action. Upright frames (phones,
-   a tablet held tall) keep their words at the foot, where that flight keeps
-   a bank. (Only with the picture: the plain page stacks every block the
-   same way.) */
-@media (min-width: 721px) and (min-aspect-ratio: 9/10) {
-  /* Upstream: the figure huge at lower left, what it counts set beside it on its baseline. */
-  html[data-flight='on'] .fl-out-words .fl-figure {
-    flex-direction: row;
-    align-items: flex-end;
-    gap: clamp(14px, 1.7vw, 30px);
-  }
-  html[data-flight='on'] .fl-out-words .beat-unit {
-    max-width: 12ch;
-    padding-bottom: 0.14em;
-  }
-
-  /* Upper left: in the sky, under the nav. */
-  html[data-flight='on'] .fl-bridge-words,
-  html[data-flight='on'] .fl-rydar-words {
-    --tag-at: tl;
-    justify-content: flex-start;
-    padding-top: 84px;
-    padding-bottom: 0;
-  }
-  /* (In the canyon's hall the left wall's crest crosses the frame under the nav: the words stand below it, on the
-     wall's own calm ice.) */
-  html[data-flight='on'] .fl-rydar-words {
-    padding-top: max(84px, 31vh);
-  }
-
-  /* Open models: the figure across the top of the frame, in the sky over the columns it counts; its label, its
-     words and its link in one column beside it. */
-  html[data-flight='on'] .fl-models-words {
-    --tag-at: tl;
-    display: grid;
-    grid-template-columns: auto auto;
-    grid-template-rows: auto auto auto;
-    justify-content: center;
-    align-content: start;
-    gap: 0 clamp(22px, 2.2vw, 44px);
-    padding-top: 84px;
-    padding-bottom: 0;
-  }
-  html[data-flight='on'] .fl-models-words .fl-figure {
-    grid-column: 1 / 3;
-    grid-row: 1 / 4;
-    display: grid;
-    grid-template-columns: subgrid;
-    grid-template-rows: subgrid;
-    gap: inherit;
-  }
-  html[data-flight='on'] .fl-models-words .fl-fig {
-    grid-column: 1;
-    grid-row: 1 / 4;
-    align-self: end;
-  }
-  html[data-flight='on'] .fl-models-words .beat-unit {
-    grid-column: 2;
-    grid-row: 2;
-    max-width: none;
-    white-space: nowrap;
-  }
-  html[data-flight='on'] .fl-models-words .fl-label {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: end;
-    padding-bottom: 6px;
-  }
-  html[data-flight='on'] .fl-models-words .fl-more {
-    grid-column: 2;
-    grid-row: 3;
-    justify-self: start;
-  }
-}
-
 /* ---------- the delta: what he is into ---------- */
 
 /* The block stands on the west bank, lower left; the channels keep the right. */
-.fl-into-words {
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: var(--s-4);
-  padding-bottom: max(clamp(28px, 7vh, 84px), env(safe-area-inset-bottom));
-}
 .fl .fl-into-list {
   max-width: min(12.2em, 44vw);
   font-size: clamp(1.9rem, 2.8vw + 0.4rem, 3.5rem);
   color: var(--ink);
 }
-/* Every other one a tone quieter, as the list has always been set; over a picture the quiet tone is the second ink
-   (before dawn a little lighter than that, so it holds on the dark bank). */
+/* Every interest in the one ink: none of them is a lesser one. */
 .fl .fl-into-list li:nth-child(even) {
-  color: var(--ink-2);
-}
-:root[data-theme='dark'] .fl .fl-into-list li:nth-child(even) {
-  color: #ccd3d7;
-}
-.fl-into-next {
-  max-width: 30ch;
   color: var(--ink);
-}
-.fl-words[data-on] > :nth-child(4) {
-  transition-delay: 210ms;
 }
 
 /* ---------- the sea: the ending ---------- */
@@ -870,9 +928,6 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     max-width: none;
     font-size: clamp(1.6rem, 7.6vw, 2.4rem);
   }
-  .fl-into-words {
-    gap: var(--s-3);
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .fl-end-words .ending-line,
@@ -927,7 +982,9 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   grid-row: 1;
   padding: 0;
 }
-:is(html[data-flight='off'], html:not([data-scripted])) .fl-words > * {
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-words,
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-words [data-at],
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-rise > .fl-rise-in {
   opacity: 1;
   transform: none;
   pointer-events: auto;
@@ -936,6 +993,9 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   position: absolute;
   inset: 0;
   padding: 0 var(--gutter) max(clamp(22px, 5.2vh, 56px), env(safe-area-inset-bottom));
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-block {
+  padding-bottom: 0;
 }
 /* The right of each block: a still basin. It holds the project's picture, or its captions, or only water. */
 :is(html[data-flight='off'], html:not([data-scripted])) .fl .fl-still,
@@ -1068,11 +1128,12 @@ html[data-flight='on'] .fl-name [data-ice-line] {
    is wide but there is little height. The first frame's two lines keep to
    the foot, side by side and smaller, clear of the name. */
 @media (max-height: 540px) and (min-aspect-ratio: 5/4) {
+  .fl {
+    --fl-foot: max(18px, env(safe-area-inset-bottom));
+    --fl-line: 1rem;
+  }
   .fl-hero-words {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--s-5);
+    gap: 6px;
     padding-bottom: max(14px, env(safe-area-inset-bottom));
   }
   .fl-hero-words .fl-role {
@@ -1080,15 +1141,9 @@ html[data-flight='on'] .fl-name [data-ice-line] {
     line-height: 1.08;
   }
   .fl-hero-words .fl-intro {
-    max-width: 32ch;
+    max-width: 60ch;
     font-size: 0.8125rem;
     line-height: 1.35;
-  }
-  .fl-view-words,
-  .fl-up-words,
-  .fl-into-words {
-    gap: var(--s-2);
-    padding-bottom: max(18px, env(safe-area-inset-bottom));
   }
   .fl-end-block {
     margin-bottom: 14px;

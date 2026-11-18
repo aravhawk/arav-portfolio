@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SECTIONS, basisOf, flightKeys, poseAt, projectPoint, type V3 } from '@/water/camera';
-import { type Cap, type Placed, LEAD, NAV_CLEAR, TAIL, composedAt, isFan, layoutCaptions, layoutList, layoutStepped, streamAnchors } from '@/water/words';
+import { basisOf, flightKeys, poseAt, projectPoint, stillStops, type V3 } from '@/water/camera';
+import { type Cap, type Placed, NAV_CLEAR, isFan, layoutCaptions, layoutList, layoutStepped, streamAnchors } from '@/water/words';
 import { COLS, colApex, colHeights } from '@/water/world';
 
 /**
@@ -21,16 +21,16 @@ const FRAMES: [number, number][] = [
   [1920, 1080],
   [2560, 1440],
 ];
-// 11 px mono capitals, tracked 0.06em: a little wider than the page sets them.
-const widthOf = (name: string) => Math.ceil(name.length * 7.4);
-const H = 16;
-const REPOS = ['kilocode', 'openbridge', 'XcodeBenchmark', 'Investo', 'tokscale', 'ThrasherAndChambersWebsite', 't3code'];
+// 12 px mono, tracked 0.01em: a little wider than the page sets it.
+const widthOf = (name: string) => Math.ceil(name.length * 7.7);
+const H = 17;
+const REPOS = ['Kilo Code', 'OpenBridge', 'XcodeBenchmark', 'Investo', 'Tokscale', 'Thrasher & Chambers Website', 'T3 Code'];
 const MODELS = ['qwen3.5-opus-4.6', 'llama4', 'gemma4', 'qwen3.6'];
 
-const OUT = SECTIONS.hero + SECTIONS.say + SECTIONS.infiniview;
-const BENCH = OUT + SECTIONS.upstream;
-const MODELS_AT = BENCH + SECTIONS.bench + SECTIONS.bridge;
-const FORK = MODELS_AT + SECTIONS.models;
+// The captions stand with their station's action: from a little before its composed frame to its leaving (see `build` in src/app/page.tsx).
+const UP = stillStops()[3];
+const MODELS_AT = stillStops()[6];
+const SPAN: [number, number] = [-0.08, 0.95];
 
 type Rect = [number, number, number, number];
 const meet = (a: Rect, b: Rect) => a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3];
@@ -75,20 +75,6 @@ function inView(points: V3[], names: string[], s: number, w: number, h: number, 
   return caps;
 }
 
-describe('a station has two states and nothing between them', () => {
-  it('is composed from a little before its stretch to a little after, and a tag everywhere else', () => {
-    let changes = 0;
-    let last = composedAt(0, 10, 12);
-    for (let s = 0; s <= 20; s += 0.01) {
-      const now = composedAt(s, 10, 12);
-      if (now !== last) changes++;
-      last = now;
-      expect(now).toBe(s >= 10 - LEAD && s < 12 + TAIL);
-    }
-    expect(changes).toBe(2);
-  });
-});
-
 describe('captions never meet, across the scroll range', () => {
   it('the seven repositories (wide frames: on their streams; narrow frames: one list)', () => {
     const points = streamAnchors();
@@ -96,7 +82,7 @@ describe('captions never meet, across the scroll range', () => {
     for (const [w, h] of FRAMES) {
       const wide = w / h >= 0.9;
       const narrow = w < 720 || (w < 900 && !wide);
-      for (let s = OUT + 0.95; s < BENCH - 0.5; s += 0.02) {
+      for (let s = UP + SPAN[0]; s < UP + SPAN[1]; s += 0.02) {
         const where = `${w}x${h} at ${s.toFixed(2)}`;
         if (narrow) {
           const sizes = REPOS.map((n) => ({ w: widthOf(n), h: H }));
@@ -119,17 +105,16 @@ describe('captions never meet, across the scroll range', () => {
     expect(seen).toBeGreaterThan(100);
   });
 
-  it('the four models (wide frames: at the columns\' feet; narrow frames: stepped over their tops)', () => {
+  it('the four models (each over its own serac: wide frames as a row of leaders, narrow frames stepped)', () => {
     const heights = colHeights([9000, 5200, 2600, 1500]);
     const tops: V3[] = COLS.xs.map((x, i) => [x + colApex(i)[0] * COLS.r * (heights[i] / COLS.hMax), COLS.y + 26 * Math.sin(i * 2.3) + colApex(i)[1] * COLS.r * (heights[i] / COLS.hMax), heights[i] - 24]);
-    const feet: V3[] = COLS.xs.map((x, i) => [x, COLS.y + 26 * Math.sin(i * 2.3), 6]);
     let seen = 0;
     for (const [w, h] of FRAMES) {
       const wide = w / h >= 0.9;
       const narrow = w < 720 || (w < 900 && !wide);
-      for (let s = MODELS_AT + 0.85; s < FORK - 0.85; s += 0.02) {
+      for (let s = MODELS_AT + SPAN[0]; s < MODELS_AT + SPAN[1]; s += 0.02) {
         const where = `${w}x${h} at ${s.toFixed(2)}`;
-        const caps = inView(wide ? feet : tops, MODELS, s, w, h, (i) => (wide ? -30 : i % 2 ? 40 : 64));
+        const caps = inView(tops, MODELS, s, w, h, (i) => (i % 2 ? 40 : 64));
         if (!caps.length) continue;
         seen++;
         const at = narrow ? layoutStepped(caps, w, 18) : layoutCaptions(caps, w, 48);

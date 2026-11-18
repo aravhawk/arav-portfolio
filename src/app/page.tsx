@@ -12,7 +12,8 @@ import { INTERESTS, PROJECTS, type Project, type ProjectMedia } from '@/content/
 import { KIND } from '@/content/kinds';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
-import { SECTIONS, SETTLE_AT, sectionStarts, stillStops } from '@/water/camera';
+import { MOVE, SECTIONS, SETTLE_AT, sectionStarts, stillStops } from '@/water/camera';
+import { posterBoot } from '@/water/poster';
 import { streamAnchors } from '@/water/words';
 import { COLS, TRIBS, colHeights, colApex } from '@/water/world';
 import './home.css';
@@ -54,9 +55,7 @@ const INFINIVIEW_HOME: ProjectMedia = {
 
 // Where each section begins, in screens of scroll, and when its words show.
 const SAY = SECTIONS.hero;
-/** The first frame's first line stands through the melt, until the camera leaves the name's water; its second line goes with the first frame. */
-const ROLE_TO = 1.2;
-/** His sentence comes in as the camera comes down to the outlet: the bank it stands on is in the frame from there. */
+/** His sentence begins as the camera comes down to the outlet: the bank it stands on is in the frame from there. The first frame's line stands until then, and the two never show together. */
 const SAY_FROM = 1.9;
 const VIEW = SAY + SECTIONS.say;
 const OUT = VIEW + SECTIONS.infiniview;
@@ -67,49 +66,88 @@ const FORK = MODELS + SECTIONS.models;
 const LATTICE = FORK + SECTIONS.fork;
 const CANYON = LATTICE + SECTIONS.lattice;
 const DELTA = CANYON + SECTIONS.canyon;
-const SEA = DELTA + SECTIONS.delta;
 
 const len = (screens: number, last = false) => ({ '--len': last ? screens : screens + 1 }) as React.CSSProperties;
+const at = (s: number) => ({ 'data-at': +s.toFixed(3) });
 
 /**
- * When a block of words shows. It is on from `from` to `to` (screens of
- * scroll): from the moment its station is in view until the camera has left
- * it. With `at` and `until` it travels: it stands composed between those two
- * and is a small tag in a corner of the frame either side of them.
+ * How a station's block of words builds. Nothing of it is ever shown at any
+ * size but its own. Its eyebrow leads, alone, as the station comes into
+ * view; then, through the camera's move (see MOVE in camera.ts), its title
+ * rises through a mask, the line under it sets, then its figure or meta,
+ * then its action and its captions. Each is a step with a scroll position
+ * of its own, in screens from the station's composed frame: past it the step
+ * sets, back past it the step is undone. By the composed frame the block
+ * stands whole. It leaves as one.
  */
-const win = (from: number, to: number, at?: number, until?: number) => ({
-  'data-fl-from': +from.toFixed(3),
-  'data-fl-to': +to.toFixed(3),
-  ...(at === undefined ? {} : { 'data-fl-in': +at.toFixed(3), 'data-fl-out': +(until ?? to).toFixed(3) }),
-});
+const STEPS = { eyebrow: -1.2, title: -MOVE.before, line: -0.38, meta: -0.22, act: -0.08, leave: 0.95 };
+function build(stop: number, over: Partial<typeof STEPS> = {}) {
+  const b = { ...STEPS, ...over };
+  return {
+    /** the block: on from its eyebrow to its leaving; composed (its title in) from `data-fl-in` to `data-fl-out` */
+    block: { 'data-fl-from': +(stop + b.eyebrow).toFixed(3), 'data-fl-to': +(stop + b.leave).toFixed(3), 'data-fl-in': +(stop + b.title).toFixed(3), 'data-fl-out': +(stop + b.leave).toFixed(3) },
+    eyebrow: at(stop + b.eyebrow),
+    title: at(stop + b.title),
+    line: at(stop + b.line),
+    meta: at(stop + b.meta),
+    act: at(stop + b.act),
+    /** the captions tied to points of the scene: with the action, to the block's leaving */
+    calls: { from: stop + b.act, to: stop + b.leave },
+  };
+}
+type Build = ReturnType<typeof build>;
 
 /** Where each stream's caption lands: on the stream itself. */
 const STREAMS = streamAnchors();
 
+/**
+ * The seven repositories, as each one's own page names it (its README's
+ * heading, or where it has none the repository's name as GitHub shows it):
+ * read 18 November 2026.
+ */
+const REPO_NAME: Record<string, string> = {
+  'pingdotgg/t3code': 'T3 Code',
+  'AvinashDevineni/ThrasherAndChambersWebsite': 'Thrasher & Chambers Website',
+  'junhoyeo/tokscale': 'Tokscale',
+  'Kanishksasi/Investo': 'Investo',
+  'Kilo-Org/kilocode': 'Kilo Code',
+  'devMEremenko/XcodeBenchmark': 'XcodeBenchmark',
+  'fakerybakery/openbridge': 'OpenBridge',
+};
+
 /** The rail: one tick to a section, in the page's order. Each takes the page to that section's composed frame. */
 const RAIL = ['Arav Jain', 'What I do', 'Infiniview', 'Open source', 'Kilo Bench', 'Agent Bridge', 'Open models', 'cc-switch', 'TensorPoW', 'RydAR', 'Interests', 'Contact'];
 
-/** A project's name is the way in, and it travels to the page it opens. */
-function Name({ p }: { p: Project }) {
+/** A project's name is the way in, and it travels to the page it opens. It rises through a mask, at its own size. */
+function Name({ p, b }: { p: Project; b: Build }) {
   return (
     <ViewTransition name={`title-${p.slug}`} share="title" default="none">
-      <h2 className="display fl-view-name" data-w="name">
-        <Link className="beat-link" href={`/work/${p.slug}`}>
-          {p.name}
-          <Arrow />
-        </Link>
+      <h2 className="display fl-view-name fl-rise" {...b.title}>
+        <span className="fl-rise-in">
+          <Link className="beat-link" href={`/work/${p.slug}`}>
+            {p.name}
+            <Arrow />
+          </Link>
+        </span>
       </h2>
     </ViewTransition>
   );
 }
 
-function Kind({ p }: { p: Project }) {
+function Kind({ p, b }: { p: Project; b: Build }) {
   return (
-    <p className="label fl-label" data-w="label">
+    <p className="fl-eyebrow" {...b.eyebrow}>
       {KIND[p.slug]}
     </p>
   );
 }
+
+/** The first script of the page: the still for this window, and the latest the first frame's words set (ms after it runs). */
+const POSTER_BOOT = posterBoot(2600);
+
+/** His sentence, set a line at a time through the reach. */
+const SAY_LINES = ['Agents that break', 'software before', 'attackers do.', 'Tools developers', 'run daily.'];
+const SAY_AT = [SAY_FROM, 2.2, 2.5, 2.78, 3.02];
 
 export default async function Home() {
   const m = await getMetrics();
@@ -119,6 +157,19 @@ export default async function Home() {
   const rydar = RYDAR_P.media[0];
   const starts = sectionStarts();
   const stops = stillStops();
+  // Each station's steps, from its composed frame (see stillStops in camera.ts).
+  const view = build(stops[2]);
+  // (A station that follows a long stretch of flight shows its eyebrow sooner, so no stretch of scroll is without a word.)
+  const up = build(stops[3], { eyebrow: -1.3 });
+  const bench = build(stops[4]);
+  const bridge = build(stops[5]);
+  const mods = build(stops[6], { eyebrow: -1.3 });
+  // (The dam is come at round its end: its move, and so its title, begins a little later.)
+  const fork = build(stops[7], { eyebrow: -1.3, title: -0.45, line: -0.32, meta: -0.2 });
+  const tensor = build(stops[8]);
+  // (The canyon is this station from its mouth: its eyebrow stands through the bends, its block sets in the hall.)
+  const canyon = build(stops[9], { eyebrow: CANYON + 0.05 - stops[9], leave: 0.75 });
+  const delta = build(stops[10], { leave: 1.2 });
   return (
     <>
       {/* ---------- the rail: where in the flight this is, and a way to any part of it (before the page's content, so the skip link passes it) ---------- */}
@@ -130,6 +181,8 @@ export default async function Home() {
         ))}
       </nav>
       <main id="main" className="fl">
+        {/* The page's first script: it chooses the first paint's still for this window (see poster.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: POSTER_BOOT }} />
         <FlightStage slab={INFINIVIEW_HOME.src} sheet={BENCH_P.media[0].kind === 'image' ? BENCH_P.media[0].src : ''} tribs={repos.map((r) => r.count).join(',')}
           cols={colH.map((h) => h.toFixed(1)).join(',')}
           face={rydar.kind === 'image' ? rydar.src : ''}
@@ -138,14 +191,24 @@ export default async function Home() {
         {/* ---------- the frozen lake ---------- */}
         <section className="fl-sec fl-hero" data-fl style={len(SECTIONS.hero)} aria-labelledby="name">
           <div className="fl-pin">
+            {/* The first paint is the scene's own first frame, a still (see scripts/capture-poster.mjs); the live picture comes up over it. */}
             <div className="fl-lake" data-basin>
-              <h1 id="name" className="ice fl-name" data-ice>
-                <span data-ice-line>Arav</span> <span data-ice-line>Jain</span>
+              <div className="fl-poster" aria-hidden="true" />
+              {/* The name is the picture's. It stays here for readers and for search. */}
+              <h1 id="name" className="fl-name sr-only" data-ice>
+                Arav Jain
               </h1>
             </div>
-            <div className="fl-words fl-hero-words" {...win(-1, ROLE_TO)} data-on>
-              <p className="statement fl-role">AI and developer tooling builder.</p>
-              <p className="lead fl-intro" data-fl-until={0.25}>
+            <div className="fl-words fl-hero-words" data-fl-from={-1} data-fl-to={SAY_FROM} data-hero data-on>
+              <p className="statement fl-role">
+                <span className="fl-rise" data-at={-1}>
+                  <span className="fl-rise-in">AI and developer</span>
+                </span>
+                <span className="fl-rise" data-at={-1}>
+                  <span className="fl-rise-in">tooling builder.</span>
+                </span>
+              </p>
+              <p className="fl-line fl-intro" data-at={-1} data-fl-until={0.25}>
                 I co-founded Infiniflop Labs and build Infiniview: agents that attack your app to prove what breaks.
               </p>
             </div>
@@ -155,8 +218,14 @@ export default async function Home() {
         {/* ---------- the statement ---------- */}
         <section className="fl-sec fl-say" data-fl style={len(SECTIONS.say)} aria-label="What I do">
           <div className="fl-pin">
-            <div className="fl-words fl-say-words" {...win(SAY_FROM, VIEW - 0.05)}>
-              <p className="say-text fl-say-text">Agents that break software before attackers do. Tools developers run daily.</p>
+            <div className="fl-words fl-say-words" data-fl-from={SAY_FROM} data-fl-to={+(VIEW - 0.3).toFixed(3)}>
+              <p className="say-text fl-say-text">
+                {SAY_LINES.map((line, i) => (
+                  <span key={line} className="fl-rise" {...at(SAY_AT[i])}>
+                    <span className="fl-rise-in">{line} </span>
+                  </span>
+                ))}
+              </p>
             </div>
           </div>
         </section>
@@ -164,10 +233,10 @@ export default async function Home() {
         {/* ---------- 01 Infiniview ---------- */}
         <section className="fl-sec fl-view" data-fl style={len(SECTIONS.infiniview)} aria-label="Infiniview">
           <div className="fl-pin">
-            <div className="fl-words fl-view-words" {...win(VIEW - 0.05, OUT - 0.2, VIEW + 0.9, OUT - 0.55)}>
-              <Kind p={INFINIVIEW} />
-              <Name p={INFINIVIEW} />
-              <p className="lead fl-view-line" data-w="line">
+            <div className="fl-words fl-block fl-view-words" {...view.block}>
+              <Kind p={INFINIVIEW} b={view} />
+              <Name p={INFINIVIEW} b={view} />
+              <p className="fl-line" {...view.line}>
                 {INFINIVIEW.line}
               </p>
             </div>
@@ -188,33 +257,37 @@ export default async function Home() {
                   at={STREAMS[i]}
                   href={r.url}
                   label={`${r.repo}: ${r.count} merged pull request${r.count === 1 ? '' : 's'}`}
-                  from={OUT + 0.95}
-                  to={BENCH - 0.5}
+                  from={up.calls.from}
+                  to={up.calls.to}
                   lift={i % 2 ? 78 : 44}
                 >
-                  {r.repo.split('/')[1]}
+                  {REPO_NAME[r.repo] ?? r.repo.split('/')[1]}
                 </Callout>
               ))}
             </div>
-            <div className="fl-words fl-up-words fl-out-words" {...win(OUT - 0.05, BENCH, OUT + 1.1, BENCH - 0.55)}>
-              <p className="label fl-label" data-w="label">
+            <div className="fl-words fl-block fl-count-words fl-out-words" {...up.block}>
+              <p className="fl-eyebrow" {...up.eyebrow}>
                 Open source
               </p>
               <h2 className="beat-figure fl-figure">
-                <span className="number fl-fig" data-w="fig">
-                <LiveNumber
-                  value={m.mergedPrs.upstream.value}
-                  from={m.mergedPrs.upstream.snapshotValue}
-                  source={m.mergedPrs.upstream.source}
-                  asOf={formatAsOf(m.mergedPrs.upstream.asOf)}
-                  what="merged pull requests in repositories I do not own"
-                />
+                <span className="number fl-fig fl-rise" {...up.title}>
+                  <span className="fl-rise-in">
+                    <LiveNumber
+                      value={m.mergedPrs.upstream.value}
+                      from={m.mergedPrs.upstream.snapshotValue}
+                      source={m.mergedPrs.upstream.source}
+                      asOf={formatAsOf(m.mergedPrs.upstream.asOf)}
+                      what="merged pull requests in repositories I do not own"
+                    />
+                  </span>
                 </span>
-                <span className="title beat-unit" data-w="unit">
+                <span className="fl-line fl-unit" {...up.line}>
                   merged pull requests in other people&apos;s projects
                 </span>
+                {/* Where a narrow frame sets the seven names, as a list beside the count (the flight puts them there). */}
+                <span className="fl-calls-slot" data-calls-slot aria-hidden="true" />
               </h2>
-              <p className="small beat-sub fl-sub" data-x>
+              <p className="fl-meta" {...up.meta}>
                 <LiveNumber
                   className="fl-count"
                   value={m.mergedPrs.total.value}
@@ -234,7 +307,7 @@ export default async function Home() {
                 />{' '}
                 contributions.
               </p>
-              <Link className="link beat-more fl-more" href="/work/open-source" data-x>
+              <Link className="link fl-more" href="/work/open-source" {...up.act}>
                 Upstream <Arrow />
               </Link>
             </div>
@@ -244,10 +317,10 @@ export default async function Home() {
         {/* ---------- 03 Kilo Bench ---------- */}
         <section className="fl-sec fl-bench" data-fl style={len(SECTIONS.bench)} aria-label="Kilo Bench">
           <div className="fl-pin">
-            <div className="fl-words fl-view-words fl-bench-words" {...win(BENCH + 0.3, BRIDGE - 0.1, BENCH + 1.05, BRIDGE - 0.55)}>
-              <Kind p={BENCH_P} />
-              <Name p={BENCH_P} />
-              <p className="lead fl-view-line" data-w="line">
+            <div className="fl-words fl-block fl-view-words fl-bench-words" {...bench.block}>
+              <Kind p={BENCH_P} b={bench} />
+              <Name p={BENCH_P} b={bench} />
+              <p className="fl-line" {...bench.line}>
                 {BENCH_P.line}
               </p>
             </div>
@@ -260,14 +333,14 @@ export default async function Home() {
         {/* ---------- 04 Agent Bridge ---------- */}
         <section className="fl-sec fl-bridge" data-fl style={len(SECTIONS.bridge)} aria-label="Agent Bridge">
           <div className="fl-pin">
-            <div className="fl-words fl-view-words fl-bridge-words" {...win(BRIDGE - 0.1, MODELS - 0.05, BRIDGE + 1.1, MODELS - 0.55)}>
-              <Kind p={BRIDGE_P} />
-              <Name p={BRIDGE_P} />
-              <p className="lead fl-view-line" data-w="line">
+            <div className="fl-words fl-block fl-view-words fl-bridge-words" {...bridge.block}>
+              <Kind p={BRIDGE_P} b={bridge} />
+              <Name p={BRIDGE_P} b={bridge} />
+              <p className="fl-line" {...bridge.line}>
                 {BRIDGE_P.line}
               </p>
               {/* The launch film: one control here, the film itself at a size it can be read at. */}
-              <div className="fl-film" data-x>
+              <div className="fl-film" {...bridge.act}>
                 <Film media={BRIDGE_P.media[0]} />
               </div>
             </div>
@@ -283,36 +356,36 @@ export default async function Home() {
                   key={x.name}
                   at={[COLS.xs[i] + colApex(i)[0] * COLS.r * (colH[i] / COLS.hMax), COLS.y + 26 * Math.sin(i * 2.3) + colApex(i)[1] * COLS.r * (colH[i] / COLS.hMax), colH[i] - 24]}
                   href={x.url}
-                  from={MODELS + 0.85}
-                  to={FORK - 0.85}
+                  from={mods.calls.from}
+                  to={mods.calls.to}
                   lift={i % 2 ? 40 : 64}
-                  // (On a wide frame the figure stands in the sky over the columns: each name is set at its column's foot.)
-                  wide={{ at: [COLS.xs[i], COLS.y + 26 * Math.sin(i * 2.3), 6], lift: -30 }}
                 >
                   {x.name}
                 </Callout>
               ))}
             </div>
-            <div className="fl-words fl-up-words fl-models-words" {...win(MODELS - 0.05, FORK - 0.05, MODELS + 1.1, FORK - 0.55)}>
-              <p className="label fl-label" data-w="label">
+            <div className="fl-words fl-block fl-count-words fl-models-words" {...mods.block}>
+              <p className="fl-eyebrow" {...mods.eyebrow}>
                 Models
               </p>
               <h2 className="beat-figure fl-figure">
-                <span className="number number-sm fl-fig" data-w="fig">
-                <LiveNumber
-                  value={m.ollama.total.value}
-                  from={m.ollama.total.snapshotValue}
-                  source={m.ollama.total.source}
-                  asOf={formatAsOf(m.ollama.total.asOf)}
-                  what="pulls of my open models on Ollama"
-                />
+                <span className="number number-sm fl-fig fl-rise" {...mods.title}>
+                  <span className="fl-rise-in">
+                    <LiveNumber
+                      value={m.ollama.total.value}
+                      from={m.ollama.total.snapshotValue}
+                      source={m.ollama.total.source}
+                      asOf={formatAsOf(m.ollama.total.asOf)}
+                      what="pulls of my open models on Ollama"
+                    />
+                  </span>
                 </span>
-                <span className="title beat-unit" data-w="unit">
+                <span className="fl-line fl-unit" {...mods.line}>
                   pulls, four open models
                 </span>
               </h2>
-              <Link className="link beat-more fl-more" href="/work/ollama" data-x>
-                Open models <Arrow />
+              <Link className="link fl-more" href="/work/ollama" {...mods.act}>
+                Ollama <Arrow />
               </Link>
             </div>
           </div>
@@ -321,13 +394,13 @@ export default async function Home() {
         {/* ---------- 06 cc-switch ---------- */}
         <section className="fl-sec fl-forks" data-fl style={len(SECTIONS.fork)} aria-label="cc-switch">
           <div className="fl-pin">
-            <div className="fl-words fl-up-words fl-fork-words" {...win(FORK + 0.1, LATTICE - 0.15, FORK + 1.1, LATTICE - 0.55)}>
-              <Kind p={SWITCH_P} />
-              <Name p={SWITCH_P} />
-              <p className="lead fl-view-line" data-w="line">
+            <div className="fl-words fl-block fl-view-words fl-fork-words" {...fork.block}>
+              <Kind p={SWITCH_P} b={fork} />
+              <Name p={SWITCH_P} b={fork} />
+              <p className="fl-line" {...fork.line}>
                 {SWITCH_P.line}
               </p>
-              <p className="small beat-sub fl-sub" data-x>
+              <p className="fl-meta" {...fork.meta}>
                 <LiveNumber
                   className="fl-count"
                   value={m.npm.allTime.value}
@@ -339,7 +412,7 @@ export default async function Home() {
                 npm downloads.
               </p>
               {/* One stream in, three channels out, the chosen one running: the switch is drawn as what it does. */}
-              <div className="fl-fork" data-bed="feat:fork" data-active="0" data-x>
+              <div className="fl-fork" data-bed="feat:fork" data-active="0" {...fork.act}>
                 <svg className="fl-gates" viewBox="0 0 284 40" preserveAspectRatio="none" aria-hidden="true">
                   <path className="fl-gate-in" d="M142 0v12" />
                   <path className="fl-gate" data-g="0" d="M142 12C142 30 50 20 50 40" />
@@ -356,10 +429,10 @@ export default async function Home() {
         {/* ---------- 07 TensorPoW ---------- */}
         <section className="fl-sec fl-tensor" data-fl style={len(SECTIONS.lattice)} aria-label="TensorPoW">
           <div className="fl-pin">
-            <div className="fl-words fl-view-words fl-tensor-words" {...win(LATTICE - 0.1, CANYON - 0.1, LATTICE + 1.05, CANYON - 0.55)}>
-              <Kind p={TENSOR_P} />
-              <Name p={TENSOR_P} />
-              <p className="lead fl-view-line" data-w="line">
+            <div className="fl-words fl-block fl-view-words fl-tensor-words" {...tensor.block}>
+              <Kind p={TENSOR_P} b={tensor} />
+              <Name p={TENSOR_P} b={tensor} />
+              <p className="fl-line" {...tensor.line}>
                 {TENSOR_P.line}
               </p>
             </div>
@@ -370,10 +443,10 @@ export default async function Home() {
         {/* ---------- 08 RydAR ---------- */}
         <section className="fl-sec fl-rydar" data-fl style={len(SECTIONS.canyon)} aria-label="RydAR">
           <div className="fl-pin">
-            <div className="fl-words fl-view-words fl-rydar-words" {...win(CANYON - 0.1, DELTA - 0.07, CANYON + 1.75, CANYON + 2.7)}>
-              <Kind p={RYDAR_P} />
-              <Name p={RYDAR_P} />
-              <p className="lead fl-view-line" data-w="line">
+            <div className="fl-words fl-block fl-view-words fl-rydar-words" {...canyon.block}>
+              <Kind p={RYDAR_P} b={canyon} />
+              <Name p={RYDAR_P} b={canyon} />
+              <p className="fl-line" {...canyon.line}>
                 {RYDAR_P.line}
               </p>
             </div>
@@ -386,19 +459,19 @@ export default async function Home() {
         {/* ---------- the delta: what he is into ---------- */}
         <section className="fl-sec fl-delta" data-fl style={len(SECTIONS.delta)} aria-labelledby="into">
           <div className="fl-pin">
-            <div className="fl-words fl-into-words" {...win(DELTA - 0.07, SEA, DELTA + 1.0, SEA - 0.5)}>
-              <p className="label fl-label" id="into" data-w="label">
+            <div className="fl-words fl-block fl-into-words" {...delta.block}>
+              <p className="fl-eyebrow" id="into" {...delta.eyebrow}>
                 Interests
               </p>
-              <ul className="into-list title fl-into-list" data-w="list">
+              <ul className="into-list title fl-into-list" {...delta.title}>
                 {INTERESTS.map((x) => (
                   <li key={x}>{x}</li>
                 ))}
               </ul>
-              <p className="lead fl-into-next" data-x>
+              <p className="fl-line fl-into-next" {...delta.line}>
                 Next: a company, a research paper, and code in tools you open daily.
               </p>
-              <Link className="btn fl-into-btn" href="/work" data-x>
+              <Link className="btn fl-into-btn" href="/work" {...delta.act}>
                 All work <Arrow />
               </Link>
             </div>
@@ -409,13 +482,13 @@ export default async function Home() {
         {/* ---------- the sea: the ending, the last frame of the same flight ---------- */}
         <section className="fl-sec fl-sea ending" data-fl style={len(SECTIONS.sea, true)} aria-label="Contact">
           <div className="fl-pin">
-            <div className="fl-words fl-end-words" {...win(SETTLE_AT - 0.04, 1e6)}>
+            <div className="fl-words fl-end-words" data-fl-from={+(SETTLE_AT - 0.04).toFixed(3)} data-fl-to={1e6}>
               <div className="fl-end-block">
                 <h2 className="ending-head">
                   <span className="ending-line">It&apos;s still early.</span>
                 </h2>
                 <p className="label ending-kicker">Selected for OpenAI DevDay 2026</p>
-                {/* One row: the ways to reach him, the feed among them, and the haptics switch as the row's last small control. */}
+                {/* One row: the ways to reach him, the feed among them. (The haptics switch is a setting: it stands by the sound control, in the nav.) */}
                 <div className="fl-end-row">
                   <Contact feed />
                 </div>
