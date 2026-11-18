@@ -208,16 +208,16 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
     dusk: 0.6,
     under: 0.5,
   };
-  // The light ending: a low sun on the ranges under a deep blue sky that comes down to warm gold at the horizon
-  // (the old ending's blue and gold: rich, with nothing of rose or lavender in it).
+  // The light ending: the last gold of the day going to blue. The sun stands on the ranges; the sky is a deep
+  // blue that comes down, through a clear pale band, to amber at the horizon.
   const blue: Key = {
-    zen: [0.005, 0.034, 0.125],
-    mid: [0.018, 0.105, 0.25],
-    hor: [0.78, 0.58, 0.25],
-    band: [1.85, 1.2, 0.46],
+    zen: [0.0045, 0.03, 0.118],
+    mid: [0.016, 0.098, 0.235],
+    hor: [0.52, 0.3, 0.1],
+    band: [1.8, 0.88, 0.24],
     az: sunAz,
     el: elEnd,
-    key: mul([1.0, 0.68, 0.4], 0.9),
+    key: mul([1.0, 0.66, 0.36], 0.9),
     keyEl: 0.05,
     amb: [0.07, 0.12, 0.28],
     haze: 0.85,
@@ -225,18 +225,19 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
     dusk: 1,
     under: 0.22,
   };
-  // The old dark ending: first light.
+  // The dark ending is another hour: the first light of morning. It is cooler: a deep blue sky with the last
+  // stars in it, rose along the horizon, and pale gold only where the sun is coming up.
   const first: Key = {
-    zen: [0.007, 0.027, 0.085],
-    mid: [0.036, 0.08, 0.14],
-    hor: [0.4, 0.2, 0.075],
-    band: [2.6, 1.12, 0.24],
+    zen: [0.003, 0.01, 0.05],
+    mid: [0.011, 0.028, 0.108],
+    hor: [0.2, 0.085, 0.11],
+    band: [1.25, 0.82, 0.5],
     az: sunAz,
     el: elEnd,
-    key: mul([1.0, 0.62, 0.3], 0.5),
+    key: mul([1.0, 0.74, 0.56], 0.45),
     keyEl: 0.05,
-    amb: [0.03, 0.04, 0.06],
-    haze: 1.0,
+    amb: [0.028, 0.04, 0.075],
+    haze: 0.95,
     // (By first light the aurora has gone.)
     aurora: 0,
     dusk: 1,
