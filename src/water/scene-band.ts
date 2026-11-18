@@ -190,7 +190,8 @@ function start(first: BandOpts, aspect: number): Promise<Shared | null> {
       // Throws when WebGL2 or float targets are missing: the still stays.
       engine = new FlightEngine(canvas, { theme: themeNow(), still: mqStill.matches, coarse });
       // The one variant of the pass this start waits for is the first scene's own: its station and nothing else.
-      engine.firstNeed = passNeeds(basisOf(firstPose(first.scene, aspect)), aspect, first.scene === 'lake' ? LAKE_ICE : NO_ICE, false);
+      const pose0 = basisOf(firstPose(first.scene, aspect));
+      engine.firstNeed = engine.firstPiece(pose0, aspect, passNeeds(pose0, aspect, first.scene === 'lake' ? LAKE_ICE : NO_ICE, false));
       await engine.prepare();
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') console.warn(err);
@@ -292,7 +293,7 @@ function start(first: BandOpts, aspect: number): Promise<Shared | null> {
       }
       cam = basisOf(pose);
       // (A scene is not shown until a variant of the pass that carries all of it is ready: until then the still stays.)
-      if (!a.drawn && !engine.carries(passNeeds(cam, a.aspect, a.opts.scene === 'lake' ? LAKE_ICE : NO_ICE, engine.hasSlab))) return;
+      if (!a.drawn && !engine.standsReady(cam, a.aspect, passNeeds(cam, a.aspect, a.opts.scene === 'lake' ? LAKE_ICE : NO_ICE, engine.hasSlab))) return;
       const b = a.boxOn ? a.box : box;
       engine.frame(now, cam, a.aspect, {
         // Only the lake's own frame shows the sheet; from every station it has long gone.
