@@ -1035,3 +1035,40 @@ are now seen nearly edge on; the table's type is set for the composed
 camera and leans in transit; cost not measured.
 
 Next, alone: R3f (night snow, the delta, the ending's air).
+
+### R3f (night snow, the delta, the ending's air), integrated 11:05 PM CT
+
+Eight signed commits on the branch ending at `a50a9f4`, merged without
+conflict; looked at in the merged build in both themes.
+
+- **Night snow** has the day's wind-cut relief, lit by the night: cold
+  light with crisp shade, warm first light on faces turned to the dawn,
+  deep blue hollows (it was flat slate with gouges). From high cameras
+  the snow is a wind-lined plain, not hills.
+- **Ranges** along the flight: more bare rock, thin air in front of the
+  near ranges.
+- **The delta**: the light theme's day now comes down through
+  afternoon, golden hour and sunset across the canyon's exit, the
+  delta and the run to sea (no jump); the sun's light on the water is
+  glitter, not a column; the wedge on the horizon (the world's north
+  edge) is gone; the bars' faces are clean blue.
+- **The ending** is two different hours: the light theme ends in the
+  last gold of the day going to blue, the dark theme in the first rose
+  and pale gold of morning. Ranges with form, a soft waterline, v2's
+  band of soft discs along the far shore, living near water, a clean
+  ribbon image with finer dust.
+- The sky behind Open models' figure before dawn is one calm tone:
+  the titles test passes 48 of 48 at 1440, 1920 and 2560 in both
+  themes.
+
+Its checks: lint, typecheck, 309 tests, build; 200 words; legibility
+over the whole page at 390, 1440 and 2560 in both themes, 11,283 lines,
+0 failures; the words test, 0 faults. Its shortfalls: the titles test
+still fails at 390 for cc-switch (both themes) and RydAR before dawn
+(those stations' phone framing); the ending's ranges are paler than
+v2's dark silhouettes and the band of discs quieter; night ground is
+still slate violet-blue overall; the plain (no WebGL) ending's gradient
+no longer matches the dark theme's dawn; cost not measured.
+
+Round 3's picture work (R3a to R3f) is in. Next, alone: the rest of
+R3b (inner pages), then the frame-rate task.
