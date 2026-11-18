@@ -1170,26 +1170,31 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   vec4 a = snowTile(p, 6200.0, vec2(0.13, 0.57));
   float fb = 1.0 - smoothstep(15.0, 38.0, foot);
   float fc = 1.0 - smoothstep(3.0, 7.6, foot);
-  vec2 sA = a.xy * GS;
+  // Seen from high above, snow is a plain the wind has lined, not a country of hills: the long drifts and the
+  // middle size keep little of their roll and their shade, and the sastrugi carry the picture.
+  float high = smoothstep(280.0, 600.0, uCamPos.z);
+  float kA = 1.0 - 0.72 * high;
+  float kB = 1.0 - 0.55 * high;
+  vec2 sA = a.xy * GS * kA;
   float mA = dot(sA, Lxy);
   // (A shade's edge is cut over a narrow band of the horizon; where a size is seen smaller than it was baked the band is wider, so the edge stays a pixel wide and does not crawl.)
   float shade = smoothstep(0.0, 0.07 * clamp(foot / 6.0, 1.0, 3.0), mix(a.z, a.w, kAz) - tanEl);
   vec2 rel = sA;
-  float lit = 1.0 - 0.6 * shade;
+  float lit = 1.0 - 0.6 * kA * shade;
   // Before dawn the snow has a second light: the sky's own, cold, from the side the curtains hang on (the first
   // baked bearing, which the morning will use). Its shade is read from the same texels and cut as crisply as the day's.
   float mC = dot(sA, SH_A);
-  float litC = uNight > 0.0 ? 1.0 - 0.6 * smoothstep(0.0, 0.07 * clamp(foot / 6.0, 1.0, 3.0), a.z - NIGHT_TAN) : 1.0;
+  float litC = uNight > 0.0 ? 1.0 - 0.6 * kA * smoothstep(0.0, 0.07 * clamp(foot / 6.0, 1.0, 3.0), a.z - NIGHT_TAN) : 1.0;
   if (fb > 0.0) {
     vec4 b = snowTile(p, 1330.0, vec2(0.71, 0.29));
-    vec2 sB = b.xy * GS;
+    vec2 sB = b.xy * GS * kB;
     // (A ridge on a drift that leans from the light throws a longer shade: the drift's own lean is added to its horizon.)
-    lit *= 1.0 - 0.8 * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 1.3, 1.0, 3.0), mix(b.z, b.w, kAz) + mA - tanEl), fb);
-    if (uNight > 0.0) litC *= 1.0 - 0.8 * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 1.3, 1.0, 3.0), b.z + mC - NIGHT_TAN), fb);
+    lit *= 1.0 - 0.8 * kB * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 1.3, 1.0, 3.0), mix(b.z, b.w, kAz) + mA - tanEl), fb);
+    if (uNight > 0.0) litC *= 1.0 - 0.8 * kB * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 1.3, 1.0, 3.0), b.z + mC - NIGHT_TAN), fb);
     rel += sB * fb;
     mA += dot(sB, Lxy) * fb;
     mC += dot(sB, SH_A) * fb;
-  } else { lit *= 0.888; litC *= 0.888; }
+  } else { lit *= 1.0 - 0.112 * kB; litC *= 1.0 - 0.112 * kB; }
   if (fc > 0.0) {
     vec4 c = snowTile(p, 286.0, vec2(0.37, 0.11));
     lit *= 1.0 - 0.88 * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 0.28, 1.0, 3.0), mix(c.z, c.w, kAz) + mA - tanEl), fc);
