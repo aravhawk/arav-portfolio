@@ -167,6 +167,38 @@ export const TRIBS: { head: Pt; mid: Pt; mouth: Pt }[] = [
   [1370, 8350, 1400, 7810, 1430],
   [1240, 8300, 1300, 7800, 1344],
 ].map(([hx, hy, mx, my, x]) => ({ head: pt(hx, hy + DY), mid: pt(mx, my + DY), mouth: pt(x, lipY(x)) }));
+/**
+ * The snowfield's long rolls: 0..1 at a place on it. (Written out, not read
+ * from a texture, so the page can say exactly how high the field stands
+ * under each stream's caption. The shading pass draws the field from these
+ * same numbers: see fieldTop.)
+ */
+export const FIELD_ROLL = { ax: 493, ay: 611, a: 0.27, b: 377, bk: 0.2 };
+export const fieldRoll = (x: number, y: number) => 0.5 + FIELD_ROLL.a * Math.sin(x / FIELD_ROLL.ax + 1.3) * Math.cos(y / FIELD_ROLL.ay + 0.4) + FIELD_ROLL.bk * Math.sin((x + y) / FIELD_ROLL.b + 2.1);
+const smoothW = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+/** How high the snowfield stands at a place on it, seen from the confluence's own frame. */
+export function fieldHeight(x: number, y: number): number {
+  const behind = y - lipY(x);
+  const roll = fieldRoll(x, y);
+  const climb = smoothW(60, 1250, behind);
+  const up = 1 + climb * (0.55 + 0.7 * roll) + 0.022 * Math.sin(behind / 150 + 4 * roll) * smoothW(120, 420, behind);
+  const back = 1 - smoothW(LIP.back + 80, LIP.back + 80 + 3 * LIP.backRamp, y + 260 * (roll - 0.5));
+  return LIP.h * up * back;
+}
+/**
+ * Where each stream's caption lands: on the stream itself as it is drawn, in
+ * its upper run a little below where it rises, at the height the snowfield
+ * stands there.
+ */
+export function tribPoint(i: number): [number, number, number] {
+  const t = TRIBS[i];
+  const x = t.head.x + (t.mid.x - t.head.x) * 0.45;
+  const y = t.head.y + (t.mid.y - t.head.y) * 0.45;
+  return [x, y, fieldHeight(x, y)];
+}
 /** How wide a stream with this many merged pull requests runs: in proportion, so the counts can be read off the widths. */
 export const tribWidth = (n: number) => 20 * Math.min(n, 10);
 /** How wide the river is at x along the cliff's foot, given each stream's width: it takes each stream in turn. */

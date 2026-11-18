@@ -24,7 +24,7 @@ import { ICE_FIELD } from './ice';
 import { NAME_ICE } from './name';
 import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
 import { PANO, SHADE_AZ, WIND } from './terrain';
-import { BASIN, BOARD, BOARD_DEPTH, boardSpan, CONF_RIVER, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, slabFaces, STREAM, T2, TARN, TARN_BAY, TRIBS } from '../world';
+import { BASIN, BOARD, BOARD_DEPTH, boardSpan, CONF_RIVER, FIELD_ROLL, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, slabFaces, STREAM, T2, TARN, TARN_BAY, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -1598,9 +1598,11 @@ float gFieldG = 0.0;
  */
 float fieldTop(vec2 q) {
   float behind = q.y - lipY(q.x);
-  float roll = textureLod(uGrain, q / 3100.0 + 0.23, 0.0).g;
+  // (Its long rolls are written out: world.ts's fieldRoll, which the captions' points are measured by.)
+  float roll = 0.5 + ${FIELD_ROLL.a.toFixed(2)} * sin(q.x / ${FIELD_ROLL.ax.toFixed(1)} + 1.3) * cos(q.y / ${FIELD_ROLL.ay.toFixed(1)} + 0.4) + ${FIELD_ROLL.bk.toFixed(2)} * sin((q.x + q.y) / ${FIELD_ROLL.b.toFixed(1)} + 2.1);
   float climb = smoothstep(60.0, 1250.0, behind);
-  float up = 1.0 + climb * (0.55 + 0.7 * roll) + 0.1 * sin(behind / 150.0 + 4.0 * roll) * smoothstep(120.0, 420.0, behind);
+  // (Its small rolls are low: a roll as steep as a far ray's own fall hides the snow behind it, and the field was drawn in torn bands.)
+  float up = 1.0 + climb * (0.55 + 0.7 * roll) + 0.022 * sin(behind / 150.0 + 4.0 * roll) * smoothstep(120.0, 420.0, behind);
   float back = 1.0 - smoothstep(${(LIP.back + 80).toFixed(1)}, ${(LIP.back + 80 + 3 * LIP.backRamp).toFixed(1)}, q.y + 260.0 * (roll - 0.5));
   return LIP_H * up * back * lipEase(q);
 }
@@ -1613,49 +1615,68 @@ bool confNear() { return uCamPos.y > ${(CONF_Y - 3300).toFixed(1)} && uCamPos.y 
 float confLift(vec3 dir) {
   gFieldG = 0.0;
   if (!confNear()) return 0.0;
-  float h = LIP_H;
-  vec2 q = vec2(0.0);
-  for (int i = 0; i < 4; i++) {
-    q = uCamPos.xy + dir.xy * ((uCamPos.z - h) / -dir.z);
-    h = fieldTop(q);
+  // Where the ray first comes down on the field: the greatest height h at which the field, under the place the ray
+  // crosses that height, stands at least h. (The field climbs away from the eye about as steeply as a far ray comes
+  // down to it, so stepping from a guess to the field's height there never settled, and the far streams were drawn
+  // away from where they run. The ray is followed down from above the field's highest roll until it is under the
+  // snow, and the place is then found between the last two heights.)
+  float hA = LIP_H * 2.45;
+  float fA = -1.0;
+  float h = -1.0;
+  vec2 q = uCamPos.xy + dir.xy * ((uCamPos.z - LIP_H * 0.98) / -dir.z);
+  // (A ray that is still short of the cliff when it has come down to the lip's height never reaches the field: most of the frame.)
+  if (q.y < lipY(q.x) - 70.0) return 0.0;
+  for (int i = 1; i <= 6; i++) {
+    float hB = LIP_H * (2.45 - 0.245 * float(i));
+    q = uCamPos.xy + dir.xy * ((uCamPos.z - hB) / -dir.z);
+    float fB = fieldTop(q) - hB;
+    if (fB >= 0.0) {
+      // (Under the snow at hB, over it at hA: halved five times, then the chord.)
+      for (int k = 0; k < 5; k++) {
+        float hM = 0.5 * (hA + hB);
+        q = uCamPos.xy + dir.xy * ((uCamPos.z - hM) / -dir.z);
+        float fM = fieldTop(q) - hM;
+        if (fM >= 0.0) { hB = hM; fB = fM; } else { hA = hM; fA = fM; }
+      }
+      h = hB + (hA - hB) * fB / max(fB - fA, 1e-4);
+      break;
+    }
+    hA = hB;
+    fA = fB;
   }
+  // (A ray that never comes under the snow passes over the field: it lands on the country beyond.)
+  if (h < 0.0) return 0.0;
+  q = uCamPos.xy + dir.xy * ((uCamPos.z - h) / -dir.z);
+  h = fieldTop(q);
   if (q.y < lipY(q.x) + lipBend(q.x) || q.x < lipWest(q.y)) return 0.0;
   gFieldG = (fieldTop(q + vec2(0.0, 14.0)) - h) / 14.0;
   return h;
 }
-/** The ice of a cliff's face. f: 0 at its lip, 1 at the water. along: a measure along it. nP: the way it faces, in plan. */
+// Where the eye's ray meets the cliff, and the ray: set by whoever asks for the cliff's ice.
+vec3 gCliffP = vec3(0.0);
+vec3 gCliffRd = vec3(0.0, 1.0, 0.0);
+/**
+ * The ice of a cliff's face: the glacier's own, as the seracs and the dam are (strata, ledges, fracture planes, melt
+ * cups, threads of meltwater), pale under its lip where it is thin and deep blue toward the water; a cornice of snow
+ * along the lip with one clean lower edge and icicles under it; a dark wet notch at the water.
+ * f: 0 at its lip, 1 at the water. along: a measure along it. nP: the way it faces, in plan.
+ */
 vec3 cliffIce(float f, float along, float tall, float px, vec2 nP) {
-  float flute = textureLod(uGrain, vec2(along / 560.0, f * 0.07 + 0.3), 0.0).g;
-  float flute2 = textureLod(uGrain, vec2(along / 150.0 + 0.4, f * 0.05 + 0.7), lodFor(px, 150.0, 256.0)).g;
-  float seam = textureLod(uGrain, vec2(along / 3000.0 + 0.2, f * 0.5), 0.0).g;
-  vec3 ice = mix(vec3(0.34, 0.64, 0.82), vec3(0.03, 0.2, 0.4), smoothstep(0.08, 0.9, f)) * (0.7 + 0.42 * flute + 0.22 * flute2);
+  vec3 L = keyDir();
+  vec3 n = normalize(vec3(nP, 0.22));
+  float up = (1.0 - f) * tall;
+  float thick = 50.0 + 520.0 * smoothstep(0.03, 0.8, f);
+  vec3 c = iceGlacier(gCliffP, n, gCliffRd, px / uPxAng, vec2(along, up), thick, 1.0, 0.45 + 0.55 * step(0.0, dot(n, L)), 1.0, 1e3, 5.3);
   // (It stands in buttresses, with deep clefts between them.)
-  float butt = textureLod(uGrain, vec2(along / 2300.0 + 0.11, 0.27), 0.0).g;
-  float cleft = 1.0 - smoothstep(0.0, 0.05, abs(butt - 0.5));
-  ice *= 1.0 - 0.5 * cleft * smoothstep(0.05, 0.3, f);
-  ice = mix(ice, vec3(0.085, 0.095, 0.11) * (0.7 + 0.6 * flute2), smoothstep(0.6, 0.68, seam) * smoothstep(0.25, 0.42, f) * 0.7);
-  // The cornice: packed snow over the lip, hanging in lobes, a soft shade under each.
-  float lobes = textureLod(uGrain, vec2(along / 1500.0, 0.61), 0.0).g;
-  float hang = (9.0 + 15.0 * smoothstep(0.3, 0.75, lobes) + 4.0 * flute2) / tall;
-  ice *= 1.0 - 0.32 * (1.0 - smoothstep(0.0, 0.09, f - hang)) * step(hang, f);
-  vec3 nC = normalize(vec3(nP + vec2(-nP.y, nP.x) * ((flute2 - 0.5) * 0.5 + (butt - 0.5) * 0.9), 0.22));
-  // (A face of ice is lit through as well as on: turned from the sun it still holds the sky's light.)
-  vec3 c = ice * (lightOn(nC, 1.0) * 0.62 + S.amb * 0.55);
-  vec3 snow = vec3(0.93, 0.94, 0.96) * (S.key * 0.24 + S.amb * 0.64);
-  if (uNight > 0.0) {
-    // Before dawn the cliff is the night's ice: blue-black toward the water, a shade lighter under its lip where it is
-    // thinnest, its flutes each catching a little of the sky, the buttresses turned to the dawn a breath warmer.
-    vec3 nc = S.amb * vec3(0.3, 0.38, 0.46) * (1.5 - 0.9 * smoothstep(0.05, 0.9, f)) * (0.7 + 0.5 * flute + 0.25 * flute2);
-    nc += vec3(0.011, 0.03, 0.058) * (1.0 - smoothstep(hang, hang + 0.16, f)) * (0.5 + 0.5 * flute2);
-    nc *= 1.0 - 0.5 * cleft * smoothstep(0.05, 0.3, f);
-    nc += S.band * 0.012 * max(dot(nC, dawnDir()), 0.0) + skyNightOn(vec3(nC.xy, 0.9)) * 0.035 * smoothstep(0.5, 0.8, flute2);
-    c = mix(c, nc, uNight);
-    snow = mix(snow, snowNight(vec3(nC.xy * 0.3, 1.0)), uNight);
-  }
-  c = mix(c, snow, 1.0 - smoothstep(hang - 0.012, hang + 0.012, f));
+  float cleft = 1.0 - smoothstep(0.0, 0.09, abs(sin(along / 733.0 + 0.7) * sin(along / 291.0 + 2.0)));
+  c *= 1.0 - 0.4 * cleft * smoothstep(0.05, 0.3, f);
+  // The cornice: packed snow over the lip, its lower edge one line that rises and falls along the cliff.
+  float hang = 11.0 + 7.0 * sin(along / 97.0 + 1.0) + 4.0 * sin(along / 31.0);
+  float dz = f * tall - hang;
+  c = iciclesOn(c, along, dz, px, 18.0);
+  c = corniceOn(c, n, dz, hang, px);
   // Wet and dark where it stands in the water.
-  c *= 1.0 - 0.45 * smoothstep(0.9, 1.0, f);
-  return c;
+  return waterlineOn(c, up, 0.5 + 0.5 * sin(along * 0.05));
 }
 /** The air between the eye and something t away, laid over its colour. */
 vec3 confAir(vec3 c, vec3 dir, float t) {
@@ -1680,6 +1701,8 @@ vec3 confWest(vec3 col, vec3 dir, float landAt0) {
   float aC = (1.0 - smoothstep(top - px, top + px, h.z)) * smoothstep(0.0, 2.0 * px, h.y - lipY(h.x) - lipBend(h.x));
   if (h.z < 0.0) aC *= 1.0 - landAt0;
   if (aC <= 0.0) return col;
+  gCliffP = h;
+  gCliffRd = dir;
   vec3 c = cliffIce((top - h.z) / (top + FREEBOARD), h.y + 400.0, top + FREEBOARD, px, vec2(-1.0, 0.0));
   return mix(col, confAir(c, dir, tc), aC);
 }
@@ -1724,6 +1747,8 @@ vec3 confCliff(vec3 col, vec3 dir, float landAt0) {
   // (The way the face looks, in plan: turned by the bend.)
   float turnB = (lipBend(h.x + 4.0) - lipBend(h.x - 4.0)) / (8.0 * LIP_LEN);
   vec2 nP = normalize(LIP_N + vec2(1.0, ${(-LIP.m).toFixed(3)}) * turnB / LIP_LEN);
+  gCliffP = h;
+  gCliffRd = dir;
   vec3 c = aC > 0.0 ? cliffIce(f, along, tall, px, nP) : col;
   // (A bay holds less of the sky than a buttress's nose, and of a buttress's two flanks one is turned to the brighter half of it.)
   float bay = smoothstep(-30.0, 46.0, lipBend(h.x));
