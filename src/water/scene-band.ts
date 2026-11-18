@@ -15,6 +15,7 @@
 import { onFrame } from '@/lib/frame';
 import { BedPainter } from './bed';
 import { type Basis, type Key, type Pose, basisOf, dayAt, flightKeys, groundUnder, poseAt, stillStops } from './camera';
+import { boardMask, boardReady } from './board';
 import { FlightEngine, scenePicture } from './flight';
 import { freeboardAt } from './shaders/flight';
 import { makeSolver } from './stage';
@@ -340,7 +341,8 @@ export function dropBand() {
 }
 
 const pictures = new Map<string, string>();
-function picture(kind: 'slab' | 'sheet' | 'face', src: string | undefined, engine: FlightEngine, alive: () => boolean) {
+const boards = new WeakMap<FlightEngine, string>();
+function picture(kind: 'slab' | 'face', src: string | undefined, engine: FlightEngine, alive: () => boolean) {
   if (!src || pictures.get(kind) === src) return;
   const img = new Image();
   img.decoding = 'async';
@@ -348,7 +350,6 @@ function picture(kind: 'slab' | 'sheet' | 'face', src: string | undefined, engin
     if (!alive()) return;
     pictures.set(kind, src);
     if (kind === 'slab') engine.setSlab(img);
-    else if (kind === 'sheet') engine.setSheet(img);
     else engine.setFace(img);
   };
   // (The scene has its own cut of each picture, made for the size it is seen at.)
@@ -447,7 +448,16 @@ export async function attachBand(host: HTMLElement, opts: BandOpts, isCancelled:
   if (opts.cols && opts.cols.length === 4) engine.colH.set(opts.cols);
   const alive = () => shared === s;
   picture('slab', opts.slab, engine, alive);
-  picture('sheet', opts.sheet, engine, alive);
+  // (The pool's results are set as type, for this band's own shape and size.)
+  if (opts.sheet) {
+    void boardReady().then(() => {
+      if (!alive()) return;
+      const key = `${a.aspect.toFixed(3)}:${canvas.width}`;
+      if (boards.get(engine) === key) return;
+      boards.set(engine, key);
+      engine.setBoard(boardMask(a.aspect, canvas.width));
+    });
+  }
   picture('face', opts.face, engine, alive);
   const tribKey = (opts.tribs ?? []).join(',');
   let recarve = 0;
