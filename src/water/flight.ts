@@ -269,7 +269,9 @@ export class FlightEngine extends WaterEngine {
   private pump() {
     for (const v of this.variants.values()) if (v.pending) return;
     const now = performance.now();
-    if (now - this.lastBegin < 150) return;
+    // (The first few at once, for where the page now is; the rest a third of a second apart, so the driver's work on
+    // them never crowds the frames.)
+    if (now - this.lastBegin < (this.variants.size < 6 ? 150 : 350)) return;
     if (this.warmQ.length) {
       const [mask, mode] = this.warmQ.shift()!;
       this.begin(mask, mode);
@@ -745,7 +747,21 @@ export class FlightEngine extends WaterEngine {
    */
   private lean = 0;
   private leanNow = 0;
-  private gov = { n: 0, missed: 0, prev: 0, clean: 0, need: 10000, lastUp: -1e9, age: 0, stretch: -1, cand: -1, candAge: 0, quick: false };
+  private gov = { n: 0, missed: 0, prev: 0, clean: 0, need: 10000, lastUp: -1e9, age: 0, stretch: -1, cand: -1, candAge: 0, quick: false, early: [] as number[], sized: false };
+
+  /**
+   * The step the picture begins at, by how many pixels it has to fill: a large screen does not begin with a second
+   * of missed frames while the governor finds out what the size alone could have told it. (A GPU that can do better
+   * is given the richer picture a second and a half later, a step at a time: see `govern`.)
+   */
+  resize(cssW: number, cssH: number, margin: number, dpr: number) {
+    super.resize(cssW, cssH, margin, dpr);
+    if (this.gov.sized || this.gov.age < 0) return;
+    this.gov.sized = true;
+    const px = this.canvas.width * this.canvas.height;
+    this.lean = this.leanNow = px > 6.5e6 ? 2 : px > 4.5e6 ? 1 : 0;
+    this.gov.quick = this.lean > 0;
+  }
   /** The step each stretch last held, by the subjects it shows. */
   private leanAt = new Map<number, number>();
   /** When the governor stepped, and to what: seconds of running time, step. */
@@ -766,8 +782,20 @@ export class FlightEngine extends WaterEngine {
       this.dirty = true;
     }
     g.age += ms;
-    // (The first seconds are the page settling, not the picture's cost.)
-    if (g.age < 2500) return;
+    // (The first seconds are the page settling, not the picture's cost: only a picture that misses most of its frames
+    // is answered that early, and at once.)
+    if (g.age < 2500) {
+      if (g.age < 900 || this.lean >= 2) return;
+      g.early.push(ms > Math.max(this.base * 1.45, 12) ? 1 : 0);
+      if (g.early.length < 24) return;
+      const late = g.early.reduce((x: number, y: number) => x + y, 0);
+      g.early.length = 0;
+      if (late >= 16) {
+        this.lean = 2;
+        this.leanLog.push([+this.time.toFixed(1), this.lean]);
+      }
+      return;
+    }
     const s = this.samples;
     if (this.needed !== g.stretch) {
       if (this.needed !== g.cand) {
@@ -804,7 +832,8 @@ export class FlightEngine extends WaterEngine {
     // About a second of misses (two half-seconds running, each with two or
     // more), or half a second in which a quarter of the frames were late.
     if (((missed >= 2 && g.prev >= 2) || missed >= 8) && this.lean < 2) {
-      this.lean++;
+      // (Most of half a second's frames late: one step will not do, and the leanest is taken at once.)
+      this.lean = missed >= 20 ? 2 : this.lean + 1;
       this.leanLog.push([+this.time.toFixed(1), this.lean]);
       g.clean = 0;
       g.quick = false;
@@ -2015,8 +2044,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       const at = mqStill.matches ? stillScroll(s) : s;
       const pose = basisOf(poseAt(keys, at));
       const need = passNeeds(pose, aspect, iceParts((at - MELT.from) / (MELT.to - MELT.from), themeNow(), true), true);
-      // (Each piece's own: the largest first.)
-      for (const t of engine.tiles(pose, aspect, need)) if (!out.some((o) => o.mask === t.mask)) out.push({ s, mask: t.mask });
+      // (Each piece's own, the largest first. A sliver's is left until it is met: there are many of them along the
+      // flight, each for a moment, and compiling them all ahead keeps the driver busy through the first screens.)
+      for (const t of engine.tiles(pose, aspect, need)) if (t.area >= 0.04 && !out.some((o) => o.mask === t.mask)) out.push({ s, mask: t.mask });
     }
     return out;
   };
