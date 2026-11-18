@@ -15,7 +15,7 @@ import { emit, flightSignal, pictureSignal, pointerSignal, signals } from '@/lib
 import { BedPainter } from './bed';
 import { boardMask, boardReady } from './board';
 import { makeCallouts } from './callouts';
-import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, poseAt, projectPoint, stillScroll, type Key, type V3 } from './camera';
+import { type Basis, END_AT, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, poseAt, stillScroll, type Key, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Pending, type Program, type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
 import { DAWN, GATE, LAP, PULSE, RIBBON, dawnLight, nextDrip, stationsNear, stepGates } from './moments';
@@ -24,8 +24,9 @@ import { flightSource, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
+import { F, F_ALL, type Mode, bits, maskName, passNeeds, seaNear, slabInFrame, tarnNear } from './variants';
 import { NAV_CLEAR, composedAt } from './words';
-import { CANYON, COLS, DAM, DELTA, LAKE, LATTICE, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TARN, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
+import { COLS, LAKE, LATTICE, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -93,6 +94,23 @@ const SCENE_PICS: Record<string, string> = {
 };
 export const scenePicture = (src: string) => SCENE_PICS[src] ?? src;
 
+/**
+ * Whether the pass is compiled for one theme at a time. The theme is in
+ * nearly every line of it (two lightings, not two tints), so a variant that
+ * knows the theme when it is compiled carries half the work.
+ */
+const THEMED = true;
+const MODE_DEFS: Record<Mode, string[]> = { day: ['DAY'], night: ['NIGHT'], any: [] };
+interface Variant {
+  mask: number;
+  mode: Mode;
+  pending: Pending | null;
+  prog: Program | null;
+  failed: boolean;
+  began: number;
+  took: number;
+}
+
 export class FlightEngine extends WaterEngine {
   private slabTex: WebGLTexture | null = null;
   private slabTint: V3 = [0.2, 0.2, 0.2];
@@ -103,6 +121,7 @@ export class FlightEngine extends WaterEngine {
   constructor(canvas: HTMLCanvasElement, opts: EngineOpts) {
     super(canvas, opts);
     this.crackCell = 700;
+    this.firstMode = this.mode();
     // The world does not scroll under the sheet: it melts where it lies.
     this.meltRange = 0;
     this.lastScroll = 0;
@@ -111,7 +130,7 @@ export class FlightEngine extends WaterEngine {
   protected sources() {
     const s = super.sources();
     delete s.render;
-    s.flight = flightSource(false);
+    s.flight = flightSource(this.firstNeed, MODE_DEFS[this.firstMode]);
     s.ground = GROUND;
     s.snowH = SNOW_H;
     s.mountH = MOUNT_H;
@@ -140,6 +159,8 @@ export class FlightEngine extends WaterEngine {
       this.p[k] = compileEnd(gl, p);
       await tick();
     }
+    this.variants.set(`${this.firstNeed}:${this.firstMode}`, { mask: this.firstNeed, mode: this.firstMode, pending: null, prog: this.p.flight, failed: false, began: 0, took: 0 });
+    this.shading.add(this.p.flight);
     super.bake();
     await tick();
     // The snow: its cut forms first, then (a task later) its slope and the shade those forms throw.
@@ -164,27 +185,197 @@ export class FlightEngine extends WaterEngine {
   }
 
   /**
-   * The pass's second variant, with the sea in it (see the shading pass).
-   * It is handed to the driver once the page is running and taken when the
-   * driver has finished; until then, and wherever the sea is far off, the
-   * first variant draws.
+   * The pass's variants (see variants.ts and the shading pass). Each carries
+   * only some of the flight's subjects, and is compiled for one theme or
+   * for the turn between the two; a frame is drawn by the smallest one that
+   * carries all it can show. The first is compiled with the rest of the
+   * engine; every other is handed to the driver while the page runs and
+   * taken when the driver says it is done (never waited for), and until the
+   * one a frame wants is there, the best of those that are draws.
    */
-  private seaPending: Pending | null = null;
-  private seaProg: Program | null = null;
-  warmSea() {
-    if (this.seaPending || this.seaProg || this.gl.isContextLost()) return;
-    this.seaPending = compileBegin(this.gl, flightSource(true), 'flightSea');
+  /** What the first frame will need: set before `prepare`, so the one variant the first frame waits for is its own. */
+  firstNeed: number = F.ICE;
+  private firstMode: Mode = 'any';
+  private variants = new Map<string, Variant>();
+  /** Every program that is the shading pass, whichever variant. */
+  private shading = new Set<Program>();
+  /** The variants the flight will want, nearest first (see `warm`), and every stretch's subjects, in no order. */
+  private warmQ: [number, Mode][] = [];
+  private planned: number[] = [];
+  private lastBegin = 0;
+  /** The variant that drew the last frame, and what that frame needed. */
+  private drawn: Variant | null = null;
+  private needed = -1;
+
+  /** The theme a variant is compiled for now: the day's or the night's while the theme is at rest, neither while it turns. */
+  private mode(): Mode {
+    if (!THEMED) return 'any';
+    return this.theme <= 0 && this.themeTarget <= 0 ? 'day' : this.theme >= 1 && this.themeTarget >= 1 ? 'night' : 'any';
   }
-  private seaReady(): Program | null {
-    if (!this.seaProg && this.seaPending && compileDone(this.gl, this.seaPending)) {
+
+  /** Hand a variant to the driver. Nothing here waits for it. */
+  private begin(mask: number, mode: Mode) {
+    const key = `${mask}:${mode}`;
+    if (this.variants.has(key) || this.gl.isContextLost()) return;
+    const now = performance.now();
+    this.variants.set(key, { mask, mode, pending: compileBegin(this.gl, flightSource(mask, MODE_DEFS[mode]), `flight:${maskName(mask)}:${mode}`), prog: null, failed: false, began: now, took: 0 });
+    this.lastBegin = now;
+  }
+
+  /** Take what the driver has finished. True when a variant has arrived. */
+  private take(): boolean {
+    let got = false;
+    for (const v of this.variants.values()) {
+      if (!v.pending || !compileDone(this.gl, v.pending)) continue;
       try {
-        this.seaProg = compileEnd(this.gl, this.seaPending);
+        v.prog = compileEnd(this.gl, v.pending);
+        this.shading.add(v.prog);
+        got = true;
       } catch (err) {
+        v.failed = true;
         if (process.env.NODE_ENV !== 'production') console.warn(err);
       }
-      this.seaPending = null;
+      v.took = performance.now() - v.began;
+      v.pending = null;
     }
-    return this.seaProg;
+    return got;
+  }
+
+  /**
+   * The stretches the flight will pass through, nearest first: each one's
+   * subjects. Their variants are compiled one at a time, each begun only
+   * when the last has been taken, so the driver is never given a pile of
+   * work in one frame. After the nearest comes the whole pass (whatever the
+   * page then does, something that is ready can draw all of it), and the
+   * nearest again for the turn between the themes, so the theme can be
+   * changed without a wait.
+   */
+  warm(masks: number[]) {
+    this.planned = masks.slice();
+    const m = this.mode();
+    const q: [number, Mode][] = [];
+    masks.forEach((mask, i) => {
+      q.push([mask, m]);
+      if (i === 0) q.push([F_ALL, m]);
+      if (i === 1 && m !== 'any') q.push([masks[0], 'any']);
+    });
+    this.warmQ = q.filter(([mask, mode]) => !this.variants.has(`${mask}:${mode}`));
+  }
+  private pump() {
+    if (!this.warmQ.length) return;
+    for (const v of this.variants.values()) if (v.pending) return;
+    if (performance.now() - this.lastBegin < 150) return;
+    const [mask, mode] = this.warmQ.shift()!;
+    this.begin(mask, mode);
+  }
+
+  /** For the checks: a variant held in place of the engine's own choice. */
+  private forced: Variant | null = null;
+  /**
+   * For the checks: compile a variant on the spot (this waits for the driver)
+   * and draw every frame with it, whatever the frame needs; null hands the
+   * choice back. `defines`: further names to define in its source.
+   */
+  holdVariant(mask: number | null, defines: string[] = []): { ms: number; error: string | null } {
+    this.forced = null;
+    this.dirty = true;
+    if (mask === null) return { ms: 0, error: null };
+    const key = `${mask}:${defines.join(',')}`;
+    const had = this.heldProgs.get(key);
+    if (had) {
+      this.forced = had;
+      return { ms: had.took, error: null };
+    }
+    const t0 = performance.now();
+    try {
+      const prog = compileEnd(this.gl, compileBegin(this.gl, flightSource(mask, defines), 'flight:held'));
+      this.shading.add(prog);
+      this.forced = { mask, mode: 'any', pending: null, prog, failed: false, began: t0, took: performance.now() - t0 };
+      this.heldProgs.set(key, this.forced);
+      return { ms: performance.now() - t0, error: null };
+    } catch (err) {
+      return { ms: performance.now() - t0, error: String(err) };
+    }
+  }
+  private heldProgs = new Map<string, Variant>();
+  /**
+   * For the checks: the frame as it is drawn now, read back (the clock must
+   * be held, so the frame depends on the camera alone). Two variants of the
+   * pass can then be compared in one visit, pixel for pixel.
+   */
+  grab(): Uint8Array | null {
+    const a = this.lastArgs;
+    if (this.held === null || !a) return null;
+    const gl = this.gl;
+    this.drawHeld(a.cam, a.aspect, a.at, a.top);
+    const px = new Uint8Array(this.canvas.width * this.canvas.height * 4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.readPixels(0, 0, this.canvas.width, this.canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    return px;
+  }
+  private lastArgs: { cam: Basis; aspect: number; at: FlightMoment; top: number } | null = null;
+
+  /** The variant to draw a frame with: the leanest that is ready, is right for the theme, and carries all the frame needs. */
+  private pick(need: number): Variant {
+    if (this.forced) return this.forced;
+    const mode = this.mode();
+    const fits = (v: Variant) => !!v.prog && (v.mode === mode || v.mode === 'any');
+    let best: Variant | null = null;
+    for (const v of this.variants.values()) {
+      if (!fits(v) || (v.mask & need) !== need) continue;
+      if (!best || bits(v.mask) < bits(best.mask) || (bits(v.mask) === bits(best.mask) && v.mode === mode && best.mode !== mode)) best = v;
+    }
+    // The one this stretch is planned to be drawn by (or, where nothing was planned for it, its very own) is asked for now.
+    let want = need;
+    let wantBits = 99;
+    for (const m of this.planned) {
+      if ((m & need) === need && bits(m) < wantBits) {
+        want = m;
+        wantBits = bits(m);
+      }
+    }
+    if (!best || bits(want) < bits(best.mask) || best.mode !== mode) this.begin(want, mode);
+    if (best) return best;
+    // Nothing that is ready carries all of it: the one that carries most of it draws until one does.
+    for (const v of this.variants.values()) {
+      if (!fits(v)) continue;
+      if (!best || bits(v.mask & need) > bits(best.mask & need) || (bits(v.mask & need) === bits(best.mask & need) && bits(v.mask) < bits(best.mask))) best = v;
+    }
+    // (Nothing for this theme at all: whatever is ready draws, for the moment it takes the driver.)
+    if (!best) for (const v of this.variants.values()) if (v.prog && (!best || bits(v.mask & need) > bits(best.mask & need))) best = v;
+    return best!;
+  }
+
+  /**
+   * The theme turns through a variant that is told the theme each frame.
+   * Until one that carries what the frame needs is ready (it is asked for
+   * at once, and with the first stretch's variants in any case), the
+   * picture keeps the theme it has: a moment, not a wrong frame.
+   */
+  private themeWant: number | null = null;
+  setTheme(t: number, instant = false) {
+    if (!THEMED || instant || !this.variants.size) {
+      super.setTheme(t, instant);
+      return;
+    }
+    this.themeWant = t;
+    this.dirty = true;
+  }
+  private turnTheme() {
+    if (this.themeWant === null) return;
+    if (this.themeWant === this.themeTarget) {
+      this.themeWant = null;
+      return;
+    }
+    const need = this.needed < 0 ? this.firstNeed : this.needed;
+    let ready = false;
+    for (const v of this.variants.values()) if (v.prog && v.mode === 'any' && (v.mask & need) === need) ready = true;
+    if (!ready) {
+      this.begin(need, 'any');
+      return;
+    }
+    super.setTheme(this.themeWant);
+    this.themeWant = null;
   }
 
   /** The snow's relief, baked once. */
@@ -467,8 +658,60 @@ export class FlightEngine extends WaterEngine {
     this.gov.age = -1e12;
   }
 
+  /**
+   * For the checks: hold the clock (null lets it run again). While it is
+   * held the picture depends on the camera and nothing else: the water is
+   * run from rest for the same short while before every frame drawn, and
+   * nothing happens by chance or by the pointer. Two visits then draw the
+   * same frame at the same place, so a change to the picture can be measured.
+   */
+  private held: number | null = null;
+  holdClock(t: number | null) {
+    this.held = t;
+    if (t === null) this.last = 0;
+    this.dirty = true;
+  }
+  /** Nothing moves by the clock: motion is reduced, or the clock is held. */
+  private get quiet() {
+    return this.still || this.held !== null;
+  }
+  private drawHeld(cam: Basis, aspect: number, at: FlightMoment, top: number) {
+    const gl = this.gl;
+    const held = this.held ?? 0;
+    for (const t of [this.wave!.a, this.wave!.b, this.waveOut!, this.vel!.a, this.vel!.b, this.heat.a, this.heat.b]) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    this.hasSimTop = false;
+    this.ptr.active = false;
+    this.ptr.vx = this.ptr.vy = 0;
+    this.meltRate = this.meltAct = 0;
+    this.lift = this.ray = this.rise = at.rest ? 1 : 0;
+    const steps = 48;
+    for (let i = steps - 1; i >= 0; i--) {
+      this.drop.s = 0;
+      this.time = held - i / 60;
+      this.simulate(1 / 60, top);
+    }
+    // (The glow is the frame before's: drawn until it has settled.)
+    for (let i = 0; i < 4; i++) this.draw(cam, aspect, at);
+    this.drop.s = 0;
+  }
+
   get info() {
-    return { ...super.info, tier: Math.max(this.tier, this.lean), simTier: this.tier, lean: this.lean, leanLog: this.leanLog.slice(-12) };
+    return {
+      ...super.info,
+      tier: Math.max(this.tier, this.lean),
+      simTier: this.tier,
+      lean: this.lean,
+      leanLog: this.leanLog.slice(-12),
+      // The variant of the pass that drew the last frame, what that frame needed, and every variant asked for so far
+      // (how long the driver took over it, in ms; 'pending' while it is still at it).
+      variant: this.drawn ? `${maskName(this.drawn.mask)}:${this.drawn.mode}` : '',
+      needed: maskName(this.needed),
+      variants: Array.from(this.variants.values(), (v) => `${maskName(v.mask)}:${v.mode}:${v.failed ? 'failed' : v.pending ? 'pending' : Math.round(v.took)}`),
+    };
   }
 
   /** Station 5: each column's height. */
@@ -487,9 +730,9 @@ export class FlightEngine extends WaterEngine {
     this.gateT = this.time;
     const i = this.gate;
     const at = this.surge[i];
-    stepGates(this.gateNow, this.surge, i, dt, this.still);
+    stepGates(this.gateNow, this.surge, i, dt, this.quiet);
     // The surge's head is real water: it throws rings as it goes.
-    if (!this.still && at < 1 && Math.floor(at * GATE.rings) !== Math.floor(this.surge[i] * GATE.rings)) {
+    if (!this.quiet && at < 1 && Math.floor(at * GATE.rings) !== Math.floor(this.surge[i] * GATE.rings)) {
       const line = SLUICES[i];
       const k = Math.min(line.length - 2, Math.floor(at * (line.length - 1)));
       const f = at * (line.length - 1) - k;
@@ -560,6 +803,12 @@ export class FlightEngine extends WaterEngine {
     if (!st || !this.iceMeta || ice.rect[2] <= 0) {
       gl.uniform4f(prog.u.uNameG, 0, 0, -1e4, 0);
       if (prog.u.uNameS) gl.uniform1f(prog.u.uNameS, 0);
+      // (Once the sheet has gone, the lead its water left by is still where the lake's current is drawn from: these two
+      // stand as the last frame of the melt left them, whichever variant of the pass draws.)
+      if (st && this.iceMeta && this.iceTex && prog.u.uNameL) {
+        gl.uniform2f(prog.u.uNameL, 1, 220);
+        if (prog.u.uNameB) gl.uniform4f(prog.u.uNameB, st.base[0], st.base[1], st.cap, st.depth);
+      }
       return;
     }
     // The blocks' melt, as the sheet's is: every number a function of the melt alone, so it reverses exactly.
@@ -585,7 +834,7 @@ export class FlightEngine extends WaterEngine {
     // The sheet opens from under their feet. First the meltwater lies on the ice round them (the simulation
     // takes that for open water, so the pointer wakes it); then the ice under it goes, the pools join, and
     // from half way the one pool they have become is the sheet's own.
-    const shade = prog === this.p.flight || prog === this.seaProg;
+    const shade = this.shading.has(prog);
     const old = ice.a[0] + 3;
     const hole = -30 + 78 * smooth(0.1, 0.47, m);
     const pond = 32 + 34 * smooth(0.04, 0.45, m);
@@ -690,6 +939,11 @@ export class FlightEngine extends WaterEngine {
     this.dirty = true;
   }
 
+  /** Whether the block has its picture (it is not drawn without one). */
+  get hasSlab() {
+    return !!this.slabTex;
+  }
+
   /** The product picture the slab carries. */
   setSlab(img: HTMLImageElement) {
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
@@ -740,7 +994,7 @@ export class FlightEngine extends WaterEngine {
     this.meltRate += (Math.min(rate, 1.1) - this.meltRate) * (1 - Math.exp(-dt * 6));
     // While the letters melt, water runs off them and falls into the pool at their feet: a small ring, here and there,
     // every little while. (They are real rings in the simulation, and only while there is water there for them.)
-    if (this.nameStand && !this.still && m > 0.035 && m < NAME_GONE - 0.02 && this.time >= this.nameDripAt) {
+    if (this.nameStand && !this.quiet && m > 0.035 && m < NAME_GONE - 0.02 && this.time >= this.nameDripAt) {
       const st = this.nameStand;
       const r = this.iceRect;
       const two = st.split > -5e3;
@@ -750,7 +1004,7 @@ export class FlightEngine extends WaterEngine {
       this.nameDripAt = this.time + 0.16 + 0.5 * Math.random();
     }
     // The last of the letters goes under: a ring leaves where each blade stood.
-    if (this.nameStand && !this.still && this.melt < NAME_GONE && m >= NAME_GONE && this.melt > NAME_GONE - 0.08) this.nameRings();
+    if (this.nameStand && !this.quiet && this.melt < NAME_GONE && m >= NAME_GONE && this.melt > NAME_GONE - 0.08) this.nameRings();
     this.melt = m;
     const want = this.iceTex && !this.still && m > 0.12 && m < ICE_GONE ? Math.min(1, this.meltRate * 2.4) : 0;
     this.meltAct += (want - this.meltAct) * (1 - Math.exp(-dt * (want > this.meltAct ? 9 : 4.2)));
@@ -774,10 +1028,19 @@ export class FlightEngine extends WaterEngine {
     const near = groundUnder(cam, 0.5, 0.9, aspect) ?? { x: cam.pos[0], y: cam.pos[1], t: 0 };
     // (Past the world's last row the bed repeats, which is open sea: the window follows the camera out over it.)
     const top = Math.min(REST.y + SPAN * 0.5, Math.max(-SPAN * 0.5, near.y - SPAN * 0.14));
+    // (A still picture is drawn only when something changes. A variant of the pass arriving is such a change: without
+    // this a reader who has asked for no motion and reaches a subject before its variant is ready would not see it.)
+    if (this.take()) this.dirty = true;
+    this.pump();
+    this.turnTheme();
+    if (this.held !== null) {
+      this.lastArgs = { cam, aspect, at: { ...at, box: [...at.box], cap: at.cap ? [...at.cap] : undefined }, top };
+      if (!this.dirty) return;
+      this.drawHeld(cam, aspect, at, top);
+      this.dirty = false;
+      return;
+    }
     this.runDawn(at.rest);
-    // (A still picture is drawn only when something changes. The sea's variant of the pass arriving is such a change:
-    // without this a reader who has asked for no motion and reaches the sea before it is ready keeps the river's water.)
-    if (this.still && this.seaPending && compileDone(gl, this.seaPending)) this.dirty = true;
 
     if (this.still) {
       if (!this.dirty) return;
@@ -801,15 +1064,28 @@ export class FlightEngine extends WaterEngine {
     this.dirty = false;
   }
 
+  /** What the pass must carry to draw a frame from this camera whole (see variants.ts). */
+  needs(cam: Basis, aspect: number): number {
+    return passNeeds(cam, aspect, !!this.iceTex && (this.melt < 1 || this.meltAct > 0), !!this.slabTex);
+  }
+  /** Whether a variant that carries all of that is ready. Where none is, it is asked for. */
+  carries(need: number): boolean {
+    const mode = this.mode();
+    for (const v of this.variants.values()) if (v.prog && (v.mode === mode || v.mode === 'any') && (v.mask & need) === need) return true;
+    this.begin(need, mode);
+    return false;
+  }
+
   private draw(cam: Basis, aspect: number, at: FlightMoment) {
     const gl = this.gl;
-    // The open sea is only worked out when the camera is near enough to see
-    // it: from inside the canyon on. Further off the first variant draws.
-    const toSea = Math.hypot(cam.pos[0] - 1900, cam.pos[1] - DELTA.sea);
-    let seaOn = cam.pos[1] > DELTA.sea ? 1 : 1 - smooth(2600, 3400, toSea);
-    const sea = seaOn > 0 ? this.seaReady() : null;
-    if (!sea) seaOn = 0;
-    const r = sea ?? this.p.flight;
+    // The variant of the pass this frame is drawn by: the leanest that carries all it can show.
+    const need = this.needs(cam, aspect);
+    const variant = this.pick(need);
+    this.needed = need;
+    this.drawn = variant;
+    // (The open sea is only worked out when the camera is near enough to see it, and by a variant that carries it.)
+    const seaOn = variant.mask & F.SEA ? seaNear(cam) : 0;
+    const r = variant.prog!;
     const tier = TIERS[this.tier];
     gl.useProgram(r.prog);
     const pal = this.palette();
@@ -826,7 +1102,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uBedDiv, this.bedMeta.div);
     gl.uniform1f(r.u.uTime, this.time);
     // The tarn's shards are only worked out from near by.
-    const nearTarn = Math.hypot(cam.pos[0] - TARN.x, cam.pos[1] - TARN.y) < 3200 && cam.pos[2] < 700;
+    const nearTarn = tarnNear(cam);
     gl.uniform1f(r.u.uShardOn, nearTarn ? 1 : 0);
     if (nearTarn) {
       // A pulse leaving a shard is a real splash at its foot.
@@ -845,7 +1121,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform3fv(r.u.uGate, this.gateNow);
     gl.uniform3fv(r.u.uSurge, this.surge);
     pictureSignal(this.time, st, this.gateNow, this.surge, this.ray, this.lift, this.rise);
-    if (st[0] > 0.5 && !this.still) {
+    if (st[0] > 0.5 && !this.quiet) {
       // Meltwater drips from the columns into the shallows: real rings, most from the tallest.
       // (Each is chosen ahead of its time and published then, so its sound can be set for the frame that shows it.)
       if (!this.drip) {
@@ -859,7 +1135,7 @@ export class FlightEngine extends WaterEngine {
         this.splash(x, y, 12 + 8 * Math.random(), 0.5);
       }
     } else this.drip = null;
-    if (st[2] > 0.5 && !this.still) {
+    if (st[2] > 0.5 && !this.quiet) {
       // The light sets out with a real ring where the thread enters the pool.
       const lap = Math.floor(this.time / LAP);
       if (lap !== this.latLap) {
@@ -903,34 +1179,12 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4fv(r.u.uLight, pal.light);
 
     // The slab, and the part of the screen it can be on.
-    const sin = Math.sin(SLAB.turn);
-    const cos = Math.cos(SLAB.turn);
-    const nx = -sin;
-    const ny = -cos;
-    const rx = cos;
-    const ry = -sin;
-    let x0 = 1;
-    let y0 = 1;
-    let x1 = 0;
-    let y1 = 0;
-    let behind = 0;
-    for (let i = 0; i < 8; i++) {
-      const side = (i & 1 ? 0.5 : -0.5) * SLAB.w;
-      const back = i & 2 ? SLAB.thick : 0;
-      const z = SLAB.lift + (i & 4 ? SLAB.h : 0);
-      const pr = projectPoint(cam, [SLAB.x + rx * side - nx * back, SLAB.y + ry * side - ny * back, z], aspect);
-      if (pr[2] < 1) behind++;
-      x0 = Math.min(x0, pr[0]);
-      x1 = Math.max(x1, pr[0]);
-      y0 = Math.min(y0, 1 - pr[1]);
-      y1 = Math.max(y1, 1 - pr[1]);
-    }
-    const on = this.slabTex && behind < 8;
+    const sl = slabInFrame(cam, aspect);
+    const on = this.slabTex && sl.behind < 8;
     gl.uniform3f(r.u.uSlabPos, SLAB.x, SLAB.y, SLAB.lift);
-    gl.uniform4f(r.u.uSlabDir, nx, ny, rx, ry);
+    gl.uniform4f(r.u.uSlabDir, sl.nx, sl.ny, sl.rx, sl.ry);
     gl.uniform3f(r.u.uSlabSize, on ? SLAB.w : 0, SLAB.h, SLAB.thick);
-    if (behind > 0) gl.uniform4f(r.u.uSlabBox, 0, 0, 1, 1);
-    else gl.uniform4f(r.u.uSlabBox, x0 - 0.01, y0 - 0.01, x1 + 0.01, y1 + 0.01);
+    gl.uniform4fv(r.u.uSlabBox, sl.box);
     gl.uniform3fv(r.u.uSlabTint, this.slabTint);
     if (r.u.uTribW) gl.uniform1fv(r.u.uTribW, this.tribW);
 
@@ -1019,7 +1273,18 @@ export class FlightEngine extends WaterEngine {
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
     if (this.faceTex) this.gl.deleteTexture(this.faceTex);
     if (this.sheetTex) this.gl.deleteTexture(this.sheetTex);
-    if (this.seaProg) this.gl.deleteProgram(this.seaProg.prog);
+    for (const v of this.variants.values()) {
+      // (The first is the engine's own `flight` program: it goes with the rest.)
+      if (v.prog && v.prog !== this.p.flight) this.gl.deleteProgram(v.prog.prog);
+      if (v.pending) {
+        this.gl.deleteShader(v.pending.vs);
+        this.gl.deleteShader(v.pending.fs);
+        this.gl.deleteProgram(v.pending.prog);
+      }
+    }
+    this.variants.clear();
+    for (const v of this.heldProgs.values()) if (v.prog) this.gl.deleteProgram(v.prog.prog);
+    this.heldProgs.clear();
     freeTarget(this.gl, this.ground);
     freeTarget(this.gl, this.pano);
     super.destroy();
@@ -1051,6 +1316,16 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   const themeNow = () => (html.dataset.theme === 'dark' ? 1 : 0);
 
   const engine = new FlightEngine(canvas, { theme: themeNow(), still: mqStill.matches, coarse });
+  {
+    // The one variant of the pass the first frame waits for is the one for where the page now is (a reload may open it anywhere).
+    const a0 = html.clientWidth / Math.max(window.innerHeight, html.clientHeight, 1);
+    const first = document.querySelector<HTMLElement>('[data-fl]');
+    const u0 = first ? first.offsetHeight / (SECTIONS.hero + 1) : window.innerHeight;
+    const s0 = window.scrollY / Math.max(u0, 1);
+    const at = mqStill.matches ? stillScroll(s0) : s0;
+    // (The block's picture has not been asked for yet: the first frame is drawn without it.)
+    engine.firstNeed = passNeeds(basisOf(poseAt(flightKeys(a0), at)), a0, (at - MELT.from) / (MELT.to - MELT.from) < 1, false);
+  }
   await engine.prepare();
   if (isCancelled()) {
     engine.destroy();
@@ -1460,8 +1735,28 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   measureWords();
   // (The first frame's words take their places once the flight is on, and settle a moment later: they are measured then.)
   const heroTimers = [0, 450, 1300].map((ms) => window.setTimeout(measureHero, ms));
-  // The sea's variant of the pass is compiled once the first frames are out.
-  const warm = window.setTimeout(() => engine.warmSea(), 900);
+  // The other variants of the pass are compiled once the first frames are out: the one for every stretch of the
+  // flight, those nearest where the page now is first.
+  /** Each stretch's subjects, with the scroll position they are first needed at. */
+  const planFlight = () => {
+    const out: { s: number; mask: number }[] = [];
+    for (let s = 0; s <= END_AT + 1e-6; s += 0.05) {
+      const at = mqStill.matches ? stillScroll(s) : s;
+      const mask = passNeeds(basisOf(poseAt(keys, at)), aspect, (at - MELT.from) / (MELT.to - MELT.from) < 1, true);
+      if (!out.some((o) => o.mask === mask)) out.push({ s, mask });
+    }
+    return out;
+  };
+  const warmFlight = () => {
+    if (destroyed) return;
+    const here = window.scrollY / unit;
+    engine.warm(
+      planFlight()
+        .sort((a, b) => Math.abs(a.s - here) - Math.abs(b.s - here))
+        .map((p) => p.mask),
+    );
+  };
+  const warm = window.setTimeout(warmFlight, 700);
 
   // The product picture: the slab appears when it has loaded.
   const img = new Image();
@@ -1505,7 +1800,13 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   const ro = new ResizeObserver(onResize);
   ro.observe(document.body);
   window.addEventListener('resize', onResize);
-  const onTheme = () => engine.setTheme(themeNow());
+  // (A theme's variants are its own: the stretches are asked for again once it has turned.)
+  let rewarm = 0;
+  const onTheme = () => {
+    engine.setTheme(themeNow());
+    window.clearTimeout(rewarm);
+    rewarm = window.setTimeout(warmFlight, 1500);
+  };
   window.addEventListener('themechange', onTheme);
   const onStill = () => engine.setStill(mqStill.matches);
   mqStill.addEventListener('change', onStill);
@@ -1657,6 +1958,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       window.clearTimeout(boxTimer);
       heroTimers.forEach((t) => window.clearTimeout(t));
       window.clearTimeout(warm);
+      window.clearTimeout(rewarm);
       solver.dispose();
       window.clearTimeout(resizeTimer);
       window.removeEventListener('resize', onResize);

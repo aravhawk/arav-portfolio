@@ -19,6 +19,7 @@ import { boardMask, boardReady } from './board';
 import { FlightEngine, scenePicture } from './flight';
 import { freeboardAt } from './shaders/flight';
 import { makeSolver } from './stage';
+import { passNeeds } from './variants';
 import { LAKE, NAME, OUTLET, SHOAL_Y, TRIBS, WORLD, paintWorld, tribWidth } from './world';
 
 export type SceneId = 'infiniview' | 'open-source' | 'kilo-bench' | 'agent-bridge' | 'ollama' | 'cc-switch' | 'tensorpow' | 'rydar' | 'delta' | 'lake' | 'snow';
@@ -162,7 +163,13 @@ async function carve(s: Shared, tribs: number[] | undefined, isDead: () => boole
   return true;
 }
 
-function start(first: BandOpts): Promise<Shared | null> {
+/** The pose a scene is first seen from (its own first pose, or its station's composed frame). */
+function firstPose(scene: SceneId, aspect: number): Pose {
+  const own = ownPoses(scene, aspect);
+  return own ? own[0] : poseAt(flightKeys(aspect), stillStops()[STOP[scene] ?? 0]);
+}
+
+function start(first: BandOpts, aspect: number): Promise<Shared | null> {
   if (shared) return Promise.resolve(shared);
   if (failed) return Promise.resolve(null);
   if (starting) return starting;
@@ -179,6 +186,8 @@ function start(first: BandOpts): Promise<Shared | null> {
     try {
       // Throws when WebGL2 or float targets are missing: the still stays.
       engine = new FlightEngine(canvas, { theme: themeNow(), still: mqStill.matches, coarse });
+      // The one variant of the pass this start waits for is the first scene's own: its station and nothing else.
+      engine.firstNeed = passNeeds(basisOf(firstPose(first.scene, aspect)), aspect, first.scene === 'lake', false);
       await engine.prepare();
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') console.warn(err);
@@ -195,8 +204,6 @@ function start(first: BandOpts): Promise<Shared | null> {
     // The lake's sheet, with nothing cut in it: a field that is far from any letter everywhere.
     engine.iceRect = { x: NAME.x - 750, y: NAME.y - 300, w: 1500, h: 600 };
     engine.setIce({ sd: new Float32Array(64 * 64).fill(400), w: 64, h: 64, minSd: -1 });
-    // The sea's variant of the pass: the delta needs it, the rest never ask.
-    const warm = window.setTimeout(() => engine.warmSea(), 300);
 
     // A lost context draws nothing: the still comes back in its place.
     canvas.addEventListener('webglcontextlost', () => {
@@ -281,6 +288,8 @@ function start(first: BandOpts): Promise<Shared | null> {
         }
       }
       cam = basisOf(pose);
+      // (A scene is not shown until a variant of the pass that carries all of it is ready: until then the still stays.)
+      if (!a.drawn && !engine.carries(passNeeds(cam, a.aspect, a.opts.scene === 'lake', engine.hasSlab))) return;
       const b = a.boxOn ? a.box : box;
       engine.frame(now, cam, a.aspect, {
         // Only the lake's own frame shows the sheet; from every station it has long gone.
@@ -302,7 +311,6 @@ function start(first: BandOpts): Promise<Shared | null> {
 
     s.dispose = () => {
       dead = true;
-      window.clearTimeout(warm);
       s.off();
       window.removeEventListener('themechange', onTheme);
       mqStill.removeEventListener('change', onStill);
@@ -362,7 +370,7 @@ function picture(kind: 'slab' | 'face', src: string | undefined, engine: FlightE
  */
 export async function attachBand(host: HTMLElement, opts: BandOpts, isCancelled: () => boolean = () => false): Promise<BandHandle | null> {
   window.clearTimeout(killTimer);
-  const s = await start(opts);
+  const s = await start(opts, host.clientWidth / Math.max(host.clientHeight, 1) || 1.8);
   if (!s || isCancelled()) {
     if (!active && s) scheduleKill();
     return null;

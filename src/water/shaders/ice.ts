@@ -39,6 +39,7 @@ uniform sampler2D uSnow;   // three draws of one smooth field, in half floats: a
 // How far the last place asked about lies from the letters' own box, in the name's frame px (the first camera's picture).
 float gIceBoxD = 1e4;
 
+#ifndef NO_ICE_FIELD
 vec2 ih2(vec2 p) {
   p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
   return fract(sin(p) * 43758.5453);
@@ -145,6 +146,7 @@ float wordsClear(vec2 u) {
   return 0.5 + 0.5 * (dyc * uIceP.w - uIceP.y * uIceP.z) / zc / max(uNameT, 0.05) - uNameW.z;
 }
 
+#endif
 /**
  * The lead the name's meltwater leaves by: one long wandering fracture from
  * behind the letters down the lake to the outlet, which the water finds and
@@ -161,6 +163,7 @@ vec2 leadAt(float y) {
   return vec2(x, t);
 }
 
+#ifndef NO_ICE_FIELD
 /** Distance to the one rounded pool the letters run together into. */
 float poolSd(vec2 q) {
   float r = min(uIceBox.z, uIceBox.w) * 0.92;
@@ -478,4 +481,5 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   }
   return f;
 }
+#endif
 `;

@@ -135,6 +135,13 @@ vec3 snowOn(vec3 n, float lump) {
   vec3 day = vec3(0.93, 0.94, 0.96) * (S.key * 0.26 * (0.42 + 0.9 * max(dot(nl, L), 0.0)) + S.amb * 0.85);
   return uNight > 0.0 ? mix(day, snowNight(nl), uNight) : day;
 }
+// 1 while a subject is drawn as its mirror image in the water: its fine inner work is not looked for.
+float gMirror = 0.0;
+bool gMirrorOn() { return gMirror > 0.5; }
+`;
+
+/** The glacier's own ice, which every station is made of: only in a variant of the pass that draws one. */
+export const GLACIER_ICE = `
 /**
  * What a ray that has left a piece of ice goes on to: the sky and the ranges
  * if it rises, the snow or the water if it falls. (Blunt: it is only ever
@@ -162,9 +169,6 @@ vec3 beyond(vec3 ro, vec3 rd) {
   vec3 c = mix(water, snow, smoothstep(-6.0, 6.0, sd));
   return mix(c, mix(S.hor, vec3(0.012, 0.03, 0.06), min(gShut * 4.0, 1.0) * uNight), exp(rd.z / 0.04) * 0.7);
 }
-// 1 while a subject is drawn as its mirror image in the water: its fine inner work is not looked for.
-float gMirror = 0.0;
-bool gMirrorOn() { return gMirror > 0.5; }
 // How much trapped air the ice has: 1 in a block that froze in a season, less in a glacier's old pressed ice.
 float gAiry = 1.0;
 // How rough its faces are: 1 a cut face that melt has only scalloped; more where it broke off and weathered.
@@ -697,6 +701,10 @@ vec3 columns(vec3 col, vec3 dir, float tw) {
   col *= 1.0 - 0.35 * (1.0 - smoothstep(rI * 0.9, rI * 1.5 + 8.0, d)) * gSt.x;
   return col;
 }
+`;
+
+/** The shallows the columns stand in: the water looks for them by place, so every variant of the pass carries this. */
+export const SHALLOWS = `
 // (The shallows the columns stand in are a hand deep: the pale bed shows through.)
 // (Only round its shore: out where the seracs stand the pool goes down into the blue.)
 float shallowsAt(vec2 p) {
@@ -752,17 +760,6 @@ const vec3 DAM_HIP = ${v3(1 / HIP_L, 0, DAM.hip / HIP_L)};
 float gateOf(int i) { return i == 0 ? uGate.x : i == 1 ? uGate.y : uGate.z; }
 float gateX(int i) { return i == 0 ? GATE_X.x : i == 1 ? GATE_X.y : GATE_X.z; }
 
-float boxHit(vec3 ro, vec3 rd, vec3 lo, vec3 hi, out vec3 n, out float tF) {
-  vec3 inv = 1.0 / (rd + vec3(equal(rd, vec3(0.0))) * 1e-6);
-  vec3 a = (lo - ro) * inv;
-  vec3 b = (hi - ro) * inv;
-  vec3 t0 = min(a, b);
-  vec3 t1 = max(a, b);
-  float tN = max(max(t0.x, t0.y), t0.z);
-  tF = min(min(t1.x, t1.y), t1.z);
-  n = -sign(rd) * vec3(step(t0.yzx, t0.xyz) * step(t0.zxy, t0.xyz));
-  return tN < tF && tN > 0.0 ? tN : -1.0;
-}
 // A length of the wall: upright toward the pond, leaning back below, a level crest. hip: 1 where its west (x) or
 // east (y) end is the dam's own and runs down into the bank.
 float wallHit(vec3 ro, vec3 rd, vec2 x, vec2 hip, out vec3 n, out float tF) {
@@ -842,6 +839,21 @@ vec3 damColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, float kind, vec3 lo, 
   float dz = DAM_H - hang - z;
   if (dz < 50.0) col = corniceOn(iciclesOn(col, q.x, dz, px, 30.0), n, dz, hang, px);
   return col;
+}
+`;
+
+/** A ray against a box: the dam, the lattice and the canyon all ask. */
+export const BOX_HIT = `
+float boxHit(vec3 ro, vec3 rd, vec3 lo, vec3 hi, out vec3 n, out float tF) {
+  vec3 inv = 1.0 / (rd + vec3(equal(rd, vec3(0.0))) * 1e-6);
+  vec3 a = (lo - ro) * inv;
+  vec3 b = (hi - ro) * inv;
+  vec3 t0 = min(a, b);
+  vec3 t1 = max(a, b);
+  float tN = max(max(t0.x, t0.y), t0.z);
+  tF = min(min(t1.x, t1.y), t1.z);
+  n = -sign(rd) * vec3(step(t0.yzx, t0.xyz) * step(t0.zxy, t0.xyz));
+  return tN < tF && tN > 0.0 ? tN : -1.0;
 }
 `;
 
@@ -1035,6 +1047,15 @@ vec3 dam(vec3 col, vec3 dir, float tw) {
 }
 `;
 
+/** How far a place is from a stretch of line: the lattice's thread and the canyon's plan both ask. */
+export const SEG_D = `
+float segD(vec2 p, vec2 a, vec2 b, out float h) {
+  vec2 ab = b - a;
+  h = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
+  return length(p - a - ab * h);
+}
+`;
+
 const cubeRnd = (k: number, m: number) => fr(Math.sin((k % 4) * 127.1 + Math.floor(k / 4) * 311.7 + m * 74.7 + 4.7) * 43758.5453);
 /** Each cube's half width, its height, and how far its upright and its top edges have melted back. */
 const cubeSizes = () =>
@@ -1070,11 +1091,6 @@ const float LAT_S = ${f(LATTICE.size / 2)};
 const float LAT_H = ${f(LATTICE.h)};
 const float LAT_IN = ${f(Math.hypot(2 * LATTICE.pitch, LATTICE.pitch * 2 + 110 - 2 * LATTICE.pitch))};
 const float LAT_LAP = ${f(4 * LATTICE.pitch + (Math.PI * LATTICE.pitch) / 2)};
-float segD(vec2 p, vec2 a, vec2 b, out float h) {
-  vec2 ab = b - a;
-  h = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
-  return length(p - a - ab * h);
-}
 // The thread: in from the pool's head, along the upstream side of each row in turn, out at its foot.
 // Returns how far off it a place is; s is how far along it.
 float threadAt(vec2 q, out float s) {

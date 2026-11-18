@@ -22,8 +22,9 @@
 
 import { ICE_FIELD } from './ice';
 import { NAME_ICE } from './name';
-import { CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, STATION_COMMON } from './stations';
+import { BOX_HIT, CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, GLACIER_ICE, LATTICE_ICE, SEG_D, SHALLOWS, STATION_COMMON } from './stations';
 import { PANO, SHADE_AZ, WIND } from './terrain';
+import { F_DEFINES } from '../variants';
 import { BASIN, BOARD, BOARD_DEPTH, boardSpan, CONF_RIVER, FIELD_ROLL, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, slabFaces, STREAM, T2, TARN, TARN_BAY, TRIBS } from '../world';
 
 /** The water sits this far below the land, world units. */
@@ -48,15 +49,26 @@ export function freeboardAt(y: number) {
 }
 
 /**
- * The pass comes in two variants. The sea's code slows every frame that
+ * The pass comes in variants. A subject's code slows every frame that
  * carries it, even where it never runs (the driver's cost follows the whole
- * shader's shape), so the flight is drawn by the variant without it, and
- * the one with it is used only while the camera is near the sea.
+ * shader's shape), so each stretch of the flight is drawn by a variant that
+ * carries only the subjects that can be seen there. One source: a variant
+ * is this text with a line of `#define` for each subject it keeps (see
+ * variants.ts for the subjects, and for which a frame needs).
+ * @param features the subjects to keep: bits of F
+ * @param defines any further names to define (DAY or NIGHT: the theme, known when it is compiled; and the checks' own)
  */
-export const flightSource = (sea: boolean) => FLIGHT_SRC.replace('//#SEA', sea ? '#define SEA' : '');
+export const flightSource = (features: number, defines: string[] = []) =>
+  FLIGHT_SRC.replace('//#DEFS', [...F_DEFINES.filter((_, i) => features & (1 << i)), ...defines].map((n) => `#define ${n}`).join('\n'));
 
 const FLIGHT_SRC = `#version 300 es
-//#SEA
+//#DEFS
+#if defined(F_COLS) || defined(F_DAM) || defined(F_LAT) || defined(F_CANYON)
+#define F_STATION
+#endif
+#if defined(F_STATION) || defined(F_SLAB) || defined(F_CONF) || defined(F_POOL) || defined(F_SHARDS)
+#define F_GLACIER
+#endif
 precision highp float;
 in vec2 vUv;
 out vec4 o;
@@ -74,7 +86,16 @@ uniform float uTime;
 uniform float uFlowSpeed;
 uniform float uQuality;    // 0 low, 1 mid, 2 high
 uniform float uLean;       // 0..2: how many steps leaner the governor has asked the shading to be (fractions while a step fades)
+// The theme. A variant compiled for the day alone (DAY) or for the hour before dawn alone (NIGHT) knows which it
+// is, so the other's work is not in it at all; one compiled for neither is told each frame, and draws the turn
+// from one theme to the other.
+#if defined(DAY)
+const float uNight = 0.0;
+#elif defined(NIGHT)
+const float uNight = 1.0;
+#else
 uniform float uNight;      // 0 morning, 1 the hour before dawn
+#endif
 uniform float uWorldW;
 uniform float uShoal;      // world y where the river has become open water
 // The light, worked out once a frame from the theme and the time of day (see sky.ts).
@@ -111,9 +132,16 @@ uniform sampler2D uGround; // the baked snow: its slope, and its horizon toward 
 uniform sampler2D uGlowTex; // the last frame's highlights, small and soft
 uniform float uBloom;
 uniform float uIceH;
+#ifdef F_ICE
 uniform float uIceOn;      // 0 once the whole sheet has melted: the field is not asked at all
 uniform float uGlow;       // 0..1: how much of the lake's sheet is still there to glow under
 uniform float uMeltAct;
+#else
+// (A variant of the pass for where the lake's sheet has gone: what the engine would send, known when it is compiled.)
+const float uIceOn = 0.0;
+const float uGlow = 0.0;
+const float uMeltAct = 0.0;
+#endif
 
 uniform vec3 uSlabPos;     // the middle of the slab's foot
 uniform vec4 uSlabDir;     // xy: the way its face looks, zw: its right as the viewer sees it
@@ -161,6 +189,9 @@ float gL2 = 0.0;
 float gWash = 0.0;
 
 vec2 bedUv(vec2 w) { return w / (uBedSize * uBedDiv); }
+#ifndef F_ICE
+#define NO_ICE_FIELD
+#endif
 ${ICE_FIELD}
 vec2 simUv(vec2 w) { return vec2(w.x / (uSim.z * uSim.y), (w.y - uSim.x) / (uSim.w * uSim.y)); }
 
@@ -604,6 +635,7 @@ vec3 snowNight(vec3 n) {
 
 /* ---------- the pictures ---------- */
 
+#if defined(F_SLAB) || defined(F_CANYON)
 /**
  * A real picture set in ice or lying under water, read so that its type
  * stays type at every size.
@@ -664,6 +696,7 @@ vec3 picRead(sampler2D tex, vec2 uv, vec2 dx, vec2 dy) {
   return mix(clamp(c, 0.0, 1.0), mix(cLo, cHi, st), gate);
 }
 
+#endif
 /* ---------- the slab ---------- */
 
 float lodFor(float foot, float scale, float n);
@@ -677,6 +710,7 @@ vec3 iciclesOn(vec3 col, float along, float dz, float px, float reach);
 vec3 waterlineOn(vec3 col, float z, float g);
 vec3 snowOn(vec3 n, float lump);
 
+#if defined(F_SLAB)
 // The block's faces, in its own frame (x across its front, y into it, z up from the water): the way each looks, and how far
 // it is from the middle of the front's foot. 0 is the polished front, 5 the foot; 4, 6, 7 and 10 look up and carry the snow.
 const int SLN = ${slabFaces().length};
@@ -711,9 +745,11 @@ float slabHit(vec3 ro, vec3 rd, out vec3 hl, out float face) {
   return tN;
 }
 
+#endif
 // 1 while the block is drawn as a mirror image in moving water: no hairline survives that.
 float gSlabSoft = 0.0;
 
+#if defined(F_SLAB) || defined(F_ICE)
 /**
  * What is seen inside a piece of glacier ice. Three depths are looked at
  * along the eye's ray, each a little further across the face than the last,
@@ -767,6 +803,8 @@ vec3 iceInside(vec2 q, vec2 v, float thick, float foot, float seed) {
   return vec3(min(veil, 1.0), spark, seen);
 }
 
+#endif
+#if defined(F_SLAB)
 // The way the basin's sea runs: its sets come in from the south-west and go on to the north-east.
 const vec2 SEA_K = vec2(0.5547, 0.8321);
 /** How hard the basin's waves are striking the block's foot at a place along it, 0..1: sets that come and go. */
@@ -1036,6 +1074,7 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
   return vec4(col, aCov);
 }
 
+#endif
 /* ---------- the bed ---------- */
 
 float bedShore;
@@ -1343,6 +1382,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   return col;
 }
 
+#if defined(F_ICE)
 /* ---------- the ice sheet ---------- */
 
 /**
@@ -1642,6 +1682,8 @@ vec3 cutFoot(vec3 col, vec2 pw, vec3 dir, vec2 slope, float foot, float k) {
   return col;
 }
 
+#endif
+#if defined(F_CONF)
 /* ---------- the confluence: a snowfield above a cliff of ice, and seven falls ---------- */
 
 // (The snowfield comes up to its height as the eye comes toward it down the valley, over a long stretch of the flight:
@@ -1960,6 +2002,8 @@ vec3 confRiver(vec3 col, vec2 pw, float footL, float na, float nb, float shade) 
   return col;
 }
 
+#endif
+#if defined(F_POOL)
 /* ---------- the rock pool and the results on its bed ---------- */
 
 const vec2 POOL_C = vec2(${(POOL.x + POOL.w / 2).toFixed(1)}, ${(POOL.y + POOL.h / 2).toFixed(1)});
@@ -2210,6 +2254,10 @@ vec3 rockColor(vec3 hp, vec3 n, float t) {
   return col;
 }
 
+#else
+// (No pool in this variant of the pass: nowhere is inside its reach.)
+#define poolAt(p) 0.0
+#endif
 /* ---------- water ---------- */
 
 /** Where the stream's middle lies at a distance down the valley. */
@@ -2279,7 +2327,9 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 
   vec2 slope = wv.ba * 9.0 + dgrad + swell;
   // (In the basin the waves run in on the block.)
+#ifdef F_SLAB
   if (slabOn > 0.0) slope = blockSwell(pw, slope);
+#endif
   // (The clear pool is measuring-still: what lies on its bed is read.)
   slope *= 1.0 - 0.72 * poolAt(pw);
   float men = smoothstep(-5.0, -0.5, bw.r);
@@ -2316,13 +2366,18 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     depth = mix(depth, min(depth, 70.0 + 34.0 * floorH), lakeK);
   }
   // The shallows the columns stand in: a hand of water over a pale bed.
+#ifdef F_SHALLOWS_OFF
+  float shalK = 0.0;
+#else
   float shalK = pb.y > ${(T2 + 380).toFixed(1)} && pb.y < ${(T2 + 1700).toFixed(1)} ? shallowsAt(pb) : 0.0;
+#endif
   if (shalK > 0.0) depth = mix(depth, min(depth, 13.0 + 12.0 * textureLod(uDetail, pb / 900.0 + 0.2, 0.0).r), shalK);
   // The clear pool: a foot of still water over a pale bed, and the picture lying on it.
   float poolK = poolAt(pb);
   float picK = 0.0;
   float deepP = 0.0;
   vec3 sheetC = vec3(0.0);
+#if defined(F_POOL)
   if (poolK > 0.0) {
     // (It shelves from a hand of water at the rim to the dark of its middle; the plates lie on a ledge a little way down.)
     deepP = smoothstep(14.0, 80.0, -bb.r + 24.0 * (textureLod(uGrain, pb / 900.0 + 0.6, 0.0).g - 0.5));
@@ -2334,6 +2389,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       picK = sp.a * poolK;
     }
   }
+#endif
   float dn = clamp(depth / DEEP, 0.0, 1.0);
   float shallow = 1.0 - smoothstep(0.08, 0.5, dn);
 
@@ -2348,12 +2404,14 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   vec4 gb = textureLod(uGrain, pb / 256.0, lodB);
   vec4 gs = gb;
   vec3 bed = uBed * (1.0 + (gb.r - 0.5) * 0.03 + (gs.b - 0.42) * 0.17 + (gb.a - 0.4) * 0.12);
+#if defined(F_POOL)
   if (poolK > 0.0) {
     // Silt and stones; the picture's sheet with a hair of shade along its edge.
     bed = mix(bed, poolBed(pb, footL, L, deepP), poolK * 0.92);
     bed *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 7.0, sheetEdge(pb))) * step(0.0, sheetEdge(pb)) * uSheetOn;
     bed = mix(bed, sheetC, picK);
   }
+#endif
   float shadow = 1.0 - 0.6 * shade;
   float fineW = 1.0 - smoothstep(0.12, 0.6, dn);
   float broadW = smoothstep(0.06, 0.4, dn);
@@ -2408,6 +2466,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   }
   // (Over the picture the net of light is gentler, so it can be read.)
   // In the pool the light is one broad net drifting over the bed; over the picture it is gentler, so it can be read.
+#if defined(F_POOL)
   if (poolK > 0.0) {
     float netP = poolNet(pb, footL);
     netP = mix(netP, 1.0 + (netP - 1.0) * 0.45, deepP);
@@ -2415,6 +2474,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     lightOnBed = mix(lightOnBed, vec3(uLight.x * 0.9 + uLight.y * shadow * mix(netP, 0.9 + (netP - 0.9) * 0.35, uNight)), poolK);
     nfil *= 1.0 - poolK;
   }
+#endif
   float caust = dot(lightOnBed, vec3(0.3333)) / (uLight.x * 0.9 + uLight.y);
   bed *= lightOnBed / (uLight.x + uLight.y);
 
@@ -2437,13 +2497,17 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     vec3 deepN = vec3(0.0022, 0.0085, 0.0135) * (0.72 + 0.28 * shaft);
     vec3 pool = bedN * lightN * transN * netN * (1.0 - 0.45 * shade) + deepN * (1.0 - 0.6 * transN.g);
     // (The clear pool is a foot deep everywhere and its bed is silt and stones: they are seen.)
+#ifdef F_POOL
     if (poolK > 0.0) pool = mix(pool, min(bed, vec3(0.8)) * lightN * 0.62, poolK * (1.0 - picK));
+#endif
 
     water = mix(water, pool, uNight * 0.93);
     // The picture glows softly up through the water.
     water = mix(water, sheetC * 2.3 + vec3(0.004, 0.011, 0.014) + water * 0.12, picK * uNight * 0.94);
     // (And lights the silt and the stones round it.)
+#ifdef F_POOL
     if (poolK > 0.0 && uSheetOn > 0.5) water += sheetGlow() * bed * 2.6 * exp(-max(sheetEdge(pb), 0.0) / 120.0) * (1.0 - picK) * poolK * uNight;
+#endif
   }
   // The lake is deep: by day its water is dark, and under the sheet, where
   // no wind reaches it, darker still. That is what draws the name.
@@ -2488,10 +2552,17 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // ranges, the warm band at their foot on its far reaches, the curtains
   // nearer the eye. Its ripples break that light into strokes.)
   float streamK = smoothstep(0.25, 0.6, length(flow)) * (1.0 - lakeK) * (1.0 - shoalK) * (1.0 - gWalled);
+#ifdef F_ICE
   float sheetK = smoothstep(0.75, 1.0, uGlow) * lakeK;
   // The name's own water while it is a melt pond.
   float pondK = gPond * lakeK;
+#else
+  // (The sheet has gone: neither is there.)
+  const float sheetK = 0.0;
+  const float pondK = 0.0;
+#endif
   float fres0 = fres;
+#if defined(F_ICE)
   if (sheetK > 0.0) {
     // Where the eye's ray came through the top of the sheet, in the first
     // camera's own frame: how far up the name this water is seen.
@@ -2519,6 +2590,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     // (Before dawn the water round the standing letters is not leaned at the curtain: it holds the sky that truly stands over it.)
     rf = normalize(mix(rf, vec3(azd * sqrt(1.0 - el * el), el), sheetK * (1.0 - uNameG.w * uNight)));
   }
+#endif
   // (Before dawn the thin cloud is too faint to be seen in moving water: it is not asked for.)
   gWash = gL1;
   gSkyQ = 0.0;
@@ -2578,6 +2650,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     // A ring on the water is a brighter face and a darker one, in the mirror's own colour.
     refl *= 1.0 + clamp(dot(wv.ba, -LXY) * 58.0, -0.34, 0.7) * uNight;
   }
+#if defined(F_SLAB)
   // The slab stands in the water: its mirror image, broken by the ripples.
   if (slabOn > 0.0) {
     vec3 suvS;
@@ -2605,6 +2678,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       fres = max(fres, 0.3 * scS.a * keepS);
     }
   }
+#endif
   refl *= 1.0 - 0.5 * shade * (1.0 - uNight);
   // The top-down view at the end is the page's water: the mirror gives way.
   // Still dark water is a better mirror than this angle alone would make
@@ -2620,7 +2694,9 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // (Wider in the walled basin, where the project's words stand over the near bank.)
   refl *= 1.0 - mix(0.3, 0.8, gWalled) * uNight * (1.0 - smoothstep(4.0, mix(46.0, 150.0, gWalled), -bw.r)) * (1.0 - sheetK);
   // (By day the sheet's own walls stand round that water: less of the pale sky reaches it.)
+#ifdef F_ICE
   gDeep = lakeDay * smoothstep(0.5, 1.0, uGlow);
+#endif
   // (By day it is dark water you look down into under the eye, and more of a mirror toward the far side of each letter.)
   // (The far side of each letter gives back the most of what stands over the lake; the near side is depth.)
   float farL = smoothstep(-1.15, 1.0, gCutA);
@@ -2663,7 +2739,9 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     fres = mix(fres, mix(clamp(fres0 * PONDK.z + 0.02, 0.03, 0.4) + 0.1 * pawP, mix(mix(0.92, 0.4, thru.g), clamp(fres0 * 1.5 + 0.12, 0.0, 0.6), uNameG.w), uNight), pondK);
   }
   vec3 col = mix(water, refl, fres);
+#ifdef F_ICE
   if (sheetK > 0.0 && gFarK > 0.0) col = cutFoot(col, pw, dir, slope, foot, sheetK);
+#endif
   // The sun on ripple faces turned toward it: a broad, graded sheen.
   float sd = max(dot(rf, S.sun), 0.0);
   col += S.band * (pow(sd, 240.0) * 1.6 + pow(sd, 40.0) * 0.12) * (1.0 - shade) * (1.0 - uNight) * (1.0 - gDeep);
@@ -2698,6 +2776,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     }
   }
 #endif
+#if defined(F_ICE)
   // In the name the sun's path is broken glitter: single ripple faces
   // catching it, a column of them coming down the water from under the
   // sun toward the eye, close and fine at the far side, wider and sparser
@@ -2726,6 +2805,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       col += S.band * path * glint * mix(1.0, 0.7, nearK) * gDeep * sheetK * sheetK * (1.0 - uNameG.w);
     }
   }
+#endif
   // A few plates of ice lie afloat in the name's water, turning slowly:
   // angular, of different sizes, each with its own thin shade.
   // (Where the letters stand as blocks the pieces that come away from them are drawn with them: see the name's own shader.)
@@ -2850,10 +2930,15 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       col = mix(col, foamS, whiteS * 0.85);
     }
   }
+#if defined(F_CONF)
   // The confluence: seven trails of paler meltwater along the cliff's foot, and a boil under each fall.
   if (pw.x > 700.0 && pw.x < 2500.0 && pw.y > ${(lipY(LIP.x0) - 900).toFixed(1)} && pw.y < ${(lipY(700) + 40).toFixed(1)}) col = confRiver(col, pw, footL, df.r, dw2.r, shade);
+#endif
+#if defined(F_SLAB)
   // White water where the basin's waves strike the block and the shores round it.
   if (slabOn > 0.0) col = blockWater(col, pw, bw.r, df.r, dw2.r, abs(wv.r) * 30.0 + length(wv.ba) * 40.0);
+#endif
+#if defined(F_POOL)
   // The pool's own surface: the sky lies on its far side, and a shelf of ice stands out over it all round.
   float poolS = poolAt(pw);
   if (poolS > 0.0) {
@@ -2878,6 +2963,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     col *= 1.0 - 0.22 * (1.0 - smoothstep(20.0, 54.0, -bw.r)) * poolS * (1.0 - uNight);
     col = mix(col, rim.rgb, rim.a * poolS);
   }
+#endif
   // The water's edge: under the bank's ice shelf a short soft shade, and
   // where the current runs against the bank a fine line of foam.
   float line = smoothstep(-3.0 - foot, 0.0, bw.r);
@@ -3315,12 +3401,35 @@ vec3 deltaBar(vec3 col, float y, float sd, vec2 ba) {
 #endif
 
 ${STATION_COMMON}
+#ifdef F_GLACIER
+${GLACIER_ICE}
+#endif
+#ifdef F_ICE
 ${NAME_ICE}
+#else
+float gNmCov = 0.0;
+#endif
+${SHALLOWS}
+#ifdef F_COLS
 ${COLUMNS}
+#endif
+#if defined(F_DAM) || defined(F_LAT) || defined(F_CANYON)
+${BOX_HIT}
+#endif
+#ifdef F_DAM
 ${DAM_ICE}
 ${DAM_WATER}
+#endif
+#if defined(F_LAT) || defined(F_CANYON)
+${SEG_D}
+#endif
+#ifdef F_LAT
 ${LATTICE_ICE}
+#endif
+#ifdef F_CANYON
 ${CANYON_ICE}
+#endif
+#ifdef F_SHARDS
 // ---- the tarn's two shards of ice, each lit from within
 const vec4 SH0 = vec4(${SHARDS[0].x.toFixed(1)}, ${SHARDS[0].y.toFixed(1)}, ${SHARDS[0].h.toFixed(1)}, ${SHARDS[0].r.toFixed(1)});
 const vec4 SH1 = vec4(${SHARDS[1].x.toFixed(1)}, ${SHARDS[1].y.toFixed(1)}, ${SHARDS[1].h.toFixed(1)}, ${SHARDS[1].r.toFixed(1)});
@@ -3472,6 +3581,7 @@ vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow)
   vec3 air = airAt(rd.xy);
   return mix(col, mix(air, mix(S.hor, air, 0.45), uNight), (1.0 - exp(-t * 0.00021 * S.haze * thin)) * (1.0 - soft));
 }
+#endif
 
 void main() {
   skyKey();
@@ -3490,6 +3600,7 @@ void main() {
   float slabCov = 0.0;
   vec3 slabCol = vec3(0.0);
   float slabT = 1e9;
+#if defined(F_SLAB)
   bool slabNear = uSlabSize.x > 0.0 && vUv.x > uSlabBox.x && vUv.x < uSlabBox.z && vUv.y > uSlabBox.y && vUv.y < uSlabBox.w;
   if (slabNear) {
     // Four rays to a pixel find how much of it the block covers (its edges
@@ -3544,19 +3655,28 @@ void main() {
     slabCov *= 1.0 - smoothstep(1900.0, 2500.0, slabT);
   }
 
+#endif
+#ifdef F_CANYON
   // (Between the canyon's walls: where ice stands on this line of sight, nothing behind it is worked out.)
   if (canyonEye()) canyonFirst(dir);
+#endif
   if (slabCov > 0.999) {
     col = slabCol;
+#ifdef F_CANYON
   } else if (gWallT >= 0.0) {
     col = vec3(0.0);
+#endif
   } else if (dir.z > -0.0006) {
     // ---- above the horizon
     gDirect = true;
     col = skyAll(dir, 1.0);
   } else {
     // (At the confluence the snowfield stands above the land: there the ground under the ray is higher.)
+#ifdef F_CONF
     float t = (uCamPos.z - confLift(dir)) / -dir.z;
+#else
+    float t = uCamPos.z / -dir.z;
+#endif
     vec2 p = uCamPos.xy + dir.xy * t;
     vec2 tilt = dir.xy / -dir.z;
     // The size of a pixel on the ground: across the view, and along it.
@@ -3588,6 +3708,7 @@ void main() {
     float f0 = 1e3;
     vec3 cr = vec3(1e3, 0.0, 0.0);
     vec2 il = vec2(0.0);
+#if defined(F_ICE)
     bool hasIce = uIceOn > 0.5 && uIce.z > 0.0 && p.y > uLake.x - 80.0 && p.y < uLake.y + 80.0 && sd0 < 40.0;
     if (hasIce) {
       f0 = iceF(p, sd0, cr, il);
@@ -3625,10 +3746,12 @@ void main() {
       }
     }
 
+#endif
     // ---- the slab's shade and its own light on the ground round it
     float slabShade = 1.0;
     vec3 slabLight = vec3(0.0);
     float slabOn = 0.0;
+#if defined(F_SLAB)
     if (uSlabSize.x > 0.0 && length(uCamPos.xy - uSlabPos.xy) < 5200.0) {
       vec2 ds = p - uSlabPos.xy;
       float dd = dot(ds, ds);
@@ -3656,11 +3779,14 @@ void main() {
       }
     }
 
+#endif
     float aLand = smoothstep(-aa, aa, sd0);
     col = vec3(0.0);
     if (aLand > 0.0) col = (landColor(p, sd0, b0.ba, foot, dir, slabShade) + slabLight * mix(0.5, 1.1, gRock)) * aLand;
+#if defined(F_CONF)
     // (The snowfield climbs away from the low sun: its slopes stand in the sky's blue shade, their crests in the light.)
     if (gFieldG != 0.0) col *= mix(vec3(1.0), mix(vec3(0.74, 0.83, 0.96), vec3(1.06, 1.04, 1.0), smoothstep(0.1, -0.05, gFieldG)), (1.0 - uNight) * smoothstep(0.0, 0.03, abs(gFieldG)));
+#endif
 #ifdef SEA
     if (aLand > 0.0 && p.y > ${(DELTA.apex.y - 200).toFixed(1)} && sd0 < 100.0) col = deltaBar(col, p.y, sd0, b0.ba) * 1.0;
 #endif
@@ -3740,10 +3866,12 @@ void main() {
       }
       col += cut * (1.0 - aLand);
     }
+#if defined(F_ICE)
     if (aCut > 0.0) col = mix(col, iceCut(p, cutS, length(tilt) * uIceH * (1.0 - gPond) / max(foot / sinE, 1e-3)), aCut);
     if (aIce > 0.0) col = mix(col, iceTop(p, il, cr, f0, sd0, dir, foot), aIce);
     // The name's blocks stand on the sheet: their shade, their image and the meltwater at their feet lie on it.
     col = nameGround(col, p, dir, foot, aIce);
+#endif
     gndT = t;
     gndIce = max(aIce, aLand);
     if (aCut > 0.5) gndWall = t + cutS * uIceH / sinE;
@@ -3780,14 +3908,17 @@ void main() {
 #else
     col = mix(col, air, exp(dir.z / 0.006) * 0.75);
 #endif
+#ifdef F_CONF
     // The cliff at the confluence and its falls stand in front of what lies behind them.
     col = confCliff(col, dir, aLand);
+#endif
 #ifdef SEA
     // The lee's shade, on the water the words stand over, while the camera is still coming in. (At the ending there is
     // none: the water there is dark of itself, it mirrors the deep of the sky, and the lee only keeps it calm.)
     col *= 1.0 - 0.56 * (1.0 - gDusk) * gLee;
 #endif
   }
+#if defined(F_POOL)
   // The boulders of the rock pool stand in front of its water and its far bank.
   if (poolNear()) {
     vec3 nR;
@@ -3798,7 +3929,11 @@ void main() {
       if (aR > 0.0) col = mix(col, rockColor(hp, nR, tR), aR);
     }
   }
+#endif
+#ifdef F_ICE
   col = nameIce(col, dir, gndT, gndIce, gndWall);
+#endif
+#ifdef F_SHARDS
   if (uShardOn > 0.5) {
     vec4 pl = pulseAt();
     vec3 L = keyDir();
@@ -3887,14 +4022,25 @@ void main() {
       }
     }
   }
+#endif
+#ifdef F_STATION
   if (uSt.x + uSt.y + uSt.z + uSt.w > 0.0) {
     float twS = dir.z < -0.0006 ? (uCamPos.z + FREEBOARD) / -dir.z : -1.0;
     gSt = smoothstep(0.0, 0.3, uSt);
+#ifdef F_COLS
     if (uSt.x > 0.0) col = columns(col, dir, twS);
+#endif
+#ifdef F_DAM
     if (uSt.y > 0.0) col = dam(col, dir, twS);
+#endif
+#ifdef F_LAT
     if (uSt.z > 0.0) col = lattice(col, dir, twS);
+#endif
+#ifdef F_CANYON
     if (uSt.w > 0.0) col = canyon(col, dir, twS);
+#endif
   }
+#endif
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
 #ifdef SEA
   // The ribbon of light stands in front of the ranges: it is only looked for in the strip of the frame it can be in.
