@@ -3264,7 +3264,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     if (band > 0.004) {
       float bk = bokeh(vec2(xs, em) / vec2(0.034, 0.017) + vec2(0.0, 0.11), uPxAng / 0.017, 7.0)
         + 0.7 * bokeh(vec2(xs, em) / vec2(0.019, 0.0095) + vec2(0.4, 0.23), uPxAng / 0.0095, 19.0);
-      col += mix(vec3(1.0, 0.9, 0.74), vec3(1.0, 0.9, 0.8), uNight) * S.band * (0.17 * bk * smoothstep(0.0, 0.004, em) + 0.035 * exp(-em / 0.012)) * band * still;
+      col += mix(vec3(1.0, 0.9, 0.74), vec3(1.0, 0.9, 0.8), uNight) * S.band * (0.27 * bk * smoothstep(0.0, 0.004, em) + 0.04 * exp(-em / 0.012)) * band * still;
     }
     // (A soft even light under the sun, so the path has a body between its points.)
     col += S.band * pathS * (0.05 + 0.1 * exp(-em / 0.05)) * still;
