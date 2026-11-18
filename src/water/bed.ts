@@ -240,8 +240,4 @@ function smooth(points: Pt[], step: number): Pt[] {
 
 /* ---------- geometry helpers for painters ---------- */
 
-export const cx = (r: Rect) => r.x + r.w / 2;
-export const cy = (r: Rect) => r.y + r.h / 2;
 export const pt = (x: number, y: number): Pt => ({ x, y });
-export const inset = (r: Rect, by: number): Rect => ({ x: r.x + by, y: r.y + by, w: r.w - by * 2, h: r.h - by * 2 });
-export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;

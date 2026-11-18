@@ -1,5 +1,8 @@
 /**
- * The water engine: a small fluid simulation and one shading pass.
+ * The water engine: a small fluid simulation, the lake's ice field and the
+ * baked textures. The shading pass is the flight's (flight.ts), which is
+ * the one engine there is; this is the part of it that knows nothing of a
+ * camera.
  *
  * Rules it keeps (see docs/redesign-v4/perf.md):
  *  - The canvas always renders at full device pixel ratio (capped at 2).
@@ -11,7 +14,6 @@
 
 import type { BedData } from './bed';
 import { type GL, type Program, type Target, Swap, bindTex, bindTriangle, compile, drawTo, freeTarget, makeTarget, makeTexture } from './gl';
-import { RENDER } from './shaders/render';
 import { BED_A, BED_B, DETAIL, DETAIL_CURV, GRAIN, SD_BLUR, SNOW, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
 
 export interface Palette {
@@ -132,7 +134,6 @@ export class WaterEngine {
   protected wave: Swap | null = null;
   protected waveOut: Target | null = null;
   protected vel: Swap | null = null;
-  protected maskTarget: Target | null = null;
   protected hf: number;
 
   // view
@@ -182,8 +183,6 @@ export class WaterEngine {
   protected meltDone = false;
 
   // governor
-  protected slow = 0;
-  protected fast = 0;
   protected base = 16.7;
   protected samples: number[] = [];
   /** Frame intervals in ms, for the perf harness. */
@@ -235,7 +234,6 @@ export class WaterEngine {
   /** The programs this engine runs. A subclass may swap the shading pass for its own. */
   protected sources(): Record<string, string> {
     return {
-      render: RENDER,
       bedA: BED_A,
       bedB: BED_B,
       sdBlur: SD_BLUR,
@@ -384,8 +382,6 @@ export class WaterEngine {
       this.canvas.height = bh;
     }
     this.allocSim();
-    freeTarget(gl, this.maskTarget);
-    this.maskTarget = null;
     this.dirty = true;
   }
 
@@ -450,70 +446,6 @@ export class WaterEngine {
   splash(worldX: number, worldY: number, radius = 16, strength = 0.9) {
     this.drop = { x: worldX, y: worldY, r: radius, s: strength };
     this.dirty = true;
-  }
-
-  /* ---------- frame ---------- */
-
-  /**
-   * @param now ms
-   * @param scrollY document scroll
-   * @param viewH visible viewport height in CSS px
-   * @returns the world y the canvas top should sit at (for the CSS transform)
-   */
-  tick(now: number, scrollY: number, viewH: number): number {
-    const gl = this.gl;
-    const top = scrollY - this.margin;
-    if (!this.ready || !this.bedA || !this.bedB || !this.wave || gl.isContextLost()) return top;
-
-    let dt = this.last ? (now - this.last) / 1000 : 1 / 60;
-    this.last = now;
-    if (this.frameLog && dt < 1) this.frameLog.push(dt * 1000);
-    this.govern(dt * 1000);
-    dt = Math.min(dt, 1 / 20);
-
-    // Theme eases between the two palettes.
-    if (this.theme !== this.themeTarget) {
-      const k = 1 - Math.exp(-dt * 9);
-      this.theme += (this.themeTarget - this.theme) * k;
-      if (Math.abs(this.theme - this.themeTarget) < 0.002) this.theme = this.themeTarget;
-      this.dirty = true;
-    }
-
-    // Melt follows scroll. It is a function of position, so it reverses exactly.
-    const m = this.iceTex ? Math.min(1, Math.max(0, scrollY / this.meltRange)) : 0;
-    const rate = Math.abs(m - this.melt) / Math.max(dt, 1e-3);
-    this.meltRate += (Math.min(rate, 1.1) - this.meltRate) * (1 - Math.exp(-dt * 6));
-    this.melt = m;
-    // Meltwater is only there while the ice is actually melting: it rises
-    // with the melt and clears within a second of it stopping.
-    // Once the ice is gone there is nothing left to melt.
-    const want = this.iceTex && !this.still && m > 0.12 && m < ICE_GONE ? Math.min(1, this.meltRate * 2.4) : 0;
-    this.meltAct += (want - this.meltAct) * (1 - Math.exp(-dt * (want > this.meltAct ? 9 : 4.2)));
-    if (this.meltAct < 0.004 && want === 0) this.meltAct = 0;
-    if (m >= 1 && !this.meltDone) {
-      this.meltDone = true;
-      this.onMelt?.(true);
-    } else if (m < 0.9 && this.meltDone) {
-      this.meltDone = false;
-      this.onMelt?.(false);
-    }
-
-    if (scrollY !== this.lastScroll) {
-      this.lastScroll = scrollY;
-      this.dirty = true;
-    }
-    if (this.still) {
-      if (!this.dirty) return top;
-      this.render(top, scrollY, viewH);
-      this.dirty = false;
-      return top;
-    }
-
-    this.time += dt;
-    this.simulate(dt, top);
-    this.render(top, scrollY, viewH);
-    this.dirty = false;
-    return top;
   }
 
   /**
@@ -721,65 +653,6 @@ export class WaterEngine {
     p.fresh = false;
   }
 
-  protected bindRender(top: number, scrollY: number, viewH: number, mode: number) {
-    const gl = this.gl;
-    const r = this.p.render;
-    const tier = TIERS[this.tier];
-    gl.useProgram(r.prog);
-    const pal = this.palette();
-    const ice = this.iceUniforms(scrollY);
-    if (!this.hasSimTop) {
-      this.simTop = Math.floor(top / tier.simDiv) * tier.simDiv - tier.simDiv;
-    }
-    gl.uniform2f(r.u.uView, this.cssW, this.cssH);
-    gl.uniform1f(r.u.uTop, top);
-    gl.uniform4f(r.u.uSim, this.simTop, tier.simDiv, this.simW, this.simH);
-    gl.uniform2f(r.u.uBedSize, this.bedMeta.w, this.bedMeta.h);
-    gl.uniform1f(r.u.uBedDiv, this.bedMeta.div);
-    // The eye stands above the middle of the view. Its height sets how
-    // much the walls and the bed slide as the page scrolls.
-    gl.uniform3f(r.u.uCam, this.cssW / 2, scrollY + viewH / 2, Math.max(1500, this.cssW * 1.25));
-    gl.uniform1f(r.u.uTime, this.time);
-    gl.uniform1f(r.u.uFlowSpeed, FLOW_SPEED);
-    gl.uniform1f(r.u.uQuality, tier.quality);
-    gl.uniform1i(r.u.uMode, mode);
-    gl.uniform1f(r.u.uScale, this.cssW < 860 ? 0.5 : 1);
-    this.bindIce(r, ice, 7, 9);
-    gl.uniform1f(r.u.uIceH, ice.h);
-    // By night the lake is lit from within while the sheet lies on it: the
-    // name is the bright thing. The light goes down as the ice goes, and is
-    // out when the melt is done.
-    gl.uniform1f(r.u.uGlow, this.iceTex ? (1 - smooth(0.5, 1, this.melt)) * Math.min(1, Math.max(0, this.theme)) : 0);
-    gl.uniform1f(r.u.uMeltAct, mode === 0 ? this.meltAct : 0);
-    gl.uniform4f(r.u.uMeltPath, this.meltPath.x, this.meltPath.y, this.meltPath.reach, this.meltPath.w);
-    gl.uniform3fv(r.u.uLand, pal.land);
-    gl.uniform3fv(r.u.uBed, pal.bed);
-    gl.uniform3fv(r.u.uAbsorb, pal.absorb);
-    gl.uniform3fv(r.u.uScatter, pal.scatter);
-    gl.uniform3fv(r.u.uSky, pal.sky);
-    gl.uniform3fv(r.u.uRim, pal.rim);
-    gl.uniform3fv(r.u.uMelt, pal.melt);
-    gl.uniform1f(r.u.uShoal, this.shoalY);
-    gl.uniform1f(r.u.uPx, 1 / this.dpr);
-    gl.uniform1f(r.u.uNight, Math.min(1, Math.max(0, this.theme)));
-    gl.uniform3fv(r.u.uIceCol, pal.ice);
-    gl.uniform4fv(r.u.uLight, pal.light);
-    gl.uniform3fv(r.u.uGrainAmt, pal.grain);
-    bindTex(gl, 0, this.bedA!.tex, r.u.uBedA);
-    bindTex(gl, 1, this.bedB!.tex, r.u.uBedB);
-    bindTex(gl, 2, this.waveOut!.tex, r.u.uWave);
-    bindTex(gl, 3, this.vel!.read.tex, r.u.uVel);
-    bindTex(gl, 5, this.detail.tex, r.u.uDetail);
-    bindTex(gl, 6, this.grain.tex, r.u.uGrain);
-    bindTex(gl, 8, this.heat.read.tex, r.u.uHeat);
-    bindTex(gl, 10, this.curv.tex, r.u.uCurv);
-  }
-
-  protected render(top: number, scrollY: number, viewH: number) {
-    this.bindRender(top, scrollY, viewH, 0);
-    drawTo(this.gl, null, this.canvas.width, this.canvas.height);
-  }
-
   protected palette(): Palette {
     const a = PALETTES.light;
     const b = PALETTES.dark;
@@ -791,64 +664,14 @@ export class WaterEngine {
     return out as unknown as Palette;
   }
 
-  /**
-   * Where the effect is, for the overlap test: 1 px per 2 CSS px, covering
-   * the visible viewport at the given scroll. Water and ice are 255.
-   */
-  readMask(scrollY: number, viewH: number): { w: number; h: number; scale: number; data: Uint8Array } {
-    const gl = this.gl;
-    const scale = 2;
-    const w = Math.ceil(this.cssW / scale);
-    const h = Math.ceil(this.cssH / scale);
-    if (!this.maskTarget || this.maskTarget.w !== w || this.maskTarget.h !== h) {
-      freeTarget(gl, this.maskTarget);
-      this.maskTarget = makeTarget(gl, w, h, { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE });
-    }
-    const top = scrollY - this.margin;
-    this.bindRender(top, scrollY, viewH, 1);
-    drawTo(gl, this.maskTarget);
-    const px = new Uint8Array(w * h * 4);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.maskTarget.fbo);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    // Flip to top-down rows and keep one channel.
-    const data = new Uint8Array(w * h);
-    for (let y = 0; y < h; y++) {
-      const src = (h - 1 - y) * w * 4;
-      for (let x = 0; x < w; x++) data[y * w + x] = px[src + x * 4];
-    }
-    this.dirty = true;
-    return { w, h, scale, data };
-  }
-
   /** How many rounds the pressure solve runs each frame. */
   protected jacobi() {
     return TIERS[this.tier].jacobi;
   }
 
-  /** Step quality down when frames run long. Resolution is never touched. */
+  /** The governor: the flight's own (see flight.ts). Resolution is never touched. */
   protected govern(ms: number) {
-    if (ms > 250) return; // tab switch or a stall, not a signal
-    const s = this.samples;
-    s.push(ms);
-    if (s.length < 30) return;
-    const sorted = s.slice().sort((a, b) => a - b);
-    const med = sorted[15];
-    s.length = 0;
-    // The display's own interval: the fastest steady median seen so far.
-    if (med < this.base * 0.9 && med > 5) this.base = med;
-    if (med > this.base * 1.45 && med > 12) {
-      this.slow++;
-      this.fast = 0;
-    } else {
-      this.fast++;
-      this.slow = 0;
-    }
-    if (this.slow >= 3 && this.tier < TIERS.length - 1) {
-      this.tier++;
-      this.slow = 0;
-      this.allocSim();
-    }
+    void ms;
   }
 
   get info() {
@@ -868,7 +691,7 @@ export class WaterEngine {
     this.wave?.free(gl);
     this.vel?.free(gl);
     this.heat.free(gl);
-    for (const t of [this.waveOut, this.bedA, this.bedB, this.iceTex, this.maskTarget, this.detail, this.grain, this.curv, this.snow]) freeTarget(gl, t);
+    for (const t of [this.waveOut, this.bedA, this.bedB, this.iceTex, this.detail, this.grain, this.curv, this.snow]) freeTarget(gl, t);
     for (const k of Object.keys(this.p)) gl.deleteProgram(this.p[k].prog);
     gl.getExtension('WEBGL_lose_context')?.loseContext();
   }
