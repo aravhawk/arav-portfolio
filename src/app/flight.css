@@ -366,18 +366,22 @@ html[data-flight='on'] .fl-rail {
 .fl-role .fl-rise:nth-child(2)[data-in] > .fl-rise-in {
   transition-delay: 70ms;
 }
-.fl-hero-words .fl-intro[data-in] {
-  transition-delay: 180ms;
+.fl-hero-words .fl-intro[data-in],
+html[data-hero-words] .fl-hero-words .fl-intro {
+  transition-delay: 280ms;
 }
 .fl-intro {
   max-width: 54ch;
 }
-/* (When the sentence has gone, the line settles to the foot. The flight measures how far.) */
+/* (When the sentence has gone, the line settles to the foot. The flight measures how far. One waits for the other:
+   the line comes down only once the sentence has left, and going back up the page the sentence returns only once the
+   line has risen out of its place.) */
 .fl .fl-hero-words[data-second-gone] > .fl-role {
   transform: translate3d(0, var(--role-drop, 0px), 0);
+  transition: transform 300ms var(--fl-ease) var(--fl-go);
 }
 .fl .fl-hero-words > .fl-role {
-  transition: transform 320ms var(--fl-ease);
+  transition: transform 280ms var(--fl-ease);
 }
 
 /* (His sentence is in its place sooner than its section begins: from the moment the bank it stands on is in the frame.) */
@@ -513,6 +517,11 @@ html[data-picture] .flight-root > .fl-poster {
 .fl .fl-still {
   display: none;
 }
+/* (The picture cuts the name from this heading's own face: see buildName in flight.ts.) */
+.fl .fl-name {
+  font-family: var(--f-ice), var(--font-display);
+  font-weight: 800;
+}
 
 @media (max-width: 720px), (max-aspect-ratio: 9/10) {
   .fl-role {
@@ -544,14 +553,59 @@ html[data-picture] .flight-root > .fl-poster {
   }
 }
 
+/* Where the picture is not shown at all (forced colours, print), the name is type again. */
 @media (forced-colors: active) {
   .flight-root {
     display: none;
+  }
+  .fl .fl-lake {
+    display: grid;
+    place-items: center;
+    background: none;
+  }
+  .fl .fl-lake .fl-poster {
+    display: none;
+  }
+  .fl .fl-name.sr-only {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    font-size: var(--ice-size);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 0.9;
+    text-align: center;
   }
 }
 @media print {
   .flight-root {
     display: none !important;
+  }
+  .fl .fl-lake {
+    display: grid;
+    place-items: center;
+    background: none;
+  }
+  .fl .fl-lake .fl-poster {
+    display: none;
+  }
+  .fl .fl-name.sr-only {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    font-size: var(--ice-size);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 0.9;
+    text-align: center;
   }
 }
 
@@ -884,17 +938,13 @@ html[data-picture] .flight-root > .fl-poster {
   text-transform: uppercase;
   color: var(--end-ink-2);
 }
-/* The entrance: the headline wipes in, the rest follows. It leaves fast. */
-.fl-words.fl-end-words > * {
-  opacity: 1;
-  transform: none;
-  transition: none;
-}
+/* The entrance. The small line leads, alone, as the camera comes down to the sea (the block is on from then);
+   when the camera rests the block sets (`data-set`): the headline wipes in and the links follow. It leaves fast. */
 .fl-end-words .ending-line {
   clip-path: inset(-10% 100% -10% 0);
   transition: clip-path 180ms var(--ease-out);
 }
-.fl-end-words[data-on] .ending-line {
+.fl-end-words[data-set] .ending-line {
   clip-path: inset(-10% -6% -10% 0);
   transition: clip-path 900ms var(--ease-in-out);
 }
@@ -906,13 +956,23 @@ html[data-picture] .flight-root > .fl-poster {
     opacity 180ms var(--ease-out),
     transform 180ms var(--ease-out);
 }
-.fl-end-words[data-on] .ending-kicker,
-.fl-end-words[data-on] .ending-links {
+.fl-end-words[data-on] .ending-kicker {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 280ms var(--ease-out),
+    transform 280ms var(--ease-out);
+}
+.fl-end-words[data-set] .ending-links {
   opacity: 1;
   transform: none;
   transition:
     opacity 700ms var(--ease-out) 420ms,
     transform 700ms var(--ease-out) 420ms;
+}
+.fl-end-words:not([data-set]) .ending-links *,
+.fl-end-words:not([data-set]) .ending-head * {
+  pointer-events: none;
 }
 .fl-end-words:not([data-on]) * {
   pointer-events: none;
@@ -937,7 +997,7 @@ html[data-picture] .flight-root > .fl-poster {
     transform: none;
     transition: opacity 200ms linear;
   }
-  .fl-end-words:not([data-on]) .ending-line {
+  .fl-end-words:not([data-set]) .ending-line {
     opacity: 0;
   }
 }

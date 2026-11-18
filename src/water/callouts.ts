@@ -6,13 +6,15 @@
  * label that would overlap one already placed is lifted above it) and a
  * callout fades when its point leaves the frame or its stretch of scroll.
  *
- * One system at every width and in both themes: the whole name in small mono
- * type, a hairline leader, a ring on the thing it names. On a wide screen a
- * station with many captions sets them as a fan: one row over the points, in
- * the points' order. On a narrow screen up to four captions stand stepped
- * over their points; a station with more sets them all as one list over its
- * words, a name to a line, in the streams' order. The geometry is in
- * words.ts, where it is tested.
+ * One system at every width and in both themes: the whole name as its own
+ * project writes it, in small mono type, a hairline leader, a ring on the
+ * thing it names. On a wide screen a station with many captions sets them
+ * as a fan: one row over the points, in the points' order. On a narrow
+ * screen up to four captions stand stepped over their points; a station
+ * with more sets them all as one list, a name to a line, in the streams'
+ * order, in the room its block of words keeps for it (`data-calls-slot`:
+ * beside the count they itemise, on the same ground as the words). The
+ * geometry is in words.ts, where it is tested.
  */
 
 import { type Basis, projectPoint, type V3 } from './camera';

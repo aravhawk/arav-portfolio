@@ -1721,6 +1721,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     on: boolean | null;
     hero: boolean;
     pieces: Piece[];
+    /** a block that sets as one at a later point than it comes on (the ending: its small line leads): that point, and whether it is past */
+    setAt: number;
+    set: boolean | null;
   }
   const words: Words[] = Array.from(document.querySelectorAll<HTMLElement>('[data-fl-from]')).map((el) => ({
     el,
@@ -1729,6 +1732,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     on: null,
     hero: el.dataset.hero !== undefined,
     pieces: Array.from(el.querySelectorAll<HTMLElement>('[data-at]')).map((piece) => ({ el: piece, at: Number(piece.dataset.at), in: null })),
+    setAt: el.dataset.flSet === undefined ? NaN : Number(el.dataset.flSet),
+    set: null,
   }));
   /** Lines that leave before their block does: each is gone from its own point of the scroll on. */
   const early = Array.from(document.querySelectorAll<HTMLElement>('[data-fl-until]')).map((el) => ({ el, until: Number(el.dataset.flUntil), gone: false }));
@@ -2113,6 +2118,13 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
         w.on = on;
         w.el.toggleAttribute('data-on', on);
         if (w === leeFor) stepped = true;
+      }
+      if (!Number.isNaN(w.setAt)) {
+        const set = on && s >= w.setAt;
+        if (set !== w.set) {
+          w.set = set;
+          w.el.toggleAttribute('data-set', set);
+        }
       }
       for (const it of w.pieces) {
         // (A block that has left keeps its pieces as they stood: it goes as one.)

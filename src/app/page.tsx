@@ -145,6 +145,13 @@ function Kind({ p, b }: { p: Project; b: Build }) {
 /** The first script of the page: the still for this window, and the latest the first frame's words set (ms after it runs). */
 const POSTER_BOOT = posterBoot(2600);
 
+/**
+ * The ending's small line leads, as a station's eyebrow does: it stands alone at its place from this long before the
+ * camera comes to rest (in screens), over the open sea the camera is coming down to, so the run out from the delta
+ * is not a stretch without a word. The headline and the links set when the camera rests, as they always have.
+ */
+const END_LEAD = 0.4;
+
 /** His sentence, set a line at a time through the reach. */
 const SAY_LINES = ['Agents that break', 'software before', 'attackers do.', 'Tools developers', 'run daily.'];
 const SAY_AT = [SAY_FROM, 2.2, 2.5, 2.78, 3.02];
@@ -169,7 +176,8 @@ export default async function Home() {
   const tensor = build(stops[8]);
   // (The canyon is this station from its mouth: its eyebrow stands through the bends, its block sets in the hall.)
   const canyon = build(stops[9], { eyebrow: CANYON + 0.05 - stops[9], leave: 0.75 });
-  const delta = build(stops[10], { leave: 1.2 });
+  // (The delta's bank stays under its words a while after the eye has begun to leave for the sea: they stay with it.)
+  const delta = build(stops[10], { leave: 1.5 });
   return (
     <>
       {/* ---------- the rail: where in the flight this is, and a way to any part of it (before the page's content, so the skip link passes it) ---------- */}
@@ -482,7 +490,7 @@ export default async function Home() {
         {/* ---------- the sea: the ending, the last frame of the same flight ---------- */}
         <section className="fl-sec fl-sea ending" data-fl style={len(SECTIONS.sea, true)} aria-label="Contact">
           <div className="fl-pin">
-            <div className="fl-words fl-end-words" data-fl-from={+(SETTLE_AT - 0.04).toFixed(3)} data-fl-to={1e6}>
+            <div className="fl-words fl-end-words" data-fl-from={+(SETTLE_AT - END_LEAD).toFixed(3)} data-fl-to={1e6} data-fl-set={+(SETTLE_AT - 0.04).toFixed(3)}>
               <div className="fl-end-block">
                 <h2 className="ending-head">
                   <span className="ending-line">It&apos;s still early.</span>
