@@ -967,3 +967,35 @@ commit `cae66f6`.
 Gates at `cae66f6`: lint, typecheck, 309 tests; 200 words; 0 console
 errors; legibility over stations 7 and 8 at 1440 and 390, 0 failures.
 Next, alone: R3e (the melt), started 4:52 PM.
+
+### R3e (the melt), integrated 6:55 PM CT
+
+Seven signed commits on the branch ending at `6479beb`, merged without
+conflict; looked at in the merged build in both themes.
+
+- The letters keep their drawn weight to the end: they round into
+  humps and **sink into a pool that spreads from their own feet**; the
+  sunk part is seen through the water; one lead carries the water off
+  toward the outlet, with a visible current, rings and calved pieces.
+- Before dawn the pool mirrors the true sky: the hard-edged green patch
+  and the stipple are gone.
+- Every frame after the name has plates, the lead and the far shore;
+  the first frame's line stays until 1.2 screens and the statement is
+  in place from 1.9 (a new camera key), so the stretch without words
+  is 0.7 screens (it was 1.9).
+- The name's ice is frosted on top and clear deep blue toward the
+  foot, with a shorter, dimmer reflection; the near snow under the
+  first frame's words is crisp, not blurred.
+- The name's contrast against the ice by day: 4.39 at 320 wide (was
+  2.92), 3.31 at 2560 x 900 (was 2.52), 5.2 to 5.7 elsewhere; 6.5 to
+  6.9 before dawn.
+
+Its checks: lint, typecheck, 309 tests, build; 200 words; legibility at
+320, 390 and 1440 over screens 0 to 5, 1,104 lines, 0 failures; the
+words test, 0 faults, 7 of 80 positions without copy (was 11; the aim
+was 6). Its shortfalls: the last beat (1.11 to 1.15 screens) is humps
+and a ghost under water, not crisp letters; translucence is a gradient,
+not refraction; on a phone before dawn the pool's front shore breaks
+into several bays; the lead's mouth is a plain funnel.
+
+Next, alone: R3d (stations 1 to 4, Kilo Bench first).
