@@ -14,7 +14,7 @@
 
 import type { BedData } from './bed';
 import { type GL, type Program, type Target, Swap, bindTex, bindTriangle, compile, drawTo, freeTarget, makeTarget, makeTexture } from './gl';
-import { BED_A, BED_B, DETAIL, DETAIL_CURV, GRAIN, SD_BLUR, SNOW, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
+import { BED_A, BED_B, DETAIL, DETAIL_CURV, GRAIN, ICE_AT, SD_BLUR, SNOW, VEL_ADVECT, VEL_DIV, VEL_PRESSURE, VEL_PROJECT, WAVE, WAVE_GRAD } from './shaders/sim';
 
 export interface Palette {
   land: [number, number, number];
@@ -134,6 +134,9 @@ export class WaterEngine {
   protected wave: Swap | null = null;
   protected waveOut: Target | null = null;
   protected vel: Swap | null = null;
+  /** The ice field at each cell of the simulation's window (ICE_AT), and what it was last worked out for. */
+  protected iceAt: Target | null = null;
+  private iceAtKey = '';
   protected hf: number;
 
   // view
@@ -238,6 +241,7 @@ export class WaterEngine {
       bedB: BED_B,
       sdBlur: SD_BLUR,
       wave: WAVE,
+      iceAt: ICE_AT,
       waveGrad: WAVE_GRAD,
       velAdvect: VEL_ADVECT,
       velDiv: VEL_DIV,
@@ -311,6 +315,7 @@ export class WaterEngine {
     gl.deleteTexture(sdTex);
     gl.deleteTexture(flowTex);
     this.bedMeta = { w: bed.w, h: bed.h, div: bed.div };
+    this.iceAtKey = '';
     this.dirty = true;
   }
 
@@ -319,6 +324,7 @@ export class WaterEngine {
     freeTarget(gl, this.iceTex);
     this.iceTex = null;
     this.iceMeta = ice;
+    this.iceSerial++;
     if (!ice) return;
     // Where the letters themselves lie in the raster (it is padded): the
     // pool they melt into is shaped on this box.
@@ -417,7 +423,10 @@ export class WaterEngine {
     this.wave?.free(gl);
     this.vel?.free(gl);
     freeTarget(gl, this.waveOut);
+    freeTarget(gl, this.iceAt);
     const o = { ...this.f16(), filter: gl.LINEAR };
+    this.iceAt = makeTarget(gl, w, h, { ...this.f16(), filter: gl.NEAREST });
+    this.iceAtKey = '';
     this.wave = new Swap(gl, w, h, { ...this.f16(), filter: gl.NEAREST });
     this.waveOut = makeTarget(gl, w, h, o);
     this.vel = new Swap(gl, w, h, o);
@@ -588,6 +597,20 @@ export class WaterEngine {
       this.heat.swap();
     }
 
+    // The ice field over the window: worked out again only when the sheet or the window has changed.
+    if (ice.rect[2] > 0) {
+      const key = `${sim.join()}|${this.iceSerial}|${ice.rect.join()}|${ice.a.join()}|${ice.b.join()}|${ice.c.join()}|${ice.k}|${ice.l.join()}|${ice.box.join()}|${ice.lake.join()}|${ice.n.join()}|${this.iceKey()}`;
+      if (key !== this.iceAtKey) {
+        this.iceAtKey = key;
+        const ia = this.p.iceAt;
+        gl.useProgram(ia.prog);
+        common(ia, 1);
+        this.bindIce(ia, ice, 3, 5);
+        bindTex(gl, 4, this.detail.tex, ia.u.uDetail);
+        drawTo(gl, this.iceAt);
+      }
+    }
+
     // Waves: fixed substeps of 1/120 s keep the wave speed frame-rate independent.
     const steps = Math.max(1, Math.min(3, Math.round(dt * 120)));
     const sub = dt / steps;
@@ -596,7 +619,9 @@ export class WaterEngine {
     common(w, 1);
     gl.uniform1f(w.u.uDt, sub);
     gl.uniform4fv(w.u.uPtr, seg);
-    this.bindIce(w, ice, 3, 5);
+    gl.uniform4fv(w.u.uIce, ice.rect);
+    gl.uniform4fv(w.u.uLake, ice.lake);
+    bindTex(gl, 3, this.iceAt!.tex, w.u.uIceAt);
     gl.uniform1f(w.u.uIceDrip, ice.rect[2] > 0 ? Math.min(this.meltRate, 1.2) + ice.shed : 0);
     gl.uniform1f(w.u.uAmbient, 1);
     bindTex(gl, 4, this.detail.tex, w.u.uDetail);
@@ -653,6 +678,13 @@ export class WaterEngine {
     p.fresh = false;
   }
 
+  /** Whatever else the ice field's uniforms depend on (a subclass that sets more of them says so here). */
+  protected iceKey(): string {
+    return '';
+  }
+  /** Counts the name's rasters: a new one is a new field. */
+  private iceSerial = 0;
+
   protected palette(): Palette {
     const a = PALETTES.light;
     const b = PALETTES.dark;
@@ -691,7 +723,7 @@ export class WaterEngine {
     this.wave?.free(gl);
     this.vel?.free(gl);
     this.heat.free(gl);
-    for (const t of [this.waveOut, this.bedA, this.bedB, this.iceTex, this.detail, this.grain, this.curv, this.snow]) freeTarget(gl, t);
+    for (const t of [this.waveOut, this.iceAt, this.bedA, this.bedB, this.iceTex, this.detail, this.grain, this.curv, this.snow]) freeTarget(gl, t);
     for (const k of Object.keys(this.p)) gl.deleteProgram(this.p[k].prog);
     gl.getExtension('WEBGL_lose_context')?.loseContext();
   }

@@ -136,6 +136,27 @@ void main() {
  * reflecting walls. Scroll moves the window in whole texels (uShift) so the
  * field is never resampled and never blurs.
  */
+/**
+ * The lake's ice field at each cell of the simulation's window: the signed distance to the edge of the ice (under 0
+ * on ice). The wave step reads it instead of working the field out: the field is the same for every step of a frame,
+ * and for every frame in which neither the melt nor the window has moved, so it is worked out once for all of them.
+ */
+export const ICE_AT = `${HEAD}
+${SIM_COMMON}
+${ICE_FIELD}
+void main() {
+  vec2 world = simWorld(vUv);
+  float sd = bedSd(world);
+  float f = 1e3;
+  if (sd <= 0.0 && uIce.z > 0.0 && world.y > uLake.x - 40.0 && world.y < uLake.y + 40.0) {
+    vec3 cr;
+    vec2 il;
+    f = iceF(world, sd, cr, il);
+  }
+  // (Kept within what a half float holds finely: only its values near the edge are used.)
+  o = vec4(clamp(f, -1e3, 1e3), 0.0, 0.0, 0.0);
+}`;
+
 export const WAVE = `${HEAD}
 ${SIM_COMMON}
 uniform sampler2D uWave;
@@ -147,7 +168,10 @@ uniform vec2 uPtrForce;     // x: strength (speed based), y: radius px
 uniform vec4 uDrop;         // x,y world, z radius, w strength (one discrete splash)
 uniform float uIceDrip;     // how hard the ice is melting right now: drips off its edges
 uniform float uAmbient;     // strength of flow-driven ripples
-${ICE_FIELD}
+uniform vec4 uIce;          // the name's raster in world px (w = 0: no ice left)
+uniform vec4 uLake;         // x: lake top, y: lake bottom
+uniform sampler2D uDetail;
+uniform sampler2D uIceAt;   // the ice field at each cell (ICE_AT): signed distance to the edge of the ice
 
 float segDist(vec2 p, vec2 a, vec2 b) {
   vec2 pa = p - a, ba = b - a;
@@ -226,9 +250,7 @@ void main() {
   // a wave that reaches the ice dies at its edge. Meltwater dripping off a
   // melting edge starts rings in the open water beside it.
   if (uIce.z > 0.0 && world.y > uLake.x - 40.0 && world.y < uLake.y + 40.0) {
-    vec3 cr;
-    vec2 il;
-    float f = iceF(world, sd, cr, il);
+    float f = texelFetch(uIceAt, p, 0).r;
     if (uIceDrip > 0.0) {
       float edge = exp(-(f - 4.0) * (f - 4.0) / 26.0);
       float n = texture(uDetail, world / 46.0 + vec2(0.9, 0.7) * uTime).r;

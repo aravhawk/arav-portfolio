@@ -909,6 +909,12 @@ export class FlightEngine extends WaterEngine {
     if (prog.u.uNameL) gl.uniform2f(prog.u.uNameL, smooth(0.13, 0.5, m), 26 + 44 * smooth(0.16, 0.56, m) + 150 * smooth(0.56, 0.9, m));
   }
 
+  /** What this engine's own part of the ice field depends on (see bindIce): the melt, the name as it stands, the first frame's words, the governor's step. */
+  protected iceKey() {
+    const st = this.nameStand;
+    return `${this.melt}|${this.nameCut.join()}|${this.nameWords.join()}|${this.nameTan}|${this.leanNow}|${st ? `${st.yf.join()},${st.base.join()},${st.split},${st.cap},${st.depth}` : ''}`;
+  }
+
   protected simCell() {
     return CELL[this.tier];
   }
