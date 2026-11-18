@@ -1230,7 +1230,8 @@ vec4 snowTile(vec2 p, float scale, vec2 off) {
 /** 0..1: how near the words now showing this pixel is. The ground is quiet under them. */
 float wordsNear() {
   if (uCalmK.x <= 0.0 || uCalmK.y > 0.5) return 0.0;
-  if (vUv.y > uCalmBox.w + 0.2 || vUv.y < uCalmBox.y - 0.2 || vUv.x > uCalmBox.z + 0.2 || vUv.x < uCalmBox.x - 0.2) return 0.0;
+  float nearX = 0.2 / min(uLens.y, 1.0);
+  if (vUv.y > uCalmBox.w + 0.2 || vUv.y < uCalmBox.y - 0.2 || vUv.x > uCalmBox.z + nearX || vUv.x < uCalmBox.x - nearX) return 0.0;
   vec2 cq = abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5;
   cq.x *= uLens.y;
   float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);
@@ -4160,7 +4161,9 @@ void main() {
   // (Most of the frame is nowhere near them: it is let go at once.)
   // (The ending's words need none of it: they stand over the near sea, which is deep and dark of itself. Nothing is
   // laid over that picture.)
-  if (uCalmK.x > 0.0 && uCalmK.y < 0.5 && vUv.y < uCalmBox.w + 0.17 && vUv.y > uCalmBox.y - 0.17 && vUv.x < uCalmBox.z + 0.17 && vUv.x > uCalmBox.x - 0.17) {
+  // (Its reach is measured in the frame's height: across an upright frame that is a larger share of the width.)
+  float leeX = 0.17 / min(uLens.y, 1.0);
+  if (uCalmK.x > 0.0 && uCalmK.y < 0.5 && vUv.y < uCalmBox.w + 0.17 && vUv.y > uCalmBox.y - 0.17 && vUv.x < uCalmBox.z + leeX && vUv.x > uCalmBox.x - leeX) {
     vec2 cq = abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5;
     cq.x *= uLens.y;
     float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);
