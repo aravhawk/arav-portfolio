@@ -10,7 +10,7 @@
  * caption, and all of it stands clear of the nav.
  */
 
-import { TRIBS, LIP } from './world';
+import { TRIBS, tribPoint } from './world';
 import type { V3 } from './camera';
 
 /** The nav is 44 px tall, 14 px from the top of the frame: nothing of the words' layer stands nearer than 24 px under it. */
@@ -22,8 +22,8 @@ export const TAIL = 0.18;
 /** True where a travelling block stands composed; everywhere else in its stretch it is a tag. */
 export const composedAt = (s: number, inAt: number, outAt: number) => s >= inAt - LEAD && s < outAt + TAIL;
 
-/** Where each stream's caption lands: on the stream itself, most of the way down its upper run. */
-export const streamAnchors = (): V3[] => TRIBS.map((t) => [t.head.x + (t.mid.x - t.head.x) * 0.8, t.head.y + (t.mid.y - t.head.y) * 0.8, LIP.h]);
+/** Where each stream's caption lands: on the stream itself as it is drawn (the world says where: tribPoint). */
+export const streamAnchors = (): V3[] => TRIBS.map((_, i) => tribPoint(i));
 /** A caption to place: its point in the frame, its label's size, and how its station wants it set. */
 export interface Cap {
   x: number;
