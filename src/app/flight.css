@@ -892,8 +892,8 @@ html[data-flight='on'] .fl-name [data-ice-line] {
    Where WebGL2 cannot run, and for a reader whose scripts never ran, the
    same sections stack as an ordinary page: each a block with its words and
    its real image or film where it has one, standing in a still basin of the
-   site's water; the name in type on pale ice; the ending as the old
-   ending's sky and sea, held as a gradient. */
+   site's water; the name in type on pale ice; the ending as the picture's
+   own sky and sea in each theme's hour, held as gradients. */
 
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-sec {
   height: auto;
@@ -994,16 +994,41 @@ html[data-flight='on'] .fl-name [data-ice-line] {
   font-size: var(--fs-label);
   pointer-events: auto;
 }
-/* The ending: the ending's picture, still. Its sky (deep blue coming down to gold), the far shore, the mist on the waterline,
-   the shore's image in the still water, the dark near water. */
+/* The ending: the ending's picture, still, in the hour its theme ends on (as the flight does: see sky.ts).
+   By day, the last gold of the day going to blue: a deep blue sky coming down to amber, the sun on the far
+   shore, the ranges and their image in the water, deep blue near water. Before dawn, the first light of
+   morning: a deep blue sky, rose along the horizon, pale gold only round the rising sun, violet ranges,
+   deep blue water. The colours are read from the picture at the same heights. Layers, front to back: the
+   sun and its glow, its path on the water, the haze on the waterline, the sky and the sea. The ranges are
+   the ::before, cut to a ridge and its mirror about the waterline (38.3 percent down). */
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-sea .fl-pin {
   display: block;
   min-height: 100svh;
   padding: 0;
-  background: linear-gradient(to bottom, #4277a8 0%, #7892ae 8%, #b6b4b0 15%, #d7cdb3 22%, #e3d9b5 28%, #b7a781 30%, #6c5b40 33.5%, #7c6947 36.5%, #d4c58f 38%, #8a754d 40%, #b9a984 43%, #ded2af 45%, #7d97b2 48.5%, #295a8f 52%, #183a6f 62%, #122a5a 75%, #0d2048 100%);
+  --end-ridge: linear-gradient(to bottom, #a48d7c 28%, #7b6a6c 32%, #6a5d68 36%, rgba(196, 168, 128, 0.2) 38.3%, #7a6767 40.4%, #8f7a70 43%, rgba(158, 136, 118, 0.5) 46%);
+  --end-ridge-sun: radial-gradient(34vmax 22vmax at 74% 31%, rgba(246, 214, 150, 0.92) 0%, rgba(226, 184, 120, 0.6) 34%, rgba(200, 160, 110, 0) 72%);
+  background:
+    radial-gradient(circle at 74% 30.5%, #fffdf7 0, #fffdf7 1.05vmax, rgba(255, 248, 226, 0.9) 1.5vmax, rgba(255, 236, 190, 0.5) 5vmax, rgba(255, 222, 160, 0.2) 15vmax, rgba(255, 214, 150, 0) 34vmax),
+    radial-gradient(5vmax 30% at 74% 72%, rgba(255, 232, 190, 0.32) 0%, rgba(255, 226, 176, 0.14) 50%, rgba(255, 226, 176, 0) 100%),
+    linear-gradient(to bottom, rgba(232, 204, 152, 0) 34%, rgba(236, 210, 160, 0.5) 37.6%, rgba(238, 214, 166, 0.62) 38.3%, rgba(232, 204, 152, 0.4) 39.4%, rgba(232, 204, 152, 0) 44%),
+    linear-gradient(to bottom, #345d92 0%, #386297 5%, #436a9b 10%, #6b799c 15%, #a39397 20%, #c7ac8e 25%, #d6ba8c 29%, #dcc090 34%, #d9bc8c 38.3%, #d2b68a 43%, #c9ac86 46%, #8a8596 49%, #546b94 51.2%, #254b7f 55.6%, #18396f 62%, #122c5c 72%, #0e224d 80%, #0c1e43 100%);
 }
 :root[data-theme='dark']:is(html[data-flight='off'], html:not([data-scripted])) .fl-sea .fl-pin {
-  background: linear-gradient(to bottom, #716874 0%, #a2877e 15%, #dcba7a 29%, #e6c682 33%, #9a7350 34.5%, #8c6344 37%, #d9a852 38%, #a47239 40%, #946941 50%, #362f32 70%, #171b22 100%);
+  --end-ridge: linear-gradient(to bottom, #7a5b6c 28%, #46334e 32%, #3f2d49 36%, rgba(150, 110, 120, 0.25) 38.3%, #4c374f 40.4%, #5d4458 43%, rgba(110, 84, 104, 0.5) 46%);
+  --end-ridge-sun: radial-gradient(34vmax 22vmax at 74% 31%, rgba(226, 190, 176, 0.9) 0%, rgba(176, 134, 136, 0.55) 34%, rgba(140, 104, 116, 0) 72%);
+  background:
+    radial-gradient(circle at 74% 30.5%, #fffdfa 0, #fffdfa 1.05vmax, rgba(252, 246, 236, 0.9) 1.5vmax, rgba(244, 228, 208, 0.48) 5vmax, rgba(226, 196, 186, 0.2) 15vmax, rgba(214, 176, 176, 0) 34vmax),
+    radial-gradient(5vmax 30% at 74% 72%, rgba(240, 222, 208, 0.3) 0%, rgba(226, 200, 196, 0.13) 50%, rgba(226, 200, 196, 0) 100%),
+    linear-gradient(to bottom, rgba(190, 150, 152, 0) 34%, rgba(196, 156, 156, 0.5) 37.6%, rgba(202, 162, 160, 0.6) 38.3%, rgba(190, 150, 152, 0.38) 39.4%, rgba(190, 150, 152, 0) 44%),
+    linear-gradient(to bottom, #262e60 0%, #293165 5%, #32386a 10%, #3f4170 15%, #544f76 20%, #836980 25%, #a07e88 29%, #a8848a 34%, #a27e86 38.3%, #9a7884 43%, #8c6e84 46%, #454472 49%, #343868 51.2%, #1b2452 55.6%, #121c46 62%, #0e173b 72%, #0c1432 80%, #0b122d 100%);
+}
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-sea .fl-pin::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--end-ridge-sun), var(--end-ridge);
+  clip-path: polygon(0% 34.84%, 2.3% 31.31%, 4.5% 33.97%, 6.8% 33%, 9.1% 32.78%, 11.4% 31.91%, 13.6% 33.65%, 15.9% 31.25%, 18.2% 32.7%, 20.5% 32.01%, 22.7% 33.04%, 25% 32.03%, 27.3% 33.05%, 29.5% 33.47%, 31.8% 34.33%, 34.1% 32.79%, 36.4% 34.14%, 38.6% 34.76%, 40.9% 34.65%, 43.2% 34.43%, 45.5% 34.79%, 47.7% 34.41%, 50% 36.22%, 52.3% 35.34%, 54.5% 35.67%, 56.8% 35.5%, 59.1% 36.22%, 61.4% 35.88%, 63.6% 35.92%, 65.9% 34.92%, 68.2% 35.9%, 70.5% 35.03%, 72.7% 34.7%, 75% 34.39%, 77.3% 35.23%, 79.5% 33.83%, 81.8% 34.21%, 84.1% 33.2%, 86.4% 32.52%, 88.6% 31.81%, 90.9% 32.7%, 93.2% 30.86%, 95.5% 34.29%, 97.7% 32.65%, 100% 33.1%, 100% 43.19%, 97.7% 43.61%, 95.5% 42.07%, 93.2% 45.29%, 90.9% 43.56%, 88.6% 44.40%, 86.4% 43.73%, 84.1% 43.09%, 81.8% 42.14%, 79.5% 42.50%, 77.3% 41.19%, 75% 41.98%, 72.7% 41.68%, 70.5% 41.37%, 68.2% 40.56%, 65.9% 41.48%, 63.6% 40.54%, 61.4% 40.57%, 59.1% 40.26%, 56.8% 40.93%, 54.5% 40.77%, 52.3% 41.08%, 50% 40.26%, 47.7% 41.96%, 45.5% 41.60%, 43.2% 41.94%, 40.9% 41.73%, 38.6% 41.63%, 36.4% 42.21%, 34.1% 43.48%, 31.8% 42.03%, 29.5% 42.84%, 27.3% 43.23%, 25% 44.19%, 22.7% 43.24%, 20.5% 44.21%, 18.2% 43.56%, 15.9% 44.93%, 13.6% 42.67%, 11.4% 44.31%, 9.1% 43.49%, 6.8% 43.28%, 4.5% 42.37%, 2.3% 44.87%, 0% 41.55%);
+  pointer-events: none;
 }
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words {
   position: absolute;
