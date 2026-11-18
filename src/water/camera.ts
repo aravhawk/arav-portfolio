@@ -438,7 +438,8 @@ function tarnBand(aspect: number): Pose {
  * two shards, each whole over its own image.
  */
 function tarnPose(): Pose {
-  const pos: V3 = [TARN_BAY.x - 400, TARN_BAY.y - 220, 50];
+  // (This near the water the tarn is most of what the frame holds, and the sound reads it so: see the scene reader's `tarn`.)
+  const pos: V3 = [TARN_BAY.x - 350, TARN_BAY.y - 170, 42];
   // (It looks down a little: the bank's far edge stands well over the name, with room to spare through the whole move.)
   return { pos, aim: [pos[0] + 700, pos[1] + 720, pos[2] - 128], fov: 44 };
 }

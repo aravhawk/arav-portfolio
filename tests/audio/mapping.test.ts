@@ -1009,10 +1009,8 @@ describe('the scene is read from what the picture publishes', () => {
     expect(pool.tarn).toBeLessThan(0.2);
 
     // 5 The tarn: both shards in frame, the further one left of the nearer, and next to no water sound.
-    // (Since the home page's fourth round the wide frame is seen from the tarn's south-west bank, whose snow fills the
-    // frame's lower left under the words: the far shard stands a little further off, and the tarn is a little less of the frame.)
     const tarn = at(5);
-    expect(tarn.tarn).toBeGreaterThan(0.8);
+    expect(tarn.tarn).toBeGreaterThan(0.9);
     const shards = SHARDS.map((sh) => seenAt(tarn.cam, 1.6, sh.x, sh.y, sh.h / 2));
     for (const sh of shards) expect(sh.k).toBe(1);
     expect(waterOf(tarn, 0).reduce((s, v) => s + v[GAIN] * v[RATE], 0)).toBeLessThan(1);
