@@ -1096,6 +1096,8 @@ const mat2 GS = mat2(${Math.sin(WIND).toFixed(5)}, ${(-Math.cos(WIND)).toFixed(5
 // The two bearings its shadows were baked for, and the way from the first to the second.
 const vec2 SH_A = vec2(${Math.sin(SHADE_AZ.a).toFixed(5)}, ${Math.cos(SHADE_AZ.a).toFixed(5)});
 const vec2 SH_D = vec2(${shD[0].toFixed(5)}, ${shD[1].toFixed(5)});
+// How high the night's cold light stands over the snow, as a tangent.
+const float NIGHT_TAN = 0.13;
 
 /** The size of a pixel on the ground, as two vectors: set once per pixel. */
 vec2 gGx;
@@ -1174,19 +1176,26 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   float shade = smoothstep(0.0, 0.07 * clamp(foot / 6.0, 1.0, 3.0), mix(a.z, a.w, kAz) - tanEl);
   vec2 rel = sA;
   float lit = 1.0 - 0.6 * shade;
+  // Before dawn the snow has a second light: the sky's own, cold, from the side the curtains hang on (the first
+  // baked bearing, which the morning will use). Its shade is read from the same texels and cut as crisply as the day's.
+  float mC = dot(sA, SH_A);
+  float litC = uNight > 0.0 ? 1.0 - 0.6 * smoothstep(0.0, 0.07 * clamp(foot / 6.0, 1.0, 3.0), a.z - NIGHT_TAN) : 1.0;
   if (fb > 0.0) {
     vec4 b = snowTile(p, 1330.0, vec2(0.71, 0.29));
     vec2 sB = b.xy * GS;
     // (A ridge on a drift that leans from the light throws a longer shade: the drift's own lean is added to its horizon.)
     lit *= 1.0 - 0.8 * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 1.3, 1.0, 3.0), mix(b.z, b.w, kAz) + mA - tanEl), fb);
+    if (uNight > 0.0) litC *= 1.0 - 0.8 * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 1.3, 1.0, 3.0), b.z + mC - NIGHT_TAN), fb);
     rel += sB * fb;
     mA += dot(sB, Lxy) * fb;
-  } else lit *= 0.888;
+    mC += dot(sB, SH_A) * fb;
+  } else { lit *= 0.888; litC *= 0.888; }
   if (fc > 0.0) {
     vec4 c = snowTile(p, 286.0, vec2(0.37, 0.11));
     lit *= 1.0 - 0.88 * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 0.28, 1.0, 3.0), mix(c.z, c.w, kAz) + mA - tanEl), fc);
+    if (uNight > 0.0) litC *= 1.0 - 0.88 * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 0.28, 1.0, 3.0), c.z + mC - NIGHT_TAN), fc);
     rel += (c.xy * GS) * fc;
-  } else lit *= 0.877;
+  } else { lit *= 0.877; litC *= 0.877; }
   // (Rock is rougher than snow, and it breaks in blocks: each block has its own tilt.)
   vec3 blockR = vec3(1.0, 0.5, 0.5);
   float lvl = 0.5;
@@ -1213,7 +1222,8 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   // (Under the words the ridges' shade is thin: the ground there is calm.)
   sun = mix(1.0, sun, 0.4) * mix(1.0, lit, 1.0 - 0.9 * calm) * slabShade;
   vec4 gr = textureLod(uGrain, p / 150.0, lodFor(foot, 150.0, 256.0));
-  vec3 snow = mix(vec3(0.93, 0.94, 0.95), vec3(0.74, 0.8, 0.9), uNight) * (0.965 + 0.07 * gr.g);
+  // (Before dawn there is no glare to hide the snow's grain: the crust shows, a little, in the cold light.)
+  vec3 snow = mix(vec3(0.93, 0.94, 0.95), vec3(0.74, 0.8, 0.9), uNight) * (0.965 + 0.07 * gr.g + uNight * (0.22 * (gr.g - 0.5) + 0.12 * (gr.a - 0.5)));
   vec3 stone = mix(vec3(0.085, 0.09, 0.1), vec3(0.05, 0.055, 0.07), uNight) * (0.7 + 0.7 * gr.g);
   vec3 blue = mix(vec3(0.3, 0.52, 0.62), vec3(0.2, 0.36, 0.46), uNight);
   // The outcrop: dark bedded rock, wet at its foot, snow only in its hollows.
@@ -1235,22 +1245,50 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   // (Level snow is held at one brightness whatever the sun's height; the
   // low sun is in how strongly every slope answers it, and in the shade.
   // Before dawn the aurora lends the snow a faint green, most on what faces it.)
-  vec3 sky = (S.amb * 0.8 + uAurora * 0.035) * (0.62 + 0.38 * n.z);
-  // (Before dawn snow is still the palest ground there is: it gathers the whole sky's light.)
-  if (uNight > 0.0) sky *= (1.0 + 0.32 * uNight) * (1.0 + uNight * (0.5 * (lit - 0.72) * (1.0 - 0.9 * calm) + 1.3 * clamp(rel.y, -0.2, 0.2)));
-  vec3 col = alb * (S.key * mix(0.24, L.z, uNight) * sun + sky);
-  // Sparkle, only on snow the sun reaches.
+  vec3 col = uNight < 1.0 ? alb * (S.key * 0.24 * sun + S.amb * 0.8 * (0.62 + 0.38 * n.z)) : vec3(0.0);
+  // Before dawn the same relief is lit by the night. Three lights, so a form has three tones: the sky's cold
+  // light from the curtains' side, which a crest catches and a lee does not; the first warm light, low on the
+  // dawn's bearing, raking the faces turned to it; and under both the deep blue the whole sky gives, which is all
+  // a hollow has. A hollow is dark blue, never a black stroke, and every shade has its lit crest beside it.
+  float warmN = 1.0;
+  float coolN = 1.0;
+  if (uNight > 0.0) {
+    float kc = 1.0 - 0.9 * calm;
+    vec3 Lc = vec3(SH_A * 0.9917, 0.1289);
+    coolN = mix(1.0, clamp(dot(n, Lc) / Lc.z, 0.0, 2.4), 0.42) * mix(1.0, litC, kc);
+    // (The first light is low and far: level snow has little of it, and a face turned to it a great deal.)
+    float wr = clamp(ndl / max(L.z, 0.05), 0.0, 2.6);
+    warmN = wr * wr / 2.6 * mix(1.0, lit, kc) * slabShade;
+    float ambL = dot(S.amb, vec3(0.2126, 0.7152, 0.0722));
+    // (The curtains' colour breathes on the slopes that face them: faintly, in the cold light, never a green ground.)
+    vec3 coolC = ambL * vec3(0.42, 0.9, 1.32) * 1.5 + uAurora * 0.024;
+    vec3 warmC = S.key * 0.105;
+    vec3 fillC = S.amb * (0.5 + 0.25 * n.z);
+    col = mix(col, alb * (fillC + coolC * coolN + warmC * warmN), uNight);
+  }
+  // Sparkle, only on snow the sun reaches. (Before dawn: a few cold glints, on the crests the sky's light finds.)
   float glintK = (1.0 - smoothstep(2.0, 9.0, foot)) * (1.0 - bare) * (1.0 - calm);
   if (glintK > 0.0) {
     float sp = sparkle(p, foot, dir);
-    col += (S.key * 0.55 * lit * step(0.3, sun) * (1.0 - uNight) + (vec3(0.5, 0.74, 1.0) * 0.05 + uAurora * 0.3) * uNight) * sp * glintK;
+    col += (S.key * 0.55 * lit * step(0.3, sun) * (1.0 - uNight) + (vec3(0.5, 0.74, 1.0) * 0.07 + uAurora * 0.12) * smoothstep(0.9, 1.5, coolN) * uNight) * sp * glintK;
   }
   // Wet shore: dark and glossy at the water.
   float wet = 1.0 - smoothstep(1.0, 16.0, sd);
   col = mix(col, col * vec3(0.62, 0.74, 0.82), wet * 0.6 * smoothstep(1.5, 5.0, sd));
   // A cold sheen: snow is a little glossy at a glancing angle.
   float cosi = clamp(dot(-dir, n), 0.0, 1.0);
-  col += S.hor * pow(1.0 - cosi, 4.0) * mix(0.08, 0.2, uNight) * (1.0 - 0.6 * bare);
+  float glance = pow(1.0 - cosi, 4.0);
+  col += S.hor * glance * mix(0.08, 0.07, uNight) * (1.0 - 0.6 * bare);
+  if (uNight > 0.0) {
+    // Before dawn the crust shines where it throws the low light at the eye: the first light along the dawn's
+    // bearing, on the faces tilted to carry it, and the sky's cold light everywhere else. It is the relief that
+    // carries it, so it is a shine on forms and not a wash.
+    vec3 rr = reflect(dir, n);
+    float toDawn = max(dot(normalize(rr.xy + 1e-5), normalize(S.sun.xy)), 0.0);
+    float low = exp(-max(rr.z, 0.0) * 9.0);
+    float td = toDawn * toDawn; td *= td;
+    col += (S.band * 0.11 * td * td * warmN + S.mid * 0.5 * coolN) * glance * low * uNight * (1.0 - 0.6 * bare) * (1.0 - 0.7 * calm);
+  }
   return col;
 }
 
