@@ -1291,3 +1291,28 @@ page's HTML now arrives whole.
 Running, alone: **R4b**, the name and the melt (capitals as plates of
 clear lake ice lit from behind; the letters stay whole and founder as
 the sheet breaks, then ride on as bergs; no outline or glow anywhere).
+
+## The gate changes: PASS or FAIL, not a number (Arav, t296u, Nov 18, 5:43 PM CT)
+
+Replacing the numeric critic gate; not a lowered bar.
+
+- The explicit "median at least 9.5, none below 9" gate is dropped.
+  Critics no longer give numbers.
+- Each critic returns **PASS or FAIL** against the same standard as
+  before: Arav's words (section 0), Igloo-level quality, and the
+  Igloo, Lando Norris and Lusion references. A FAIL lists the specific
+  faults that make it fail. A PASS says why it holds up next to those
+  references.
+- Nobody (critics, helpers, this thread) is told to settle, aim lower
+  or wrap up early. The quality expectation is unchanged.
+- Completion is this thread's judgment, from the critics' verdicts and
+  reasons and from whether the remaining faults are real: no rounds
+  just to chase a number, and no stopping while real faults remain.
+- Everything else stays: round 4 finishes as planned, one helper at a
+  time, full review depth, signed checkpoints; the sound phase after
+  the build passes; **then push the branch and open the PR (never
+  merge)**.
+
+Applied: the round's common brief tells helpers of the change; panel
+11's package asks each critic for a verdict, its reasons, and the
+ranked faults, with no scores.
