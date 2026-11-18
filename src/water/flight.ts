@@ -20,11 +20,11 @@ import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './eng
 import { type Pending, type Program, type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
 import { DAWN, GATE, LAP, PULSE, RIBBON, dawnLight, nextDrip, stationsNear, stepGates } from './moments';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
-import { flightSource, freeboardAt } from './shaders/flight';
+import { FLIGHT_FREEBOARD, flightSource, freeboardAt } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
-import { F, F_ALL, type Mode, type Rect, bits, farParts, NO_ICE, iceParts, maskName, passNeeds, seaNear, slabInFrame, tarnNear } from './variants';
+import { type Box, F, F_ALL, type Mode, NO_ICE, type Tile, bits, frameTiles, iceParts, maskName, passNeeds, seaNear, slabInFrame, tarnNear } from './variants';
 import { NAV_CLEAR, composedAt } from './words';
 import { COLS, LAKE, LATTICE, OUTLET, REST, SHARDS, SHOAL_Y, SLAB, SLUICES, TRIBS, WORLD, paintWorld, rasterName, tribWidth } from './world';
 
@@ -327,8 +327,14 @@ export class FlightEngine extends WaterEngine {
   }
   private lastArgs: { cam: Basis; aspect: number; at: FlightMoment; top: number } | null = null;
 
-  /** The variant to draw a frame with: the leanest that is ready, is right for the theme, and carries all the frame needs. */
-  private pick(need: number): Variant {
+  /**
+   * The variant to draw a frame, or a piece of one, with: the leanest that is ready, is right for the theme, and
+   * carries all that is needed there.
+   * @param piece a piece of the frame: null where nothing ready carries all of it (the frame's own variant then draws it)
+   */
+  private pick(need: number): Variant;
+  private pick(need: number, piece: true): Variant | null;
+  private pick(need: number, piece = false): Variant | null {
     if (this.forced) return this.forced;
     const mode = this.mode();
     const fits = (v: Variant) => !!v.prog && (v.mode === mode || v.mode === 'any');
@@ -346,8 +352,9 @@ export class FlightEngine extends WaterEngine {
         wantBits = bits(m);
       }
     }
-    if (!best || bits(want) < bits(best.mask) || best.mode !== mode) this.begin(want, mode);
-    if (best) return best;
+    // (While the theme turns no piece asks for a variant of its own: the turn is drawn by what is ready.)
+    if ((!best || bits(want) < bits(best.mask) || best.mode !== mode) && !(piece && mode === 'any')) this.begin(want, mode);
+    if (best || piece) return best;
     // Nothing that is ready carries all of it: the one that carries most of it draws until one does.
     for (const v of this.variants.values()) {
       if (!fits(v)) continue;
@@ -757,9 +764,10 @@ export class FlightEngine extends WaterEngine {
       // The variant of the pass that drew the last frame, what that frame needed, and every variant asked for so far
       // (how long the driver took over it, in ms; 'pending' while it is still at it).
       variant: this.drawn ? `${maskName(this.drawn.mask)}:${this.drawn.mode}` : '',
-      // (Where the frame was drawn in parts: the variant that drew all of it but its far subjects' own rectangles.)
-      variantLean: this.drawnLean ? `${maskName(this.drawnLean.mask)}:${this.drawnLean.mode}` : '',
-      parts: this.drawnParts.map((q) => q.map((v) => +v.toFixed(4))),
+      // (The pieces the last frame was drawn in: what each needed, what drew it, and the share of the frame it covers.)
+      tiles: this.drawnTiles.map((t) => `${maskName(t.mask)} by ${maskName(t.by.mask)}:${t.by.mode} ${Math.round(t.area * 100)}%`),
+      // (Whether every piece was drawn by its very own variant, with nothing still at the driver's.)
+      settled: this.drawnTiles.length > 0 && this.drawnTiles.every((t) => t.by.mask === t.mask) && !Array.from(this.variants.values()).some((v) => v.pending),
       needed: maskName(this.needed),
       variants: Array.from(this.variants.values(), (v) => `${maskName(v.mask)}:${v.mode}:${v.failed ? 'failed' : v.pending ? 'pending' : Math.round(v.took)}`),
     };
@@ -1127,53 +1135,52 @@ export class FlightEngine extends WaterEngine {
     return false;
   }
 
-  /** The variant that drew the frame outside its far parts, when it was drawn in parts: for the checks. */
-  private drawnLean: Variant | null = null;
-  private drawnParts: Rect[] = [];
+  /** The pieces the last frame was drawn in, and what drew each: for the checks. */
+  private drawnTiles: { mask: number; area: number; by: Variant }[] = [];
+
+  /** The box the letters stand in (the pass's nameHit), with room: where in the frame they can be. */
+  private nameBox(): Box | null {
+    const st = this.nameStand;
+    const r = this.iceRect;
+    if (!st || r.w <= 0) return null;
+    return [
+      [r.x - 30, Math.min(st.yf[0], st.yf[1]) - 30, -FLIGHT_FREEBOARD - 70],
+      [r.x + r.w + 30, Math.max(st.yf[0], st.yf[1]) + st.depth + 30, st.cap * 1.3 + 20],
+    ];
+  }
+
+  /** The pieces a frame from this camera is drawn in, each with what it needs (see frameTiles). */
+  tiles(cam: Basis, aspect: number, need: number): Tile[] {
+    return frameTiles(cam, aspect, need, need & F.NAME ? this.nameBox() : null, this.canvas.width, this.canvas.height);
+  }
 
   private draw(cam: Basis, aspect: number, at: FlightMoment) {
-    // The variant of the pass this frame is drawn by: the leanest that carries all it can show.
     const need = this.needs(cam, aspect);
-    const variant = this.pick(need);
     this.needed = need;
-    this.drawn = variant;
-    this.drawnLean = null;
-    this.drawnParts = [];
     const night = Math.min(1, Math.max(0, this.theme));
-    // A subject that is looked for by place and stands far off needs only a small part of the frame: the frame is
-    // drawn by a variant without it, and that part again by the one that carries it.
-    if (!this.forced && (variant.mask & need) === need) {
-      const far = farParts(cam, aspect, need);
-      if (far.rects.length) {
-        const lean = this.leaner(far.lean, variant);
-        if (lean) {
-          this.drawnLean = lean;
-          this.drawnParts = far.rects;
-          this.scene(lean, cam, aspect, at, null);
-          this.scene(variant, cam, aspect, at, far.rects);
-          this.glow(night);
-          return;
-        }
-      }
+    // The variant that carries all the frame can show: what draws any piece whose own is not ready yet.
+    const whole = this.pick(need);
+    this.drawnTiles = [];
+    if (this.forced) {
+      this.drawn = whole;
+      this.drawnTiles.push({ mask: whole.mask, area: 1, by: whole });
+      this.scene(whole, cam, aspect, at, null);
+      this.glow(night);
+      return;
     }
-    this.scene(variant, cam, aspect, at, null);
+    // Each piece of the frame by the leanest variant that carries what stands in that piece.
+    const tiles = this.tiles(cam, aspect, need);
+    for (const t of tiles) {
+      const by = (t.mask === need ? whole : this.pick(t.mask, true)) ?? whole;
+      this.drawnTiles.push({ mask: t.mask, area: t.area, by });
+      this.scene(by, cam, aspect, at, tiles.length === 1 ? null : t.px);
+    }
+    this.drawn = this.drawnTiles[0].by;
     this.glow(night);
   }
 
-  /** A ready variant that carries `mask` and is leaner than `than`; where the leanest is not there yet it is asked for. */
-  private leaner(mask: number, than: Variant): Variant | null {
-    const mode = this.mode();
-    let best: Variant | null = null;
-    for (const v of this.variants.values()) {
-      if (!v.prog || (v.mode !== mode && v.mode !== 'any') || (v.mask & mask) !== mask || bits(v.mask) >= bits(than.mask)) continue;
-      if (!best || bits(v.mask) < bits(best.mask) || (bits(v.mask) === bits(best.mask) && v.mode === mode && best.mode !== mode)) best = v;
-    }
-    if (!best || best.mask !== mask || best.mode !== mode) this.begin(mask, mode);
-    return best;
-  }
-
   /** The scene, drawn by one variant: the whole frame, or only the given parts of it. */
-  private scene(variant: Variant, cam: Basis, aspect: number, at: FlightMoment, parts: Rect[] | null) {
+  private scene(variant: Variant, cam: Basis, aspect: number, at: FlightMoment, parts: [number, number, number, number][] | null) {
     const gl = this.gl;
     // (The open sea is only worked out when the camera is near enough to see it, and by a variant that carries it.)
     const seaOn = variant.mask & F.SEA ? seaNear(cam) : 0;
@@ -1305,11 +1312,10 @@ export class FlightEngine extends WaterEngine {
       drawTo(gl, null, w, h);
       return;
     }
+    // (In whole device pixels, x, y, width, height, y up.)
     gl.enable(gl.SCISSOR_TEST);
     for (const q of parts) {
-      const x0 = Math.max(0, Math.floor(q[0] * w) - 2);
-      const y0 = Math.max(0, Math.floor(q[1] * h) - 2);
-      gl.scissor(x0, y0, Math.min(w, Math.ceil(q[2] * w) + 2) - x0, Math.min(h, Math.ceil(q[3] * h) + 2) - y0);
+      gl.scissor(q[0], q[1], q[2], q[3]);
       drawTo(gl, null, w, h);
     }
     gl.disable(gl.SCISSOR_TEST);
@@ -1849,8 +1855,10 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const out: { s: number; mask: number }[] = [];
     for (let s = 0; s <= END_AT + 1e-6; s += 0.05) {
       const at = mqStill.matches ? stillScroll(s) : s;
-      const mask = passNeeds(basisOf(poseAt(keys, at)), aspect, iceParts((at - MELT.from) / (MELT.to - MELT.from), themeNow(), true), true);
-      if (!out.some((o) => o.mask === mask)) out.push({ s, mask });
+      const pose = basisOf(poseAt(keys, at));
+      const need = passNeeds(pose, aspect, iceParts((at - MELT.from) / (MELT.to - MELT.from), themeNow(), true), true);
+      // (All the frame there needs, which can draw any piece of it, and then each piece's own.)
+      for (const mask of [need, ...engine.tiles(pose, aspect, need).map((t) => t.mask)]) if (!out.some((o) => o.mask === mask)) out.push({ s, mask });
     }
     return out;
   };

@@ -141,7 +141,7 @@ const WATER_LOW = -64;
  */
 const FIELD_HIGH = LIP.h * 3.3;
 
-type Box = [V3, V3];
+export type Box = [V3, V3];
 /** Where the block's shade, its light, its image and its white water can lie: the ground and water within four widths of it. */
 const SLAB_REACH = SLAB.w * 4 + 8;
 const SLAB_GROUND: Box = [
@@ -233,37 +233,171 @@ export function boxRect(cam: Basis, aspect: number, [lo, hi]: Box): Rect | null 
 }
 
 /**
- * The subjects a frame needs only in a small part of itself: a subject the
- * pass looks for by place (the block and what it does to the ground and
- * water round it, the confluence's trails, the pool's water) and that is
- * far enough off to stand in a small rectangle of the frame. The frame is
- * then drawn by a variant without them (`lean`), and only those rectangles
- * again by the variant that carries them: every pixel is still drawn by a
- * variant that carries all it can show.
- * @param need what the whole frame needs (passNeeds)
+ * The part of the frame a box of the world can be seen in, whatever of it is behind the eye: the box is cut at the
+ * eye's own plane first, so what is left of it is all in front and its corners can be projected. null: none of it is
+ * in front of the eye. (It errs wide: where the box runs past the eye the rectangle runs off the frame on that side.)
  */
-export function farParts(cam: Basis, aspect: number, need: number): { lean: number; rects: Rect[] } {
-  let lean = need;
-  const rects: Rect[] = [];
-  const take = (bit: number, r: Rect | null) => {
-    if (!r) return;
-    const x0 = Math.max(0, r[0]);
-    const y0 = Math.max(0, r[1]);
-    const x1 = Math.min(1, r[2]);
-    const y1 = Math.min(1, r[3]);
-    // (A subject that fills much of the frame is the frame's own.)
-    if (x1 <= x0 || y1 <= y0 || (x1 - x0) * (y1 - y0) > 0.3) return;
-    lean &= ~bit;
-    rects.push([x0, y0, x1, y1]);
+export function boxRectCut(cam: Basis, aspect: number, [lo, hi]: Box): Rect | null {
+  const NEAR = 0.5;
+  const tx = cam.tan * aspect;
+  const ty = cam.tan;
+  // The corners, in the eye's frame: across, up, forward.
+  const c: V3[] = [];
+  for (let i = 0; i < 8; i++) {
+    const dx = (i & 1 ? hi[0] : lo[0]) - cam.pos[0];
+    const dy = (i & 2 ? hi[1] : lo[1]) - cam.pos[1];
+    const dz = (i & 4 ? hi[2] : lo[2]) - cam.pos[2];
+    c.push([dx * cam.r[0] + dy * cam.r[1] + dz * cam.r[2], dx * cam.u[0] + dy * cam.u[1] + dz * cam.u[2], dx * cam.f[0] + dy * cam.f[1] + dz * cam.f[2]]);
+  }
+  let x0 = 1e9;
+  let y0 = 1e9;
+  let x1 = -1e9;
+  let y1 = -1e9;
+  let any = false;
+  const put = (x: number, y: number, z: number) => {
+    const u = 0.5 + x / (z * tx) / 2;
+    const v = 0.5 + y / (z * ty) / 2;
+    x0 = Math.min(x0, u);
+    x1 = Math.max(x1, u);
+    y0 = Math.min(y0, v);
+    y1 = Math.max(y1, v);
+    any = true;
   };
+  for (let i = 0; i < 8; i++) {
+    const a = c[i];
+    if (a[2] >= NEAR) put(a[0], a[1], a[2]);
+    // Each of the box's twelve edges that crosses the eye's plane is cut there.
+    for (let k = 1; k < 8; k <<= 1) {
+      if (i & k) continue;
+      const b = c[i | k];
+      if (a[2] >= NEAR === b[2] >= NEAR) continue;
+      const t = (NEAR - a[2]) / (b[2] - a[2]);
+      put(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, NEAR);
+    }
+  }
+  return any ? [x0 - 0.004, y0 - 0.004, x1 + 0.004, y1 + 0.004] : null;
+}
+
+/** Where the sheet, its water and what lies on it can be in the frame: the lake's own ground and water, from side to side of the world and beyond. */
+const LAKE_GROUND: Box = [
+  [-60000, LAKE_Y[0], WATER_LOW],
+  [60000, LAKE_Y[1], 24],
+];
+/**
+ * Where the swept field can be. It is laid out in the first camera's picture of the name (nameSwept), up to about
+ * four of the name's half heights above its middle, and the far shore and the horizon stand about there in that
+ * picture: so its faint far end lies on all the ground from the lake to the horizon, the land beyond the lake too.
+ */
+const FIELD_GROUND: Box = [
+  [-400000, LAKE_Y[0], WATER_LOW],
+  [400000, 400000, 24],
+];
+
+/**
+ * A frame, cut into parts that each need less than the whole.
+ *
+ * A subject the pass looks for by place stands in a part of the frame: the lake's sheet and the name on it (the
+ * lake's own ground and water, and the letters' box), the block and what it does to the ground and water round it,
+ * the confluence's trails in the river, the pool's water. Outside that part the pass with the subject and the pass
+ * without it draw the same pixel, and the one without it is the cheaper (a subject's code slows a pixel that never
+ * runs it, and two subjects in one program cost more than the two apart). So each such subject is given its
+ * rectangle, the frame is cut along the rectangles' edges, and every piece is drawn once, by a variant that carries
+ * what stands in that piece and nothing else. A subject that fills nearly all of the frame is the frame's own.
+ * @param need what the whole frame needs (passNeeds)
+ * @param nameBox the box the letters stand in, while they stand
+ * @param w, h the frame's size in device pixels
+ * @returns each different need, with the pieces of the frame that have it (x, y, width, height in device pixels, y up)
+ */
+export interface Tile {
+  mask: number;
+  px: [number, number, number, number][];
+  /** the share of the frame these pieces cover */
+  area: number;
+}
+export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Box | null, w: number, h: number): Tile[] {
+  const whole: Tile[] = [{ mask: need, px: [[0, 0, w, h]], area: 1 }];
+  const parts: { bits: number; r: [number, number, number, number] }[] = [];
+  const take = (bits: number, r: Rect | null) => {
+    if (!bits) return;
+    if (!r) return;
+    // (In whole pixels, with a little room; a part that is nearly the frame is not cut out of it.)
+    const x0 = Math.max(0, Math.floor(r[0] * w) - 2);
+    const y0 = Math.max(0, Math.floor(r[1] * h) - 2);
+    const x1 = Math.min(w, Math.ceil(r[2] * w) + 2);
+    const y1 = Math.min(h, Math.ceil(r[3] * h) + 2);
+    if (x1 <= x0 || y1 <= y0) {
+      // (Looked for by place, and that place is not in the frame: no piece of the frame needs it.)
+      need &= ~bits;
+      return;
+    }
+    if ((x1 - x0) * (y1 - y0) > 0.86 * w * h) return;
+    parts.push({ bits, r: [x0, y0, x1, y1] });
+  };
+  const NONE: Rect = [0, 0, 0, 0];
+  const join = (a: Rect | null, b: Rect | null): Rect | null => (!a ? b : !b ? a : [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]);
+  const lake = need & (F.ICE | F.FIELD | F.NAME);
+  if (lake) take(lake, join(boxRectCut(cam, aspect, need & F.FIELD ? FIELD_GROUND : LAKE_GROUND), need & F.NAME && nameBox ? boxRectCut(cam, aspect, nameBox) : null) ?? NONE);
   if (need & F.SLAB) {
     const s = slabInFrame(cam, aspect);
-    const g = boxRect(cam, aspect, SLAB_GROUND);
-    if (s.behind === 0 && g) take(F.SLAB, [Math.min(s.box[0], g[0]), Math.min(s.box[1], g[1]), Math.max(s.box[2], g[2]), Math.max(s.box[3], g[3])]);
+    if (s.behind === 0) take(F.SLAB, join(s.box, boxRectCut(cam, aspect, SLAB_GROUND)));
   }
-  if (need & F.CONF && !confNearCam(cam)) take(F.CONF, boxRect(cam, aspect, CONF_RIVER_BOX));
-  if (need & F.POOL && !poolNearCam(cam)) take(F.POOL, boxRect(cam, aspect, POOL_BOX));
-  return { lean, rects };
+  const conf = need & F.CONF && !confNearCam(cam) ? (boxRectCut(cam, aspect, CONF_RIVER_BOX) ?? NONE) : null;
+  const pool = need & F.POOL && !poolNearCam(cam) ? (boxRectCut(cam, aspect, POOL_BOX) ?? NONE) : null;
+  const both = join(conf, pool)!;
+  // (Two small far subjects side by side are one piece: a variant and a draw for each sliver between them would cost more than it saved.)
+  if (conf && pool && conf !== NONE && pool !== NONE && (both[2] - both[0]) * (both[3] - both[1]) < 0.06) take(F.CONF | F.POOL, both);
+  else {
+    if (conf) take(F.CONF, conf);
+    if (pool) take(F.POOL, pool);
+  }
+  if (!parts.length) {
+    whole[0].mask = need;
+    return whole;
+  }
+  let base = need;
+  for (const q of parts) base &= ~q.bits;
+  // The frame is cut along every edge of every part; each piece then lies wholly inside or outside each part.
+  const xs = [...new Set([0, w, ...parts.flatMap((q) => [q.r[0], q.r[2]])])].sort((a, b) => a - b);
+  const ys = [...new Set([0, h, ...parts.flatMap((q) => [q.r[1], q.r[3]])])].sort((a, b) => a - b);
+  const maskAt = (x: number, y: number) => {
+    let m = base;
+    for (const q of parts) if (x >= q.r[0] && x < q.r[2] && y >= q.r[1] && y < q.r[3]) m |= q.bits;
+    return m;
+  };
+  // Pieces side by side with the same need are one piece; so are pieces one over the other with the same span.
+  const open = new Map<string, [number, number, number, number]>();
+  const tiles = new Map<number, Tile>();
+  const close = (mask: number, r: [number, number, number, number]) => {
+    let t = tiles.get(mask);
+    if (!t) tiles.set(mask, (t = { mask, px: [], area: 0 }));
+    t.px.push(r);
+    t.area += (r[2] * r[3]) / (w * h);
+  };
+  for (let j = 0; j < ys.length - 1; j++) {
+    const row: [number, number, number][] = [];
+    for (let i = 0; i < xs.length - 1; i++) {
+      const m = maskAt(xs[i], ys[j]);
+      const last = row[row.length - 1];
+      if (last && last[2] === m) last[1] = xs[i + 1];
+      else row.push([xs[i], xs[i + 1], m]);
+    }
+    const seen = new Set<string>();
+    for (const [a, b, m] of row) {
+      const key = `${a}:${b}:${m}`;
+      seen.add(key);
+      const up = open.get(key);
+      if (up) up[3] += ys[j + 1] - ys[j];
+      else open.set(key, [a, ys[j], b - a, ys[j + 1] - ys[j]]);
+    }
+    for (const [key, r] of open) {
+      if (seen.has(key)) continue;
+      close(Number(key.split(':')[2]), r);
+      open.delete(key);
+    }
+  }
+  for (const [key, r] of open) close(Number(key.split(':')[2]), r);
+  // (The largest first: it is the frame's own.)
+  return [...tiles.values()].sort((a, b) => b.area - a.area);
 }
 
 /**
