@@ -376,3 +376,109 @@ What the three share now, worst first:
 | The ending: closer, but no haze or sparkle band, flat terraced ranges, a stepped tail on the ribbon, the two themes nearly the same picture | all three |
 | A red noisy smear on the far falls from Infiniview at night | one |
 | Inner pages: small body text against empty bands; the same backdrop behind every page; one post on the blog | all three |
+
+## Panel 10: three fresh critics, ours beside the references (`b7e15c0`)
+
+After round 3 (R3a to R3g) and the two frame rate passes. The owner's
+format: every critic scores the same nine categories in one table, for
+ours and for Igloo, Lando Norris and Lusion, from sheets that put our
+frames beside theirs at the same viewports (1440 by 900 and 390 wide):
+18 desktop sheets, 11 phone sheets, 7 motion sheets (the load at 0.6,
+1.5, 3 and 5 s; runs of four consecutive frames every 450 px of
+scroll), plus our 58 full frames and 30 reference frames. Captured
+from the production build with the engine's full shading pinned; the
+motion runs with the page left alone, as a visitor meets it. Three
+critics, run one after another, each seeing only the package.
+
+Ours:
+
+| Category | 10a | 10b | 10c |
+| --- | --- | --- | --- |
+| Typography | 7.0 | 7.0 | 7.0 |
+| Hierarchy | 7.5 | 7.5 | 7.5 |
+| Spacing and density | 7.0 | 7.0 | 7.0 |
+| Color and contrast | 7.5 | 7.0 | 7.0 |
+| Iconography and imagery | 7.5 | 7.0 | 7.0 |
+| Motion | 6.5 | 6.0 | 6.0 |
+| Consistency and polish | 7.0 | 6.5 | 7.0 |
+| Clarity | 9.0 | 8.5 | 8.5 |
+| **Overall** | **7.3** | **7.0** | **7.1** |
+
+The references, by the same critics and the same standard (overall,
+then the range of the eight categories):
+
+| | 10a | 10b | 10c |
+| --- | --- | --- | --- |
+| Igloo | 8.8 (5.5 clarity to 9.5) | 9.0 (6.5 to 9.5) | 9.0 |
+| Lando Norris | 9.3 (8.5 to 9.5) | 9.3 (9.0 to 9.5) | 9.2 |
+| Lusion | 8.6 (8.0 to 9.0) | 8.7 (8.0 to 9.0) | 8.7 |
+
+**Median 7.1, lowest 7.0** (panel 9: 7.1, on a different rubric). Not
+at the bar. Two things to say plainly. First, round 3's fixes did not
+move the overall score: the faults panel 9 named are mostly gone from
+the findings (the canyon's smear, the night patch round the name, the
+boulders, the truncated captions), and the new format's motion sheets
+exposed a fault no earlier panel could see. Second, the bar itself:
+the same critics put the three references at 8.6 to 9.3. A median of
+9.5 with none below 9 means a build these critics rank above all
+three. That is the owner's bar and it stands; it is recorded here so
+the distance is not misread.
+
+Clarity is the one category where ours is level with or ahead of all
+three references (8.5 to 9.0). Motion is the lowest (6.0 to 6.5).
+
+What the three share, worst first:
+
+| Finding | Seen by |
+| --- | --- |
+| **The scroll goes dead.** Four consecutive frames across 1,350 px at the statement are one picture; the stations hold the same way (Infiniview, Upstream, Kilo Bench). "A slideshow of held paintings" while every reference changes in every frame | all three, first or second finding |
+| **The ice name reads as a text effect**: a stock bold sans extruded, snow caps, a cube for the dot of the i, a smeared double reflection. "3D WordArt" beside Igloo's modelled object | all three |
+| **The first paint pops**: a flat teal name on a pale gradient at 0.6 s, replaced by a different composition at 1.5 s; then nothing moves from 1.5 s to 8 s | all three |
+| **The melt looks drawn**: a dark hole with a neon cyan rim; the name goes ghostly and is close to unreadable on a phone; then a full screen of open water with no words and no subject | all three |
+| **Kilo Bench's table is keystoned** (rows of three sizes, scores at three x positions) and **cut by the screen's edge on a phone** ("anthropic/cl", "Scor"): clipped text, a hard ban | all three |
+| **Titles caught at thumbnail size** in transit, resting there after the scroll stops | all three |
+| **Every station is the same white and teal**; nothing in light or weather says the reader has moved on; no accent until the sunrise | all three |
+| **The dark theme is the lesser theme**: stock aurora streaks, ground like crumpled cloth or a bump map, a muddy orange horizon, neon teal shores | all three |
+| **Labels too small**: the mono eyebrows a few pixels tall at 1440, the sublines at caption size under 90 px titles, the pillars' labels about 8 px, Upstream's callouts unspaced repository slugs ("THRASHERANDCHAMBERSWEBSITE"), struck through by a leader line on a phone | all three |
+| **RydAR**: a pale web card in a pale wall, tilted and soft, cropped by the frame; the app in use is never shown | all three |
+| **The objects are a tier below**: faceted, banded, "mid-tier game assets" (TensorPoW's cubes, the pillars, the shards); no haze, grain or lens character | all three |
+| **Text placement has no rule**: bottom left, top left (Agent Bridge), top centre (Open models) | all three |
+| **Inner pages leave the world**: a two-column document on a pale streaked sheet, body and tables at caption size, a one-post writing index, an article title smaller than its index entry | all three |
+| **The ending is handsome but thin**: the streak reads as a lens flare with no source and is the same in both themes; the DevDay line tiny; no action; a "HAPTICS ON" chip beside RSS on a phone | all three |
+| The interests are a word list in two greys | two |
+| cc-switch: dark specks in the side channels, streamlines like a diagram, a tiny switcher | two |
+| Unlabelled controls: the four dots in the nav, the tick rail at the right edge | two |
+| The first screen's supporting sentence floats, aligned to nothing | one |
+| Phone: the statement runs across the meltwater channel | one |
+| **Too close to Igloo**: an ice landscape with each project's media frozen in an ice block "is Igloo's central idea restated" | one |
+| Content: `merlin-control` in the archive; the quoted prize title with a spaced hyphen | two (both fixed at once, `9fd1a1b`) |
+| Em dashes in the blog post's body | all three (the owner's own post, protected: not new copy) |
+
+Could not be judged from captures, by all three: whether the water
+flows and answers the pointer, easing, frame rate, sound.
+
+### Round 4, decided
+
+One helper at a time, each integrated before the next:
+
+1. **R4a, motion and words.** No hold is still: the camera moves
+   through every hold on one curve, and each block of words builds in
+   steps through it. The eyebrow leads; a title is never shown small.
+   The tagline stays until the statement arrives. The first paint is
+   the scene's own first frame, with a designed entrance. One anchor
+   for the words. The type scale's missing middle step. Named
+   controls, a rail with a lane, callouts in people's words.
+2. **R4b, the name and the melt.** The name redrawn for ice and lit as
+   an object; the melt without an outline, the letters solid until
+   they are gone.
+3. **R4c, the light.** A day that moves across the flight, station by
+   station, toward the ending; the dark theme relit; air, grain and
+   lens.
+4. **R4d, the stations** (two helpers, 1 to 4 and 5 to 8 with the
+   delta): each station's one scroll-driven event; the table flat and
+   whole on every screen; RydAR shows the app; the objects' ice.
+5. **R4e, the inner pages and the ending.**
+6. **P3, the frame rate** (after the name is final): the first
+   visit's opening, the name made cheap, the governor.
+
+Then panel 11, in the same format.
