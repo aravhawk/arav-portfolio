@@ -557,19 +557,19 @@ vec3 nameCalves(vec3 col, vec2 pw, vec3 dir, float foot, float onWater) {
   // (Most of the water is nowhere near them.)
   if (abs(pw.x - gNmC.x) > uIceBox.z + 260.0 || pw.y > max(uNameG.x, uNameG.y) + 20.0 || pw.y < yNear - 360.0) return col;
   vec2 lean = dir.xy / max(-dir.z, 0.05);
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 6; i++) {
     float fi = float(i);
     float h1 = hash11(fi * 7.31 + 1.7);
     float h2 = hash11(fi * 3.17 + 9.2);
     float born = 0.11 + 0.36 * fract(fi * 0.381966 + 0.13);
     float age = (m - born) / 0.2;
     if (age <= 0.0 || age >= 1.0) continue;
-    float fx = (fi + 0.5) / 8.0 * 2.0 - 1.0 + (h1 - 0.5) * 0.16;
+    float fx = (fi + 0.5) / 6.0 * 2.0 - 1.0 + (h1 - 0.5) * 0.2;
     float yf = two && i - 2 * (i / 2) == 1 ? uNameG.x : yNear;
     vec2 from = vec2(gNmC.x + fx * uIceBox.z * 0.94, yf - 6.0);
     vec2 way = normalize(vec2(fx * 0.55 + (h2 - 0.5) * 0.8, -1.0));
     vec2 c = from + way * (26.0 + 150.0 * pow(age, 0.7)) + vec2(sin(uTime * 0.31 + fi * 2.1), cos(uTime * 0.27 + fi * 1.3)) * 2.5;
-    float sz = (7.0 + 9.0 * h1) * (1.0 - 0.7 * age * age) * smoothstep(0.0, 0.07, age);
+    float sz = (0.05 + 0.055 * h1) * uNameB.z * (1.0 - 0.7 * age * age) * smoothstep(0.0, 0.07, age);
     vec2 q = pw - c;
     if (abs(q.x) > sz * 2.2 + 8.0 || abs(q.y) > sz * 2.2 + 8.0 + 10.0 * abs(lean.y)) continue;
     float ang = h2 * 6.283 + (0.5 + h1) * age * 1.4 + 0.12 * sin(uTime * 0.2 + fi);

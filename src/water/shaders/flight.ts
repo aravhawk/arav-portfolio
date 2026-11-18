@@ -2616,7 +2616,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     float lineT = 1.0 - smoothstep(0.0, 0.05 + footL * 0.004, abs(th - 0.56));
     float tornT = smoothstep(0.38, 0.7, textureLod(uDetail, vec2(acr / 330.0 + 0.6, (us.y - runL * 1.2) / 900.0), lodFor(footL, 330.0, 512.0)).r);
     float kL = exp(-acr * acr / (uNameL.y * uNameL.y * 1.4 + 400.0)) * (1.0 - smoothstep(uNameL.x - 0.08, uNameL.x - 0.01, ld.y));
-    float kP = (1.0 - smoothstep(150.0, 430.0, rho)) * smoothstep(60.0, 200.0, rho);
+    // (In the pool it is fainter, and it keeps behind the letters: nothing is drawn across what stands under the water in front of them.)
+    float kP = (1.0 - smoothstep(150.0, 380.0, rho)) * smoothstep(60.0, 200.0, rho) * 0.55 * smoothstep(yM - 120.0, yM - 50.0, us.y);
     float kT = mix(kL, kP, inPool) * smoothstep(0.03, 0.25, uNameL.x) * (1.0 - smoothstep(0.86, 0.99, uIceA.z)) * (1.0 - smoothstep(8.0, 26.0, footL));
     vec3 foamT = mix(vec3(0.8, 0.93, 1.0) * (S.amb * 1.2 + S.key * 0.22), gFoamN * 0.8, uNight);
     col = mix(col, foamT, lineT * lineT * tornT * kT * mix(0.13, 0.12, uNight));
