@@ -55,8 +55,7 @@ const subscribeHaptics = (cb: () => void) => {
 const readHaptics = (): HapticsState => (hapticsAvailable() ? (hapticsEnabled() ? 'on' : 'off') : 'hidden');
 const readHapticsServer = (): HapticsState => 'hidden';
 
-/** `item`: set as a member of the contact row (a list item, drawn as the row's own small control). */
-export function HapticsSetting({ item = false }: { item?: boolean }) {
+export function HapticsSetting() {
   const state = useSyncExternalStore(subscribeHaptics, readHaptics, readHapticsServer);
   if (state === 'hidden') return null;
   const toggle = () => {
@@ -66,15 +65,6 @@ export function HapticsSetting({ item = false }: { item?: boolean }) {
     // Turning it on answers with the thing itself.
     if (on) haptic('light');
   };
-  if (item) {
-    return (
-      <li>
-        <button type="button" className="end-haptics end-copy label" role="switch" aria-checked={state === 'on'} onClick={toggle}>
-          Haptics {state}
-        </button>
-      </li>
-    );
-  }
   return (
     <button type="button" className="end-haptics" role="switch" aria-checked={state === 'on'} onClick={toggle}>
       Haptics {state}
@@ -83,9 +73,9 @@ export function HapticsSetting({ item = false }: { item?: boolean }) {
 }
 
 /**
- * The ways to reach him. `feed`: the row also carries the feed and, where a
- * device can buzz, the haptics switch, as members of the row (the home
- * page's ending, which has no footer under it).
+ * The ways to reach him. `feed`: the row also carries the feed (the home
+ * page's ending, which has no footer under it). The haptics switch is a
+ * setting and stands in the nav, by the sound control.
  */
 export function Contact({ feed = false }: { feed?: boolean }) {
   return (
@@ -109,14 +99,11 @@ export function Contact({ feed = false }: { feed?: boolean }) {
         <CopyEmail />
       </li>
       {feed ? (
-        <>
-          <li>
-            <a className="end-link" href="/feed.xml">
-              RSS
-            </a>
-          </li>
-          <HapticsSetting item />
-        </>
+        <li>
+          <a className="end-link" href="/feed.xml">
+            RSS
+          </a>
+        </li>
       ) : null}
     </ul>
   );

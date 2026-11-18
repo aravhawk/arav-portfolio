@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useSyncExternalStore } from 'react';
-import { haptic } from '@/lib/haptics';
+import { haptic, hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/lib/haptics';
 import { THEME_COLOR } from '@/lib/site';
 import { SoundToggle } from './SoundToggle';
 import './nav.css';
@@ -54,6 +54,42 @@ function ThemeToggle() {
   );
 }
 
+/**
+ * The haptics switch: a setting, so it stands with the other settings here
+ * and not among the links at the foot of a page. Shown only where a device
+ * can buzz.
+ */
+type Buzz = 'hidden' | 'on' | 'off';
+const subscribeBuzz = (cb: () => void) => {
+  window.addEventListener('hapticschange', cb);
+  return () => window.removeEventListener('hapticschange', cb);
+};
+const readBuzz = (): Buzz => (hapticsAvailable() ? (hapticsEnabled() ? 'on' : 'off') : 'hidden');
+const readBuzzServer = (): Buzz => 'hidden';
+
+function HapticsToggle() {
+  const state = useSyncExternalStore(subscribeBuzz, readBuzz, readBuzzServer);
+  const toggle = useCallback(() => {
+    const on = readBuzz() !== 'on';
+    setHapticsEnabled(on);
+    window.dispatchEvent(new Event('hapticschange'));
+    // Turning it on answers with the thing itself.
+    if (on) haptic('light');
+  }, []);
+  if (state === 'hidden') return null;
+  return (
+    <button type="button" className="nav-haptics" role="switch" aria-checked={state === 'on'} aria-label="Haptics" title={state === 'on' ? 'Haptics: on' : 'Haptics: off'} onClick={toggle}>
+      <svg width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+        <rect x="6.75" y="1.75" width="6.5" height="12.5" rx="1.6" />
+        <g className="nav-haptics-waves">
+          <path d="M3.9 5v6M1.2 6.6v2.8M16.1 5v6M18.8 6.6v2.8" />
+        </g>
+        <path className="nav-haptics-off" d="M4.4 14.2 15.6 1.8" />
+      </svg>
+    </button>
+  );
+}
+
 const LINKS = [
   { href: '/work', label: 'Work' },
   { href: '/blog', label: 'Writing' },
@@ -82,6 +118,7 @@ export function Nav() {
           );
         })}
         <SoundToggle />
+        <HapticsToggle />
         <ThemeToggle />
       </nav>
     </header>

@@ -145,12 +145,28 @@ export function SoundToggle() {
   }, []);
 
   return (
-    <button type="button" className="nav-sound" onClick={toggle} onPointerEnter={warmUp} onPointerDown={warmUp} onFocus={warmUp} aria-label={active ? 'Turn sound off' : 'Turn sound on'} aria-pressed={active} data-on={active ? '' : undefined}>
-      <span className="nav-sound-bars" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
+    <button
+      type="button"
+      className="nav-sound"
+      onClick={toggle}
+      onPointerEnter={warmUp}
+      onPointerDown={warmUp}
+      onFocus={warmUp}
+      aria-label={active ? 'Turn sound off' : 'Turn sound on'}
+      aria-pressed={active}
+      title={active ? 'Sound: on' : 'Sound: off'}
+      data-on={active ? '' : undefined}
+    >
+      {/* A speaker and the level beside it: a flat line when off, a moving wave when on. */}
+      <span className="nav-sound-mark" aria-hidden="true">
+        <svg className="nav-sound-cone" width="8" height="12" viewBox="0 0 8 12">
+          <path d="M0.6 4.1h2.1L6.9 0.9a0.4 0.4 0 0 1 0.6 0.3v9.6a0.4 0.4 0 0 1-0.6 0.3L2.7 7.9H0.6a0.6 0.6 0 0 1-0.6-0.6V4.7a0.6 0.6 0 0 1 0.6-0.6z" fill="currentColor" />
+        </svg>
+        <span className="nav-sound-bars">
+          <span />
+          <span />
+          <span />
+        </span>
       </span>
     </button>
   );

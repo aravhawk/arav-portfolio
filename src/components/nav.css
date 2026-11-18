@@ -144,6 +144,9 @@ html:not([data-js]) .nav-mark,
     padding: 0 9px;
   }
   .nav-links .nav-sound {
+    width: 36px;
+  }
+  .nav-links .nav-haptics {
     width: 30px;
   }
   .nav-toggle {
@@ -157,11 +160,20 @@ html:not([data-js]) .nav-mark,
 }
 @media (max-width: 340px) {
   .nav-mark {
-    padding: 0 11px;
-    font-size: 0.875rem;
+    padding: 0 9px;
+    font-size: 0.8125rem;
   }
   .nav-link {
-    padding: 0 7px;
+    padding: 0 6px;
+  }
+  .nav-links .nav-sound {
+    width: 32px;
+  }
+  .nav-links .nav-haptics {
+    width: 26px;
+  }
+  .nav-toggle {
+    width: 42px;
   }
 }
 
