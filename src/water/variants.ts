@@ -18,7 +18,7 @@
 
 import { type Basis, type V3, projectPoint } from './camera';
 import { stationsNear } from './moments';
-import { CONF_Y, DELTA, LAKE, LIP, POOL, SLAB, TARN, lipY } from './world';
+import { CANYON, COLS, CONF_Y, DAM, DELTA, LAKE, LATTICE, LIP, POOL, SHARDS, SLAB, TARN, TARN_BAY, lipY } from './world';
 
 /** The theme a variant is compiled for: the day's, the night's, or neither (it is told each frame, and draws the turn between them). */
 export type Mode = 'day' | 'night' | 'any';
@@ -294,6 +294,49 @@ const FIELD_GROUND: Box = [
 ];
 
 /**
+ * Where each of the later stations' subjects can be: what the pass's own tests admit (each names the test it mirrors).
+ * All of a subject's own ice is inside its box, and so is every place on the water or the ground where its image, its
+ * shade or its light is looked for: a ray that meets such a place passes through the box's foot.
+ */
+// The seracs: themselves, and the water and bank within `rect` of them (columns: `abs(pwp.x - 1340.0) < 800.0 && abs(pwp.y - COL_Y) < 560.0`).
+const COLS_BOX: Box = [
+  [1340 - 830, COLS.y - 590, WATER_LOW],
+  [1340 + 830, COLS.y + 590, COLS.hMax * 1.25 + 40],
+];
+// (And a serac is looked for along the whole of a ray, under the water too: a ray that would meet one below the water
+// is given the seracs' long shade on the water it meets first, wherever that is (columns: `best > tw`). So every pixel
+// under a serac in the frame can need them: the box they stand in, carried down out of sight.)
+const COL_REACH = 2.7 * COLS.r + 40;
+const COLS_DEEP: Box = [
+  [COLS.xs[0] - COL_REACH, COLS.y - 26 - COL_REACH, -1e5],
+  [COLS.xs[3] + COL_REACH, COLS.y + 26 + COL_REACH, COLS.hMax * 1.25 + 40],
+];
+// The dam: its wall and hips, its pond behind it and its three channels below it (dam: `d < -pond - 120 || d > 1010 || abs(pwp.x - 1300) > 640`).
+const DAM_BOX: Box = [
+  [Math.min(DAM.x0 - 180, 1300 - 660), DAM.y - DAM.pond - 150, WATER_LOW],
+  [Math.max(DAM.x1 + 180, 1300 + 660), DAM.y + 1040, DAM.h + 40],
+];
+// The lattice: its cubes, and the pool's water round them (lattice: `max(abs(q.x), abs(q.y)) > 2.0 * LAT_P + 300.0`).
+const LAT_REACH = 2 * LATTICE.pitch + 330;
+const LAT_BOX: Box = [
+  [LATTICE.x - LAT_REACH, LATTICE.y - LAT_REACH, WATER_LOW],
+  [LATTICE.x + LAT_REACH, LATTICE.y + LAT_REACH, LATTICE.h * 3 + 60],
+];
+// The canyon: the glacier's own box (glacierHit's), which its water lies in too.
+const CANYON_BOX: Box = [
+  [CANYON.x0 - 4, CANYON.y0 - 4, WATER_LOW],
+  [CANYON.x1 + 4, CANYON.y1 + 4, CANYON.h + 6],
+];
+// The tarn's shards: the tarn and its bay (their image, their rings, the pulse), and the light each throws into the
+// air and onto the water round it, which dies away with distance (to a three-thousandth of itself, eight of its own
+// lengths off: far under one step of the screen's 255).
+const SHARD_GLOW = 8 * 1.9 * Math.max(SHARDS[0].r, SHARDS[1].r);
+const SHARDS_BOX: Box = [
+  [Math.min(TARN.x - TARN.rx - 20, TARN_BAY.x - TARN_BAY.r - 20, SHARDS[0].x - SHARD_GLOW, SHARDS[1].x - SHARD_GLOW), Math.min(TARN.y - TARN.ry - 20, TARN_BAY.y - TARN_BAY.r - 20, SHARDS[0].y - SHARD_GLOW, SHARDS[1].y - SHARD_GLOW), -SHARD_GLOW],
+  [Math.max(TARN.x + TARN.rx + 20, TARN_BAY.x + TARN_BAY.r + 20, SHARDS[0].x + SHARD_GLOW, SHARDS[1].x + SHARD_GLOW), Math.max(TARN.y + TARN.ry + 20, TARN_BAY.y + TARN_BAY.r + 20, SHARDS[0].y + SHARD_GLOW, SHARDS[1].y + SHARD_GLOW), Math.max(SHARDS[0].h, SHARDS[1].h) + SHARD_GLOW],
+];
+
+/**
  * A frame, cut into parts that each need less than the whole.
  *
  * A subject the pass looks for by place stands in a part of the frame: the lake's sheet and the name on it (the
@@ -350,6 +393,11 @@ export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Bo
     if (conf) take(F.CONF, conf);
     if (pool) take(F.POOL, pool);
   }
+  if (need & F.SHARDS) take(F.SHARDS, boxRectCut(cam, aspect, SHARDS_BOX) ?? NONE);
+  if (need & F.COLS) take(F.COLS, join(boxRectCut(cam, aspect, COLS_BOX), boxRectCut(cam, aspect, COLS_DEEP)) ?? NONE);
+  if (need & F.DAM) take(F.DAM, boxRectCut(cam, aspect, DAM_BOX) ?? NONE);
+  if (need & F.LAT) take(F.LAT, boxRectCut(cam, aspect, LAT_BOX) ?? NONE);
+  if (need & F.CANYON) take(F.CANYON, boxRectCut(cam, aspect, CANYON_BOX) ?? NONE);
   if (!parts.length) {
     whole[0].mask = need;
     return whole;
