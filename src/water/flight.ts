@@ -1105,6 +1105,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     rest: null,
     tag: null,
   }));
+  /** Lines that leave before their block does: each is gone from its own point of the scroll on. */
+  const early = Array.from(document.querySelectorAll<HTMLElement>('[data-fl-until]')).map((el) => ({ el, until: Number(el.dataset.flUntil), gone: false }));
   /** How long a block is out while it changes from one state to the other, ms. */
   const SWAP_MS = 240;
   const settle = (w: Words) => {
@@ -1525,6 +1527,13 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       }
       // (The first frame's two lines stand at opposite ends of the near ice, which is calm already.)
       if (on && !active && w.el !== heroWords) active = w;
+    }
+    for (const e of early) {
+      const gone = s >= e.until;
+      if (gone !== e.gone) {
+        e.gone = gone;
+        e.el.toggleAttribute('data-gone', gone);
+      }
     }
     // The lee comes in with the words and goes out with them; between two
     // blocks it goes out where the first stood before it comes in behind

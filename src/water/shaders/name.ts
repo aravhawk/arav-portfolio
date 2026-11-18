@@ -27,14 +27,12 @@
  * phone), a bounded number of steps; the ground's work is done only inside
  * the field.
  *
- * Needs the ice field's uniforms and nameSeat, nameSwept, nameFoot; the
+ * Needs the ice field's uniforms (uNameW and uNameT among them) and nameSeat, nameSwept, nameFoot; the
  * stations' common block (snowOn, inAir); and iceInside, fracture, lodFor,
  * keyDir, simUv, stars, sunBloom, RW declared before it.
  */
 export const NAME_ICE = `
-uniform vec3 uNameW;       // where the first frame's words stand, in the frame: x: the right end of the left block, y: the left end of the right one (both 1 when they are stacked), z: how far up the frame their top is
 uniform vec4 uNameP;       // x: how far from the blocks' feet meltwater lies on the sheet px, y: 0..1 how wet the blocks are, z: 0..1 the sheet has opened under them, w: 0..1 the pool has opened behind them
-uniform float uNameT;      // the tangent of half the first camera's field of view: where a place on the lake stood in the first frame
 uniform vec4 uNameQ;       // the blocks' slump. x: how far their tops have melted down, in the raster's px, y: 0..1 how rounded and wet they have become, z: 0..1 how much of what stands under the water has gone, w: how far the water they stand in has spread from their feet px
 
 // The first camera, for which the outlines are laid: where it is, how deep the name's middle lies from it, and the slope of its line of sight to that middle.

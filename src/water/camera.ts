@@ -149,9 +149,12 @@ export function flightKeys(aspect: number, sunAz = SUN_END_AZ): Key[] {
         { s: 0, ...hero },
         { s: HOLD, ...hero2 },
         // Out over the breaking lake, still high: the plates, the far shore and the outlet ahead, the name's water left behind.
-        { s: 1.52, pos: [1345, 2700, 430], aim: [1480, 5300, 0], fov: wideFov },
+        { s: 1.46, pos: [1345, 2700, 430], aim: [1480, 5300, 0], fov: wideFov },
         // Low over the lake's south end, looking down the river toward the ranges.
-        { s: OUTLET_AT, pos: [1380, 1640 + DY, 200], aim: [1500, 2190 + DY, 0], fov: wideFov },
+        { s: OUTLET_AT - 0.12, pos: [1380, 1640 + DY, 200], aim: [1500, 2190 + DY, 0], fov: wideFov },
+        // Over the river's mouth, already turned to the first reach: the bank his sentence stands on fills the lower
+        // left of the frame from here, so the sentence can be in its place this early, and the eye glides on to its frame.
+        { s: 1.96, pos: [1130, 2140 + DY, 166], aim: [1350, 2640 + DY, 0], fov: 48 },
         // The statement: gliding down the first reach, river on the right, the bank on the left.
         { s: h + 0.7, pos: [1080, 2250 + DY, 158], aim: [1320, 2740 + DY, 0], fov: 48 },
         { s: s1 - 0.5, pos: [1090, 2440 + DY, 152], aim: [1325, 2930 + DY, 0], fov: 48 },

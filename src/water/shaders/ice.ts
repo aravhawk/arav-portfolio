@@ -29,6 +29,8 @@ uniform vec4 uNameG;       // the standing letters. x: the upright plane the far
 uniform vec4 uNameB;       // x: the far line's baseline, y: the near line's, in the raster's true units up from its middle, z: the capitals' height, w: a block's depth front to back while it is whole
 uniform vec4 uNameM;       // the blocks' melt. x: how far every face has melted back px, y: the depth left, z: how far they have sunk, w: 0..1 how much of them is left to see
 uniform float uNameS;      // how far the water the standing letters stand in has spread from their feet px (0: not at all)
+uniform vec3 uNameW;       // where the first frame's words stand, in the frame: x: the right end of the left block, y: the left end of the right one (both 1 when they are stacked), z: how far up the frame their top is
+uniform float uNameT;      // the tangent of half the first camera's field of view: where a place on the lake stood in the first frame
 uniform vec2 uNameL;       // the lead that water leaves by, from the name down the lake to the outlet. x: 0..1 how far down the lake it has opened, y: its width px
 uniform sampler2D uIceSdf; // signed distance to the letters px (negative inside), _, gradient
 uniform sampler2D uDetail;
@@ -132,6 +134,18 @@ float nameSwept(vec2 u) {
 }
 
 /**
+ * How far above the first frame's words a place on the lake stood in the
+ * first frame, as a share of the frame's height (negative under them). While
+ * a line of those words still stands, the ice under it stays whole: no lead
+ * opens there and the name's water stops short of it.
+ */
+float wordsClear(vec2 u) {
+  float dyc = u.y - uIceP.x;
+  float zc = max(dyc * uIceP.z + uIceP.y * uIceP.w, 1.0);
+  return 0.5 + 0.5 * (dyc * uIceP.w - uIceP.y * uIceP.z) / zc / max(uNameT, 0.05) - uNameW.z;
+}
+
+/**
  * The lead the name's meltwater leaves by: one long wandering fracture from
  * behind the letters down the lake to the outlet, which the water finds and
  * widens. x: where its middle lies at a place down the lake (the sheet's own
@@ -230,6 +244,8 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     open = mix(lsd, poolSd(il) + pn * wide, uIceC.z);
   }
   float f = uIceA.x - open;
+  // (The water that opens from the standing letters' feet stops short of the first frame's words while a line of them stands.)
+  if (uNameG.w > 0.5 && uIceP.y > 0.0) f = min(f, mix((wordsClear(u) - 0.034) * 2600.0, 1e4, smoothstep(0.57, 0.66, uIceA.z)));
 
   // Pressure cracks: the walls of a few large, irregular cells. Early in the
   // melt they are where leads of water open.
@@ -348,6 +364,8 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     } else {
       lead *= 1.0 - uIceC.y;
     }
+    // (Under the first frame's words no lead opens while a line of them stands.)
+    if (uNameG.w > 0.5 && uIceP.y > 0.0) lead *= mix(smoothstep(0.0, 0.07, wordsClear(u)), 1.0, smoothstep(0.57, 0.66, uIceA.z));
     f = smax(f, lead - cr.x, kS);
   }
   if (uNameG.w > 0.5 && uNameS > 0.0) {
@@ -360,7 +378,9 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
       float toEye = max(min(uNameG.x, uNameG.y) - u.y, 0.0);
       float dE = lsd - 0.32 * min(toEye, lsd);
       float R = uNameS * (0.8 + 0.6 * un1 + 0.24 * un2) + 40.0 * exp(-cr.x / 46.0) * smoothstep(50.0, 170.0, uNameS);
-      f = smax(f, R - dE, 22.0);
+      // (It stops short of the first frame's words while a line of them stands, along a shore that wanders as the rest does.)
+      float short_ = (wordsClear(u) - 0.046 - 0.03 * un2 - 0.012 * un1) * 2600.0;
+      f = smax(f, mix(min(R - dE, short_), R - dE, smoothstep(0.57, 0.66, uIceA.z)), 22.0);
     }
     // And it leaves: one lead opens from behind the letters down the lake, its head running on ahead of the melt
     // until it reaches the outlet; then it widens, and the sheet either side of it goes as plates.

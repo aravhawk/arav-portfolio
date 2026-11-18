@@ -53,6 +53,10 @@ const INFINIVIEW_HOME: ProjectMedia = {
 
 // Where each section begins, in screens of scroll, and when its words show.
 const SAY = SECTIONS.hero;
+/** The first frame's first line stands through the melt, until the camera leaves the name's water; its second line goes with the first frame. */
+const ROLE_TO = 1.2;
+/** His sentence comes in as the camera comes down to the outlet: the bank it stands on is in the frame from there. */
+const SAY_FROM = 1.9;
 const VIEW = SAY + SECTIONS.say;
 const OUT = VIEW + SECTIONS.infiniview;
 const BENCH = OUT + SECTIONS.upstream;
@@ -148,9 +152,11 @@ export default async function Home() {
                 <span data-ice-line>Arav</span> <span data-ice-line>Jain</span>
               </h1>
             </div>
-            <div className="fl-words fl-hero-words" {...win(-1, 0.25)} data-on>
+            <div className="fl-words fl-hero-words" {...win(-1, ROLE_TO)} data-on>
               <p className="statement fl-role">AI and developer tooling builder.</p>
-              <p className="lead fl-intro">I co-founded Infiniflop Labs and build Infiniview: agents that attack your app to prove what breaks.</p>
+              <p className="lead fl-intro" data-fl-until={0.25}>
+                I co-founded Infiniflop Labs and build Infiniview: agents that attack your app to prove what breaks.
+              </p>
             </div>
           </div>
         </section>
@@ -158,7 +164,7 @@ export default async function Home() {
         {/* ---------- the statement ---------- */}
         <section className="fl-sec fl-say" data-fl style={len(SECTIONS.say)} aria-label="What I do">
           <div className="fl-pin">
-            <div className="fl-words fl-say-words" {...win(SAY - 0.25, VIEW - 0.05)}>
+            <div className="fl-words fl-say-words" {...win(SAY_FROM, VIEW - 0.05)}>
               <p className="say-text fl-say-text">Agents that break software before attackers do. Tools developers run daily.</p>
             </div>
           </div>

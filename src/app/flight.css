@@ -77,6 +77,16 @@ html[data-flight='on'] .flight-canvas {
 .fl-words[data-on] > :nth-child(2) {
   transition-delay: 70ms;
 }
+/* A line that leaves before its block does (the first frame's second line: the first stays through the melt). */
+.fl .fl-words[data-on] > [data-gone] {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  pointer-events: none;
+  transition:
+    opacity 320ms var(--ease-out),
+    transform 320ms var(--ease-out);
+  transition-delay: 0ms;
+}
 .fl-words[data-on] > :nth-child(3) {
   transition-delay: 140ms;
 }
@@ -275,6 +285,10 @@ html[data-flight='on'] .fl-rail {
   font-weight: 500;
 }
 
+/* (His sentence is in its place sooner than its section begins: from the moment the bank it stands on is in the frame.) */
+.fl-sec.fl-say {
+  --early: 50svh;
+}
 /* His sentence stands on the bank, left of the river. */
 .fl-say-words {
   align-items: flex-end;
