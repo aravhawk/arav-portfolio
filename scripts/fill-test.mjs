@@ -10,10 +10,11 @@
  *  - text boxes: for every block that holds text, the box round its lines
  *    as they are set (from the first line's top to the last line's foot,
  *    from the leftmost ink to the rightmost). The empty part of a wide
- *    column beside a short line counts for nothing. A row of a table (a
- *    `tr`, or a list's row marked `data-row`: a line of cells on a rule
- *    that runs the row's width) is one box, from its first cell's ink to
- *    its last;
+ *    column beside a short line counts for nothing. Two things are
+ *    measured across their own width and as tall as their ink: a row of
+ *    a table (a `tr`, or a list's row marked `data-row`), which is a line
+ *    of cells on a rule that runs the row's width; and a block of a
+ *    post's running text (`.prose`), whose lines are set to the measure;
  *  - pictures: images, films, the scene's canvas and its still, and
  *    anything marked `data-fill` (a picture set as a background);
  *  - diagrams: the drawn pieces, each marked `data-fill` on its outer box
@@ -132,7 +133,15 @@ function fillNow() {
       }
     }
   }
-  for (const b of boxes.values()) paint(b.l, b.t, b.r, b.b, 'text');
+  for (const [block, b] of boxes) {
+    // A ruled row, and a block of running text, are as wide as they are set.
+    if (block.matches('tr, [data-row]') || (block.closest('.prose') && !block.closest('pre, table'))) {
+      const q = block.getBoundingClientRect();
+      b.l = Math.min(b.l, q.left);
+      b.r = Math.max(b.r, q.right);
+    }
+    paint(b.l, b.t, b.r, b.b, 'text');
+  }
 
   const cells = gw * gh;
   return { share: (kinds.text + kinds.picture + kinds.control) / cells, text: kinds.text / cells, picture: kinds.picture / cells, control: kinds.control / cells };

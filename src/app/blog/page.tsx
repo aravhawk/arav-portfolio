@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { openingLines } from '@/components/blog/opening';
+import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
 import { PageShell } from '@/components/PageShell';
 import { getAllPosts } from '@/lib/blog';
 import { formatPostDate } from '@/lib/dates';
@@ -22,10 +23,8 @@ export default function BlogPage() {
     <PageShell
       scene="lake"
       index
-      head={{
-        title: 'Notes from the work',
-        lead: 'What I learn building agents and the tools around them.',
-      }}
+      head={{ title: WAY_TO_WRITING.title, lead: WAY_TO_WRITING.line }}
+      next={WAY_TO_WORK}
     >
       <section className="sec wrap" aria-label="Posts">
         {lead ? (
@@ -44,10 +43,10 @@ export default function BlogPage() {
                 <p className="post-desc">{lead.frontmatter.description}</p>
                 {opening ? <p className="post-open">{opening}</p> : null}
                 <span className="post-go">
+                  Read it
                   <span className="row-go" aria-hidden="true">
                     <Arrow />
                   </span>
-                  Read it
                 </span>
               </div>
             </Link>

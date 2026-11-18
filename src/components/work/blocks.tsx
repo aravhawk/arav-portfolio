@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { VideoSlab } from '@/components/VideoSlab';
-import { PROJECTS, type Project, type ProjectLink, type ProjectMedia } from '@/content/projects';
+import { PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
 
 /**
  * The few pieces every project page shares. Each page is otherwise its own
  * composition (cases.tsx): these are only the picture, the section, the
- * quiet list of facts, the run-in note, the ways out and the way round the
- * set. There are no eyebrows here: a section that needs a name gets a
+ * quiet list of facts, the run-in note, and the foot (the ways out and the
+ * way round the set). There are no eyebrows here: a section that needs a name gets a
  * heading, and where a thing comes from is said in a sentence under it.
  */
 
@@ -66,12 +66,18 @@ export function Note({ title, children, className = '' }: { title: string; child
   );
 }
 
-/** The ways out: links, set as links. */
-export function Outs({ links }: { links: ProjectLink[] }) {
+/**
+ * The foot of a project's page, on one line: the ways out (links, set as
+ * links) and the way round the set (the eight projects by name, this one
+ * marked; each name travels into the title of the page it opens). The one
+ * after this is offered as a place, in the band under this: see nextOf.
+ */
+export function Ways({ current }: { current: Project }) {
+  const next = nextOf(current);
   return (
-    <Sec className="sec-outs" label="Links">
-      <ul className="outs">
-        {links.map((l) => (
+    <div className="sec wrap ways">
+      <ul className="outs" aria-label="Links">
+        {current.links.map((l) => (
           <li key={l.href}>
             <a className="out" href={l.href} target="_blank" rel="noopener noreferrer">
               {l.label} <Arrow out />
@@ -79,52 +85,36 @@ export function Outs({ links }: { links: ProjectLink[] }) {
           </li>
         ))}
       </ul>
-    </Sec>
+      <nav className="strip" aria-label="Projects">
+        <ul className="strip-names">
+          {PROJECTS.map((p) =>
+            p.slug === current.slug ? (
+              <li key={p.slug}>
+                <span className="strip-name" aria-current="page">
+                  {p.name}
+                </span>
+              </li>
+            ) : (
+              <li key={p.slug}>
+                <Link className="strip-name" href={`/work/${p.slug}`}>
+                  {p.slug === next.slug ? (
+                    p.name
+                  ) : (
+                    <ViewTransition name={`title-${p.slug}`} share="title" default="none">
+                      <span>{p.name}</span>
+                    </ViewTransition>
+                  )}
+                </Link>
+              </li>
+            ),
+          )}
+        </ul>
+      </nav>
+    </div>
   );
 }
 
-/**
- * The way round the set: the eight projects by name, this one marked, the
- * one after it offered. Each name travels into the title of the page it opens.
- */
-export function WorkStrip({ current }: { current: Project }) {
-  const next = PROJECTS[(PROJECTS.indexOf(current) + 1) % PROJECTS.length];
-  return (
-    <nav className="strip wrap" aria-label="Projects">
-      <ul className="strip-names">
-        {PROJECTS.map((p) =>
-          p.slug === current.slug ? (
-            <li key={p.slug}>
-              <span className="strip-name" aria-current="page">
-                {p.name}
-              </span>
-            </li>
-          ) : (
-            <li key={p.slug}>
-              <Link className="strip-name" href={`/work/${p.slug}`}>
-                {p.slug === next.slug ? (
-                  p.name
-                ) : (
-                  <ViewTransition name={`title-${p.slug}`} share="title" default="none">
-                    <span>{p.name}</span>
-                  </ViewTransition>
-                )}
-              </Link>
-            </li>
-          ),
-        )}
-      </ul>
-      <Link className="strip-next" href={`/work/${next.slug}`}>
-        <span className="strip-next-copy">
-          <ViewTransition name={`title-${next.slug}`} share="title" default="none">
-            <span className="strip-next-name">{next.name}</span>
-          </ViewTransition>
-          <span className="strip-next-line">{next.line}</span>
-        </span>
-        <span className="row-go" aria-hidden="true">
-          <Arrow />
-        </span>
-      </Link>
-    </nav>
-  );
+/** The project after this one, round the set. */
+export function nextOf(current: Project): Project {
+  return PROJECTS[(PROJECTS.indexOf(current) + 1) % PROJECTS.length];
 }

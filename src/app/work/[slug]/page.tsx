@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
-import { WorkStrip } from '@/components/work/blocks';
+import { Ways, nextOf } from '@/components/work/blocks';
 import { Case, SwitchInScene } from '@/components/work/cases';
 import { SCENE_OF } from '@/components/work/stations';
 import { PROJECTS, projectBySlug } from '@/content/projects';
@@ -26,13 +26,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 /**
  * A project's page: its own station from the home page's world, live, with
  * its name standing in it, then a page built from what the project is
- * (src/components/work/cases.tsx), then the way round the set.
+ * (src/components/work/cases.tsx), then the way round the set, and the
+ * next project's own station as the way on.
  */
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const p = projectBySlug(slug);
   if (!p) notFound();
   const m = await getMetrics();
+  const next = nextOf(p);
 
   return (
     <PageShell
@@ -46,9 +48,18 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         children: p.slug === 'cc-switch' ? <SwitchInScene /> : null,
       }}
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
+      next={{
+        scene: SCENE_OF[next.slug] ?? 'delta',
+        href: `/work/${next.slug}`,
+        label: 'Next',
+        title: next.name,
+        line: next.line,
+        vt: `title-${next.slug}`,
+        aria: 'Next project',
+      }}
     >
       <Case p={p} m={m} />
-      <WorkStrip current={p} />
+      <Ways current={p} />
     </PageShell>
   );
 }

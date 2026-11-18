@@ -22,7 +22,7 @@
   --pg-lead: clamp(1.25rem, 0.9vw + 0.95rem, 2rem);
   --pg-say: clamp(1.75rem, 2.5vw + 0.9rem, 3.4rem);
   --pg-num: clamp(3.4rem, 7.2vw + 0.6rem, 8.4rem);
-  --pg-gap: clamp(56px, 8vh, 104px);
+  --pg-gap: clamp(48px, 6.4vh, 84px);
   --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 40px 70px -44px rgba(16, 38, 58, 0.55), 0 12px 24px -18px rgba(16, 38, 58, 0.35);
   --panel: rgba(255, 255, 255, 0.5);
   --panel-edge: rgba(255, 255, 255, 0.9);
@@ -221,8 +221,43 @@
 .state-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  align-items: center;
+  gap: 6px clamp(22px, 3vw, 48px);
   margin-top: var(--s-2);
+}
+/* A way out of a page that has nothing on it is a link: words and an arrow. (A pill is for a control: the one
+   thing here that acts, trying again, keeps it.) */
+.way {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 0.9vw + 1rem, 1.75rem);
+  font-weight: 660;
+  letter-spacing: -0.024em;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, var(--ink) 40%, transparent);
+  transition: text-decoration-color var(--t-fast) ease;
+}
+.way .arrow {
+  width: 0.72em;
+  height: 0.72em;
+  transition: transform var(--t-ui) var(--ease-out);
+}
+.way:active {
+  transform: scale(0.985);
+}
+@media (hover: hover) and (pointer: fine) {
+  .way:hover {
+    text-decoration-color: var(--ink);
+  }
+  .way:hover .arrow {
+    transform: translateX(3px);
+  }
 }
 .band-fork {
   margin-top: var(--s-2);
@@ -290,6 +325,10 @@
 }
 .pg-index > .sec:first-child {
   margin-top: 0;
+}
+/* (An index is lists: its parts stand closer.) */
+.pg-index > .sec + .sec {
+  margin-top: clamp(36px, 5vh, 64px);
 }
 /* A section's name: a heading, under the groove that opens the section. */
 .sec-h {
@@ -386,7 +425,7 @@
   grid-template-columns: minmax(6rem, 11rem) minmax(0, 1fr);
   column-gap: var(--s-4);
   align-items: baseline;
-  padding: 13px 0 14px;
+  padding: 10px 0 11px;
   background: var(--rule);
 }
 .spec dt {
@@ -440,7 +479,7 @@
 }
 .say-s {
   max-width: 32ch;
-  font-size: clamp(1.375rem, 1.5vw + 0.95rem, 2.5rem);
+  font-size: clamp(1.375rem, 1.5vw + 0.95rem, 3rem);
   font-weight: 620;
   line-height: 1.12;
   letter-spacing: -0.026em;
@@ -492,13 +531,21 @@
   font-size: clamp(2.6rem, 4.4vw + 0.4rem, 5.4rem);
 }
 
-/* The ways out are links. */
+/* The foot of a project's page, on one line under one groove: the ways out at the left, set as links; the way
+   round the set at the right, the eight by name. */
+.ways {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px clamp(32px, 5vw, 96px);
+  padding-top: clamp(14px, 1.6vw, 24px);
+  background: var(--rule);
+}
 .outs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px clamp(24px, 3.4vw, 56px);
-  padding-top: clamp(18px, 2vw, 30px);
-  background: var(--rule);
+  gap: 4px clamp(24px, 3vw, 52px);
 }
 .out {
   position: relative;
@@ -532,22 +579,10 @@
     transform: translate(2px, -2px);
   }
 }
-
-/* The way round the set: the eight by name, and the one after this. */
-.strip {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  column-gap: clamp(32px, 6vw, 120px);
-  row-gap: var(--s-6);
-  align-items: start;
-  margin-top: var(--pg-gap);
-}
 .strip-names {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 clamp(16px, 1.8vw, 30px);
-  padding-top: clamp(14px, 1.6vw, 24px);
-  background: var(--rule);
+  gap: 0 clamp(16px, 1.9vw, 34px);
 }
 .strip-name {
   display: inline-flex;
@@ -565,47 +600,122 @@
   text-decoration-thickness: 1.5px;
   text-underline-offset: 0.3em;
 }
-.strip-next {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 56px;
-  gap: var(--s-5);
-  align-items: center;
-  padding-top: clamp(14px, 1.6vw, 24px);
-  background: var(--rule);
-  color: var(--ink);
-}
-.strip-next-copy {
-  display: grid;
-  gap: 8px;
-}
-.strip-next-name {
-  justify-self: start;
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 2.6vw + 1rem, 4rem);
-  font-weight: var(--display-wght);
-  line-height: 0.98;
-  letter-spacing: -0.012em;
-  padding-bottom: 0.05em;
-}
-.strip-next-line {
-  max-width: 40ch;
-  font-size: var(--pg-body);
-  line-height: 1.36;
-  color: var(--ink-2);
-}
-.strip-next:active .row-go {
-  transform: scale(0.94);
-}
 @media (hover: hover) and (pointer: fine) {
   a.strip-name:hover {
     color: var(--ink);
   }
-  .strip-next:hover .row-go {
-    background: var(--ink);
-    color: var(--land);
+}
+
+/* ---------- the way on: a band of the place the page leads to ---------- */
+
+/* The page returns to the world before its footer. The picture is the next
+   page's own scene, photographed with the calm its words stand in, and the
+   words are set as they are at the head of that page: lower left, over the
+   near bank. The whole band is the link. A wide picture is 2.4 to 1 and an
+   upright one 13 to 16; the band keeps the picture's shape wherever the
+   screen lets it, and where it cannot, the picture is cut from the top (the
+   sky), so the bank stays under the words. */
+.next {
+  position: relative;
+  /* (Under the content, clear of the last section by the page's own rhythm.) */
+  margin-top: 0;
+}
+.pg-body:has(+ .next) {
+  padding-bottom: clamp(28px, 4vh, 48px);
+}
+.next-link {
+  position: relative;
+  display: block;
+  height: clamp(380px, 41.667vw, 800px);
+  overflow: hidden;
+  color: var(--ink);
+}
+.next-view {
+  position: absolute;
+  inset: 0;
+  /* The picture rises out of the snow the page stands on. */
+  -webkit-mask-image: linear-gradient(to top, #000 calc(100% - clamp(48px, 7vw, 120px)), transparent);
+  mask-image: linear-gradient(to top, #000 calc(100% - clamp(48px, 7vw, 120px)), transparent);
+}
+.next-pic {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 0% 100%;
+  transition: transform 900ms var(--ease-out);
+}
+.next-dark,
+.next-bandtall,
+:root[data-theme='dark'] .next-light {
+  display: none;
+}
+:root[data-theme='dark'] .next-band.next-dark {
+  display: block;
+}
+.next-words {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--s-4);
+  /* (A share of the band's own height, as in the photograph.) */
+  padding-bottom: clamp(46px, 5vw, 96px);
+}
+.next-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-bottom: calc(-1 * var(--s-3));
+  color: var(--ink);
+}
+.next-label .arrow {
+  width: 1.05em;
+  height: 1.05em;
+  transition: transform var(--t-ui) var(--ease-out);
+}
+.next-title {
+  display: block;
+}
+.next-line {
+  display: block;
+}
+.next-link:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: -6px;
+}
+.next-link:active .next-pic {
+  transform: scale(1.01);
+}
+@media (hover: hover) and (pointer: fine) {
+  .next-link:hover .next-pic {
+    transform: scale(1.018);
   }
-  .strip-next:hover .row-go .arrow {
-    transform: translateX(2px);
+  .next-link:hover .next-label .arrow {
+    transform: translateX(4px);
+  }
+}
+@media (max-width: 719px) {
+  .next-link {
+    height: min(123.08vw, 560px);
+  }
+  .next-band,
+  :root[data-theme='dark'] .next-band.next-dark {
+    display: none;
+  }
+  .next-bandtall.next-light,
+  :root[data-theme='dark'] .next-bandtall.next-dark {
+    display: block;
+  }
+  :root[data-theme='dark'] .next-bandtall.next-light {
+    display: none;
+  }
+  .next-words {
+    padding-bottom: clamp(36px, 12vw, 56px);
   }
 }
 
@@ -1531,7 +1641,7 @@
 .prov {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(28px, 3.4vw, 56px) clamp(24px, 4vw, 80px);
+  gap: clamp(24px, 2.4vw, 40px) clamp(24px, 4vw, 80px);
 }
 .prov-group {
   display: grid;
@@ -1547,8 +1657,8 @@
   margin-bottom: 6px;
 }
 .prov-cells i {
-  width: clamp(14px, 1.5vw, 26px);
-  height: clamp(14px, 1.5vw, 26px);
+  width: clamp(14px, 1.5vw, 36px);
+  height: clamp(14px, 1.5vw, 36px);
   border-radius: 2px;
   background: color-mix(in srgb, var(--ink) 30%, transparent);
 }
@@ -1558,7 +1668,7 @@
 }
 .prov-name {
   font-family: var(--font-display);
-  font-size: clamp(1.375rem, 1.1vw + 1rem, 2.25rem);
+  font-size: clamp(1.375rem, 1.1vw + 1rem, 2.75rem);
   font-weight: 680;
   letter-spacing: -0.022em;
   line-height: 1.08;
@@ -1570,7 +1680,7 @@
   color: var(--ink-3);
 }
 .prov-group .body {
-  max-width: 40ch;
+  max-width: 44ch;
   color: var(--ink-2);
 }
 .said-pair {
@@ -1578,14 +1688,14 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--s-6) clamp(32px, 6vw, 120px);
   align-items: start;
-  margin-top: clamp(40px, 5vw, 84px);
+  margin-top: clamp(32px, 3.4vw, 56px);
 }
 .said-pair .said {
   align-content: start;
 }
 .said-pair .said + .said .say-s {
   max-width: 36ch;
-  font-size: clamp(1.25rem, 1vw + 0.95rem, 1.875rem);
+  font-size: clamp(1.25rem, 1vw + 0.95rem, 2.25rem);
   font-weight: 560;
   line-height: 1.2;
 }
@@ -1783,76 +1893,93 @@
   font-size: 0.9375rem;
   color: var(--ink-3);
 }
-/* What the implementation holds: four short lists, side by side. */
-.parts {
+/* What is built, and beside it what is still to do. */
+.tp-pair {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--s-6) clamp(24px, 3.4vw, 64px);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--pg-gap);
+  align-items: start;
 }
-.part {
+/* What the implementation holds: a table, a part to a row, what it holds read along the row. */
+.holds {
   display: grid;
-  gap: clamp(12px, 1.2vw, 18px);
-  align-content: start;
-  padding-top: clamp(14px, 1.5vw, 22px);
-  border-top: 1.5px solid var(--ink);
 }
-.part-name {
+.hold {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 11rem) minmax(0, 1fr);
+  column-gap: var(--s-4);
+  align-items: baseline;
+  padding: clamp(14px, 1.4vw, 22px) 0 clamp(15px, 1.5vw, 24px);
+  background: var(--rule);
+}
+.holds > :first-child {
+  background: none;
+  padding-top: 0;
+}
+.hold-name {
   font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
   font-weight: 520;
   color: var(--ink-3);
 }
-.part-items {
-  display: grid;
-  gap: 0.3em;
+.hold-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.08em 0.36em;
   font-family: var(--font-display);
-  font-size: clamp(1.25rem, 1vw + 0.9rem, 2rem);
+  font-size: clamp(1.25rem, 1vw + 0.9rem, 2.25rem);
   font-weight: 660;
-  line-height: 1.12;
+  line-height: 1.14;
   letter-spacing: -0.022em;
 }
-.part-items.mono {
-  gap: 0.5em;
+.hold-items li:not(:last-child)::after {
+  content: ',';
+}
+.hold-tools {
+  gap: 0.3em 1.4em;
   font-family: var(--font-mono);
-  font-size: clamp(0.9375rem, 0.5vw + 0.78rem, 1.3125rem);
+  font-size: clamp(0.9375rem, 0.5vw + 0.78rem, 1.4375rem);
   font-weight: 520;
   letter-spacing: 0;
 }
-.part-items .term-p {
+.hold-tools li:not(:last-child)::after {
+  content: none;
+}
+.hold-items .term-p {
   color: var(--bar);
 }
-.part .cap {
-  margin-top: 0;
+.hold .cap {
+  margin-top: 10px;
 }
 .tp-node > .cap {
-  margin-top: clamp(22px, 2.6vw, 40px);
+  margin-top: clamp(16px, 1.5vw, 24px);
 }
-/* What is still to do: four gates on the way to a live network, none of them passed. */
+/* What is still to do: four gates on the way to a live network, none of them passed. The way runs down
+   through every gate. */
 .tp-status .lead {
   margin-bottom: clamp(18px, 2vw, 30px);
   color: var(--ink-2);
 }
 .gates {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-  column-gap: clamp(18px, 2.4vw, 44px);
 }
 .gate {
   position: relative;
-  padding: 46px 0 6px;
-  font-size: clamp(1.125rem, 0.7vw + 0.95rem, 1.625rem);
+  min-height: 56px;
+  padding: 0 0 clamp(22px, 2.4vw, 40px) 46px;
+  font-size: clamp(1.125rem, 1.1vw + 0.65rem, 2.125rem);
   font-weight: 560;
   line-height: 1.22;
   letter-spacing: -0.018em;
   text-wrap: balance;
 }
-/* (The way runs through every gate.) */
 .gate::before {
   content: '';
   position: absolute;
-  top: 12px;
-  left: 0;
-  right: calc(-1 * clamp(18px, 2.4vw, 44px));
-  height: 2px;
+  top: 0;
+  bottom: 0;
+  left: 12px;
+  width: 2px;
   background: var(--ink);
 }
 .gate-box {
@@ -1866,13 +1993,12 @@
   box-shadow: inset 0 0 0 2px var(--ink);
 }
 .gate-end {
-  padding-left: 0;
-  min-width: 6.5rem;
+  min-height: 0;
+  padding-bottom: 0;
   color: var(--ink-3);
 }
 .gate-end::before {
-  right: auto;
-  width: 0;
+  display: none;
 }
 .gate-end .gate-box {
   border-radius: 50%;
@@ -1988,35 +2114,26 @@
   .feat-row:hover .feat-pic {
     transform: scale(1.02);
   }
-  .feat-row:hover .row-go,
-  .post-row:hover .row-go {
-    background: var(--ink);
-    color: var(--land);
-  }
   .feat-row:hover .row-go .arrow,
   .post-row:hover .row-go .arrow {
-    transform: translateX(2px);
+    transform: translateX(5px);
   }
 }
 .feat-row:active .row-go,
 .post-row:active .row-go {
   transform: scale(0.94);
 }
+/* The way into a row is an arrow, not a button: the whole row is the link. */
 .row-go {
   display: inline-grid;
   place-items: center;
   width: 56px;
   height: 56px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px var(--line);
-  transition:
-    background-color var(--t-fast) ease,
-    color var(--t-fast) ease,
-    transform var(--t-press) var(--ease-out);
+  transition: transform var(--t-press) var(--ease-out);
 }
 .row-go .arrow {
-  width: 18px;
-  height: 18px;
+  width: clamp(22px, 1.9vw, 32px);
+  height: clamp(22px, 1.9vw, 32px);
   transition: transform var(--t-ui) var(--ease-out);
 }
 
@@ -2213,12 +2330,29 @@
   line-height: 1.56;
   color: var(--ink-2);
 }
+/* (The way in is words and an arrow: the whole block is the link.) */
 .post-go {
   display: inline-flex;
   align-items: center;
-  gap: 16px;
-  font-size: 1.0625rem;
-  font-weight: 600;
+  gap: 0.45em;
+  justify-self: start;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 0.9vw + 1rem, 1.75rem);
+  font-weight: 660;
+  letter-spacing: -0.024em;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.post-go .row-go {
+  width: auto;
+  height: auto;
+}
+.post-go .row-go .arrow {
+  width: 0.72em;
+  height: 0.72em;
 }
 /* Earlier posts follow, one to a row. */
 .posts-more {
@@ -2250,31 +2384,85 @@
   color: var(--ink-2);
 }
 
-/* A post: what it is filed under in the margin, the text in a reading measure. */
+/* A post: the text in a reading measure at the middle of the page; in the
+   margin beside it, quiet, when it was written, what it is filed under and
+   its own headings, which stay in view while it is read. */
 .article {
+  --prose: clamp(1.125rem, 0.75vw + 0.64rem, 1.75rem);
   display: grid;
-  /* The measure stands at the middle of the page; what the post is filed under stands in the margin beside it. */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 46rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   column-gap: clamp(24px, 3vw, 64px);
   padding-top: clamp(12px, 2vh, 28px);
 }
 .article-rail {
   position: sticky;
-  top: 92px;
+  top: 96px;
   align-self: start;
+  justify-self: end;
+  display: grid;
+  gap: clamp(16px, 1.6vw, 26px);
+  width: min(100%, 16em);
   padding-top: 0.5em;
+  font-size: clamp(0.9375rem, 0.4vw + 0.6rem, 1.25rem);
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+.rail-when {
+  display: grid;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.rail-when time {
+  font-weight: 600;
+  color: var(--ink);
 }
 .tags {
   display: grid;
-  gap: 4px;
-  justify-items: end;
-  font-size: clamp(1rem, 0.3vw + 0.78rem, 1.1875rem);
-  font-weight: 520;
-  line-height: 1.4;
-  color: var(--ink-2);
+  gap: 2px;
+  padding-top: clamp(12px, 1.2vw, 18px);
+  background: var(--rule);
+}
+.toc {
+  padding-top: clamp(12px, 1.2vw, 18px);
+  background: var(--rule);
+}
+.toc-fold {
+  display: none;
+}
+.toc-h,
+.toc summary {
+  font-weight: 600;
+  color: var(--ink);
+}
+.toc ol {
+  display: grid;
+  margin-top: 6px;
+}
+.toc a {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 0;
+  line-height: 1.28;
+  color: var(--ink-3);
+  transition: color var(--t-fast) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .toc a:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+/* (A heading the contents opens stands clear of the nav.) */
+.prose :is(h2, h3, h4) {
+  scroll-margin-top: 96px;
 }
 .article-main {
   min-width: 0;
+  /* About 70 characters to the line. */
+  width: calc(35 * var(--prose));
+  max-width: 100%;
 }
 .article-lead {
   max-width: 26em;
@@ -2286,20 +2474,15 @@
   color: var(--ink);
   text-wrap: pretty;
 }
-.article-back {
-  margin-top: var(--s-7);
-}
 .prose {
-  /* About 66 characters to the line. */
-  max-width: 33em;
-  font-size: clamp(1.125rem, 0.5vw + 0.87rem, 1.5rem);
+  font-size: var(--prose);
   line-height: 1.6;
   color: var(--ink-2);
   font-weight: 420;
   hanging-punctuation: first;
 }
 .prose > * + * {
-  margin-top: 1.15em;
+  margin-top: 1.1em;
 }
 .prose h1,
 .prose h2,
@@ -2315,7 +2498,7 @@
 .prose h2 {
   font-size: clamp(1.75rem, 1.8vw + 1rem, 2.75rem);
   font-weight: 700;
-  margin-top: 2em;
+  margin-top: 1.8em;
 }
 .prose h3 {
   font-size: clamp(1.375rem, 0.9vw + 1.05rem, 1.875rem);
@@ -2451,8 +2634,70 @@
 /* ---------- narrow ---------- */
 
 @media (max-width: 1100px) {
+  /* The margin is folded above the text: the date and the tags on a line, the contents behind their name. */
   .article {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 40rem);
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .article-rail {
+    position: static;
+    justify-self: center;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 22px;
+    row-gap: 10px;
+    width: calc(35 * var(--prose));
+    max-width: 100%;
+    padding: 0 0 var(--s-5);
+  }
+  /* (The head of the page has just said when it was written.) */
+  .rail-when {
+    display: none;
+  }
+  .article-rail .tags {
+    grid-column: 1 / -1;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    padding-top: 0;
+    background: none;
+  }
+  .toc-wide {
+    display: none;
+  }
+  .toc-fold {
+    display: block;
+    grid-column: 1 / -1;
+  }
+  .toc summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .toc summary::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 12px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform var(--t-ui) var(--ease-out);
+  }
+  .toc[open] summary::after {
+    transform: translateY(4px) rotate(225deg);
+  }
+  .toc summary::-webkit-details-marker {
+    display: none;
+  }
+  .toc summary {
+    list-style: none;
+  }
+  .toc a {
+    min-height: 44px;
   }
   /* The diagram keeps its three lifelines; what the README says of them goes under it. */
   .seq {
@@ -2517,38 +2762,14 @@
   .ry-count,
   .cs-writes,
   .said-pair,
-  .strip,
   .post-lead {
     grid-template-columns: minmax(0, 1fr);
   }
-  .prov,
-  .parts {
+  .prov {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  /* The gates on a phone: one under the other, the way running down the left. */
-  .gates {
+  .tp-pair {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .gate {
-    padding: 0 0 26px 44px;
-    min-height: 52px;
-  }
-  .gate::before {
-    top: 0;
-    bottom: 0;
-    left: 12px;
-    right: auto;
-    width: 2px;
-    height: auto;
-  }
-  .gate-end {
-    padding-bottom: 0;
-  }
-  .gate-end::before {
-    display: none;
-  }
-  .tp-abs .spec {
-    order: 0;
   }
   .figs {
     --cols: 2;
@@ -2722,19 +2943,6 @@
   .post-about {
     padding-top: 0;
   }
-  .article {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .article-rail {
-    position: static;
-    padding: 0 0 var(--s-5);
-  }
-  .tags {
-    justify-items: start;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px 18px;
-  }
   .post-nav {
     grid-template-columns: 1fr;
   }
@@ -2851,20 +3059,34 @@
 @media (prefers-reduced-motion: reduce) {
   .band-canvas,
   .band-view::after,
-  .feat-pic {
+  .feat-pic,
+  .next-pic {
     transition: none;
+  }
+  .next-link:hover .next-pic,
+  .next-link:active .next-pic {
+    transform: none;
   }
 }
 
 @media (forced-colors: active) {
-  .band-view {
+  .band-view,
+  .next-view {
     display: none;
   }
 }
 
 @media print {
-  .band-view {
+  .band-view,
+  .next-view {
     display: none !important;
+  }
+  .next-link {
+    height: auto !important;
+  }
+  .next-words {
+    position: static !important;
+    padding: 24px 0 !important;
   }
   .band {
     height: auto !important;

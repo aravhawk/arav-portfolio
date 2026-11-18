@@ -154,6 +154,10 @@
   height: 1px;
   background: var(--ink);
 }
+/* (Under a band of the world the picture's own edge is the line.) */
+.pg-ground:has(.next) .foot-row::before {
+  display: none;
+}
 .foot-brand {
   display: grid;
   gap: 2px;

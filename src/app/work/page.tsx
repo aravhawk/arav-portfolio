@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
+import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
 import { PageShell } from '@/components/PageShell';
 import { ArchiveList } from '@/components/work/ArchiveList';
 import { SCENE_OF } from '@/components/work/stations';
@@ -35,17 +36,15 @@ export default async function Work() {
     <PageShell
       scene="delta"
       index
-      head={{
-        title: 'Everything I have built',
-        lead: 'Eight things I would point you to first, then the rest, one line each.',
-      }}
+      head={{ title: WAY_TO_WORK.title, lead: WAY_TO_WORK.line }}
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
+      next={WAY_TO_WRITING}
     >
       <section className="sec wrap" aria-label="Featured">
         <ul className="feats">
           {PROJECTS.map((p) => (
             <li key={p.slug}>
-              <Link className="row feat-row" href={`/work/${p.slug}`}>
+              <Link className="row feat-row" data-row href={`/work/${p.slug}`}>
                 <span className="label feat-n">{p.n}</span>
                 <span className="feat-pic" data-fill style={stillVars(SCENE_OF[p.slug])} aria-hidden="true" />
                 <span className="feat-copy">

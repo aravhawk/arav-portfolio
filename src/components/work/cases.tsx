@@ -5,7 +5,7 @@ import type { Project, ProjectMedia } from '@/content/projects';
 import { formatPostDate } from '@/lib/dates';
 import { formatAsOf, formatCount, type Metric, type SiteMetrics } from '@/lib/metrics';
 import { SHEET_COLS, SHEET_SRC } from '@/water/world';
-import { HALF_SIZES, Note, Outs, Plate, Sec, Spec } from './blocks';
+import { HALF_SIZES, Note, Plate, Sec, Spec } from './blocks';
 import {
   BRIDGE_FLOW,
   BRIDGE_LIMITS,
@@ -512,7 +512,7 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
                     ))}
                   </dl>
                 ) : null}
-                <code className="mono build-run">
+                <code className="mono build-run" data-fill>
                   <span className="term-p" aria-hidden="true">
                     ${' '}
                   </span>
@@ -716,50 +716,61 @@ function TensorPoW({ p }: { p: Project }) {
           </figcaption>
         </figure>
       </Sec>
-      <Sec className="tp-node" title="What the reference implementation holds" id="p-node">
-        <ul className="parts">
-          {TENSOR_NODE.map((x) => (
-            <li key={x.name} className="part">
-              <h3 className="part-name">{x.name}</h3>
-              <ul className="part-items">
-                {x.items.map((it) => (
-                  <li key={it}>{it}</li>
-                ))}
-              </ul>
+      {/* What is built, and beside it what is still to do. */}
+      <div className="sec wrap tp-pair">
+        <section className="tp-node" aria-labelledby="p-node">
+          <h2 className="sec-h" id="p-node">
+            What the reference implementation holds
+          </h2>
+          <ul className="holds">
+            {TENSOR_NODE.map((x) => (
+              <li key={x.name} className="hold" data-row>
+                <h3 className="hold-name">{x.name}</h3>
+                <ul className="hold-items">
+                  {x.items.map((it) => (
+                    <li key={it}>{it}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+            <li className="hold" data-row>
+              <h3 className="hold-name">Operator tools</h3>
+              <div>
+                <ul className="hold-items hold-tools mono">
+                  {TENSOR_TOOLS.map((t) => (
+                    <li key={t}>
+                      <span className="term-p" aria-hidden="true">
+                        ${' '}
+                      </span>
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+                <p className="cap">{TENSOR_TOOLS_MORE}</p>
+              </div>
             </li>
-          ))}
-          <li className="part part-tools">
-            <h3 className="part-name">Operator tools</h3>
-            <ul className="part-items mono">
-              {TENSOR_TOOLS.map((t) => (
-                <li key={t}>
-                  <span className="term-p" aria-hidden="true">
-                    ${' '}
-                  </span>
-                  {t}
-                </li>
-              ))}
-            </ul>
-            <p className="cap">{TENSOR_TOOLS_MORE}</p>
-          </li>
-        </ul>
-        <p className="cap">{TENSOR_SPEC}</p>
-      </Sec>
-      <Sec className="tp-status" title="Not a live network yet" id="p-gates">
-        <p className="lead">Before mainnet, per the README:</p>
-        <ol className="gates" data-fill>
-          {TENSOR_GATES.map((g) => (
-            <li key={g} className="gate">
+          </ul>
+          <p className="cap">{TENSOR_SPEC}</p>
+        </section>
+        <section className="tp-status" aria-labelledby="p-gates">
+          <h2 className="sec-h" id="p-gates">
+            Not a live network yet
+          </h2>
+          <p className="lead">Before mainnet, per the README:</p>
+          <ol className="gates" data-fill>
+            {TENSOR_GATES.map((g) => (
+              <li key={g} className="gate">
+                <i className="gate-box" aria-hidden="true" />
+                {g}
+              </li>
+            ))}
+            <li className="gate gate-end">
               <i className="gate-box" aria-hidden="true" />
-              {g}
+              Mainnet
             </li>
-          ))}
-          <li className="gate gate-end">
-            <i className="gate-box" aria-hidden="true" />
-            Mainnet
-          </li>
-        </ol>
-      </Sec>
+          </ol>
+        </section>
+      </div>
     </>
   );
 }
@@ -844,7 +855,6 @@ export function Case({ p, m }: { p: Project; m: SiteMetrics }) {
           ))}
         </>
       )}
-      <Outs links={p.links} />
     </>
   );
 }

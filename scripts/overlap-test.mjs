@@ -199,6 +199,18 @@ async function measureInner(page, row) {
       const y = Math.round((max * i) / n);
       await page.evaluate((yy) => window.scrollTo(0, yy), y);
       await page.waitForTimeout(260);
+      // A picture that loads as it nears the screen (the band a page ends on) is waited for: words over it are
+      // measured against the picture, not against the ground it has yet to cover.
+      await page.evaluate(() =>
+        Promise.all(
+          [...document.images]
+            .filter((im) => {
+              const r = im.getBoundingClientRect();
+              return r.width > 0 && r.bottom > 0 && r.top < innerHeight && !im.complete;
+            })
+            .map((im) => new Promise((res) => (im.addEventListener('load', res, { once: true }), im.addEventListener('error', res, { once: true }), setTimeout(res, 4000)))),
+        ),
+      );
       row.steps++;
       checks++;
       for (const b of await measureView(page)) {

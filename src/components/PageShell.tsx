@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ViewTransition } from 'react';
 import { Footer } from '@/components/ending/Ending';
+import { NextBand } from '@/components/NextBand';
 import { SceneBand } from '@/components/SceneBand';
 import { stationData } from '@/components/work/stations';
 import { getMetrics } from '@/lib/metrics';
@@ -57,7 +58,8 @@ function groundOf(key: string) {
  * Inner pages share the home page's world. Each opens on a live frame of it
  * (the page's own station, the delta, the lake, the snowfield) with its
  * title standing in the frame; the content follows on the snow the frame
- * ends in, and the footer closes it.
+ * ends in; the page returns to the world in a band of the place it leads to
+ * next, and the footer closes it.
  */
 export async function PageShell({
   scene,
@@ -66,6 +68,7 @@ export async function PageShell({
   head,
   children,
   note,
+  next,
 }: {
   scene: SceneId;
   /** A shorter scene: a post is for reading. */
@@ -75,6 +78,8 @@ export async function PageShell({
   head: HeadProps;
   children: React.ReactNode;
   note?: string;
+  /** The way on: a band of the next page's own scene, before the footer. */
+  next?: React.ComponentProps<typeof NextBand>;
 }) {
   const m = await getMetrics();
   return (
@@ -84,6 +89,7 @@ export async function PageShell({
           <BandWords head={head} />
         </SceneBand>
         <div className={`pg-body${index ? ' pg-index' : ''}`}>{children}</div>
+        {next ? <NextBand {...next} /> : null}
       </main>
       <Footer note={note} />
     </div>
