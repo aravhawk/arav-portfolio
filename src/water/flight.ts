@@ -262,12 +262,24 @@ export class FlightEngine extends WaterEngine {
     this.warmQ = q.filter(([mask, mode]) => !this.variants.has(`${mask}:${mode}`));
   }
   private pump() {
-    if (!this.warmQ.length) return;
     for (const v of this.variants.values()) if (v.pending) return;
-    if (performance.now() - this.lastBegin < 150) return;
-    const [mask, mode] = this.warmQ.shift()!;
-    this.begin(mask, mode);
+    const now = performance.now();
+    if (now - this.lastBegin < 150) return;
+    if (this.warmQ.length) {
+      const [mask, mode] = this.warmQ.shift()!;
+      this.begin(mask, mode);
+      return;
+    }
+    // With nothing else to compile: once the reader has rested in a stretch for a moment, the variant its theme would
+    // turn through is made ready, so the switch can be pressed there without a wait. (A variant drawn the moment the
+    // driver reports it holds the first frame it draws for most of a second; one that has had a few seconds does not.)
+    if (this.needed !== this.restIn) {
+      this.restIn = this.needed;
+      this.restAt = now;
+    } else if (THEMED && this.needed >= 0 && now - this.restAt > 1500) this.begin(this.needed, 'any');
   }
+  private restIn = -1;
+  private restAt = 0;
 
   /** For the checks: a variant held in place of the engine's own choice. */
   private forced: Variant | null = null;
