@@ -77,6 +77,14 @@ html[data-flight='on'] .flight-canvas {
 .fl-words[data-on] > :nth-child(2) {
   transition-delay: 70ms;
 }
+/* (Where the first frame's two lines are stacked, the first settles to the foot once the second has gone. The flight
+   measures how far.) */
+.fl .fl-hero-words[data-on][data-second-gone] > .fl-role {
+  transform: translate3d(0, var(--role-drop, 0px), 0);
+  transition:
+    opacity 620ms var(--ease-out),
+    transform 900ms var(--ease-out);
+}
 /* A line that leaves before its block does (the first frame's second line: the first stays through the melt). */
 .fl .fl-words[data-on] > [data-gone] {
   opacity: 0;

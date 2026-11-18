@@ -2502,7 +2502,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     vec3 thru = exp(-vec3(2.7, 0.95, 1.0) * hw);
     // The net of light lies on the shallow bed by day.
     float netP = smoothstep(0.3, 0.75, df.a) * (1.0 - uNight) * (1.0 - smoothstep(1.5, 4.0, footL));
-    vec3 lightP = mix(S.amb * 1.3 + S.key * 0.25, S.amb * 2.0 + uAurora * 0.7 + vec3(0.05, 0.13, 0.15), uNight);
+    // (Before dawn the shelf round the standing letters' water is only a little paler than the water: a bright rim to every bay of its shore was a scribble.)
+    vec3 lightP = mix(S.amb * 1.3 + S.key * 0.25, (S.amb * 2.0 + uAurora * 0.7 + vec3(0.05, 0.13, 0.15)) * mix(1.0, 0.4, uNameG.w), uNight);
     vec3 deepP = mix(vec3(0.0003, 0.015, 0.016), vec3(0.002, 0.009, 0.014), uNight) * (0.75 + 0.5 * shaft);
     vec3 body = vec3(0.7, 0.9, 0.97) * thru * lightP * (0.84 + 0.42 * netP) + deepP * (1.0 - thru.g);
     body *= 1.0 + clamp(wf * 6.5, -0.3, 0.7);

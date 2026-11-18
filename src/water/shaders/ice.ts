@@ -212,6 +212,9 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   if (uNameG.w > 0.5) {
     // The letters stand on the sheet: it opens from under their feet.
     lsd = nameFoot(u);
+    // (All the water they stand in is their pond, lying flush with the sheet: on a phone the near line's water reaches
+    // well out of the letters' own box toward the eye.)
+    gIceBoxD = min(boxD, max(lsd - 1.6 * uNameS - 40.0, 0.0));
   } else if (nearName) {
     vec2 cl = clamp(iuv, 0.002, 0.998);
     lsd = (texture(uIceSdf, cl).r + length((iuv - cl) * uIce.zw)) * nk;
@@ -245,7 +248,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   }
   float f = uIceA.x - open;
   // (The water that opens from the standing letters' feet stops short of the first frame's words while a line of them stands.)
-  if (uNameG.w > 0.5 && uIceP.y > 0.0) f = min(f, mix((wordsClear(u) - 0.034) * 2600.0, 1e4, smoothstep(0.57, 0.66, uIceA.z)));
+  if (uNameG.w > 0.5 && uIceP.y > 0.0) f = min(f, mix((wordsClear(u) - 0.026) * 2600.0, 1e4, smoothstep(0.57, 0.66, uIceA.z)));
 
   // Pressure cracks: the walls of a few large, irregular cells. Early in the
   // melt they are where leads of water open.
@@ -379,7 +382,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
       float dE = lsd - 0.32 * min(toEye, lsd);
       float R = uNameS * (0.8 + 0.6 * un1 + 0.24 * un2) + 40.0 * exp(-cr.x / 46.0) * smoothstep(50.0, 170.0, uNameS);
       // (It stops short of the first frame's words while a line of them stands, along a shore that wanders as the rest does.)
-      float short_ = (wordsClear(u) - 0.046 - 0.03 * un2 - 0.012 * un1) * 2600.0;
+      float short_ = (wordsClear(u) - 0.036 - 0.024 * un2 - 0.01 * un1) * 2600.0;
       f = smax(f, mix(min(R - dE, short_), R - dE, smoothstep(0.57, 0.66, uIceA.z)), 22.0);
     }
     // And it leaves: one lead opens from behind the letters down the lake, its head running on ahead of the melt

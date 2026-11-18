@@ -1281,6 +1281,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     }
   };
 
+  /** How far up the frame the first frame's words reach: with both lines standing, and once the second has gone. */
+  let wordsTop: [number, number] = [0.2, 0.2];
+  let secondGone = false;
   /** Where the first frame's two blocks of words stand (measured while the page is at its top, where they are). */
   function measureHero() {
     if (destroyed) return;
@@ -1291,7 +1294,12 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const b = intro.getBoundingClientRect();
     if (a.width < 2 || b.width < 2) return;
     const side = b.left > a.right;
-    engine.nameWords = [side ? a.right / viewW : 1, side ? b.left / viewW : 1, 1 - Math.min(a.top, b.top) / viewH];
+    // (Where they are stacked, the first line settles to the foot of the frame once the second has gone: the water the
+    // letters stand in has that much more room to spread toward the eye.)
+    const drop = side ? 0 : Math.max(0, b.bottom - a.bottom);
+    heroWords?.style.setProperty('--role-drop', `${drop.toFixed(1)}px`);
+    wordsTop = [1 - Math.min(a.top, b.top) / viewH, 1 - (a.top + drop) / viewH];
+    engine.nameWords = [side ? a.right / viewW : 1, side ? b.left / viewW : 1, wordsTop[secondGone ? 1 : 0]];
     engine.touch();
   }
 
@@ -1533,7 +1541,19 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       if (gone !== e.gone) {
         e.gone = gone;
         e.el.toggleAttribute('data-gone', gone);
+        if (e.el.parentElement === heroWords) {
+          secondGone = gone;
+          heroWords?.toggleAttribute('data-second-gone', gone);
+        }
       }
+    }
+    // (The snow left for those words follows them, over a moment: the bare ice comes on toward the eye as the line settles.)
+    const topNow = wordsTop[secondGone ? 1 : 0];
+    if (Math.abs(engine.nameWords[2] - topNow) > 1e-4) {
+      const kTop = mqStill.matches ? 1 : 1 - Math.exp(-Math.min(0.1, boxLast ? (now - boxLast) / 1000 : 0) * 4);
+      engine.nameWords[2] += (topNow - engine.nameWords[2]) * kTop;
+      if (Math.abs(engine.nameWords[2] - topNow) <= 1e-4) engine.nameWords[2] = topNow;
+      engine.touch();
     }
     // The lee comes in with the words and goes out with them; between two
     // blocks it goes out where the first stood before it comes in behind
