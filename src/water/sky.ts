@@ -138,7 +138,10 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
   // The sun waits behind the ranges, its upper edge just under the crest, and clears it when the camera settles:
   // it comes to rest with its middle a little above the crest, a clean limb standing on the ranges.
   const elEnd = ridge - 0.018 + 0.023 * lift;
-  // Late in the light theme's day: the sun has come round to the right, still clear of the ranges, and the light is gold.
+  // The light theme's day comes down in stages, so that no screen of the flight is a step from the one before:
+  // morning through the stations; an afternoon as the river leaves the canyon; the golden hour over the delta;
+  // the sun going down on the run to sea; and the blue hour's last gold where the camera comes to rest.
+  // (`late` is what the stations' own stretch leans a little toward, as it always has: their light is not touched.)
   const late: Key = {
     zen: [0.045, 0.13, 0.42],
     mid: [0.16, 0.29, 0.6],
@@ -151,9 +154,59 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
     amb: [0.25, 0.35, 0.56],
     haze: 1.0,
     aurora: 0,
-    // (Not yet the ending's sky: its extra terms cost nothing until the camera is out over the sea.)
     dusk: 0,
     under: 0.9,
+  };
+  // Afternoon, out of the canyon: the sun well round to the right and lower, the light a warm white, the sky a
+  // shade deeper overhead.
+  const afternoon: Key = {
+    zen: [0.045, 0.13, 0.43],
+    mid: [0.16, 0.3, 0.62],
+    hor: [0.62, 0.62, 0.7],
+    band: [1.6, 1.0, 0.6],
+    az: sunAz - 0.3,
+    el: Math.max(0.072, ridge + 0.036),
+    key: mul([1.0, 0.84, 0.64], 2.9),
+    keyEl: 0.08,
+    amb: [0.25, 0.35, 0.56],
+    haze: 1.0,
+    aurora: 0,
+    dusk: 0,
+    under: 0.95,
+  };
+  // The golden hour, over the delta: a low gold sun on the right, cream snow with long blue shade, a deep sky
+  // that comes down to peach and gold.
+  const golden: Key = {
+    zen: [0.02, 0.08, 0.3],
+    mid: [0.085, 0.21, 0.43],
+    hor: [0.88, 0.64, 0.36],
+    band: [2.3, 1.2, 0.42],
+    az: sunAz - 0.07,
+    el: Math.max(0.045, ridge + 0.016),
+    key: mul([1.0, 0.76, 0.42], 2.6),
+    keyEl: 0.06,
+    amb: [0.17, 0.26, 0.45],
+    haze: 1.0,
+    aurora: 0,
+    dusk: 0.22,
+    under: 0.95,
+  };
+  // The sun going down, on the run to sea: it stands just over the ranges, the gold has deepened and the blue
+  // overhead with it. (The snow is still light enough for the delta's dark words, which stand until here.)
+  const sunset: Key = {
+    zen: [0.012, 0.05, 0.2],
+    mid: [0.045, 0.135, 0.32],
+    hor: [0.9, 0.56, 0.26],
+    band: [2.2, 1.15, 0.4],
+    az: sunAz - 0.03,
+    el: Math.max(0.03, ridge + 0.006),
+    key: mul([1.0, 0.62, 0.3], 1.7),
+    keyEl: 0.052,
+    amb: [0.12, 0.18, 0.34],
+    haze: 0.9,
+    aurora: 0,
+    dusk: 0.6,
+    under: 0.5,
   };
   // The light ending: a low sun on the ranges under a deep blue sky that comes down to warm gold at the horizon
   // (the old ending's blue and gold: rich, with nothing of rose or lavender in it).
@@ -190,7 +243,19 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
     under: 1,
   };
   const d = Math.min(1, Math.max(0, day));
-  const light = d < 0.55 ? mixKey(MORNING, late, d / 0.55) : mixKey(late, blue, smooth(0.55, 1, d));
+  // (The stages stand where the day's clock puts the camera: 0.1 at the end of the canyon's hold, 0.42 at its
+  // mouth, 0.55 at the delta's frame, 0.6 as the camera turns out to sea, 1 a little before it comes to rest.)
+  const held = (x: number) => mixKey(MORNING, late, x / 0.55);
+  const light =
+    d <= 0.1
+      ? held(d)
+      : d < 0.42
+        ? mixKey(held(0.1), afternoon, (d - 0.1) / 0.32)
+        : d < 0.55
+          ? mixKey(afternoon, golden, (d - 0.42) / 0.13)
+          : d < 0.6
+            ? mixKey(golden, sunset, (d - 0.55) / 0.05)
+            : mixKey(sunset, blue, smooth(0.6, 1, d) * 0.5 + ((d - 0.6) / 0.4) * 0.5);
   // (The night holds until the delta; the first light comes over the sea.)
   // (And before that the first light grows a little with every station.)
   const dark = mixKey(mixKey(NIGHT, LATE_NIGHT, smooth(0, 0.1, d)), first, smooth(0.3, 1, d) * smooth(0.3, 1, d) * 0.35 + smooth(0.6, 1, d) * 0.65);

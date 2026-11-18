@@ -1051,6 +1051,15 @@ vec4 bedAt(vec2 w) {
   }
   b.r += bedShore;
   b.g += bedShore;
+  // The painted world ends a little north of the western cape, and past its edge the bed repeats its last row:
+  // the cape's shallows, and the lie of its shore, would run on from there to the horizon (a pale wedge on the
+  // sea, with a strip of half-land along the skyline where a far shore's edge is blended widest). By that edge
+  // all water is the deep open sea, with no shore near it.
+  if (w.y > ${(T2 + 9900 - 330).toFixed(1)} && b.r < 0.0) {
+    float north = smoothstep(${(T2 + 9900 - 330).toFixed(1)}, ${(T2 + 9900 - 60).toFixed(1)}, w.y);
+    b.rg = mix(b.rg, vec2(-2000.0), north);
+    b.ba *= 1.0 - north;
+  }
   return b;
 }
 float bedSoft(vec4 b) { return mix(b.r, b.g, smoothstep(3.0, 16.0, -b.r)); }
@@ -2654,19 +2663,23 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     // (Two looks toward the sun: a bank a long way off still shades this water.)
     if (open < 1.0) longShade = max(shade, max(smoothstep(-6.0, 6.0, textureLod(uBedA, bedUv(pw + LXY * 64.0), 0.0).r), 0.75 * smoothstep(-6.0, 6.0, textureLod(uBedA, bedUv(pw + LXY * 150.0), 0.0).r)));
     col = mix(col, col * vec3(0.16, 0.4, 0.5) + vec3(0.0, 0.008, 0.016), dlt * (0.72 + 0.26 * longShade));
+    // (At a bar's foot the water lies over the bar's own ice, pale and clean: the bed's brown never shows at a waterline.)
+    float skirt = 1.0 - smoothstep(0.0, 14.0, -bw.r);
+    if (skirt > 0.0) col = mix(col, vec3(0.36, 0.62, 0.68) * (S.amb * 1.3 + S.key * 0.1 * (1.0 - longShade)), dlt * skirt * 0.8);
   }
   if (uSea.x > 0.0 && S.sun.z > 0.0) {
     float daS = atan(dir.x, dir.y) - atan(S.sun.x, S.sun.y);
     // (By day the path is narrow: contrast, not more light everywhere, is what makes it blaze.)
-    float pathS = exp(-daS * daS / mix(0.03, 0.1, uNight));
+    float pathS = exp(-daS * daS / mix(0.014, 0.1, uNight));
     if (pathS > 0.01) {
       // Every ripple face turned to the sun throws it back whole: the braids blaze where they cross its bearing,
       // in broad flashing faces with a fine sparkle over them that comes and goes.
       // (By day they are fewer and far brighter, with dark water between them: a wash of light would turn the channels to sand.)
-      float face = smoothstep(mix(0.55, 0.5, uNight), mix(0.8, 0.78, uNight), mix(dw2.r, df.r, 0.45));
+      float face = smoothstep(mix(0.6, 0.5, uNight), mix(0.8, 0.78, uNight), mix(dw2.r, df.r, 0.45));
       face = mix(face, mix(0.2, 0.34, uNight), smoothstep(2.0, 9.0, footL));
       float spark = smoothstep(0.7, 0.92, n2(pw / 9.0 + vec2(uTime * 1.1, -uTime * 0.8))) * (1.0 - smoothstep(1.2, 4.0, footL));
-      vec3 gold = mix(S.band, vec3(2.4, 1.7, 1.0), 0.5 * (1.0 - uNight));
+      // (By day a glint is the sun itself, white with a little of its gold: a dim tan fleck reads as silt on the water.)
+      vec3 gold = mix(S.band, vec3(2.6, 2.3, 1.8), 0.85 * (1.0 - uNight));
       col += gold * pathS * (mix(0.05, 0.16, uNight) + mix(16.0, 5.5, uNight) * face * face * face + mix(8.0, 4.0, uNight) * spark * face) * (0.35 + 0.65 * fres) * uSea.x * (1.0 - longShade) * mix(1.0, 0.45, uNight);
     }
   }
@@ -3062,8 +3075,10 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float cosi = clamp(dot(-dir, n), 0.0, 1.0);
   float fres = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
   // (Still water gives the ranges back as sharp as they stand, and the sun as a soft light under them: its path is the glitter's to draw.)
-  gSunK = 1.0 - 0.6 * still;
-  gDiscK = 1.0 - still;
+  // (By day a moving sea does not hold the sun's glow as a smooth patch either: every facet throws it or does
+  // not, and that is the glitter's to draw. The mirror keeps a little of the glow and none of the disc.)
+  gSunK = mix(mix(0.22, 1.0, uNight), 0.4, still);
+  gDiscK = (1.0 - still) * uNight;
   vec3 refl = withRidges(skyColor(r, 0.0), r, 1.0 - still);
   gSunK = 1.0;
   gDiscK = 1.0;
@@ -3088,13 +3103,15 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     float sd = max(dot(r, S.sun), 0.0);
     float s90 = pow(sd, 90.0);
     float s900 = pow(sd, 900.0);
-    col += vec3(1.0, 0.86, 0.62) * (s900 * 14.0 + s90 * mix(0.42, 0.55, uNight)) * mix(0.8, 1.0, uNight) * (1.0 - lee) * up * mix(0.6, 1.0, gDusk) * (1.0 - still);
+    // (By day almost none of it is a smooth lobe: a lobe on calm far water is a column of light standing on the sea.)
+    col += vec3(1.0, 0.86, 0.62) * (s900 * 14.0 + s90 * mix(0.42, 0.55, uNight)) * mix(0.8, 1.0, uNight) * (1.0 - lee) * up * mix(0.6, 1.0, gDusk) * (1.0 - still) * mix(0.1, 1.0, uNight);
     // By day the broad lobe is held back and the light is carried by a path
     // of separate glints: wide and sparse near the eye, narrowing to a thread
     // at the horizon.
     float day = (1.0 - uNight) * up * (1.0 - still);
     if (day > 0.0) {
-      float wide = mix(0.028, mix(0.085, 0.11, gDusk), nearK) * mix(1.12, 1.0, gDusk);
+      // (A thread under the sun at the far shore, opening toward the eye: never a band of one width.)
+      float wide = mix(0.009, mix(0.085, 0.11, gDusk), nearK * nearK) * mix(1.12, 1.0, gDusk);
       float path = exp(-da * da / (wide * wide));
       if (path > 0.003) {
         vec2 gq = q * vec2(30.0, 15.0);
@@ -3103,8 +3120,18 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
         // Each glint has a soft shoulder: a spark on a ripple, not a cut-out.
         float glint = smoothstep(lo - 0.16, lo + 0.26, sp);
         glint *= glint;
-        // Far off a glint is finer than a pixel: there the path is its even mean.
-        glint = mix(glint, 0.3, smoothstep(0.35, 1.1, px * 15.0));
+        // Far off a ripple is finer than a pixel, and the light is still glitter: separate points, each a pixel
+        // or two of the screen, coming and going, with dark water between them. (Level dashes laid out by
+        // bearing and by how far under the horizon the eye looks, as on the still sea.)
+        float farG = smoothstep(0.35, 1.1, px * 15.0);
+        if (farG > 0.0) {
+          float r0 = max(0.0006, 0.85 * uPxAng);
+          vec2 spA = vec2(sin(da), em);
+          float fineG = (motes(spA / vec2(0.0085, 0.003) + vec2(0.0, uTime * 0.02), vec2(3.0 * r0 / 0.0085, r0 / 0.003), 5.0)
+            + motes(spA / vec2(0.0085, 0.003) + vec2(0.5, 0.5 - uTime * 0.016), vec2(3.0 * r0 / 0.0085, r0 / 0.003), 31.0)
+            + 0.7 * motes(spA / vec2(0.019, 0.0052) + vec2(0.3, uTime * 0.011), vec2(3.5 * r0 / 0.019, r0 / 0.0052), 13.0)) * (0.0006 * 0.0006) / (r0 * r0);
+          glint = mix(glint, min(fineG * 2.6, 1.6), farG);
+        }
         // The sun's reflected bloom is broken by the same facets, so it is not a patch. (It is taken away by as much
         // as the path is there: taken whole up to the path's edge, it left a seam down the water at that edge.)
         col = max(col - sunBloom(sd) * mir * mix(0.85, 0.3, gDusk) * (1.0 - glint) * day * smoothstep(0.003, 0.12, path), 0.0);
@@ -3206,9 +3233,11 @@ vec3 deltaBar(vec3 col, float y, float sd, vec2 ba) {
   if (k <= 0.0) return col;
   float toSun = dot(-ba, normalize(keyDir().xy));
   float lit = smoothstep(0.05, 0.75, toSun) * (1.0 - smoothstep(3.0, 44.0, sd));
-  float lee = smoothstep(0.05, 0.75, -toSun) * (1.0 - smoothstep(8.0, 96.0, sd));
-  col = mix(col, col * vec3(0.56, 0.68, 0.9), 0.75 * lee * k);
-  return col + S.key * vec3(1.0, 0.84, 0.62) * 0.17 * lit * k;
+  // (Its shade keeps to the rim: a wide band of it round every bar is a smear, and it is the sky's blue, not mauve.)
+  float lee = smoothstep(0.05, 0.75, -toSun) * (1.0 - smoothstep(6.0, 46.0, sd));
+  col = mix(col, vec3(dot(col, vec3(0.3333))) * vec3(0.66, 0.8, 1.06), 0.62 * lee * k);
+  // (The lit rim is the sun's own colour on snow, thin and pale: never a tan edge.)
+  return col + S.key * 0.085 * lit * lit * k;
 }
 #endif
 
@@ -3595,7 +3624,11 @@ void main() {
         vec3 wall = iceF_ * lightOn(nW, 1.0);
         wall = mix(iceF_ * vec3(0.5, 0.62, 0.8) * S.amb * 0.62, wall, smoothstep(underF - 1.5 * af, underF + 1.5 * af, f));
         wall = mix(mix(vec3(0.95, 0.97, 1.0), vec3(0.7, 0.82, 0.92), uNight) * (S.key * mix(0.27, 0.0, uNight) + S.amb * mix(0.86, 1.5, uNight) + uAurora * 0.2), wall, smoothstep(rimF - af, rimF + af, f));
-        wall *= 1.0 - 0.5 * smoothstep(0.87 - af, 0.91 + af, f);
+        // (A bar of the delta is low and the low sun's glare lies over all of it: its face is kept the clear blue
+        // of ice in shade, and it comes down to pale water, not to a dark foot that the glare turns brown.)
+        float barK = smoothstep(${(DELTA.apex.y - 200).toFixed(1)}, ${(DELTA.y - 60).toFixed(1)}, p.y) * (1.0 - uNight);
+        wall *= 1.0 - 0.5 * smoothstep(0.87 - af, 0.91 + af, f) * (1.0 - barK);
+        wall = mix(wall, wall * vec3(0.3, 1.0, 1.22) + vec3(0.0, 0.02, 0.032) * (0.4 + 0.6 * smoothstep(0.6, 1.0, f)), barK);
         wall = mix(wall, wall * vec3(0.55, 0.7, 0.85), uNight * 0.6);
         // The basin's walls are the glacier's own ice under a cornice of snow: fluted where melt runs down them,
         // blue and deeper toward the water, with a seam or two of the dark moraine frozen into them.
