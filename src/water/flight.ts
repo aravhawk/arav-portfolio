@@ -292,6 +292,10 @@ export class FlightEngine extends WaterEngine {
   /** The fence behind the last program's first draw: until the GPU has passed it, the driver is still building that program. */
   private warmFence: WebGLSync | null = null;
   private warmBegan = 0;
+  /** How long a frame takes here, of late (ms): what a first draw's time is measured against. */
+  private frameMs = 16.7;
+  /** A variant drew for the first time in the frame now being drawn, as a piece of the picture: that first draw is timed too. */
+  private coldDrew = false;
   private warmedAt = 0;
   /**
    * Whether a first draw holds the picture on this visit. A reader who has been here before has the driver's own
@@ -307,9 +311,9 @@ export class FlightEngine extends WaterEngine {
     gl.deleteSync(this.warmFence);
     this.warmFence = null;
     this.warmedAt = performance.now();
-    // (A first draw the driver has in store is over within a frame or two, however busy the GPU is; one it must build
-    // takes a quarter of a second and more.)
-    this.warmHolds = this.warmedAt - this.warmBegan > 150;
+    // (A first draw the driver has in store is over within a few frames, however long this GPU's frames are; one it
+    // must build takes a quarter of a second and more on top of that.)
+    this.warmHolds = this.warmedAt - this.warmBegan > 150 + 3 * this.frameMs;
     return false;
   }
   /**
@@ -439,6 +443,7 @@ export class FlightEngine extends WaterEngine {
     // (Where a first draw holds the picture, one that has drawn before is taken first. On a later visit the driver has
     // these programs and a first draw is a matter of a frame: the leanest is taken, as it comes.)
     const best = this.warmHolds || !cold || (warm && !leaner(cold, warm)) ? (warm ?? cold) : cold;
+    if (best && !best.warm) this.coldDrew = true;
     // (A sliver of the frame that something ready can already draw is not given a variant of its own: slivers come and
     // go all along the flight, and each new program is work for the driver while the frames run.)
     if (!best || ((bits(want) < bits(best.mask) || best.mode !== mode) && !sliver)) this.begin(want, mode);
@@ -1198,6 +1203,7 @@ export class FlightEngine extends WaterEngine {
 
     let dt = this.last ? (now - this.last) / 1000 : 1 / 60;
     this.last = now;
+    if (dt < 0.25) this.frameMs += (dt * 1000 - this.frameMs) * 0.1;
     if (this.frameLog && dt < 1) this.frameLog.push(dt * 1000);
     this.govern(dt * 1000);
     dt = Math.min(dt, 1 / 20);
@@ -1348,6 +1354,7 @@ export class FlightEngine extends WaterEngine {
   }
 
   private draw(cam: Basis, aspect: number, at: FlightMoment) {
+    const gl = this.gl;
     const need = this.needs(cam, aspect);
     this.needed = need;
     const night = Math.min(1, Math.max(0, this.theme));
@@ -1367,6 +1374,13 @@ export class FlightEngine extends WaterEngine {
       this.scene(by, cam, aspect, at, tiles.length === 1 ? null : t.px);
     }
     this.drawn = this.drawnTiles[0].by;
+    // (A program that drew its first pixels as part of this frame: how long the GPU takes over it says, as a first
+    // draw made on purpose does, whether the driver had it in store.)
+    if (this.coldDrew && !this.warmFence && !gl.isContextLost()) {
+      this.warmFence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      this.warmBegan = performance.now();
+    }
+    this.coldDrew = false;
     this.glow(night);
   }
 
