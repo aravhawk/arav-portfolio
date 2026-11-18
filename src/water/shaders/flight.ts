@@ -447,7 +447,8 @@ vec3 withRidges(vec3 col, vec3 d, float soft) {
     float cover = 1.0 - smoothstep(0.86, 0.97, m.a);
     if (cover > 0.0) {
       // (By day snow holds only on the easier slopes: the steep faces are bare rock, which is what gives a range its drawing.)
-      float snowK = m.b * mix(smoothstep(0.86, 0.955, m.g), 1.0, 0.5 * uNight);
+      // (Snow lies only where the ground is easy: every steeper face, by day and before dawn, is the rock itself.)
+      float snowK = m.b * mix(smoothstep(0.885, 0.965, m.g), smoothstep(0.84, 0.95, m.g), uNight);
       vec3 alb = mix(mix(vec3(0.085, 0.09, 0.105), vec3(0.05, 0.055, 0.07), uNight), mix(vec3(0.92, 0.93, 0.95), vec3(0.5, 0.56, 0.66), uNight), snowK);
       float sunAz = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
       // (What the sun does not reach is lit by the sky alone: blue, and deep in the folds.)
@@ -455,12 +456,20 @@ vec3 withRidges(vec3 col, vec3 d, float soft) {
       vec3 day = S.key * 0.95 * m.r * smoothstep(0.015, 0.21, m.r) + S.amb * vec3(0.78, 0.93, 1.14) * (0.02 + 0.36 * m.g * m.g);
       // Before dawn: the sky's own light, and the first warmth on what faces it.
       // (And the faces the coming light will find first already hold a little of it: a range has its drawing before dawn too.)
-      vec3 night = S.amb * (0.5 + 1.6 * m.g) + S.band * 0.035 * pow(sunAz, 3.0) * m.g + uAurora * 0.02 * m.g + S.band * 0.05 * m.r * (0.35 + 0.65 * sunAz);
+      // (The night's cold light comes from the side the curtains hang on, which is the side the morning sun will
+      // come from: the faces it finds are pale blue, with the shadows the country throws, and the rest is deep.)
+      float lumA = dot(S.amb, vec3(0.2126, 0.7152, 0.0722));
+      vec3 night = S.amb * (0.3 + 0.7 * m.g) + (lumA * vec3(0.42, 0.9, 1.32) * 5.2 + uAurora * 0.05) * m.r * smoothstep(0.01, 0.2, m.r)
+        + S.band * 0.035 * pow(sunAz, 3.0) * m.g + S.band * 0.06 * m.r * (0.2 + 0.8 * sunAz);
       vec3 rock = alb * mix(day, night, uNight);
       float far = clamp(m.a / 0.84, 0.0, 1.0);
-      float airK = 1.0 - exp(-(mix(0.03, 0.1, uNight) + far * mix(0.95, 1.9, uNight)) * S.haze);
+      // (The air is thin in front of the near ranges and gathers with distance: they stand dark and drawn, and each
+      // range behind them is paler.)
+      float airK = 1.0 - exp(-(mix(0.015, 0.04, uNight) + far * mix(0.3, 0.5, uNight) + far * far * mix(1.25, 2.4, uNight)) * S.haze);
       // (Against the morning sun a range is a shape before it is a surface: less of the sun's own glare lies in front of it than behind.)
       vec3 airR = mix(air, mix(S.hor * 0.9, air, 0.4), (1.0 - uNight) * (1.0 - gDusk));
+      // (Before dawn the air in front of them is the cold air the ground lies in, warm only toward the light.)
+      airR = mix(airR, mix(S.hor, air, 0.45), uNight * (1.0 - gDusk));
 #ifdef SEA
       if (gDusk > 0.0) {
         // Against the low light the ranges are the ending's: shaded faces
