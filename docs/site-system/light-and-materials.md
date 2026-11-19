@@ -54,6 +54,16 @@ known bed, pass that backing directly to `clearIce`. The object owns
 its intersection, snow cover, submerged shelf and reflected ray.
 Apply `inAir` over the complete camera path after shading.
 
+Measure a change at the composed stops and between them, including the
+opening melt. At 1440 × 900 and DPR 2, the shared material's first pass
+took 15.80–16.01 ms at the daylight opening across three sessions. Its
+ceiling there is 14.96 ms.
+
+The plates' faces should reach 4.5:1 by day and 3:1 before dawn against
+the lake directly behind them, from rest through one screen of scroll.
+Measure the same pixels with the plates hidden. Check 390, 768, 1440
+and 1920 CSS pixels wide. The first pass misses both floors.
+
 ## Objects
 
 One strong subject a frame. Real silhouettes with thickness, lit by

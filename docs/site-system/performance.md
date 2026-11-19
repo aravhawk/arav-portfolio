@@ -48,6 +48,16 @@ per frame than the median of the existing stations.
   between visits, so a harness that has run before sees no compile
   stall. Test a first visit with programs made new.
 
+For ice changes, run `NODE_PATH=<playwright modules> node
+scripts/ice-frame-cost.mjs <production URL>` on the M4. Optional arguments
+select comma-separated screen positions and themes. The harness pins the
+camera, entrance, scene clock and shading tier. It verifies the drawing
+buffer and waits for each tile's own shader. Three fresh Chromium
+process groups rotate through the same stop, with only the measured
+group running. Every timed draw ends with a synchronous pixel read.
+Keep all three means and the raw groups. A range above 0.3 ms fails
+the comparison. Other applications can still occupy the GPU.
+
 ## Where it stands (2026-11-18, before the frame budget task)
 
 1440 at 2x: 1.6 to 2.8 percent of frames slow, all in the first two
