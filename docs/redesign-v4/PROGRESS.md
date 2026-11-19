@@ -1425,3 +1425,36 @@ to and including R4b, and whatever R4c has committed when it is
 stopped, is Fable's (helpers and this thread; R3a and part of R3b by
 Kilo). From this point the 3D is Astra's, task by task, listed as it
 lands.
+
+### The hand-over to Astra (Nov 18, about 9:45 PM CT)
+
+- **R4c stopped at a clean commit** (its sixth, `62dcafb`), by the
+  owner's direction, and its six commits are integrated (ending
+  `6e78340`; lint, typecheck, 315 tests, build, 200 words). What it
+  built: the hours as keys along the flight (a day in the light
+  theme, a night in the dark theme with the moon as its key), the
+  aurora only at the first screen and at Kilo Bench, the afternoon's
+  raking light and the canyon's last light, a lee with no edge, the
+  lead ending at the snow, the night's code kept out of the day's
+  programs. I looked at the whole page in both themes: from Agent
+  Bridge on the day reads as hours (silver, cream, gold, rose); from
+  the statement to Kilo Bench it is still one white and one teal; the
+  night is one saturated cobalt wash with little form. It was stopped
+  before its own checks; the page tests on this head are owed and
+  are in the next task's definition of done.
+- **The glass is gone** (`296ad70`, this thread): the frosted
+  surfaces were the nav's two controls, the rail and the cc-switch
+  selector. They are solid plates now (packed snow by day, night ice
+  before dawn, a hairline edge, a close shadow, squarer corners);
+  nothing is blurred or seen through. There were no other glass
+  panels in the styles; the two glass-like panels inside the scene
+  (Kilo Bench's table and RydAR's card) are being replaced by the
+  station tasks.
+- **Astra's first task is running, alone: A1, the light**, briefed
+  with the goal, the state as reviewed, the hour-by-hour art
+  direction already written, references on disk and a definition of
+  done. Queue after it: the stations in five small tasks, the name's
+  polish and cost, the canyon, governor and first visit, the ending
+  and the inner pages' scenes.
+- Meanwhile this thread does the DOM work that was in the inner
+  pages' task.
