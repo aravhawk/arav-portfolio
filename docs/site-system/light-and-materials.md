@@ -1,7 +1,5 @@
 # Light and materials
 
-The hours and solid UI surfaces are in use. A single ice material for all objects is planned.
-
 ## Light
 
 | Stop | Day | Night |
@@ -28,23 +26,29 @@ and the ground's shadow-casting key have separate elevations.
 The engine integrates air density from the camera height once per
 frame. Beyond the foreground, the valley air grows denser. Its onset
 follows camera height. Ground and station shaders call `airLoss(t)`
-at the hit distance and fade toward the directional horizon colour. The lower mist layer favours
-water. The panorama stores range depth for its own haze. A new object
-uses `inAir` for both its direct hit and the full reflected path.
+at the hit distance and fade toward the directional horizon colour.
+The lower mist layer favours water. The panorama stores range depth
+for its own haze. A new object uses `inAir` for both its direct hit
+and the full reflected path.
 The block’s display and its spill rise together as its ice draws near.
 
 The scene shader applies the vignette before the display curve. Both
 themes share the same highlight shoulder and moving luminance grain.
 Keep the scene sharp and the shore free of emissive outlines.
 
-## The ice (planned: one function for every object)
+## Ice
 
-Lake Baikal's ice: a clear body that glows blue-green where light
-passes through it and is dark where it does not; a few white fracture
-planes and veils of bubbles inside; sawn faces with fine saw marks,
-broken faces with chipped glinting edges, never a rounded bevel;
-Fresnel; wet and darker where water touches it; one true image in
-still water. Every ice object on the page calls the same material.
+The columns, dam, lattice and canyon walls use `iceGlacier` in
+`src/water/shaders/stations.ts`. It shades the depth of the ice,
+its white strata and its reflections. After moonset the pale horizon
+lights exposed facets and shines through thin ice. The lake sheet,
+name plates and polished display faces have dedicated shading.
+
+Use Lake Baikal ice as the reference. Clear ice transmits blue-green
+light through white fracture planes and veils of bubbles. Sawn faces
+show fine saw marks. Broken edges catch the light. The wet foot is
+darker, and a still pool carries one reflection.
+The longer-term aim is one ice material across the flight.
 
 ## Objects
 
