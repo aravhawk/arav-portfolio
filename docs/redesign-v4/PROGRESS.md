@@ -1498,3 +1498,23 @@ and where each point stands:
 - A detailed quality brief is coming; when it arrives it is reviewed
   against the frontend skills installed on this machine and answered
   with a plan.
+
+## The quality brief, the plan, and the maintainer pack (Arav, t306u, t307u, t309u; Nov 18, about 9:22 to 9:35 PM CT)
+
+- The quality brief (zero AI slop, extreme fluidity, never killing
+  the browser; Lando Norris as the main benchmark) was answered with
+  one plan after reading the source pack, the API critic's review and
+  the installed design and motion skills, and after studying
+  landonorris.com first-hand. The plan is kept in
+  `docs/redesign-v4/quality-plan.md`.
+- **A maintainer pack is a deliverable of V4 and builds up as the
+  work proceeds**: `docs/site-system/` (linked from a tracked root
+  `AGENTS.md`): the architecture map, the motion system, light and
+  materials, the performance budget, copy rules, recipes, the
+  consistency checklist with the critics' PASS criteria, and
+  pitfalls. Its first version is in. Every Astra task now has to make
+  its pages true for what it built. The code is brought to match it:
+  a typed station registry comes before the station work, so stations
+  are definitions, not one-offs. Before V4 is called done a fresh
+  helper adds a throwaway section from the pack alone on a scratch
+  branch.
