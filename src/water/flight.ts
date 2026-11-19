@@ -60,6 +60,8 @@ export interface FlightMoment {
   melt: number;
   /** 0..1, how far the day has come round */
   day: number;
+  /** the scroll position, in screens, whose hour lights the picture (where it is not said, the hour the day's clock stands for) */
+  hour?: number;
   /** 0..1, how far the camera has settled on the ending */
   settle: number;
   /** true once it has come to rest there */
@@ -1576,11 +1578,13 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uNight, night);
     gl.uniform1f(r.u.uWorldW, WORLD.w);
     gl.uniform1f(r.u.uShoal, this.shoalY);
-    // The light: the hour's keys, worked out here once a frame.
-    const sky = skyAt(night, at.day, this.lift, this.sunAz, this.ridge);
+    // The light: the hour's keys.
+    const sky = skyAt(night, at.day, this.lift, this.sunAz, this.ridge, at.hour);
     // (The first screen has its own sun and moon, behind the name: let go as the eye leaves the lake.)
-    const moon = heroLight(sky, heroLightAt(MELT.from + at.melt * (MELT.to - MELT.from)), night);
-    if (r.u.uMoon) gl.uniform4fv(r.u.uMoon, moon);
+    const heroK = heroLightAt(MELT.from + at.melt * (MELT.to - MELT.from));
+    heroLight(sky, heroK, night);
+    // The moon stands where the night's light comes from: the first screen's own while the name stands, then the hour's, until it sets.
+    if (r.u.uMoon) gl.uniform4f(r.u.uMoon, sky.keyDir[0], sky.keyDir[1], sky.keyDir[2], night * Math.max(heroK, sky.moon));
     if (this.first < 1 || this.breath !== 0) firstLight(sky, this.first, night, this.breath);
     gl.uniform3fv(r.u.uSkyZen, sky.zen);
     gl.uniform3fv(r.u.uSkyMid, sky.mid);
@@ -1590,7 +1594,9 @@ export class FlightEngine extends WaterEngine {
     gl.uniform3fv(r.u.uKeyCol, sky.key);
     gl.uniform3fv(r.u.uKeyDir, sky.keyDir);
     gl.uniform3fv(r.u.uAmbCol, sky.amb);
-    gl.uniform4f(r.u.uSkyK, sky.haze, sky.aurora, sky.dusk, sky.under);
+    gl.uniform4f(r.u.uSkyK, sky.haze, sky.aurora * sky.air[3], sky.dusk, sky.under);
+    if (r.u.uAir) gl.uniform4f(r.u.uAir, sky.air[0], sky.air[1], sky.air[2], 0);
+    if (r.u.uRange) gl.uniform4fv(r.u.uRange, sky.range);
     this.dusk = sky.dusk;
     gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
     gl.uniform4fv(r.u.uCalmBox, at.box);
@@ -1603,11 +1609,13 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uIceOn, this.iceTex && this.melt < 0.999 ? 1 : 0);
     gl.uniform1f(r.u.uGlow, this.iceTex ? 1 - smooth(0.5, 1, this.melt) : 0);
     gl.uniform1f(r.u.uMeltAct, this.meltAct);
-    gl.uniform3fv(r.u.uBed, pal.bed);
-    gl.uniform3fv(r.u.uAbsorb, pal.absorb);
-    gl.uniform3fv(r.u.uScatter, pal.scatter);
+    // The water's own body takes the hour's light: its colour, how milky it is, how deep it reads, how its surface nets the light.
+    const wt = sky.water;
+    gl.uniform3f(r.u.uBed, pal.bed[0] * wt.tint[0], pal.bed[1] * wt.tint[1], pal.bed[2] * wt.tint[2]);
+    gl.uniform3f(r.u.uAbsorb, pal.absorb[0] * wt.clear, pal.absorb[1] * wt.clear, pal.absorb[2] * wt.clear);
+    gl.uniform3f(r.u.uScatter, pal.scatter[0] * wt.tint[0] * wt.milk, pal.scatter[1] * wt.tint[1] * wt.milk, pal.scatter[2] * wt.tint[2] * wt.milk);
     gl.uniform3fv(r.u.uIceCol, pal.ice);
-    gl.uniform4fv(r.u.uLight, pal.light);
+    gl.uniform4f(r.u.uLight, pal.light[0], pal.light[1], pal.light[2] * wt.caust, pal.light[3]);
 
     // The slab, and the part of the screen it can be on.
     const sl = slabInFrame(cam, aspect);
@@ -2401,7 +2409,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       cap[3] = 1 - (span[1] - pad) / viewH;
     }
     capK = span ? Math.min(1, capK + dtCap / (mqStill.matches ? 0.001 : 0.3)) : Math.max(0, capK - dtCap / (mqStill.matches ? 0.001 : 0.25));
-    engine.frame(now, cam, aspect, { melt, day: dayNow, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle });
+    engine.frame(now, cam, aspect, { melt, day: dayNow, hour: s, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle });
     // The live picture stands over its still once a frame of it is drawn; the entrance begins when the dissolve is done.
     if (!pictureUp && engine.drew) {
       pictureUp = true;

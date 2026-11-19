@@ -299,6 +299,7 @@ function start(first: BandOpts, aspect: number): Promise<Shared | null> {
         // Only the lake's own frame shows the sheet; from every station it has long gone.
         melt: a.opts.scene === 'lake' ? 0 : 1,
         day: own ? 0 : dayAt(s0),
+        hour: own ? 0 : s0,
         settle: 0,
         rest: false,
         calm: 0.6,
