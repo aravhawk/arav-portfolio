@@ -62,7 +62,7 @@ const maxBytes = Number(arg('max-kb', '150')) * 1024;
 
 /* The window each shape is photographed on: its height in CSS px (the words' layout is a real window's) and how many
    device pixels to each. A still is fitted to the frame's height, so these give its height in pixels. */
-const SHAPE = { tall: { h: 844, dpr: 2 }, square: { h: 1000, dpr: 1.2 }, wide: { h: 900, dpr: 1.2 } };
+const SHAPE = { tall: { h: 844, dpr: 2 }, mid: { h: 1024, dpr: 1.5 }, square: { h: 1000, dpr: 1.2 }, wide: { h: 900, dpr: 1.2 } };
 const HIDE = '.fl-words,.fl-call,.fl-calls,.nav,.skip,.fl-rail,.fl-poster{visibility:hidden!important}nextjs-portal{display:none!important}';
 
 mkdirSync(outDir, { recursive: true });

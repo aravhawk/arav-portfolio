@@ -476,14 +476,19 @@ html[data-hero-words] .fl-hero-words .fl-intro {
   background: center / auto 100% no-repeat;
   background-image: var(--poster, none);
 }
-/* Without scripts nothing has chosen a still: one of three stands in, by the window's shape and the system's theme. */
+/* Without scripts nothing has chosen a still: one of four stands in, by the window's shape and the system's theme. */
 html:not([data-scripted]) .fl-poster {
   background-size: cover;
   background-image: image-set(url('/media/poster/wide-3-light.avif') type('image/avif'), url('/media/poster/wide-3-light.webp') type('image/webp'));
 }
 @media (max-aspect-ratio: 1.2) {
   html:not([data-scripted]) .fl-poster {
-    background-image: image-set(url('/media/poster/square-3-light.avif') type('image/avif'), url('/media/poster/square-3-light.webp') type('image/webp'));
+    background-image: image-set(url('/media/poster/square-1-light.avif') type('image/avif'), url('/media/poster/square-1-light.webp') type('image/webp'));
+  }
+}
+@media (max-aspect-ratio: 0.9) {
+  html:not([data-scripted]) .fl-poster {
+    background-image: image-set(url('/media/poster/mid-1-light.avif') type('image/avif'), url('/media/poster/mid-1-light.webp') type('image/webp'));
   }
 }
 @media (max-aspect-ratio: 0.7) {
@@ -500,7 +505,12 @@ html:not([data-scripted]) .fl-poster {
   }
   @media (max-aspect-ratio: 1.2) {
     html:not([data-scripted]) .fl-poster {
-      background-image: image-set(url('/media/poster/square-3-dark.avif') type('image/avif'), url('/media/poster/square-3-dark.webp') type('image/webp'));
+      background-image: image-set(url('/media/poster/square-1-dark.avif') type('image/avif'), url('/media/poster/square-1-dark.webp') type('image/webp'));
+    }
+  }
+  @media (max-aspect-ratio: 0.9) {
+    html:not([data-scripted]) .fl-poster {
+      background-image: image-set(url('/media/poster/mid-1-dark.avif') type('image/avif'), url('/media/poster/mid-1-dark.webp') type('image/webp'));
     }
   }
   @media (max-aspect-ratio: 0.7) {
