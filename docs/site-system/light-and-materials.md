@@ -9,11 +9,11 @@ The hours and solid UI surfaces are in use. A single ice material for all object
 | Lake | Low sun behind the plates | Low moon and a faint aurora |
 | Statement | Long blue shadows in morning mist | Silver moonlight across the river |
 | Infiniview | Cold morning and clear ranges | Moonlit snow around the screen |
-| Upstream | Late morning, mist at the falls | Silver falls against a shaded cliff |
-| Kilo Bench | White noon light over the pool | Aurora over the pool |
+| Upstream | Low cream light from the left, milky falls | Silver falls against a shaded cliff |
+| Kilo Bench | High white sun, short shadows, clear pool | Aurora over the pool |
 | Agent Bridge | Pale overcast light | Moonset and stars on the tarn |
-| Open models | Cream afternoon light | First blue sky after moonset |
-| cc-switch | Low gold key and blue shade | Brighter blue hour |
+| Open models | Cream afternoon light | Cobalt overhead, silver horizon behind the columns |
+| cc-switch | Low gold key and blue shade | Pale horizon light across the dam, violet in shadow |
 | TensorPoW | Amber light across the banks | First rose light on the peaks |
 | RydAR | Last sunlight at the rim | Rose horizon over the shaded canyon |
 | Delta | Peach sky and pink ice | Warm dawn reflected in the sea |
@@ -26,10 +26,12 @@ water, haze and mist through the neighbouring hours. The visible sun
 and the ground's shadow-casting key have separate elevations.
 
 The engine integrates air density from the camera height once per
-frame. Ground and station shaders use the distance along each ray to
-fade surfaces toward the horizon colour. The lower mist layer favours
+frame. Beyond the foreground, the valley air grows denser. Its onset
+follows camera height. Ground and station shaders call `airLoss(t)`
+at the hit distance and fade toward the directional horizon colour. The lower mist layer favours
 water. The panorama stores range depth for its own haze. A new object
-must apply air at its hit distance before compositing it into the scene.
+uses `inAir` for both its direct hit and the full reflected path.
+The block’s display and its spill rise together as its ice draws near.
 
 The scene shader applies the vignette before the display curve. Both
 themes share the same highlight shoulder and moving luminance grain.

@@ -1490,6 +1490,14 @@ export class FlightEngine extends WaterEngine {
     const depth = cam.pos[2] / 320;
     const mistDepth = cam.pos[2] / 70;
     const extinction = 0.00021 * sky.haze * -Math.expm1(-depth) / Math.max(depth, 0.001);
+    // The thicker valley air begins beyond the foreground. Keep the opening lake and final sea clear.
+    const hour = at.hour ?? 0;
+    const valley = smooth(2, 3.1, hour) * (1 - smooth(28.3, 30.1, hour));
+    const extra = (0.00027 + 0.00007 * night) * sky.haze * valley * (1 - 0.55 * sky.dusk);
+    const blueHour = night * smooth(13.8, 16.6, hour) * (1 - smooth(19.4, 22.15, hour));
+    const distanceAir = [extinction + extra, -(300 + 0.95 * cam.pos[2]) * extra, blueHour];
+    const rangeToScreen = Math.hypot(cam.pos[0] - SLAB.x, cam.pos[1] - SLAB.y, cam.pos[2] - (SLAB.lift + SLAB.h / 2));
+    const emission = 1 - smooth(1750, 2140, rangeToScreen);
     const lowExtinction = 0.0022 * -Math.expm1(-mistDepth) / Math.max(mistDepth, 0.001);
     const sunLength = Math.hypot(sky.sun[0], sky.sun[1]) || 1;
     const keyLength = Math.hypot(sky.keyDir[0], sky.keyDir[1]) || 1;
@@ -1503,7 +1511,9 @@ export class FlightEngine extends WaterEngine {
     const film = [0.42 + 0.08 * at.settle, grainPhase - Math.floor(grainPhase), 0.020 * (1 - 0.6 * at.settle), moon[3] * smooth(-0.05, 0.05, moon[2])];
     const [left, bottom, right, top] = at.box;
     const lee = [(left + right) / 2, (bottom + top) / 2, 1 / ((right - left) / 2 + 0.15 / aspect), 1 / ((top - bottom) / 2 + 0.19)];
-    return { sky, moon, extinction, lowExtinction, bearings, shadow, film, lee };
+    const [x0, y0, x1, y1] = at.cap ?? NO_BOX;
+    const captionLee = [(x0 + x1) / 2, (y0 + y1) / 2, 1 / (Math.max(x1 - x0, 0) * 0.5 + 0.16 / aspect), 1 / (Math.max(y1 - y0, 0) * 0.5 + 0.16)];
+    return { sky, moon, extinction, distanceAir, emission, lowExtinction, bearings, shadow, film, lee, captionLee };
   }
 
   private draw(cam: Basis, aspect: number, at: FlightMoment) {
@@ -1629,6 +1639,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform3fv(r.u.uAmbCol, sky.amb);
     gl.uniform4f(r.u.uSkyK, sky.haze, sky.aurora * sky.air[3], sky.dusk, sky.under);
     if (r.u.uAir) gl.uniform4f(r.u.uAir, sky.air[0], sky.air[1], sky.air[2], extinction);
+    if (r.u.uDistanceAir) gl.uniform3fv(r.u.uDistanceAir, light.distanceAir);
     if (r.u.uRange) gl.uniform4fv(r.u.uRange, sky.range);
     if (r.u.uArrive) gl.uniform1f(r.u.uArrive, this.first);
     if (r.u.uHour) gl.uniform4f(r.u.uHour, sky.ground[0], sky.ground[1], sky.ground[2], lowExtinction);
@@ -1636,7 +1647,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
     gl.uniform4fv(r.u.uCalmBox, at.box);
     gl.uniform2f(r.u.uCalmK, at.boxK, at.boxLight ? 1 : 0);
-    if (r.u.uCapBox) gl.uniform4fv(r.u.uCapBox, at.cap ?? NO_BOX);
+    if (r.u.uCapBox) gl.uniform4fv(r.u.uCapBox, light.captionLee);
     if (r.u.uCapK) gl.uniform1f(r.u.uCapK, at.capK ?? 0);
     this.setRibbon(r, cam, aspect, seaOn, at.settle);
     this.bindIce(r, ice, 7, 9);
@@ -1659,7 +1670,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(r.u.uSlabDir, sl.nx, sl.ny, sl.rx, sl.ry);
     gl.uniform3f(r.u.uSlabSize, on ? SLAB.w : 0, SLAB.h, SLAB.thick);
     gl.uniform4fv(r.u.uSlabBox, sl.box);
-    gl.uniform3fv(r.u.uSlabTint, this.slabTint);
+    if (r.u.uSlabTint) gl.uniform4f(r.u.uSlabTint, this.slabTint[0] * light.emission, this.slabTint[1] * light.emission, this.slabTint[2] * light.emission, light.emission);
     if (r.u.uTribW) gl.uniform1fv(r.u.uTribW, this.tribW);
 
     bindTex(gl, 0, this.bedA!.tex, r.u.uBedA);

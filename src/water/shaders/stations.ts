@@ -118,7 +118,7 @@ float gDepth = 1e9;
 float gShut = 0.0;
 /** The air between the eye and something t away. */
 vec3 inAir(vec3 c, vec3 dir, float t) {
-  float fog = 1.0 - exp(-t * uAir.w);
+  float fog = airLoss(t);
   vec3 air = airAt(dir.xy);
   air = mix(air, mix(S.hor, air, 0.45), uNight);
   return mix(c, air, fog);
@@ -386,6 +386,8 @@ vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky
   float thinK = exp(-max(thick, 0.0) / 70.0);
   vec3 lightD = S.amb * (0.5 + 1.25 * sky) + S.key * sun * (0.2 * max(dot(nc, L), 0.0) + 0.07 * thinK + 0.12 * thinK * max(dot(-n, L), 0.0));
   vec3 lightN = S.amb * (0.5 + 2.3 * sky) + uAurora * vec3(0.45, 0.72, 1.0) * (0.012 + 0.085 * skyA + 0.05 * max(nc.z, 0.0) * skyA) + gIceLamp;
+  // After moonset the open side of a face gathers light from the low horizon.
+  lightN += S.key * (uDistanceAir.z * sky * (1.5 * max(dot(nc, L), 0.0) + thinK * (0.28 + 0.42 * max(dot(-n, L), 0.0))));
   vec3 light = mix(lightD, lightN, uNight);
   gIceBody = body;
   gIceLight = light;
@@ -1644,7 +1646,7 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
     // (Before dawn the air in and over the glacier is the night's own cold blue: seen from far off down the valley its
     // dark mouth is not warmed to brown by the horizon's first light.)
     if (uNight > 0.0) {
-      c = mix(c, mix(c0, S.hor * 0.22 + vec3(0.012, 0.034, 0.078), 1.0 - exp(-t * uAir.w)), 0.85 * uNight * veil);
+      c = mix(c, mix(c0, S.hor * 0.22 + vec3(0.012, 0.034, 0.078), airLoss(t)), 0.85 * uNight * veil);
     }
     c = mix(c, mistC, (1.0 - exp(-t / 2600.0)) * inK * (1.0 - 0.8 * faceNear(uCamPos + dir * t)) * veil);
     return mix(col, c, gSt.w * foot);
