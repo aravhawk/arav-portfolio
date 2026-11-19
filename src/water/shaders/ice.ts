@@ -554,7 +554,11 @@ export const CLEAR_ICE = `
 // q follows the cut, independent of the camera. backing is radiance on
 // the bent ray after it leaves the solid (or from the bed under a sheet).
 vec3 clearIce(vec3 n, vec3 rd, vec2 q, float px, float thickness, float edge,
-              float broken, float wet, vec3 backing, vec3 light, vec3 environment, float sawFrost) {
+              float broken, float wet, vec3 backing, vec3 light, vec3 environment
+#ifdef F_FIELD
+              , float sawFrost, float keyReflection
+#endif
+              ) {
   vec3 across = abs(n.z) > 0.9 ? vec3(1,0,0) : normalize(vec3(-n.y,n.x,0));
   vec3 up = cross(n, across);
   vec3 ray = refract(rd, n, 0.763);
@@ -595,17 +599,24 @@ vec3 clearIce(vec3 n, vec3 rd, vec2 q, float px, float thickness, float edge,
   body += light * max(relief,0.0) * broken * vec3(0.18,0.24,0.25);
   mediump float cosine = clamp(dot(-rd, face),0.0,1.0);
   mediump float fresnel = 0.018 + 0.982 * pow(1.0 - cosine,5.0);
+#ifdef F_FIELD
   // Air caught in the saw cuts returns diffuse light before it enters
   // the body. Wet cuts clear first; untouched edges still transmit.
   body += light * sawFrost * (0.22 + 1.5 * smoothstep(0.22,0.78,skin.g)) * (1.0 - 0.72 * wet);
+#endif
   mediump vec3 result = mix(body, environment, fresnel);
   mediump float highlight = max(dot(reflect(rd,face),keyDir()),0.0);
   mediump float glint = pow(highlight,160.0) + 0.05 * (1.0 - broken) * pow(highlight,18.0);
   mediump float chip = (1.0 - smoothstep(0.0, 2.0 + px, edge)) * smoothstep(0.35,0.66,skin.r);
+#ifdef F_FIELD
+  glint *= keyReflection;
+#endif
   return result + S.key * glint + light * chip * (0.12 + 0.38 * backlit);
 }
+#ifdef F_FIELD
 vec3 clearIce(vec3 n, vec3 rd, vec2 q, float px, float thickness, float edge,
               float broken, float wet, vec3 backing, vec3 light, vec3 environment) {
-  return clearIce(n,rd,q,px,thickness,edge,broken,wet,backing,light,environment,0.0);
+  return clearIce(n,rd,q,px,thickness,edge,broken,wet,backing,light,environment,0.0,1.0);
 }
+#endif
 `;

@@ -40,10 +40,10 @@ Keep the scene sharp and the shore free of emissive outlines.
 
 The name plates, frozen lake, station objects and drift ice use
 `clearIce` in `src/water/shaders/ice.ts`. It absorbs red first along
-the ray through the solid. A mipmapped 512 × 1024 map holds shell-shaped surface breaks, fracture
-facets, their lips and veils of air. The shader samples it behind the
-face along the refracted ray. The front surface carries the saw marks,
-wet sheen and glancing reflection.
+the ray through the solid. A mipmapped 512 × 1024 map holds shell-shaped
+surface breaks, fracture facets, their lips and veils of air. The
+shader samples it behind the face along the refracted ray. The front
+surface carries the saw marks, wet sheen and glancing reflection.
 
 For a station, call `iceGlacier` with the hit position, normal, view
 ray, hit distance, local face coordinates, exit minus entry distance,
@@ -52,13 +52,16 @@ and a stable piece seed. It gathers the terrain or sky behind the ice
 and the light at this hour, then calls `clearIce`. For a sheet with a
 known bed, pass that backing directly to `clearIce`. The object owns
 its intersection, snow cover, submerged shelf and reflected ray.
-For a thick exposed face such as the display block or a column, pass
-`true` as the final argument to `iceGlacier`. Its clear edges admit
-the horizon. Deeper in the chord, a second fracture is sampled along
-the refracted ray, at a different depth and scale from the front
-inclusions. The display samples its image inside its aperture. Opaque pixels above
-the splash and clear of snow and wear finish there. Only land and its
-grounded ice shelf receive the block’s three-ray ground shadow.
+For a thick exposed face, include its existing station feature in
+`DEEP_ICE_FEATURES` in `shaders/stations.ts` and pass `true` as the
+final argument to `iceGlacier`. The block and columns use this finish.
+Their clear edges admit the horizon. Deeper in the chord, a second
+fracture is sampled along the refracted ray at a different depth and
+scale from the front inclusions. The display samples its image inside
+its aperture. Past the 2500-unit fade plus one block width, its direct
+intersection can be skipped. Opaque display pixels above the splash and clear of snow
+and wear finish there. Only land and its grounded ice shelf receive
+the block’s three-ray ground shadow.
 The plate outline uses the same chipped distance for the
 direct hit and its reflection. Frost clears toward a fresh arris.
 Apply `inAir` over the complete camera path after shading.
@@ -84,11 +87,15 @@ dawn exceeded their ceilings in the route sweep. Repeating the same
 draws in a different time window moved their means by 3.08 and 2.45 ms.
 
 On the standing name, the sawn face scatters incident light before it
-passes through the body. Pass a saw-frost weight as the last argument to
-`clearIce` for this finish. Melt clears the frost first at the feet.
+passes through the body. The field overload of `clearIce` takes a
+saw-frost weight followed by a direct-reflection weight. Melt clears
+the frost first at the feet.
 The swept sheet darkens toward a steep view into the lake. Its glancing
-reflection keeps the track of the sun or moon. The snow fill under the
-hero copy fades off bare ice above the measured text margin.
+reflection keeps the track of the sun or moon. Across the swept field,
+the direct glint strengthens toward the far ice and the sides. The
+snow fill under the hero copy fades off bare ice above the measured
+text margin. Before dawn the wind-swept field has no snow dust or
+drift. The underlying sheet samples its snow where it shows through.
 
 The name must reach 4.5:1 by day and 3:1 before dawn. At 390, 768, 1440
 and 1920 CSS pixels, hold full shading and render at 0, 0.25, 0.5, 0.75

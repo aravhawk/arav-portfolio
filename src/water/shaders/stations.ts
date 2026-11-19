@@ -15,6 +15,9 @@
 
 import { BENDS, CANYON, COLS, DAM, FACE, HALL, LATTICE, SLUICES, T2 } from '../world';
 
+/** Existing station features whose hits supply the deep fracture and exposed horizon. */
+export const DEEP_ICE_FEATURES = 'defined(F_SLAB) || defined(F_COLS)';
+
 const f = (n: number) => n.toFixed(1);
 
 const fr = (x: number) => x - Math.floor(x);
@@ -173,9 +176,21 @@ vec3 gIceLamp = vec3(0.0);
 // The body colour and the light of the ice last asked for: what stands on it (snow's shade, icicles) is lit the same.
 vec3 gLastIce = vec3(0.0);
 vec3 gIceLight = vec3(0.0);
+#if ${DEEP_ICE_FEATURES}
+// On a worn face the broad horizon is reflected. The shared surface
+// resolves the narrow key specular and the sharp fracture lips.
+vec3 iceHorizon(vec3 light, float elevation) {
+  vec3 sky = mix(light*vec3(0.12,0.22,0.27),S.hor,smoothstep(-0.24,0.02,elevation));
+  return mix(sky,S.mid,smoothstep(0.04,0.44,elevation));
+}
+#endif
 // Gather the station's incident light and the terrain or sky on the bent
 // ray. The same optical material also receives lake and letter hits.
-vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky, float sun, float cups, float edge, float seed, bool deepFace) {
+vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky, float sun, float cups, float edge, float seed
+#if ${DEEP_ICE_FEATURES}
+                , bool deepFace
+#endif
+                ) {
   vec3 ri = refract(rd, n, 0.763);
   vec3 reflected = reflect(rd,n);
   vec3 light = S.amb * (0.55 + sky * mix(1.1, 2.0, uNight)) + gIceLamp
@@ -185,6 +200,7 @@ vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky
   light += S.hor * (0.16 * sky * uNight);
   vec3 backing = light * 0.21;
   float through = 1.0 - smoothstep(145.0,270.0,thick);
+#if ${DEEP_ICE_FEATURES}
   if (deepFace) {
     // A second cleave sits behind the inclusions nearest the surface.
     // Its offset follows the bent chord, so the two slide apart in motion.
@@ -201,18 +217,16 @@ vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky
     float facet = clamp(1.65*cleave.r + cleave.g,0.0,1.0);
     backing += (light + S.hor*(1.8+3.6*uNight)) * facet;
     thick = mix(thick,min(thick,42.0),facet);
-  } else if (gShut <= 0.0 && through > 0.0)
+  } else
+#endif
+  if (gShut <= 0.0 && through > 0.0)
     backing = mix(backing,beyond(p + ri * thick,ri),through);
-  vec3 skyImage;
-  if (deepFace) {
-    // At a worn arris the broad horizon is the reflection. The shared
-    // surface still resolves the narrow specular and the sharp fracture lips.
-    skyImage = mix(light*vec3(0.12,0.22,0.27),S.hor,smoothstep(-0.24,0.02,reflected.z));
-    skyImage = mix(skyImage,S.mid,smoothstep(0.04,0.44,reflected.z));
-  } else {
-    skyImage = gShut > 0.0 && reflected.z < gShut * 0.8
-      ? light * vec3(0.09,0.22,0.32) : beyond(p,reflected);
-  }
+  vec3 skyImage =
+#if ${DEEP_ICE_FEATURES}
+    deepFace ? iceHorizon(light,reflected.z) :
+#endif
+    gShut > 0.0 && reflected.z < gShut * 0.8
+    ? light * vec3(0.09,0.22,0.32) : beyond(p,reflected);
   float wet = 1.0 - smoothstep(-FREEBOARD, 9.0-FREEBOARD, p.z);
   vec3 color = clearIce(n, rd, q + seed * 133.0, max(0.03,t*uPxAng), thick,
     edge, cups, wet, backing, light, skyImage);
@@ -220,9 +234,11 @@ vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky
   gLastIce = color;
   return color;
 }
+#if ${DEEP_ICE_FEATURES}
 vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky, float sun, float cups, float edge, float seed) {
   return iceGlacier(p,n,rd,t,q,thick,sky,sun,cups,edge,seed,false);
 }
+#endif
 /**
  * Icicles under a lip of snow or ice. along: the place along the lip; dz: how far under it; px: a pixel's size there.
  * (They hang in runs, where the lip drips; most are short. Each is clear ice in the round: dark at its sides, a line of light down its middle.)

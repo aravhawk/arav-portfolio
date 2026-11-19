@@ -255,7 +255,7 @@ vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, ve
   return clearIce(n,rd,q*232.0/A.w+fi*61.0,t*uPxAng*232.0/A.w,thick*232.0/A.w,
     edge*232.0/A.w, kind < 1.5 ? 0.0 : 1.0,wet,
     (behind * 0.58 + light*0.22) * mix(vec3(0.23,0.42,0.49),vec3(1),h), light*(1.0-0.25*soft), nameEnv(reflect(rd,n).z),
-    kind < 1.5 ? mix(0.19,0.52,uNight) * smoothstep(0.0,0.052,edge/A.w) : 0.0);
+    kind < 1.5 ? mix(0.19,0.52,uNight) * smoothstep(0.0,0.052,edge/A.w) : 0.0, 1.0);
 }
 #endif
 
@@ -268,7 +268,7 @@ vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, ve
  * frame; shade: the blocks' shade there; wet: 0..1 meltwater lies on it;
  * slope: that water's. Sets tiltOut: how the plate it is part of leans.
  */
-vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, vec2 slope, out vec2 tiltOut) {
+vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, vec2 slope, float sweptDistance, out vec2 tiltOut) {
   vec2 tilt = textureLod(uGrain,il/2100.0,0.0).gb - 0.5;
   tiltOut = tilt * 0.018;
   vec3 n = normalize(vec3(-slope-tiltOut*(1.0-wet),1.0));
@@ -276,7 +276,8 @@ vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, ve
   vec3 reflected = reflect(dir,n);
   vec3 sky = nameEnv(abs(reflected.z));
   vec3 col = clearIce(n,dir,il*0.65,foot,60.0,1e3,0.0,wet,
-    nameLake()*0.5,light*0.15,min(sky,S.hor*1.8)*mix(0.15,0.36,wet));
+    nameLake()*0.5,light*0.15,min(sky,S.hor*1.8)*mix(0.15,0.36,wet),
+    0.0, mix(0.015,1.0,smoothstep(0.52,1.04,sweptDistance)));
   col += vec3(0.14,0.7,0.84)*S.key*gNmPool*mix(0.09,0.48,uNight);
   return col;
 }
@@ -480,12 +481,18 @@ float nameCover(vec2 p, vec3 dir, float foot) {
   vec2 wl = RW * il;
   // The snow's own lie (the sheet's drifts are drawn from the same field): swept, there is less of it, and at the
   // field's heart none. What is left at the edges is the crests of the drifts, reaching in along the wind.
+#ifdef NIGHT
+  // Moonlit cover has no snow drift or dust. The underlying sheet samples
+  // its own snow only where the swept field leaves it visible.
+  const float fin = 0.0, lvl = 0.5, lvlS = 0.0;
+#else
   float fin = textureLod(uSnow, wl / vec2(420.0, 110.0) + vec2(0.71, 0.29), 0.0).b;
   float bigS = textureLod(uSnow, wl / vec2(2290.0, 790.0), 0.0).r;
   float midS = textureLod(uSnow, wl / vec2(860.0, 195.0) + vec2(0.37, 0.11), 0.0).g;
   gNfSnow = vec4(bigS, midS, fin, 1.0);
   float lvl = 0.5 + 0.26 * bigS + 0.18 * midS + 0.085 * fin;
   float lvlS = lvl - 0.44 * (1.0 - smoothstep(0.5, 1.0, d)) - 0.12 * (1.0 - smoothstep(0.15, 0.6, d));
+#endif
   // (How much of the sheet a pixel covers along the eye's line: far off, the finest of the drifts is under a pixel and is let go.)
   float footL = foot / max(-dir.z, 0.05);
   float ew = 0.004 + 0.005 * foot + 0.002 * footL;
@@ -549,7 +556,7 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   }
   vec2 tilt = vec2(0.0);
   if (DBG_FLOOR K * onIce > 0.0) {
-    vec3 fl = nameFloor(p, il, dir, foot, gNmShade, pond, slope, tilt);
+    vec3 fl = nameFloor(p, il, dir, foot, gNmShade, pond, slope, d, tilt);
     // (A dusting lies on the ice ahead of each drift.)
     float dust = smoothstep(0.12, 0.5, lvlS) * 0.18 * (1.0 - uNight);
     fl = mix(fl, mix(vec3(0.9, 0.92, 0.95) * (S.key * 0.24 * (1.0 - 0.5 * gNmShade) + S.amb * 0.8), vec3(0.4, 0.47, 0.6) * (S.amb * 1.4), uNight), dust);
