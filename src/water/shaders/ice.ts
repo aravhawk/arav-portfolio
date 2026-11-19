@@ -95,7 +95,8 @@ float nameFoot(vec2 u) {
     q = abs(vec2(q.x * r.x + q.y * r.y, q.y * r.x - q.x * r.y)) - f.zw;
     float di = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
     d = min(d, di);
-    op = max(op, r.z - di);
+    // (Under a plate the sheet is as whole as at its edge: the water opens round a footing, not from its middle.)
+    op = max(op, r.z - max(di, 0.0));
   }
   gFootOpen = op;
   return d;
@@ -243,7 +244,8 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // Half way through, the letters stop being letters: their openings run
   // together into one pool with an uneven, rounded edge. Nothing of their
   // outlines is left to notch the floes around them.
-  float open = uNameG.w > 0.5 ? rowD : lsd;
+  // (Under a row itself the sheet is as whole as beside it: the water opens round the rows, not along their middle.)
+  float open = uNameG.w > 0.5 ? max(rowD, 0.0) : lsd;
   if (uNameG.w > 0.5) {
     // (The water under the rows is not ruled either: it has gone further here than there.)
     open += 26.0 * textureLod(uSnow, il / vec2(520.0, 300.0) + 0.23, 0.0).r;
