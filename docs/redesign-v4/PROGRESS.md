@@ -1380,3 +1380,48 @@ on the subscription, in the serial queue. The key file is deleted.
 Running, alone: **R4c**, the light (one day across the flight in the
 light theme, one night toward dawn in the dark theme, air, tone and
 grain, and the three leftovers above).
+
+## Direction change: Astra builds the 3D; the glass goes (Arav, t305u, Nov 18, about 9:20 PM CT)
+
+This overrides the earlier "never OpenAI for frontend" rule, for this
+scope only.
+
+1. **GPT-6.2 Astra takes over all 3D and animation production**: the
+   rendering, the shader, lighting and scene work, the station
+   objects, the hero's ice plates and the melt, motion and animation
+   curves, generated graphics and assets. It runs as T3 helper
+   threads (provider `codex`, model `gpt-6.2-astra`, reasoning effort
+   high), one at a time. Arav saw Astra as a real step forward for
+   animation and is worried the quality so far does not match the
+   time, tokens and money spent.
+   - This thread (Fable) stays the orchestrator and keeps the DOM and
+     layout, the copy, the integration, the reviews and the PASS or
+     FAIL judgement. Every Astra output is reviewed against the Igloo,
+     Lando Norris and Lusion bar before it is integrated, and sent
+     back if it misses.
+   - Astra is briefed with a goal, constraints, context and a concrete
+     definition of done (not steps), in tightly scoped tasks, with
+     explicit art direction and references, and is asked for frame
+     captures as evidence.
+   - R4c (the light) is allowed to reach its next safe commit and is
+     then stopped; what is left of the light goes to Astra with the
+     rest of the queued 3D work: the stations' events and objects
+     (R4d), the name's and melt's polish, and the 3D parts of the
+     frame rate pass, the inner pages and the ending. Committed
+     progress is kept; Astra raises the quality from there.
+   - Unchanged: serial helpers, signed SSH commits on
+     `redesign/fable-v4b-20261115`, the critics' PASS or FAIL gate,
+     no lag on Arav's display.
+2. **The heavy glassmorphism goes.** It reads as an AI-made look.
+   This thread goes through the whole site and removes or strongly
+   tones down frosted, blurred, translucent panels and cards, in
+   favour of solid surfaces, light and material. Clear ice as a
+   material inside the scene is fine; glass UI chrome is not.
+3. The final write-up lists which parts Astra built and which Fable
+   built.
+
+**Who built what, kept from here on** (for that line): everything up
+to and including R4b, and whatever R4c has committed when it is
+stopped, is Fable's (helpers and this thread; R3a and part of R3b by
+Kilo). From this point the 3D is Astra's, task by task, listed as it
+lands.
