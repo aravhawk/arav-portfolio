@@ -1928,3 +1928,46 @@ The risk, stated plainly: Igloo's assets were made by 3D artists in
 Houdini. Ours will be made by scripts and scans. The proof frame is
 there to find out early whether that is enough.
 
+### The proof frame (Nov 19): the pipeline holds; the art is not yet there
+
+The hero was rebuilt on a lab route, `/lab/hero` (not indexed, not
+linked; the home page still runs the old scene), by an Astra helper
+(gpt-6.2-astra, high) in three passes that Fable reviewed and sent
+back twice.
+
+- **Authoring.** Blender driven by scripts (`tools/scene/`), with
+  CC0 elevation data, scans and an HDR sky (every source and licence
+  in `tools/scene/SOURCES.md`). The name is TASA Orbiter Bold as
+  slabs of pale lake ice on black ice with a white crack network;
+  the far shore has real eroded relief; the snow is wind-packed. 95
+  numbered studies against photographs of Lake Baikal. One command
+  rebuilds everything shipped (6 min 18 s).
+- **Runtime.** The baked scene is 6 draw calls and 242,560
+  triangles, drawn by a renderer of 7.7 KB gzipped that loads after
+  first paint. A still of the same frame paints first and the live
+  picture takes over in 0.43 to 0.48 s with no jump. The browser's
+  frame matches the offline render (SSIM 0.964).
+- **Cost, measured on an Apple M4 (10 GPU cores):** 1.9 ms of GPU
+  time a frame at a 2880 by 1800 backing, **2.8 ms at 3456 by 2234**
+  (the owner's screen at its full pixel ratio; the 120 Hz frame is
+  8.3 ms), 4.4 ms at 5120 by 2880, 0.8 ms on the phone profile. No
+  frame over 20 ms in a ten second scroll. The old scene could not
+  hold 16.7 ms at smaller sizes.
+- **Loading.** Lighthouse 100 on a desktop (LCP 0.24 s, CLS 0) and
+  100 on a throttled phone (LCP 0.90 s, CLS 0.004) for the lab
+  route. 2.4 MB shipped for the scene in both themes, with its four
+  stills and codecs.
+
+What is not there yet, plainly: the picture is far from the old one
+and still short of igloo.inc's first frame. The broad faces of the
+letters read flat under the backlight, several letters meet the ice
+along one straight seam, there is a hard dark band behind the name,
+and the night theme and the phone composition are provisional (a
+regrade and a reframing of the day scene). The scroll move is small.
+Next: revise the hero's art, then take the stations through the same
+pipeline one at a time.
+
+Who built what: Astra built the authoring scripts, the bake and the
+lake renderer. Fable set the direction, gathered the references,
+reviewed each pass, integrated and measured.
+
