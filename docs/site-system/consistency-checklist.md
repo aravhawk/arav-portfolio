@@ -16,6 +16,12 @@ old one.
    eye never stops; easing and durations come from the tokens; no
    mechanism is used by two neighbours; the words build in the one
    way; reduced motion is whole.
+   UI layers and controls follow `motion.md` ("UI layers and
+   controls"): origin-aware layers, under 300 ms, ease-out with a
+   faster exit, no `scale(0)`, `scale(0.97)` on press, transform and
+   opacity only, nothing animated for a keyboard action or for
+   constant chrome, a fade under reduced motion, `text-wrap: pretty`
+   on body copy.
 3. **Light**: each station is told from its neighbours by light
    alone; the light moves without a step; the night has form.
 4. **Materials**: all ice is the one ice; no glow or outline where

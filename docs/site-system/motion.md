@@ -51,6 +51,30 @@ Hover styles only under `@media (hover: hover) and (pointer: fine)`.
 `prefers-reduced-motion`: every step is shown at once, no entrance,
 the first screen stands where its still was taken.
 
+## UI layers and controls (the owner's standing guidance, Nov 19, 2026)
+
+These apply wherever the site has the matching element (the nav, the
+rail's labels, the archive's filter, the post's contents, the film's
+dialog, the profile switch, buttons and links). They do not change
+the hero, the river or any 3D work.
+
+- **Origin-aware.** A dropdown, popover, menu, tooltip or overflow
+  layer scales from its trigger, never from its own centre
+  (`transform-origin` from the trigger's position, or the library's
+  variable where one is used).
+- **Short.** UI motion stays under 300 ms, about 200 ms for a small
+  layer. Ease-out for both enter and exit; the exit about a fifth
+  faster than the enter.
+- **Never from nothing.** No start from `scale(0)`: start at 0.93 to
+  0.95 with opacity. Press feedback is `scale(0.97)` on `:active`.
+- **Transform and opacity only**, and interruptible transitions in
+  place of keyframes.
+- **No motion on keyboard-initiated actions**, nor on chrome people
+  see constantly.
+- **Reduced motion** across the scroll journey and the ending: a
+  fade in place of any large movement.
+- `text-wrap: pretty` on body copy.
+
 ## Springs (planned: one helper in the engine)
 
 For anything that follows the pointer or a drag: critically damped
