@@ -1719,3 +1719,37 @@ second pass; the one shared ice (the plates' sawn faces, the lake's
 glare, the dark core and fractures of thick ice) and the cost it
 paid back on the first two screens and the canyon. Fable (this
 thread and its helpers): everything else to date.
+
+### The station registry integrated; a fault in the canyon's walls found and sent for a fix (Nov 19)
+
+- **A3, the station registry** (codex / gpt-6.2-astra / high), three
+  signed commits, integrated (ending `2ba701f`; each typechecked and
+  built on its own; lint and 315 tests pass; on the merged build 200
+  words, 0 console errors, words test 0 faults at 390 and 1440). A
+  station is now one typed definition in `FLIGHT`
+  (`src/water/registry.ts`) from which the timeline, the camera's
+  joins, the shader variants and pieces, the scroll-event uniform,
+  the home section and rail tick, the inner page's band and the
+  project order are derived; its water painting also feeds the
+  sound's plan. Its proof: 200 frame pairs within 0.02 of 255 (limit
+  0.5), 24,888 camera poses and 88 shader sources identical, cost
+  unchanged by paired A/B, and a throwaway station added and deleted
+  on a scratch branch by its own recipe (`docs/site-system/recipes.md`
+  is rewritten for the registry).
+  **Not complete, by its own report**: the original eight stations
+  still keep some rendering, sound and page behaviour outside their
+  definitions (ground, water and reflection calls for four of them;
+  texture bindings and stateful effects; named audio voices; bespoke
+  metrics, captions and media). Those move into the definitions as
+  each station is rebuilt.
+- **A fault I let through, found while checking the registry's
+  merge**: the one-ice work left **the canyon's walls covered in
+  blotchy yellow highlights and smeared swirls**, from about 23.8 to
+  27.2 screens, in both themes and on phones. I had reviewed the
+  composed stops and not the frames between them. It is on the
+  pushed head now. Sent to Astra as **A2d** (running, alone, same
+  model and effort): find the cause, make the walls read as clean
+  layered glacier ice in the one shared material, change nothing
+  else, cost not dearer. The rule is in the pack's pitfalls: look at
+  24 frames of the whole page in both themes and on a phone before
+  integrating any change to the picture.

@@ -34,6 +34,12 @@ Each of these cost time on this build.
   root is tracked and empty on purpose. Do not delete it.
 - **Root `AGENTS.md` is tracked.** Do not delete it as a stray build
   output.
+- **Review the frames between the composed stops, not only the
+  stops.** A material change that looked right at every composed
+  frame left the canyon's walls covered in blotches on the way in
+  and out. Before integrating any change to the picture, look at 24
+  evenly spaced frames of the whole page in both themes and at the
+  same on a phone.
 - **Every pushed commit must build, typecheck and render on its
   own.** Run `pnpm exec tsc --noEmit` and `pnpm build` on the exact
   tree before each push. Commit a deletion together with its
