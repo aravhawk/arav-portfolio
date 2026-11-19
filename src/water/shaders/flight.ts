@@ -275,7 +275,7 @@ vec3 airAt(vec2 dxy) {
   vec3 hz = mix(S.hor, S.amb * 1.45 + S.hor * 0.12, uHour.x * (1.0 - a * a));
   vec3 c = hz + S.band * (pow(a, 5.0) * 0.3 + pow(a, 2.0) * 0.08) * mix(0.5, 1.0, max(uNight, gDusk));
   // (Before dawn the air is brightest under the moon, while it is up.)
-  if (uMoon.w > 0.0) {
+  if (uNight > 0.0 && uMoon.w > 0.0) {
     float am = max(dot(normalize(dxy + 1e-5), normalize(uMoon.xy + 1e-5)), 0.0);
     float am2 = am * am;
     c += S.key * (am2 * am2 * am2 * 0.42 + am2 * 0.1) * uMoon.w * smoothstep(-0.05, 0.05, uMoon.z);
@@ -312,13 +312,18 @@ vec3 aurora(vec3 d) {
   if (h > 0.985) return vec3(0.0);
   float az = gAz;
   vec3 sum = vec3(0.0);
-  for (int i = 0; i < 2; i++) {
+  // (A sheet of ice is a mirror only at a glance: it shows the low curtain alone.)
+  for (int i = 0; i < (gDull ? 1 : 2); i++) {
     float k = float(i) * 0.5;
     float a = az * (1.0 - 0.2 * k) + k * 3.8;
     // Its border: a slow fold, and a ripple that runs along it.
     float p1 = a * (1.9 + 0.8 * k) + 0.6 + 2.3 * k + uTime * 0.028;
     float s1 = sin(p1);
-    float hem = (0.048 + 0.27 * k) + (0.026 + 0.07 * k) * s1 + 0.004 * (1.0 + k) * sin(a * 14.0 - uTime * 0.5 + 1.7 * k);
+    float hem = (0.048 + 0.27 * k) + (0.026 + 0.07 * k) * s1;
+    // (A mirror's picture of it, in ice or in water, is its broad light alone: the ripple along its border and the
+    // drift of its drapes are the sky's own, and are not worked out twice for a pixel.)
+    bool whole = !gDull && gSkyQ > 0.0;
+    if (whole) hem += 0.004 * (1.0 + k) * sin(a * 14.0 - uTime * 0.5 + 1.7 * k);
     float tall = 0.17 + 0.42 * k;
     float up = h - hem;
     if (up < -0.06) continue;
@@ -326,7 +331,7 @@ vec3 aurora(vec3 d) {
     float fold = n1(a * 3.1 + uTime * 0.02 + k * 14.0);
     float reach = i == 0 ? smoothstep(0.2, 0.62, fold + 0.25 * s1) : smoothstep(0.34, 0.74, fold - 0.22 * s1);
     // Its drapes: broad, leaning a little as they climb, drifting along it.
-    float drape = 0.58 + 0.42 * sin(a * (11.0 - 3.0 * k) + 2.2 * s1 + up * 3.4 - uTime * 0.03 + 4.0 * k) * (0.3 + 0.7 * n1(a * 2.3 + 7.0 * k + uTime * 0.01));
+    float drape = 0.58 + 0.42 * sin(a * (11.0 - 3.0 * k) + 2.2 * s1 + up * 3.4 - uTime * 0.03 + 4.0 * k) * (whole ? 0.3 + 0.7 * n1(a * 2.3 + 7.0 * k + uTime * 0.01) : 0.62);
     // Edge on at a fold's turn, the light piles up.
     float pile = 1.0 + 0.55 * sqrt(max(1.0 - s1 * s1, 0.0));
     // (A soft border, widest under the faint lengths; then the long fall upward.)
@@ -446,7 +451,7 @@ vec3 skyColor(vec3 d, float clouds) {
 #else
   col += vec3(1.0, 0.9, 0.7) * (smoothstep(0.9996, 0.99999, sd) * 2.4 + smoothstep(0.9999, 1.0, sd) * 1.6) * (1.0 - uNight * (1.0 - gDusk)) * gSunK * (1.0 - uAir.y);
 #endif
-  if (uMoon.w > 0.0) {
+  if (uNight > 0.0 && uMoon.w > 0.0) {
     // The first screen's moon: low behind the name, a small pale disc a little past full, with a thin cold glow round
     // it. It is what lights the plates before dawn.
     float md = max(dot(d, uMoon.xyz), 0.0);
@@ -1386,7 +1391,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   }
   // Snow the wind lifts: thin veils of it streaming over the ground along the wind, low, lit by the low sun and
   // brightest against it. They come and go and they travel.
-  if (uHour.y > 0.0) {
+  if (uNight < 1.0 && uHour.y > 0.0) {
     vec2 wq = GS * p;
     float lodW = lodFor(foot, 520.0, 256.0);
     float veilW = textureLod(uGrain, vec2(wq.x / 2600.0 - uTime * 0.021, wq.y / 520.0 + 0.11 * sin(wq.x / 900.0)), lodW).g;
@@ -2801,7 +2806,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   col += S.band * (pow(sd, 240.0) * 1.6 + pow(sd, 40.0) * 0.12) * (1.0 - shade) * (1.0 - uNight) * (1.0 - gDeep);
   // Before dawn, the moon's: every ripple face turned to it throws it back, so its path lies down the water toward
   // the eye, bright and close-set under the moon and breaking up toward the near bank.
-  if (uMoon.w > 0.0 && uMoon.z > -0.03) {
+  if (uNight > 0.0 && uMoon.w > 0.0 && uMoon.z > -0.03) {
     float mdw = max(dot(rf, uMoon.xyz), 0.0);
     float m8 = mdw * mdw; m8 *= m8; m8 *= m8;
     float m64 = m8 * m8; m64 *= m64; m64 *= m64;
@@ -4190,18 +4195,18 @@ void main() {
   // (The ending's words need none of it: they stand over the near sea, which is deep and dark of itself. Nothing is
   // laid over that picture.)
   // (Its reach is measured in the frame's height: across an upright frame that is a larger share of the width.)
-  // (It has no outline: it is strongest behind the words and falls away as a bank of mist does, over nearly half the
+  // (It has no outline: it is strongest behind the words and falls away as a bank of mist does, over a third of the
   // frame's height, along a border that wanders. Nothing in it is a straight line or a corner.)
-  const float LEE_R = 0.46;
+  const float LEE_R = 0.38;
   float leeX = LEE_R / min(uLens.y, 1.0);
   if (uCalmK.x > 0.0 && uCalmK.y < 0.5 && vUv.y < uCalmBox.w + LEE_R && vUv.y > uCalmBox.y - LEE_R && vUv.x < uCalmBox.z + leeX && vUv.x > uCalmBox.x - leeX) {
     vec2 cq = abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5;
     cq.x *= uLens.y;
     float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);
     vec2 lw = vec2(vUv.x * uLens.y, vUv.y);
-    cd += (0.03 * sin(lw.x * 8.3 + 2.1 * sin(lw.y * 5.7 + 1.3)) + 0.022 * sin(lw.y * 12.1 + 1.7 * sin(lw.x * 4.9 + 0.6))) * smoothstep(0.0, 0.1, cd);
-    float cg = max(cd + 0.012, 0.0) / 0.15;
-    float ck = exp(-0.5 * cg * cg) * (1.0 - smoothstep(0.34, LEE_R, cd)) * uCalmK.x;
+    if (cd > 0.0) cd += 0.04 * sin(lw.x * 8.3 + 2.1 * sin(lw.y * 6.7 + 1.3) + lw.y * 3.1) * min(cd * 10.0, 1.0);
+    float cg = max(cd + 0.012, 0.0) / 0.14;
+    float ck = exp(-0.5 * cg * cg) * (1.0 - smoothstep(0.28, LEE_R, cd)) * uCalmK.x;
     if (ck > 0.002) {
       float l = max(dot(col, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
       float shadeK = uNight;
