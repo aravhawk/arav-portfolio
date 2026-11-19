@@ -1825,3 +1825,51 @@ is sluggish on his M5 Pro. This overrides the plan.
 built the second half of the flight's light, the one shared ice, the
 canyon's fix and the station registry, all of which leave with the
 scene. Fable built everything else, and builds the new site.
+
+## Correction: the 3D stays, and is overhauled (Arav, Nov 19, afternoon)
+
+Arav corrected the direction above about half an hour after it was
+written. **The 3D is not to be removed or cut.** The river, canyon
+and ice scene stays the core of the site. His complaint is its
+quality and its speed, and both get a full overhaul.
+
+His words: "The performance and quality both need an overhaul and it
+needs to be Igloo-level depth and clarity and extreme resolution and
+smoothness... ours looks like a starter Roblox game."
+
+What that means, as given:
+
+- **Depth:** atmospheric perspective, fog, layered parallax, depth of
+  field where it is earned.
+- **Clarity:** physically based materials, high-resolution detail
+  normals and textures, proper tone mapping, colour grading,
+  anti-aliasing. Nothing muddy, low-poly, flat, blocky or
+  toy-like.
+- **Resolution:** the full device pixel ratio on capable machines,
+  sharp on Retina and 4K, adaptive only when the frame budget
+  demands it.
+- **Smoothness:** a locked 120 fps on his M5 Pro MacBook Pro, 60 on
+  phones, an eased camera, no jank.
+- Study igloo.inc's real rendering techniques and match that craft.
+  A clean, minimal UI around the scene.
+
+The performance gate is unchanged (Lighthouse 95 or more on a phone
+and 100 on a desktop for every page; LCP under 1.2 s and 2.0 s; CLS
+under 0.02; INP under 100 ms; no task over 50 ms) and is reached by
+optimising the 3D (loaded after first paint, compressed assets,
+instancing, levels of detail, adaptive resolution, paused off
+screen, efficient shaders), never by removing it.
+
+What the withdrawn direction changed: one docs commit (`a8d6721`,
+the note and its entry here). No scene code was removed; the branch
+still holds everything up to the canyon's fix (`fcb8a6c`). A helper
+that had started the type-only build in its own worktree was
+cancelled and none of its work was taken. The unpushed motion and
+pacing commit is on the helper branch `t3/smooth-scroll-flight`.
+
+Numbers taken before the overhaul (the site at `a8d6721`, local
+production build, Lighthouse 12): phone scores home 74, work 54, a
+project 56, writing 85, a post 85; desktop 100, 92, 98, 99, 99;
+about 360 to 380 KB of JavaScript on every page; the home page
+blocked the main thread for 1.5 s on a phone; the work page's LCP on
+a phone was 12.7 s.

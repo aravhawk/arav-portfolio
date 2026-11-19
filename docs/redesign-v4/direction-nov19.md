@@ -1,5 +1,13 @@
 # Direction, Nov 19, 2026: quiet pages, one line, no 3D
 
+> **Withdrawn the same day (Nov 19, 2026).** Arav corrected this
+> direction about half an hour after it was written: the 3D is not to
+> be removed or cut. His complaint is the scene's quality and speed,
+> and both are to be overhauled to the level of igloo.inc. Nothing in
+> this note was built into the site. It is kept as a record only. The
+> direction in force is in `PROGRESS.md` under "Correction: the 3D
+> stays".
+
 Arav's verdict on the latest preview (12:18 PM CT): "still very laggy
 and nowhere near as clean + fluid + super fast and quick loading as
 lando norris, lusion, or igloo"; the river, canyon and ice scene
