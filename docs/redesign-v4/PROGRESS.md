@@ -1579,3 +1579,48 @@ is flagged here for Arav's decision.
 moonlit night, the layered hours, the tone curve, grain and
 vignette, the lee without an edge). Fable (this thread and its
 helpers): everything else to date.
+
+### The ending Arav picked; the light's second pass integrated; one ice under way (Nov 19)
+
+- **The ending** now reads "This was the warm-up." with "The next
+  station isn't built yet." under it (Arav's pick, `18347cf`). The
+  headline is set at 5.7vw so the longer line ends short of the
+  ribbon of light at 1440 and 1920; a phone wraps it "This was the /
+  warm-up."; legibility over the ending has 0 failures at 1440, 1920
+  and 390 in both themes. The new lines are two words longer, so two
+  small labels became marks with their words kept for screen readers
+  (the copy control by Email, the film control at Agent Bridge): the
+  home page is at 200 words. **"Selected for OpenAI DevDay 2026" was
+  only in the ending, so it is no longer anywhere on the site**; Arav
+  has been told and decides whether it gets a new place.
+- **Standing guidance for UI layers and controls** (Arav, from his
+  notes on Emil Kowalski's work) is written into
+  `docs/site-system/motion.md` and the consistency checklist and is
+  applied in the next whole-site pass (`82ec80f`).
+- **A1b, the light's second pass** (codex / gpt-6.2-astra / high),
+  came back with six signed commits and is integrated (ending
+  `612f3ae`; each commit typechecked and built on its own before the
+  push; lint and 315 tests pass; on the merged build: 200 words, 0
+  console errors, legibility from 26 screens to the end 0 failures of
+  1,130 lines, titles 96 of 96). **Cost: every one of the 26 stops is
+  now at or under the cost before the light was added** (its table:
+  from +0.02 ms at Open models by day, inside the noise, to 3.25 ms
+  saved at the canyon before dawn; the first screen by day 14.96 ms
+  where it was 15.02 before the light and 16.66 after the first
+  pass). Picture: the far block's words no longer hang on the
+  horizon at night; the blue hour has a lit side, a paler horizon
+  and depth; Upstream and Kilo Bench differ in shadow length and
+  water. Its own remaining shortfalls (three depths of air hard to
+  read at cc-switch on a phone and against the canyon's close wall;
+  the pillars' shadowed faces lack relief; long wind marks on
+  cc-switch's banks; a bright edge on TensorPoW's near snow) are
+  handed on to the tasks that own those surfaces.
+- **Running now, alone: A2, one ice across the whole page** (codex /
+  gpt-6.2-astra / high): every ice object takes one shared material
+  in one pass, no stop dearer than A1b's table and the first two
+  screens cheaper.
+
+**Who built what, so far**: Astra: the light's second half and its
+second pass (moonlit night, layered hours and air, tone curve,
+grain, the blue hour, shelves and wind-cut snow, cost paid back).
+Fable (this thread and its helpers): everything else to date.
