@@ -23,7 +23,8 @@
 .ending-head {
   font-family: var(--font-accent);
   font-weight: 380;
-  font-size: clamp(3.1rem, 6.8vw, 7.6rem);
+  /* (Sized so the line ends short of the ribbon of light that crosses the frame beside it.) */
+  font-size: clamp(3.1rem, 5.7vw, 6.4rem);
   line-height: 0.94;
   letter-spacing: -0.032em;
   /* One line wherever the screen has room for it, whatever the block's own measure. */
@@ -108,6 +109,10 @@
   transform: scale(0.97);
 }
 .end-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
   min-height: 44px;
   padding: 0 12px;
   border-radius: var(--r-pill);

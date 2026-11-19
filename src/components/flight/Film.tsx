@@ -39,7 +39,8 @@ export function Film({ media }: { media: ProjectMedia }) {
             <path d="M3.5 1.8v10.4L12 7z" fill="currentColor" />
           </svg>
         </span>
-        <span>Film</span>
+        {/* (The play mark says it; the word is kept for readers that cannot see the mark.) */}
+        <span className="sr-only">Film</span>
       </button>
       <dialog
         ref={dialog}

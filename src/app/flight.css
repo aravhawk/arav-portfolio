@@ -761,7 +761,8 @@ html[data-picture] .flight-root > .fl-poster {
   align-items: center;
   gap: 12px;
   min-height: 48px;
-  padding: 0 20px 0 6px;
+  /* (The control is its play mark alone: a round button.) */
+  padding: 0 6px;
   border-radius: var(--r-pill);
   background: var(--ink);
   color: var(--land);

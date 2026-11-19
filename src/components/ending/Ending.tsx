@@ -40,7 +40,16 @@ function CopyEmail() {
         Email
       </a>
       <button type="button" className="end-copy label" onClick={copy} aria-label="Copy email address">
-        <span aria-live="polite">{state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed. Use the link.' : 'Copy'}</span>
+        {/* At rest the control is its mark; what happened is said in words when it happens. */}
+        {state === 'idle' ? (
+          <svg className="end-copy-mark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="5.5" y="5.5" width="8" height="8" rx="1.6" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M10.5 3.2H4.4c-.9 0-1.6.7-1.6 1.6v6.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          </svg>
+        ) : null}
+        <span aria-live="polite" className={state === 'idle' ? 'sr-only' : undefined}>
+          {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed. Use the link.' : 'Copy'}
+        </span>
       </button>
     </span>
   );
