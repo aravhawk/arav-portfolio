@@ -53,6 +53,9 @@ and the light at this hour, then calls `clearIce`. For a sheet with a
 known bed, pass that backing directly to `clearIce`. The object owns
 its intersection, snow cover, submerged shelf and reflected ray.
 Apply `inAir` over the complete camera path after shading.
+The block and shard find their entry and exit by clipping the ray
+against flat faces. When the first six faces leave an empty interval,
+the remaining faces cannot contribute ice, shadow or reflection.
 
 Measure a change at the composed stops and between them, including the
 opening melt. At 1440 × 900 and DPR 2, the shared material's first pass
@@ -62,14 +65,20 @@ field for ground-level plates lets the driver omit the overhead lake
 and cut-letter paths. Inner-page lake shaders and the water simulation
 still select their own field from their uniforms.
 
-With that change the daylight opening measured 11.73–12.04 ms against
-a 14.96 ms ceiling. Its three-session spread was 0.313 ms. One screen
-in, the same sessions measured 16.48–16.53 ms against 21.24 ms.
+With the water held and the three browsers rotating every ten measured
+draws, the daylight opening measured 11.70–11.75 ms against its
+14.96 ms ceiling. One screen in, it measured 16.50–16.58 ms against
+21.24 ms. These are whole-frame times, including the synchronous read.
+The daylight Agent Bridge and the transition at 23.5 screens before
+dawn exceeded their ceilings in the route sweep. Repeating the same
+draws in a different time window moved their means by 3.08 and 2.45 ms.
 
 The plates' faces should reach 4.5:1 by day and 3:1 before dawn against
 the lake directly behind them, from rest through one screen of scroll.
 Measure the same pixels with the plates hidden. Check 390, 768, 1440
-and 1920 CSS pixels wide. The first pass misses both floors.
+and 1920 CSS pixels wide. Across five measured positions the current
+faces reach 1.90–3.80:1 by day and 1.75–2.76:1 before dawn. Both floors
+remain open.
 
 ## Objects
 

@@ -54,9 +54,14 @@ select comma-separated screen positions and themes. The harness pins the
 camera, entrance, scene clock and shading tier. It verifies the drawing
 buffer and waits for each tile's own shader. Three fresh Chromium
 process groups rotate through the same stop, with only the measured
-group running. Every timed draw ends with a synchronous pixel read.
-Keep all three means and the raw groups. A range above 0.3 ms fails
-the comparison. Other applications can still occupy the GPU.
+group running. After the water and shader settle, the harness parks the
+live animation callback so it cannot enqueue extra draws between batches.
+It warms the rotation for 24 rounds, then samples 72 batches of ten
+completed frames per browser. Every timed draw ends with a synchronous
+pixel read. Keep all three means and the raw groups. A range above
+0.3 ms fails the comparison. Rotating sessions share the load of the
+same time window. A small range can still hide a slowdown common to
+all three. Compare the absolute times against the published ceilings.
 
 ## Where it stands (2026-11-18, before the frame budget task)
 

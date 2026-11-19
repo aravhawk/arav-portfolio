@@ -773,6 +773,8 @@ float slabHit(vec3 ro, vec3 rd, out vec3 hl, out float face) {
     if (den < -1e-6) { float t = num / den; if (t > tN) { tN = t; face = float(j); } }
     else if (den > 1e-6) tF = min(tF, num / den);
     else if (num < 0.0) return -1.0;
+    // Once the first six faces exclude the ray, the remaining cuts cannot admit it.
+    if (j == 5 && (tN > tF || tF < 0.0)) return -1.0;
   }
   if (tN > tF || tN < 0.0) return -1.0;
   gSlabThick = tF - tN;
@@ -3462,6 +3464,8 @@ float shardHit(vec3 ro, vec3 rd, vec4 s, float turn, out vec3 n, out float tF) {
     if (den < -1e-5) { float t = num / den; if (t > tN) { tN2 = tN; tN = t; n = pn; } else if (t > tN2) tN2 = t; }
     else if (den > 1e-5) tF = min(tF, num / den);
     else if (num < 0.0) return -1.0;
+    // Reject empty intervals before testing the broken shoulders and chips.
+    if (k == 5 && tN > tF) return -1.0;
   }
   gShardEdge = tN - tN2;
   return tN < tF && tN > 0.0 ? tN : -1.0;

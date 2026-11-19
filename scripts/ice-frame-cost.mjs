@@ -11,6 +11,7 @@ const { chromium } = createRequire(import.meta.url)('playwright');
 const [base, positions = '0,0.4,0.8,1,1.4,2,3.1,5.6,8.45,11.15,13.8,16.6,19.4,20.5,22.15,23.5,25.8,28.3,31.1', themes = 'light,dark'] = process.argv.slice(2);
 if (!base || process.platform !== 'darwin') throw Error('Supply the production URL on the Metal benchmark Mac.');
 const sessions = [];
+let stopping = false;
 
 function resume(session) {
   if (session.parked) {
@@ -22,13 +23,16 @@ function resume(session) {
 function park(session) {
   // Chromium's compositor keeps submitting Metal work when only its page is
   // frozen. Suspend the dedicated process group created by this invocation.
+  if (stopping) return;
   process.kill(-session.pid, 'SIGSTOP');
   session.parked = true;
 }
 
 for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
-  process.once(signal, () => {
+  process.once(signal, async () => {
+    stopping = true;
     for (const session of sessions) resume(session);
+    await Promise.allSettled(sessions.map(session => session.server.close()));
     process.exit(code);
   });
 }
@@ -52,6 +56,7 @@ async function open(theme) {
 async function prepare(page, stop) {
   await page.evaluate(s => {
     const f = window.__flight;
+    window.restoreIceBenchmarkFrame?.();
     f.engine.holdLean(0);
     f.engine.holdClock(8);
     f.holdEntrance(8);
@@ -86,6 +91,11 @@ async function prepare(page, stop) {
       }
       return (performance.now() - start) / frames;
     };
+    // The normal RAF otherwise calls frame() between timed batches. On a
+    // held clock it can reset the simulation and warm other variants.
+    const frame = e.frame;
+    e.frame = () => {};
+    window.restoreIceBenchmarkFrame = () => { e.frame = frame; };
     const start = performance.now();
     while (performance.now() - start < 8000) window.timeDraws(16);
     return { gpu, backing, tiles: e.info.tiles, pose: a.cam.pos, clock: e.time };
@@ -102,14 +112,23 @@ async function measure(theme, s) {
   if (new Set(states.map(state => JSON.stringify(state))).size !== 1) {
     throw Error('Session state differs: ' + JSON.stringify(states));
   }
-  for (let block = 0; block < 18; block++) {
+  // Warm the actual rotation as well as the three individual contexts.
+  for (let block = 0; block < 24; block++) {
+    for (let slot = 0; slot < sessions.length; slot++) {
+      const session = sessions[(block + slot) % sessions.length];
+      resume(session);
+      await session.page.evaluate(() => window.timeDraws(14));
+      park(session);
+    }
+  }
+  for (let block = 0; block < 72; block++) {
     for (let slot = 0; slot < sessions.length; slot++) {
       const i = (block + slot) % sessions.length;
       const session = sessions[i];
       resume(session);
       const ms = await session.page.evaluate(() => {
-        window.timeDraws(8);
-        return window.timeDraws(40);
+        window.timeDraws(4);
+        return window.timeDraws(10);
       });
       groups[i].push(ms);
       park(session);
