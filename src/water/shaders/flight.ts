@@ -4056,6 +4056,11 @@ void main() {
     vec2 q = (vUv - uLee.xy) * uLee.zw;
     float r2 = dot(q, q);
     float ck = (1.0 - smoothstep(0.0, 4.0, r2)) * uCalmK.x;
+#ifdef F_FIELD
+    // Above the hero copy, keep the bare, transmitting sheet out of the
+    // snow fill. Keep its full strength on the words and their margin.
+    ck *= 1.0 - gNfK * smoothstep(0.012, 0.085, vUv.y-uCalmBox.w);
+#endif
     if (ck > 0.002) {
       float l = max(dot(col, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
       float shadeK = uNight;

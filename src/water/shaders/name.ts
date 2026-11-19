@@ -234,19 +234,22 @@ vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, ve
   float edge = kind < 1.5 ? max(-sd,0.0) : max(G.w-abs(pl.y),0.0);
   vec3 bent = refract(rd,n,0.763);
   vec3 exitPoint = p + bent * thick;
-  vec3 behind = nameEnv(bent.z);
+  vec3 behind;
   if (bent.z < -0.02) {
     vec2 floorPoint = exitPoint.xy + bent.xy * max(0.0,exitPoint.z+gFree) / -bent.z;
     float snow = textureLod(uSnow, RW*floorPoint/vec2(2290.0,790.0),0.0).r;
     behind = mix(nameLake(), S.amb + S.key * 0.16, smoothstep(-0.05,0.35,snow));
+  } else {
+    behind = nameEnv(bent.z);
   }
   float h = clamp(pl.z/A.w+0.5,0.0,1.0);
   vec3 light = (S.amb * mix(1.3,2.8,uNight) + S.key * mix(0.48,1.7,uNight) + uAurora*0.08)
     * mix(0.52,1.0,h);
-  float wet = max(uNameP.y, uNameP.w * (1.0-smoothstep(0.0,9.0,p.z+gFree)));
+  float wet = max(uNameP.y * (0.32 + 0.68 * (1.0-h)), uNameP.w * (1.0-smoothstep(0.0,9.0,p.z+gFree)));
   return clearIce(n,rd,q*232.0/A.w+fi*61.0,t*uPxAng*232.0/A.w,thick*232.0/A.w,
     edge*232.0/A.w, kind < 1.5 ? 0.0 : 1.0,wet,
-    (behind * 0.58 + light*0.22) * mix(vec3(0.23,0.42,0.49),vec3(1),h), light*(1.0-0.25*soft), nameEnv(reflect(rd,n).z));
+    (behind * 0.58 + light*0.22) * mix(vec3(0.23,0.42,0.49),vec3(1),h), light*(1.0-0.25*soft), nameEnv(reflect(rd,n).z),
+    kind < 1.5 ? mix(0.20,0.47,uNight) : 0.0);
 }
 #endif
 
@@ -603,6 +606,9 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
       col = mix(col, mix(vec3(0.9, 0.92, 0.95) * (S.key * 0.24 * (1.0 - 0.5 * gNmShade) + S.amb * 0.8), vec3(0.36, 0.44, 0.58) * (S.amb * 1.5), uNight), snake * 0.34 * K * onIce * (1.0 - pond));
     }
   }
-  return col;
+  // A steep view through the swept sheet shows deep water, even where a
+  // film has filled its cracks. At grazing angles the sky still mirrors.
+  float deep = smoothstep(0.035, 0.21, -dir.z) * (1.0-smoothstep(0.72,1.24,d));
+  return col * (1.0 - 0.48 * deep);
 }
 `;

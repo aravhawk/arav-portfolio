@@ -61,7 +61,16 @@ completed frames per browser. Every timed draw ends with a synchronous
 pixel read. Keep all three means and the raw groups. A range above
 0.3 ms fails the comparison. Rotating sessions share the load of the
 same time window. A small range can still hide a slowdown common to
-all three. Compare the absolute times against the published ceilings.
+all three. Absolute times on unchanged shaders can drift 2–3 ms between windows.
+For a material change, compare the two builds at the same stop in one
+browser session on the M4. Use the production programs and compile their
+counterparts with the control shader body, same tile masks and themes.
+Keep the pose, clock, simulation, 2880 × 1800 backing and tier fixed.
+Alternate programs on the same tiles. Reverse the order on each round.
+After 24 warm rounds, retain all 40 paired groups, four warm draws and
+12 timed draws per program. Finish every draw with a pixel read. Report
+the two means, their paired difference and the spread of those
+differences. Use the separate absolute run to track the display budget.
 
 ## Where it stands (2026-11-18, before the frame budget task)
 

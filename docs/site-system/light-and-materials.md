@@ -73,12 +73,21 @@ The daylight Agent Bridge and the transition at 23.5 screens before
 dawn exceeded their ceilings in the route sweep. Repeating the same
 draws in a different time window moved their means by 3.08 and 2.45 ms.
 
-The plates' faces should reach 4.5:1 by day and 3:1 before dawn against
-the lake directly behind them, from rest through one screen of scroll.
-Measure the same pixels with the plates hidden. Check 390, 768, 1440
-and 1920 CSS pixels wide. Across five measured positions the current
-faces reach 1.90–3.80:1 by day and 1.75–2.76:1 before dawn. Both floors
-remain open.
+On the standing name, the sawn face scatters incident light before it
+passes through the body. Pass a saw-frost weight as the last argument to
+`clearIce` for this finish. Melt clears the frost first at the feet.
+The swept sheet darkens toward a steep view into the lake. Its glancing
+reflection keeps the track of the sun or moon. The snow fill under the
+hero copy fades off bare ice above the measured text margin.
+
+The name must reach 4.5:1 by day and 3:1 before dawn. At 390, 768, 1440
+and 1920 CSS pixels, hold full shading and render at 0, 0.25, 0.5, 0.75
+and 1 screen. At each position hold the clock and render normally, with
+`DBG_NO_NHIT`, and with `DBG_NO_NLOOK` plus `DBG_NO_NMIR`. The flat
+render identifies the pixels covered by plates. At those same pixels
+compare median linear-sRGB luminance in the normal and hidden renders,
+using (lighter + 0.05) / (darker + 0.05). The historical diagnostic uses
+DPR 2 through 1440 and DPR 1 at 1920. Inspect the first frames at DPR 2.
 
 ## Objects
 
