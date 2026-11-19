@@ -34,6 +34,13 @@ Each of these cost time on this build.
   root is tracked and empty on purpose. Do not delete it.
 - **Root `AGENTS.md` is tracked.** Do not delete it as a stray build
   output.
+- **Every pushed commit must build, typecheck and render on its
+  own.** Run `pnpm exec tsc --noEmit` and `pnpm build` on the exact
+  tree before each push. Commit a deletion together with its
+  replacement (a staged `git rm` rides along with the next commit,
+  whatever that commit was meant to be: look at `git status --short`
+  for staged lines first). Never rewrite pushed history to hide a
+  broken commit; complete it in the next one and say so.
 - **zsh does not split unquoted variables into words**, and a
   `git cherry-pick --continue` finishes the whole sequence: rerunning
   the remaining hashes duplicates commits.

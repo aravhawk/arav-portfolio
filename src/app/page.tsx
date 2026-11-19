@@ -150,7 +150,7 @@ const POSTER_BOOT = posterBoot();
  * camera comes to rest (in screens), over the open sea the camera is coming down to, so the run out from the delta
  * is not a stretch without a word. The headline and the links set when the camera rests, as they always have.
  */
-const END_LEAD = 0.4;
+const END_LEAD = 0.15;
 
 /** His sentence, set a line at a time through the reach. */
 const SAY_LINES = ['Agents that break', 'software before', 'attackers do.', 'Tools developers', 'run daily.'];
@@ -177,7 +177,7 @@ export default async function Home() {
   // (The canyon is this station from its mouth: its eyebrow stands through the bends, its block sets in the hall.)
   const canyon = build(stops[9], { eyebrow: CANYON + 0.05 - stops[9], leave: 0.75 });
   // (The delta's bank stays under its words a while after the eye has begun to leave for the sea: they stay with it.)
-  const delta = build(stops[10], { leave: 1.5 });
+  const delta = build(stops[10], { leave: 1.75 });
   return (
     <>
       {/* ---------- the rail: where in the flight this is, and a way to any part of it (before the page's content, so the skip link passes it) ---------- */}
