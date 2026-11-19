@@ -2806,7 +2806,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     float m8 = mdw * mdw; m8 *= m8; m8 *= m8;
     float m64 = m8 * m8; m64 *= m64; m64 *= m64;
     float m512 = m64 * m64; m512 *= m512; m512 *= m512;
-    col += S.key * (m512 * m512 * 26.0 + m512 * 2.2 + m64 * 0.22 + m8 * 0.03) * uMoon.w * (1.0 - shade) * smoothstep(-0.03, 0.04, uMoon.z);
+    col += S.key * (m512 * m512 * 30.0 + m512 * 1.1 + m64 * 0.1 + m8 * 0.02) * uMoon.w * (1.0 - shade) * smoothstep(-0.03, 0.04, uMoon.z);
   }
 #ifdef SEA
   // The delta, late in the day. The sun is low and ahead, so each bar lays a long shade on the water behind it and
@@ -3728,7 +3728,17 @@ void main() {
     if (slabCov > 0.0) slabCol /= slabCov;
     // Far down the valley it is lost in the air: nothing stands behind the name.
     // (From the statement's frame it is not there at all: the valley's air has it.)
-    slabCov *= 1.0 - smoothstep(1500.0, 2100.0, slabT);
+    slabCov *= 1.0 - smoothstep(2000.0, 2500.0, slabT);
+    // (And it stands in the valley's air like everything else at its distance: the hour's haze lies in front of it,
+    // and the hour's mist, so far off it comes out of the air and is never a pale ghost of itself on a clear horizon.)
+    if (slabCov > 0.0) {
+      float thinS = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
+      slabCol = mix(slabCol, airAt(dir.xy), 1.0 - exp(-slabT * 0.00021 * S.haze * thinS));
+      if (uAir.x > 0.0) {
+        float lowS = (1.0 - exp(-uCamPos.z / 70.0)) / max(uCamPos.z / 70.0, 1e-3);
+        slabCol = mix(slabCol, mistColor(dir.xy), (1.0 - exp(-max(slabT - 420.0, 0.0) * 0.0022 * lowS)) * 0.9 * uAir.x);
+      }
+    }
   }
 
 #endif
