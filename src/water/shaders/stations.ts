@@ -393,6 +393,9 @@ vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky
   gIceLight = light;
   vec3 col = body * light * (1.0 + 0.95 * cupL);
 
+  // White strata scatter the broad grazing key back before it enters the blue body.
+  col += S.key * (uDistanceAir.z * sky * max(dot(nc, L), 0.0) * (0.16 + 0.60 * white));
+
   // Clear ice in the open shows what stands behind it, bent and coloured by the ice the light crossed (it takes the
   // red first): most through a thin piece, none through a stratum full of air.
   float cosi0 = max(dot(-rd, n), 0.0);

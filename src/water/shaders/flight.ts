@@ -1356,8 +1356,8 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   rel *= 1.0 - 0.72 * calm;
   vec3 n = normalize(vec3(-rel, 1.0));
   // The bank rolls over into the cut.
-  float ch = 1.0 - smoothstep(0.0, 26.0, sd);
-  n = normalize(n + vec3(-grad * ch * ch * 0.9, 0.0));
+  float ch = 1.0 - smoothstep(0.0, 48.0, sd);
+  n = normalize(n + vec3(-grad * ch * (0.13 + 0.17 * a.z), 0.0));
 
   float ew = clamp(foot * 0.004, 0.004, 0.1);
   float bare = 0.0;
@@ -1389,9 +1389,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
 
   // The bank's lip is wet ice all along the water: a blue edge under the white.
   float lipK = 1.0 - smoothstep(2.0, 13.0 + 6.0 * gr.b, sd);
-  alb = mix(alb, blue * 1.15, lipK * 0.85 * (1.0 - gRock));
-  // The shelf's own top edge: a hair of bright refrozen ice over the water.
-  alb = mix(alb, mix(vec3(0.86, 0.95, 1.0), vec3(0.62, 0.8, 0.9), uNight), (1.0 - smoothstep(0.5, 3.0 + foot, sd)) * 0.8);
+  alb = mix(alb, blue * 1.15, lipK * (0.36 + 0.25 * gr.b) * (1.0 - gRock));
   // (Level snow is held at one brightness whatever the sun's height; the
   // low sun is in how strongly every slope answers it, and in the shade.
   // Before dawn the aurora lends the snow a faint green, most on what faces it.)
@@ -1433,7 +1431,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   }
   // Wet shore: dark and glossy at the water.
   float wet = 1.0 - smoothstep(1.0, 16.0, sd);
-  col = mix(col, col * vec3(0.62, 0.74, 0.82), wet * 0.6 * smoothstep(1.5, 5.0, sd));
+  col = mix(col, col * vec3(0.62, 0.74, 0.82), wet * 0.36);
   // A cold sheen: snow is a little glossy at a glancing angle.
   float cosi = clamp(dot(-dir, n), 0.0, 1.0);
   float glance = pow(1.0 - cosi, 4.0);
@@ -2436,7 +2434,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // (The clear pool is measuring-still: what lies on its bed is read.)
   slope *= 1.0 - 0.72 * poolAt(pw);
   float men = smoothstep(-5.0, -0.5, bw.r);
-  slope += bw.ba * men * 0.42;
+  slope += bw.ba * men * 0.12;
   vec3 n = normalize(vec3(-slope, 1.0));
 
   // ---- under the surface
@@ -2877,9 +2875,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     // (Two looks toward the sun: a bank a long way off still shades this water.)
     if (open < 1.0) longShade = max(shade, max(smoothstep(-6.0, 6.0, textureLod(uBedA, bedUv(pw + LXY * 64.0), 0.0).r), 0.75 * smoothstep(-6.0, 6.0, textureLod(uBedA, bedUv(pw + LXY * 150.0), 0.0).r)));
     col = mix(col, col * vec3(0.16, 0.4, 0.5) + vec3(0.0, 0.008, 0.016), dlt * (0.72 + 0.26 * longShade));
-    // (At a bar's foot the water lies over the bar's own ice, pale and clean: the bed's brown never shows at a waterline.)
-    float skirt = 1.0 - smoothstep(0.0, 14.0, -bw.r);
-    if (skirt > 0.0) col = mix(col, vec3(0.36, 0.62, 0.68) * (S.amb * 1.3 + S.key * 0.1 * (1.0 - longShade)), dlt * skirt * 0.8);
+    // Ice under the shallows returns the light that survives the round trip to the bed.
+    col += dlt * (1.0 - fres) * trans * trans * vec3(0.08, 0.16, 0.17) * (S.amb + S.key * (0.10 * (1.0 - longShade)));
   }
   if (uSea.x > 0.0 && S.sun.z > 0.0) {
     float daS = atan(dir.x, dir.y) - uShadow.z;
@@ -3091,7 +3088,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // where the current runs against the bank a fine line of foam.
   float line = smoothstep(-3.0 - foot, 0.0, bw.r);
   col *= 1.0 - 0.16 * line * (1.0 - uNight);
-  float edgeF = (1.0 - smoothstep(1.5 + foot, 5.0 + 2.0 * foot, -bw.r)) * (0.25 + 0.75 * smoothstep(0.2, 0.7, fmag)) * (0.55 + 0.45 * df.r) * (1.0 - smoothstep(14.0, 40.0, footL));
+  float edgeF = (1.0 - smoothstep(1.5 + foot, 5.0 + 2.0 * foot, -bw.r)) * smoothstep(0.15, 0.7, dot(flow, bw.ba)) * smoothstep(0.34, 0.72, df.r) * (1.0 - smoothstep(14.0, 40.0, footL));
   vec3 edgeC = mix(vec3(0.9, 0.96, 1.0) * (S.amb * 1.2 + S.key * 0.24), gFoamN, uNight);
   col = mix(col, edgeC, edgeF * mix(0.6, 0.3, uNight) * (1.0 - lakeK * smoothstep(0.0, 0.3, uGlow)));
 
@@ -3534,8 +3531,8 @@ vec3 deltaBar(vec3 col, float y, float sd, vec2 ba) {
   // (Its shade keeps to the rim: a wide band of it round every bar is a smear, and it is the sky's blue, not mauve.)
   float lee = smoothstep(0.05, 0.75, -toSun) * (1.0 - smoothstep(6.0, 46.0, sd));
   col = mix(col, vec3(dot(col, vec3(0.3333))) * vec3(0.66, 0.8, 1.06), 0.62 * lee * k);
-  // (The lit rim is the sun's own colour on snow, thin and pale: never a tan edge.)
-  return col + S.key * 0.085 * lit * lit * k;
+  // The broad shoulder receives the same key as the rest of the snow.
+  return col * (1.0 + 0.12 * lit * k);
 }
 #endif
 
@@ -3980,23 +3977,16 @@ void main() {
       float aWall = smoothstep(-aa, aa, bw.r);
       vec3 cut = vec3(0.0);
       if (aWall > 0.0) {
-        // The far bank's face above the waterline. The snow ends in a shelf
-        // of ice that overhangs the water: its cut edge is bright, the hollow
-        // the water has eaten under it lies in shade, and below that old blue
-        // ice goes down to a dark wet foot. Each of these ends at an edge a
-        // pixel wide, so the bank is drawn, not smeared.
+        // The visible wall turns from an undercut hollow into wet blue ice.
         float f = clamp(-sd0 / max(length(tilt) * gFree, 1.0), 0.0, 1.0);
         float af = clamp(1.2 * foot / gFree, 0.012, 0.22);
         vec3 nW = normalize(vec3(-bw.ba, 0.35));
         float alongB = dot(p, vec2(bw.a, -bw.b));
         vec4 gw = textureLod(uGrain, vec2(alongB / 180.0, f * 0.35), lodFor(foot, 180.0, 256.0));
-        float rimF = 0.085 + 0.05 * textureLod(uGrain, vec2(alongB / 760.0, 0.21), 0.0).g;
-        // (The hollow's lower edge hangs unevenly: it is where the melt has cut furthest.)
-        float underF = rimF + 0.16 + 0.22 * textureLod(uGrain, vec2(alongB / 430.0, 0.37), 0.0).g;
+        float underF = 0.28 + 0.21 * gw.g;
         vec3 iceF_ = mix(vec3(0.6, 0.79, 0.9), vec3(0.2, 0.44, 0.6), smoothstep(underF, 1.0, f)) * (0.86 + 0.28 * gw.g);
         vec3 wall = iceF_ * lightOn(nW, 1.0);
-        wall = mix(iceF_ * vec3(0.5, 0.62, 0.8) * S.amb * 0.62, wall, smoothstep(underF - 1.5 * af, underF + 1.5 * af, f));
-        wall = mix(mix(vec3(0.95, 0.97, 1.0), vec3(0.7, 0.82, 0.92), uNight) * (S.key * mix(0.27, 0.3, uNight) + S.amb * mix(0.86, 0.9, uNight) + uAurora * 0.03), wall, smoothstep(rimF - af, rimF + af, f));
+        wall *= 0.72 + 0.28 * smoothstep(underF - 0.16 - af, underF + 0.16 + af, f);
         // (A bar of the delta is low and the low sun's glare lies over all of it: its face is kept the clear blue
         // of ice in shade, and it comes down to pale water, not to a dark foot that the glare turns brown.)
         float barK = smoothstep(${(DELTA.apex.y - 200).toFixed(1)}, ${(DELTA.y - 60).toFixed(1)}, p.y) * (1.0 - uNight);

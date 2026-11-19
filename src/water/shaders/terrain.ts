@@ -71,9 +71,13 @@ float cut(vec2 q) {
   float worked2 = smoothstep(0.0, 0.28, tgn(q * 5.0 + 3.9, 5.0));
   float nf = tgn(q * vec2(5.0, 59.0) + 6.1, vec2(5.0, 59.0));
   float fine = tent(nf - 0.05, 0.3, 0.12) * worked2;
-  return 0.0034 * drift + 0.00065 * sast + 0.00019 * fine;
+  // The wind scours broad lanes clean between patches of ridged snow.
+  float cover = smoothstep(-0.25, 0.19, tgn(q * 2.0 + 8.6, 2.0));
+  return cover * (0.0031 * drift + 0.00065 * sast + 0.00019 * fine);
 }
-vec2 bent(vec2 p) { return p + 0.035 * vec2(tgn(p * 2.0 + 1.7, 2.0), tgn(p * 2.0 + 5.2, 2.0)); }
+vec2 bent(vec2 p) {
+  return p + vec2(0.12 * tgn(p * 2.0 + 1.7, 2.0), 0.17 * tgn(p * 2.0 + 5.2, 2.0));
+}
 `;
 
 /** The cut forms alone (drifts, sastrugi), kept in half floats: what the shadows are marched through. */

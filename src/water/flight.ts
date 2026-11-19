@@ -1493,8 +1493,8 @@ export class FlightEngine extends WaterEngine {
     // The thicker valley air begins beyond the foreground. Keep the opening lake and final sea clear.
     const hour = at.hour ?? 0;
     const valley = smooth(2, 3.1, hour) * (1 - smooth(28.3, 30.1, hour));
-    const extra = (0.00027 + 0.00007 * night) * sky.haze * valley * (1 - 0.55 * sky.dusk);
     const blueHour = night * smooth(13.8, 16.6, hour) * (1 - smooth(19.4, 22.15, hour));
+    const extra = (0.00027 + 0.00007 * night) * sky.haze * valley * (1 - 0.55 * sky.dusk - 0.50 * blueHour);
     const distanceAir = [extinction + extra, -(300 + 0.95 * cam.pos[2]) * extra, blueHour];
     const rangeToScreen = Math.hypot(cam.pos[0] - SLAB.x, cam.pos[1] - SLAB.y, cam.pos[2] - (SLAB.lift + SLAB.h / 2));
     const emission = 1 - smooth(1750, 2140, rangeToScreen);
