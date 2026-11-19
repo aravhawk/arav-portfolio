@@ -1753,3 +1753,33 @@ thread and its helpers): everything else to date.
   else, cost not dearer. The rule is in the pack's pitfalls: look at
   24 frames of the whole page in both themes and on a phone before
   integrating any change to the picture.
+
+### The canyon's walls fixed; motion and pacing under way (Nov 19)
+
+- **A2d** (codex / gpt-6.2-astra / high), one signed commit,
+  integrated as `fcb8a6c` (typecheck, lint, 315 tests, build; 200
+  words, 0 console errors). The cause: the canyon handed nearly full
+  broken-face relief to the shared ice over its whole vertical cut,
+  the shell map swung the shading normal across the key's direction,
+  and the key's specular ignored the wall's own shadow. The walls are
+  now layered ice lit at their exposed edges; the blotches, the
+  swirls and the green band are gone in both themes and on a phone,
+  and all eight paired comparisons are faster (0.18 to 1.29 ms a
+  frame). I looked at the canyon every half screen from 23.8 to 27.2
+  in both themes, and then at 24 frames of the whole page in both
+  themes at 1440 and at 390, before pushing. Its own shortfalls:
+  warm haze still flattens the exit walls by day; some fractures
+  repeat a tapered shape; before dawn the rose rim is faint; 24.3
+  before dawn is 16.77 ms, just over budget.
+- **Seen in that whole-page look, for the tasks that own them**: on a
+  phone the Kilo Bench table is still tilted and cut by the screen's
+  edge in transit (its rebuild is queued); on a phone before dawn the
+  far block's screen text is readable at the statement (the block is
+  replaced in the stations' work); the lee under the canyon's leading
+  eyebrow shows as a pale patch on the wall.
+- **Running now, alone: A4, the motion system and pacing** (same
+  model and effort): inertia in Lando Norris's class from the
+  engine's one frame loop, the camera on a critically damped spring,
+  the flight re-timed on the registry to about 24 screens with the
+  eye never under a quarter of travel speed at a station, velocity
+  and the pointer felt in the picture, no blur, no bounce.
