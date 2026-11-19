@@ -1477,16 +1477,34 @@ export class FlightEngine extends WaterEngine {
     return frameTiles(cam, aspect, need, need & F.NAME ? this.nameBox() : null, this.canvas.width, this.canvas.height);
   }
 
+  /** All tiles see the same hour and atmospheric column. */
+  private frameLight(cam: Basis, at: FlightMoment, night: number) {
+    const sky = skyAt(night, at.day, this.lift, this.sunAz, this.ridge, at.hour);
+    // (The first screen has its own sun and moon, behind the name: let go as the eye leaves the lake.)
+    const heroK = heroLightAt(MELT.from + at.melt * (MELT.to - MELT.from));
+    heroLight(sky, heroK, night);
+    // The moon stands where the night's light comes from: the first screen's own while the name stands, then the hour's, until it sets.
+    const moon = [...sky.keyDir, night * Math.max(heroK, sky.moon)];
+    if (this.first < 1 || this.breath !== 0) firstLight(sky, this.first, night, this.breath);
+    // Integrated density of each atmospheric layer from this camera height.
+    const depth = cam.pos[2] / 320;
+    const mistDepth = cam.pos[2] / 70;
+    const extinction = 0.00021 * sky.haze * -Math.expm1(-depth) / Math.max(depth, 0.001);
+    const lowExtinction = 0.0022 * -Math.expm1(-mistDepth) / Math.max(mistDepth, 0.001);
+    return { sky, moon, extinction, lowExtinction };
+  }
+
   private draw(cam: Basis, aspect: number, at: FlightMoment) {
     const gl = this.gl;
     const need = this.needs(cam, aspect);
     this.needed = need;
     const night = Math.min(1, Math.max(0, this.theme));
     this.drawnTiles = [];
+    const light = this.frameLight(cam, at, night);
     if (this.forced) {
       this.drawn = this.forced;
       this.drawnTiles.push({ mask: this.forced.mask, area: 1, by: this.forced });
-      this.scene(this.forced, cam, aspect, at, null);
+      this.scene(this.forced, cam, aspect, at, light, null);
       this.glow(night);
       return;
     }
@@ -1495,7 +1513,7 @@ export class FlightEngine extends WaterEngine {
     for (const t of tiles) {
       const by = this.pick(t.mask, t.area < 0.04);
       this.drawnTiles.push({ mask: t.mask, area: t.area, by });
-      this.scene(by, cam, aspect, at, tiles.length === 1 ? null : t.px);
+      this.scene(by, cam, aspect, at, light, tiles.length === 1 ? null : t.px);
     }
     this.drawn = this.drawnTiles[0].by;
     // (A program that drew its first pixels as part of this frame: how long the GPU takes over it says, as a first
@@ -1510,7 +1528,7 @@ export class FlightEngine extends WaterEngine {
   }
 
   /** The scene, drawn by one variant: the whole frame, or only the given parts of it. */
-  private scene(variant: Variant, cam: Basis, aspect: number, at: FlightMoment, parts: [number, number, number, number][] | null) {
+  private scene(variant: Variant, cam: Basis, aspect: number, at: FlightMoment, light: ReturnType<FlightEngine['frameLight']>, parts: [number, number, number, number][] | null) {
     const gl = this.gl;
     // (The open sea is only worked out when the camera is near enough to see it, and by a variant that carries it.)
     const seaOn = variant.mask & F.SEA ? seaNear(cam) : 0;
@@ -1579,13 +1597,8 @@ export class FlightEngine extends WaterEngine {
     gl.uniform1f(r.u.uWorldW, WORLD.w);
     gl.uniform1f(r.u.uShoal, this.shoalY);
     // The light: the hour's keys.
-    const sky = skyAt(night, at.day, this.lift, this.sunAz, this.ridge, at.hour);
-    // (The first screen has its own sun and moon, behind the name: let go as the eye leaves the lake.)
-    const heroK = heroLightAt(MELT.from + at.melt * (MELT.to - MELT.from));
-    heroLight(sky, heroK, night);
-    // The moon stands where the night's light comes from: the first screen's own while the name stands, then the hour's, until it sets.
-    if (r.u.uMoon) gl.uniform4f(r.u.uMoon, sky.keyDir[0], sky.keyDir[1], sky.keyDir[2], night * Math.max(heroK, sky.moon));
-    if (this.first < 1 || this.breath !== 0) firstLight(sky, this.first, night, this.breath);
+    const { sky, moon, extinction, lowExtinction } = light;
+    if (r.u.uMoon) gl.uniform4fv(r.u.uMoon, moon);
     gl.uniform3fv(r.u.uSkyZen, sky.zen);
     gl.uniform3fv(r.u.uSkyMid, sky.mid);
     gl.uniform3fv(r.u.uSkyHor, sky.hor);
@@ -1595,10 +1608,10 @@ export class FlightEngine extends WaterEngine {
     gl.uniform3fv(r.u.uKeyDir, sky.keyDir);
     gl.uniform3fv(r.u.uAmbCol, sky.amb);
     gl.uniform4f(r.u.uSkyK, sky.haze, sky.aurora * sky.air[3], sky.dusk, sky.under);
-    if (r.u.uAir) gl.uniform4f(r.u.uAir, sky.air[0], sky.air[1], sky.air[2], 0);
+    if (r.u.uAir) gl.uniform4f(r.u.uAir, sky.air[0], sky.air[1], sky.air[2], extinction);
     if (r.u.uRange) gl.uniform4fv(r.u.uRange, sky.range);
     if (r.u.uArrive) gl.uniform1f(r.u.uArrive, this.first);
-    if (r.u.uHour) gl.uniform4f(r.u.uHour, sky.ground[0], sky.ground[1], sky.ground[2], 0);
+    if (r.u.uHour) gl.uniform4f(r.u.uHour, sky.ground[0], sky.ground[1], sky.ground[2], lowExtinction);
     this.dusk = sky.dusk;
     gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
     gl.uniform4fv(r.u.uCalmBox, at.box);

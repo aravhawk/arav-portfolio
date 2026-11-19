@@ -61,17 +61,17 @@ export const SHADE_DIRS = [...inTile(SHADE_AZ.a), ...inTile(SHADE_AZ.b)];
  */
 const SNOW_FIELD = `
 float tent(float n, float gentle, float steep) { return smoothstep(-gentle, 0.0, n) * (1.0 - smoothstep(0.0, steep, n)); }
-float swell(vec2 q) { return 0.0055 * (0.6 * tgn(q * vec2(2.0, 3.0), vec2(2.0, 3.0)) + 0.4 * tgn(q * vec2(3.0, 5.0) + 3.1, vec2(3.0, 5.0))); }
+float swell(vec2 q) { return 0.008 * (0.6 * tgn(q * vec2(2.0, 3.0), vec2(2.0, 3.0)) + 0.4 * tgn(q * vec2(3.0, 5.0) + 3.1, vec2(3.0, 5.0))); }
 float cut(vec2 q) {
   float nd = tgn(q * vec2(2.0, 7.0) + 7.7, vec2(2.0, 7.0)) + 0.3 * tgn(q * vec2(4.0, 15.0) + 1.3, vec2(4.0, 15.0));
-  float drift = tent(nd - 0.1, 0.4, 0.05);
+  float drift = tent(nd - 0.1, 0.64, 0.17);
   float worked = smoothstep(-0.02, 0.26, tgn(q * 3.0 + 9.3, 3.0));
   float ns = tgn(q * vec2(3.0, 25.0) + 2.2, vec2(3.0, 25.0)) + 0.22 * tgn(q * vec2(5.0, 47.0) + 4.4, vec2(5.0, 47.0));
   float sast = tent(ns - 0.04, 0.3, 0.06) * worked;
   float worked2 = smoothstep(0.0, 0.28, tgn(q * 5.0 + 3.9, 5.0));
   float nf = tgn(q * vec2(5.0, 59.0) + 6.1, vec2(5.0, 59.0));
   float fine = tent(nf - 0.05, 0.3, 0.12) * worked2;
-  return 0.0026 * drift + 0.0011 * sast + 0.00045 * fine;
+  return 0.0034 * drift + 0.00065 * sast + 0.00019 * fine;
 }
 vec2 bent(vec2 p) { return p + 0.035 * vec2(tgn(p * 2.0 + 1.7, 2.0), tgn(p * 2.0 + 5.2, 2.0)); }
 `;

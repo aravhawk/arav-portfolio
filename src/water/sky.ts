@@ -212,14 +212,14 @@ function dayKeys(sunAz: number, ridge: number, elEnd: number): [number, Key][] {
       {
         zen: [0.075, 0.19, 0.48],
         mid: [0.27, 0.41, 0.69],
-        hor: [0.74, 0.7, 0.74],
+        hor: [0.66, 0.52, 0.42],
         band: [1.5, 1.0, 0.64],
         az: -1.07,
         el: 0.21,
-        key: mul([1.0, 0.81, 0.56], 3.1),
+        key: mul([1.0, 0.79, 0.56], 1.43),
         keyEl: 0.11,
-        amb: [0.23, 0.34, 0.6],
-        haze: 0.95,
+        amb: [0.12, 0.17, 0.29],
+        haze: 1.52,
         aurora: 0,
         dusk: 0,
         under: 1,
@@ -227,7 +227,7 @@ function dayKeys(sunAz: number, ridge: number, elEnd: number): [number, Key][] {
         tint: [1.0, 1.02, 1.0],
         milk: 1.3,
         clear: 0.92,
-        rake: 0.35,
+        rake: 0.84,
       },
     ],
     // Morning: the clearest, coldest air of the day. The light has lost its gold; snow is blue-white and the sky deep and clean.
@@ -240,10 +240,10 @@ function dayKeys(sunAz: number, ridge: number, elEnd: number): [number, Key][] {
         band: [0.85, 0.82, 0.74],
         az: -1.42,
         el: 0.38,
-        key: mul([0.88, 0.95, 1.0], 2.9),
+        key: mul([0.88, 0.95, 1.0], 2.18),
         keyEl: 0.2,
-        amb: [0.2, 0.37, 0.72],
-        haze: 0.5,
+        amb: [0.17, 0.26, 0.41],
+        haze: 0.38,
         aurora: 0,
         dusk: 0,
         under: 1,
@@ -257,19 +257,20 @@ function dayKeys(sunAz: number, ridge: number, elEnd: number): [number, Key][] {
       {
         zen: [0.045, 0.15, 0.5],
         mid: [0.16, 0.35, 0.72],
-        hor: [0.5, 0.66, 0.86],
+        hor: [0.43, 0.55, 0.67],
         band: [1.0, 0.94, 0.8],
         az: -1.88,
         el: 0.61,
-        key: mul([1.0, 0.97, 0.9], 3.1),
+        key: mul([1.0, 0.94, 0.84], 2.12),
         keyEl: 0.36,
-        amb: [0.26, 0.38, 0.58],
-        haze: 0.8,
+        amb: [0.16, 0.23, 0.34],
+        haze: 0.92,
         aurora: 0,
         dusk: 0,
-        under: 1,
-        mist: 0.3,
-        milk: 1.12,
+        under: 0.82,
+        mist: 0.55,
+        rake: 0.52,
+        milk: 0.70,
       },
     ],
     // Noon: the sun as high as it gets, behind the eye. The hardest, whitest light and the shortest shade; no glare
@@ -291,7 +292,7 @@ function dayKeys(sunAz: number, ridge: number, elEnd: number): [number, Key][] {
         dusk: 0,
         under: 1.05,
         tint: [0.8, 1.0, 1.04],
-        milk: 0.55,
+        milk: 0.29,
         clear: 1.3,
         caust: 1.5,
       },
@@ -478,7 +479,7 @@ function dayKeys(sunAz: number, ridge: number, elEnd: number): [number, Key][] {
 }
 
 /** The moon's own light on snow: silver, a little blue. */
-const MOONLIGHT: V3 = [0.118, 0.152, 0.215];
+const MOONLIGHT: V3 = [0.176, 0.185, 0.197];
 
 /**
  * The night, stop by stop (the dark theme). `az` and `el` are the sun's,
@@ -519,26 +520,26 @@ function nightKeys(sunAz: number, elEnd: number): [number, Key][] {
       say,
       {
         ...lake,
-        zen: [0.003, 0.009, 0.036],
-        mid: [0.009, 0.025, 0.076],
-        hor: [0.034, 0.052, 0.098],
+        zen: [0.006, 0.008, 0.012],
+        mid: [0.015, 0.021, 0.029],
+        hor: [0.060, 0.071, 0.083],
         key: mul(MOONLIGHT, 1.08),
         keyAz: 0.8,
         keyEl: 0.33,
-        amb: [0.022, 0.034, 0.066],
+        amb: [0.016, 0.019, 0.024],
         haze: 0.9,
         aurora: 0,
         mist: 0.4,
       },
     ],
     // The basin: the moon a little dimmer through thin air, so the block's own screen is the brightest thing there.
-    [view, { ...lake, zen: [0.003, 0.009, 0.036], mid: [0.009, 0.025, 0.076], hor: [0.032, 0.05, 0.096], key: mul(MOONLIGHT, 0.82), keyAz: 0.97, keyEl: 0.36, haze: 0.7, aurora: 0 }],
+    [view, { ...lake, zen: [0.006, 0.008, 0.012], mid: [0.015, 0.021, 0.029], hor: [0.042, 0.05, 0.061], key: mul(MOONLIGHT, 0.82), amb: [0.012, 0.016, 0.021], keyAz: 0.97, keyEl: 0.36, haze: 0.7, aurora: 0 }],
     // The confluence: the moon beyond the cliff and to the right. The cliff's face is black; the falls and their mist take the light.
-    [up, { ...lake, zen: [0.003, 0.009, 0.036], mid: [0.009, 0.025, 0.076], hor: [0.032, 0.05, 0.096], key: mul(MOONLIGHT, 1.1), keyAz: 1.08, keyEl: 0.29, haze: 0.85, aurora: 0, mist: 0.3 }],
+    [up, { ...lake, zen: [0.006, 0.008, 0.012], mid: [0.015, 0.021, 0.029], hor: [0.042, 0.05, 0.061], key: mul(MOONLIGHT, 1.1), amb: [0.009, 0.012, 0.016], keyAz: 1.08, keyEl: 0.29, haze: 0.85, aurora: 0, mist: 0.3 }],
     // The rock pool: the moon is low and going, and the aurora has come: the frame's only colour.
-    [bench, { ...lake, zen: [0.003, 0.01, 0.034], mid: [0.008, 0.024, 0.07], hor: [0.028, 0.046, 0.088], key: mul(MOONLIGHT, 0.5), keyAz: 1.14, keyEl: 0.15, amb: [0.02, 0.033, 0.06], haze: 0.8, glow: 1 }],
+    [bench, { ...lake, zen: [0.004, 0.008, 0.013], mid: [0.014, 0.021, 0.029], hor: [0.032, 0.043, 0.054], key: mul(MOONLIGHT, 0.5), keyAz: 1.14, keyEl: 0.15, amb: [0.016, 0.022, 0.028], haze: 0.8, glow: 1 }],
     // Moonset at the tarn: the last of the moon on the ranges. The darkest, stillest frame; the water holds the stars.
-    [bridge, { ...lake, zen: [0.0028, 0.008, 0.032], mid: [0.007, 0.02, 0.064], hor: [0.024, 0.04, 0.08], band: [0.04, 0.06, 0.11], key: mul(MOONLIGHT, 0.1), keyAz: 1.17, keyEl: 0.026, amb: [0.017, 0.027, 0.054], haze: 0.8, aurora: 0 }],
+    [bridge, { ...lake, zen: [0.003, 0.004, 0.006], mid: [0.009, 0.013, 0.018], hor: [0.025, 0.033, 0.041], band: [0.04, 0.06, 0.11], key: mul(MOONLIGHT, 0.1), keyAz: 1.17, keyEl: 0.026, amb: [0.015, 0.018, 0.023], haze: 0.8, aurora: 0 }],
     // The first blue: the moon has gone. The sky ahead deepens to cobalt at the horizon and the stars begin to thin.
     [
       models,
@@ -549,10 +550,10 @@ function nightKeys(sunAz: number, elEnd: number): [number, Key][] {
         band: [0.06, 0.13, 0.32],
         az: 0.4,
         el: -0.16,
-        key: [0, 0, 0],
+        key: [0.015, 0.022, 0.034],
         keyAz: 1.19,
         keyEl: 0.02,
-        amb: [0.018, 0.034, 0.08],
+        amb: [0.020, 0.028, 0.044],
         haze: 0.9,
         aurora: 0,
         dusk: 0,
@@ -561,7 +562,7 @@ function nightKeys(sunAz: number, elEnd: number): [number, Key][] {
         moon: 0,
       },
     ],
-    // The blue hour: an even cobalt light from the whole sky and no shadow anywhere. Snow is blue, water steel.
+    // Blue hour: diffuse cobalt overhead, with a broad, brighter horizon reflected in the steel-blue water.
     [
       fork,
       {
@@ -571,10 +572,10 @@ function nightKeys(sunAz: number, elEnd: number): [number, Key][] {
         band: [0.1, 0.19, 0.38],
         az: 0.5,
         el: -0.12,
-        key: [0, 0, 0],
+        key: [0.043, 0.055, 0.071],
         keyAz: sunAz,
-        keyEl: 0.05,
-        amb: [0.04, 0.076, 0.17],
+        keyEl: 0.15,
+        amb: [0.035, 0.049, 0.067],
         haze: 1.0,
         aurora: 0,
         dusk: 0,

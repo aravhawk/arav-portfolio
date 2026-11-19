@@ -128,9 +128,9 @@ uniform vec3 uKeyDir;
 uniform vec3 uAmbCol;
 uniform vec4 uMoon;        // the first screen's moon before dawn: xyz where it stands, w: how much of it there is (none by day, none once the eye has left the lake)
 uniform vec4 uSkyK;        // x: haze, y: how much aurora is left, z: 0..1 how far the sky has come to the ending's, w: the light left in the water's own body
-uniform vec4 uAir;         // the hour's air. x: mist lying low over the water, y: a veil of high cloud, z: how many of the stars are left
+uniform vec4 uAir;         // the hour's air. x: mist lying low over the water, y: a veil of high cloud, z: how many of the stars are left, w: air extinction from the camera
 uniform float uArrive;     // 0..1: how far the first screen's light has arrived (1 everywhere else)
-uniform vec4 uHour;        // the hour's ground. x: how strongly a slope answers a low light (0: the morning's even snow), y: how much snow the wind is lifting, z: 0..1 the last light: only what stands high still has the sun
+uniform vec4 uHour;        // the hour's ground. x: how strongly a slope answers a low light (0: the morning's even snow), y: how much snow the wind is lifting, z: 0..1 the last light: only what stands high still has the sun, w: extinction in low mist
 uniform vec4 uRange;       // how the ranges are lit. x: by the side the morning finds, y: from overhead, z: by the side the evening finds; w: 0..1 the first rose light on the highest peaks
 uniform vec4 uSea;         // x: 1 when the open sea is near enough to be seen, y: 0..1 the camera has settled on the ending, z: u left of which the water is kept calm for the words, w: v under which it is (narrow screens), or 0
 uniform vec4 uCalmBox;     // where the words now showing stand, in vUv: x0, y0, x1, y1
@@ -616,7 +616,7 @@ vec3 skyAll(vec3 d, float clouds) { return withRidges(skyColor(d, clouds), d, cl
  */
 
 /** Where the night's one light stands, low: the moon while it is up, then the first light. */
-vec3 dawnDir() { return normalize(vec3(normalize(uKeyDir.xy + 1e-5), 0.14)); }
+vec3 dawnDir() { return uKeyDir; }
 
 /** The night sky as a face of ice gives it back: no stars, no rays, the curtain as a soft wash. Below the horizon, dark water. */
 vec3 skyNightOn(vec3 r) {
@@ -642,7 +642,7 @@ vec3 iceNight(vec3 n, vec3 nf, vec3 rd, float thick, float gloss, float shut) {
   float thin = exp(-max(thick, 0.0) / 90.0);
   // (What light there is comes from the sky overhead and from low on the dawn's side: a piece of ice has a lit side and a dark one.)
   float form = 0.5 + 0.5 * dot(n, dawnDir());
-  vec3 col = S.amb * vec3(0.26, 0.34, 0.42) * (0.3 + 0.5 * max(nf.z, 0.0) + 0.75 * form * form) * (1.0 - 0.5 * shut) + vec3(0.011, 0.03, 0.058) * thin * (1.0 - 0.6 * shut);
+  vec3 col = S.amb * vec3(0.26, 0.34, 0.42) * (0.3 + 0.5 * max(nf.z, 0.0) + 0.75 * form * form) * (1.0 - 0.5 * shut) + vec3(0.014, 0.021, 0.026) * thin * (1.0 - 0.6 * shut);
   // What lies on the face: the sky, the more the more glancing the eye, and most in the glazed lanes.
   vec3 rr = reflect(rd, n);
   vec3 sky = mix(skyNightOn(rr), vec3(0.004, 0.012, 0.03), shut * (1.0 - smoothstep(0.5, 0.9, rr.z)));
@@ -660,7 +660,7 @@ vec3 iceNight(vec3 n, vec3 nf, vec3 rd, float thick, float gloss, float shut) {
 /** Snow on ice before dawn: the palest thing on it, a shade over the night's own snow; the dawn's side a little warm, the curtain's light on what lies level. */
 vec3 snowNight(vec3 n) {
   vec3 dw = dawnDir();
-  return vec3(0.74, 0.8, 0.9) * (S.amb * (0.62 + 0.3 * max(n.z, 0.0)) + S.key * 0.62 * mix(1.0, 0.15, gDusk) * clamp(dot(n, dw) / 0.14, 0.0, 2.2)) + uAurora * vec3(0.5, 0.75, 1.0) * 0.03 * max(n.z, 0.0);
+  return vec3(0.84, 0.85, 0.87) * (S.amb * (0.62 + 0.3 * max(n.z, 0.0)) + S.key * 0.62 * mix(1.0, 0.15, gDusk) * clamp(dot(n, dw) / max(dw.z, 0.09), 0.0, 2.2)) + uAurora * vec3(0.5, 0.75, 1.0) * 0.03 * max(n.z, 0.0);
 }
 
 /* ---------- the pictures ---------- */
@@ -1309,7 +1309,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
     // sastrugi under the eye are a quiet grain on them, not a crumpled surface.)
     // (And under a low raking light seen from high up: the long forms carry the gold and the shade, and the fine
     // work is a grain on them.)
-    float fineN = (1.0 - 0.5 * uNight) * (1.0 - 0.6 * uHour.x * high);
+    float fineN = (1.0 - 0.88 * uNight) * (1.0 - 0.6 * uHour.x * high);
     lit *= 1.0 - 0.88 * fineN * mix(0.14, smoothstep(0.0, 0.07 * clamp(foot / 0.28, 1.0, 3.0), mix(c.z, c.w, kAz) + mA - tanEl), fc);
     rel += (c.xy * GS) * fc * fineN;
   } else { lit *= 0.877; }
@@ -1342,7 +1342,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   sun = mix(1.0, sun, 0.4 + 0.5 * uHour.x * (1.0 - calm)) * mix(1.0, lit, 1.0 - 0.9 * calm) * slabShade;
   vec4 gr = textureLod(uGrain, p / 150.0, lodFor(foot, 150.0, 256.0));
   // (Before dawn there is no glare to hide the snow's grain: the crust shows, a little, in the cold light.)
-  vec3 snow = mix(vec3(0.93, 0.94, 0.95), vec3(0.74, 0.8, 0.9), uNight) * (0.965 + 0.07 * gr.g + uNight * (0.1 * (gr.g - 0.5) + 0.05 * (gr.a - 0.5)));
+  vec3 snow = mix(vec3(0.93, 0.94, 0.95), vec3(0.84, 0.85, 0.87), uNight) * (0.965 + 0.07 * gr.g + uNight * (0.1 * (gr.g - 0.5) + 0.05 * (gr.a - 0.5)));
   vec3 stone = mix(vec3(0.085, 0.09, 0.1), vec3(0.05, 0.055, 0.07), uNight) * (0.7 + 0.7 * gr.g);
   vec3 blue = mix(vec3(0.3, 0.52, 0.62), vec3(0.2, 0.36, 0.46), uNight);
   // The outcrop: dark bedded rock, wet at its foot, snow only in its hollows.
@@ -1374,7 +1374,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
     float kc = 1.0 - 0.9 * calm;
     float wr = clamp(ndl / max(L.z, 0.07), 0.0, 2.6);
     // (Under the words it lies evenly: a light this low would pick out every ripple the calm ground has left.)
-    moonN = mix(1.0, wr, 0.62 * (1.0 - 0.8 * calm)) * mix(1.0, lit, kc) * slabShade;
+    moonN = mix(1.0, wr, 0.94 * (1.0 - 0.8 * calm)) * mix(1.0, lit, kc) * slabShade;
     // (At the ending the first sun is far brighter than a moon: the snow takes a little of it and stays the morning's blue.)
     vec3 keyN = S.key * 0.62 * mix(1.0, 0.15, gDusk);
     // (Under the aurora the snow that looks up at it holds a breath of its colour.)
@@ -1384,7 +1384,8 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   float glintK = (1.0 - smoothstep(2.0, 9.0, foot)) * (1.0 - bare) * (1.0 - calm);
   vec3 rr = reflect(dir, n);
   float toKey = max(dot(rr, L), 0.0);
-  if (glintK > 0.0) {
+  // A rough crystal flashes only near the reflected light, and only on the lit side.
+  if (glintK > 0.0 && toKey > 0.72 && lit > 0.25) {
     float sp = sparkle(p, foot, dir);
     float tk = toKey * toKey; tk *= tk;
     col += (S.key * 0.55 * lit * step(0.3, sun) * (1.0 - uNight) + S.key * (0.03 + 7.0 * tk * tk) * step(0.3, moonN) * uNight) * sp * glintK;
@@ -1612,7 +1613,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
     // a floor, lit from above; the water the melt opens is a depth.
     // (Its snow lies nearly level: lit across its full relief by the low first light it banded like a swell.)
     vec3 nN = normalize(vec3(-rel * 0.2, 1.0));
-    vec3 snowN = vec3(0.74, 0.8, 0.9) * (S.key * max(dot(nN, L), 0.0) + (S.amb * 0.8 + uAurora * 0.035) * (0.62 + 0.38 * nN.z)) * (0.94 + 0.12 * g.r);
+    vec3 snowN = vec3(0.84, 0.85, 0.87) * (S.key * max(dot(nN, L), 0.0) + (S.amb * 0.8 + uAurora * 0.035) * (0.62 + 0.38 * nN.z)) * (0.94 + 0.12 * g.r);
     // (Air is clouded in it in long drifts of its own, where the snow lies thickest.)
     float cloudI = 0.5 + 0.7 * big;
     vec3 iceN = vec3(0.011, 0.028, 0.046) * (0.7 + 0.5 * under) + vec3(0.016, 0.036, 0.05) * smoothstep(0.45, 0.8, cloudI) * (1.0 - 0.6 * nearK);
@@ -1687,14 +1688,14 @@ vec3 iceCut(vec2 p, float s, float tall) {
   // (Before dawn it is the ice's thickness under the sky: a pale cold band, a little greener and brighter toward
   // the water, where the curtain's light comes back up off it. It is lit, it does not shine.)
   // (It is ice in the sky's light, never a light of its own: paler than the water, duller than the snow over it.)
-  vec3 lit = mix(S.amb * 1.15 + S.key * 0.07, S.amb * 2.4 + uAurora * 0.1 + S.key * 0.3, uNight);
+  vec3 lit = mix(S.amb * 1.15 + S.key * 0.07, S.amb * 1.05 + uAurora * 0.05 + S.key * 0.22, uNight);
   vec3 top = mix(vec3(0.8, 0.9, 0.96), vec3(0.6, 0.72, 0.82), uNight) * lit;
   vec3 foot = mix(vec3(0.2, 0.46, 0.6), vec3(0.2, 0.36, 0.46), uNight) * lit;
   // (Wet and dark where it meets the water.)
   vec3 face = mix(top, foot, smoothstep(0.0, 0.85, s)) * (0.88 + 0.24 * streak) * (0.92 + 0.16 * band) * (1.0 - 0.3 * smoothstep(0.82, 1.0, s));
   // The lip: packed snow standing over the cut.
   float w = min(1.4 / max(tall, 1.0), 0.3);
-  vec3 lip = mix(vec3(0.97, 0.985, 1.0), vec3(0.12, 0.2, 0.24), uNight);
+  vec3 lip = vec3(0.9, 0.93, 0.95) * lit;
   face = mix(face, lip, 1.0 - smoothstep(w * 0.6, w * 1.3, s));
   return face;
 }
@@ -1849,11 +1850,10 @@ vec3 cliffIce(float f, float along, float tall, float px, vec2 nP) {
 }
 /** The air between the eye and something t away, laid over its colour. */
 vec3 confAir(vec3 c, vec3 dir, float t) {
-  float thin = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
   vec3 air = airAt(dir.xy);
   air = mix(air, mix(S.hor, air, 0.45), uNight);
   // (The same air as the ground it stands on, at any distance: far off the cliff is a low shelf of ice in the land's own light, never a paler shape hung in front of it.)
-  return mix(c, air, 1.0 - exp(-t * 0.00021 * S.haze * thin));
+  return mix(c, air, 1.0 - exp(-t * uAir.w));
 }
 /** The cliff's second face: from the corner north along the river that leaves, looking west. */
 vec3 confWest(vec3 col, vec3 dir, float landAt0) {
@@ -2201,10 +2201,9 @@ vec4 poolRim(vec2 pw, float inside, float footL, vec3 sky) {
   vec3 snow = mix(vec3(0.93, 0.94, 0.96) * (S.key * 0.24 + S.amb * 0.8), snowNight(vec3(0.0, 0.0, 1.0)), uNight);
   vec3 col = mix(ice, snow, dust * 0.85) + sky * 0.14;
   // (Before dawn its lip is thin ice with the cold in it, not a lit line.)
-  col += mix(vec3(0.85, 0.96, 1.0) * (S.amb * 0.7 + S.key * 0.14), vec3(0.011, 0.03, 0.058) * (0.4 + 0.6 * g.b), uNight) * edge;
-  // The picture's light, from underneath.
-  float dS = max(sheetEdge(pw), 0.0);
-  col += sheetGlow() * (0.5 + 1.2 * edge) * exp(-dS / 150.0) * uNight * uSheetOn;
+  col += mix(vec3(0.85, 0.96, 1.0) * (S.amb * 0.7 + S.key * 0.14), S.amb * vec3(0.43, 0.52, 0.61) * (0.4 + 0.6 * g.b), uNight) * edge;
+  // At the lip the exposed bevel reflects the water it meets.
+  col = mix(col, sky, edge * 0.12);
   return vec4(col, a * (0.82 + 0.18 * edge));
 }
 // The blocks of ice that stand in the pool. xy: where, z: a sphere round each that holds all of it above the water.
@@ -3645,9 +3644,8 @@ vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow)
   // (Its image in the water is the water's: darker than the ice that throws it, and bluer.)
   if (soft > 0.5) col *= mix(vec3(0.58, 0.72, 0.84), vec3(0.7, 0.8, 0.9), uNight);
   // (Seen from far off it stands in the valley's air, as the land round it does.)
-  float thin = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
   vec3 air = airAt(rd.xy);
-  return mix(col, mix(air, mix(S.hor, air, 0.45), uNight), (1.0 - exp(-t * 0.00021 * S.haze * thin)) * (1.0 - soft));
+  return mix(col, mix(air, mix(S.hor, air, 0.45), uNight), (1.0 - exp(-t * uAir.w)) * (1.0 - soft));
 }
 #endif
 
@@ -3737,11 +3735,9 @@ void main() {
     // (And it stands in the valley's air like everything else at its distance: the hour's haze lies in front of it,
     // and the hour's mist, so far off it comes out of the air and is never a pale ghost of itself on a clear horizon.)
     if (slabCov > 0.0) {
-      float thinS = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
-      slabCol = mix(slabCol, airAt(dir.xy), 1.0 - exp(-slabT * 0.00021 * S.haze * thinS));
+      slabCol = mix(slabCol, airAt(dir.xy), 1.0 - exp(-slabT * uAir.w));
       if (uAir.x > 0.0) {
-        float lowS = (1.0 - exp(-uCamPos.z / 70.0)) / max(uCamPos.z / 70.0, 1e-3);
-        slabCol = mix(slabCol, mistColor(dir.xy), (1.0 - exp(-max(slabT - 420.0, 0.0) * 0.0022 * lowS)) * 0.9 * uAir.x);
+        slabCol = mix(slabCol, mistColor(dir.xy), (1.0 - exp(-max(slabT - 420.0, 0.0) * uHour.w)) * 0.9 * uAir.x);
       }
     }
   }
@@ -3998,9 +3994,7 @@ void main() {
     // ---- the air: haze that lies low and thickens with distance. From
     // high up the ray crosses less of it; near the ground it hides the far
     // end of the world.
-    const float HF = 320.0;
-    float thin = (1.0 - exp(-uCamPos.z / HF)) / max(uCamPos.z / HF, 1e-3);
-    float fog = 1.0 - exp(-t * 0.00021 * S.haze * thin);
+    float fog = 1.0 - exp(-t * uAir.w);
     // (Before dawn the air over the name is clear: the ice round a mirror of the sky is the darkest on the lake.)
     fog *= 1.0 - 0.8 * uNight * gNameK * max(aIce, gPond);
     // (And by day the cold air over the far lake's bare ice is clear enough to leave its mirror something to show.)
@@ -4023,11 +4017,9 @@ void main() {
     // banks, in long banks with thinner air between; near the eye there is none, and it gathers with distance until
     // the far reach is lost in it. It is lit by whatever lights the ground.
     if (uAir.x > 0.0) {
-      const float HM = 70.0;
-      float lowM = (1.0 - exp(-uCamPos.z / HM)) / max(uCamPos.z / HM, 1e-3);
       float overW = 1.0 - smoothstep(0.0, 520.0, sd0);
       float bankM = 0.72 + 0.28 * sin(p.x * 0.0029 + 1.7 * sin(p.y * 0.0021 + uTime * 0.012) + uTime * 0.008);
-      float mistK = (1.0 - exp(-max(t - 420.0, 0.0) * 0.0022 * lowM * bankM)) * mix(0.25, 1.0, overW) * uAir.x;
+      float mistK = (1.0 - exp(-max(t - 420.0, 0.0) * uHour.w * bankM)) * mix(0.25, 1.0, overW) * uAir.x;
       col = mix(col, mistColor(dir.xy), mistK * 0.9 * (1.0 - clearK));
     }
     // The horizon is soft: the same mist that lies at the ranges' foot.
@@ -4194,24 +4186,19 @@ void main() {
   // (Most of the frame is nowhere near them: it is let go at once.)
   // (The ending's words need none of it: they stand over the near sea, which is deep and dark of itself. Nothing is
   // laid over that picture.)
-  // (Its reach is measured in the frame's height: across an upright frame that is a larger share of the width.)
-  // (It has no outline: it is strongest behind the words and falls away as a bank of mist does, over a third of the
-  // frame's height, along a border that wanders. Nothing in it is a straight line or a corner.)
-  const float LEE_R = 0.38;
-  float leeX = LEE_R / min(uLens.y, 1.0);
-  if (uCalmK.x > 0.0 && uCalmK.y < 0.5 && vUv.y < uCalmBox.w + LEE_R && vUv.y > uCalmBox.y - LEE_R && vUv.x < uCalmBox.z + leeX && vUv.x > uCalmBox.x - leeX) {
-    vec2 cq = abs(vUv - (uCalmBox.xy + uCalmBox.zw) * 0.5) - (uCalmBox.zw - uCalmBox.xy) * 0.5;
-    cq.x *= uLens.y;
-    float cd = length(max(cq, 0.0)) + min(max(cq.x, cq.y), 0.0);
-    vec2 lw = vec2(vUv.x * uLens.y, vUv.y);
-    if (cd > 0.0) cd += 0.04 * sin(lw.x * 8.3 + 2.1 * sin(lw.y * 6.7 + 1.3) + lw.y * 3.1) * min(cd * 10.0, 1.0);
-    float cg = max(cd + 0.012, 0.0) / 0.14;
-    float ck = exp(-0.5 * cg * cg) * (1.0 - smoothstep(0.28, LEE_R, cd)) * uCalmK.x;
+  // The falloff follows an ellipse around the ink. Its centre has no flat plateau,
+  // and the density falls to zero before the support boundary.
+  if (uCalmK.x > 0.0 && uCalmK.y < 0.5) {
+    vec2 halfBox = 0.5 * (uCalmBox.zw - uCalmBox.xy);
+    vec2 radii = halfBox + vec2(0.15 / uLens.y, 0.19);
+    vec2 q = (vUv - uCalmBox.xy - halfBox) / radii;
+    float r2 = dot(q, q);
+    float ck = (1.0 - smoothstep(0.0, 4.0, r2)) * uCalmK.x;
     if (ck > 0.002) {
       float l = max(dot(col, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
       float shadeK = uNight;
-      const float CAP = 0.082;
-      const float FLOOR = 0.165;
+      float CAP = clamp(S.key.g * 0.8 - 0.08, 0.038, 0.084);
+      float FLOOR = 0.165 + 0.08 * uHour.z;
       float capped = 0.5 * (l + CAP - sqrt((l - CAP) * (l - CAP) + 0.09 * CAP * CAP));
       float lifted = 0.5 * (l + FLOOR + sqrt((l - FLOOR) * (l - FLOOR) + 0.09 * FLOOR * FLOOR));
       col *= mix(1.0, capped / l, ck * shadeK);
@@ -4237,10 +4224,12 @@ void main() {
     }
   }
   vec3 xa = col * 1.12;
-  col = clamp((xa * (2.51 * xa + 0.03)) / (xa * (2.43 * xa + 0.59) + 0.14), 0.0, 1.0);
-  col = pow(max(col, 0.0), vec3(1.0 / 2.2));
-  float gn = hash21(gl_FragCoord.xy + fract(uTime * 7.31) * vec2(317.0, 113.0)) - 0.5;
+  // Display-referred fit to the filmic response: a lifted toe, a long shoulder
+  // below display white, and the transfer to screen space in one quotient.
+  col = (xa * (3.39 * xa + 6.0) + 0.0127) / (xa * (3.42 * xa + 5.95) + 1.0);
+  // Interleaved gradient noise in display space. The offset advances the grain without moving the scene.
+  float gn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)) + fract(uTime * 0.73))) - 0.5;
   float lum = dot(col, vec3(0.3, 0.6, 0.1));
-  col += gn * (1.6 / 255.0 + 0.022 * (1.0 - 0.6 * uSea.y) * (0.35 + 2.6 * lum * (1.0 - lum)));
+  col += gn * (1.4 / 255.0 + 0.020 * (1.0 - 0.6 * uSea.y) * (0.35 + 2.6 * lum * (1.0 - lum)));
   o = vec4(col, 1.0);
 }`;

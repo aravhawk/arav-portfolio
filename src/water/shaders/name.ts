@@ -280,7 +280,7 @@ vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, ve
   // (Before dawn the plates are ice in moonlight: clear and dark in the body, the sky's own colour in the frost of
   // their sawn faces, and the moon in their edges. As the first screen comes up the light arrives across them, from
   // the moon's side to the other.)
-  vec3 keyP = S.key * mix(1.0, mix(0.3, 1.0, smoothstep(0.0, 0.3, uArrive * 1.45 - vUv.x)), uNight);
+  vec3 keyP = mix(S.key, vec3(dot(S.key, vec3(0.2126, 0.7152, 0.0722))), 0.74 * uNight) * mix(1.0, mix(0.3, 1.0, smoothstep(0.0, 0.3, uArrive * 1.45 - vUv.x)), uNight);
   vec3 behind = mix(S.key * (0.05 + 0.23 * tw) * (0.3 + 0.7 * up) + S.amb * 0.56, keyP * (0.05 + 0.62 * tw) + S.amb * 0.8 + uAurora * 0.03, uNight);
   // It deepens toward the foot: the light has further to come down the plate, and the black ice under it gives none back.
   float deep = mix(mix(0.22, 0.56, uNight), 1.0, smoothstep(0.0, 0.7, hK)) * mix(1.0, 0.78, (1.0 - up) * (1.0 - uNight));
@@ -290,9 +290,9 @@ vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, ve
   vec3 Ll = qFrom(Q, L);
   vec2 sunG = normalize(Ll.xz + vec2(1e-4, 0.3));
   float toSun = clamp(0.5 + 0.5 * dot(gd, sunG), 0.0, 1.0);
-  vec3 cold = mix(vec3(1.0, 0.97, 0.9), vec3(0.78, 0.9, 1.05), uNight);
+  vec3 cold = mix(vec3(1.0, 0.97, 0.9), vec3(0.91, 0.96, 1.0), uNight);
   vec3 keyL = mix(S.key, keyP * 4.8 + S.amb * 1.0, uNight);
-  vec3 skyLit = mix(S.amb * 1.3 + S.key * 0.03, mix(S.amb, vec3(dot(S.amb, vec3(0.3333))), 0.45) * 2.7 + uAurora * 0.1 + keyP * 0.45, uNight);
+  vec3 skyLit = mix(S.amb * 1.3 + S.key * 0.03, mix(S.amb, vec3(dot(S.amb, vec3(0.3333))), 0.75) * 2.7 + uAurora * 0.1 + keyP * 0.45, uNight);
   vec3 lake = nameLake();
 
   // What is in it, read once for a face and an edge alike: slow clouds of trapped air, curtains drawn up through
