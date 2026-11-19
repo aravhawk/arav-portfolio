@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { PROJECTS } from '@/content/projects';
-import { getAllPosts } from '@/lib/blog';
+import { getAllPosts } from '@/lib/posts';
 import { abs } from '@/lib/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {

@@ -1,4 +1,4 @@
-import { getAllPostSlugs, getPostBySlug } from '@/lib/blog';
+import { getAllPostSlugs, getPostBySlug } from '@/lib/posts';
 import { formatPostDate } from '@/lib/dates';
 import { OG_SIZE, OG_TYPE, ogAlt, renderOg } from '@/lib/og';
 

@@ -19,7 +19,8 @@ being rewritten to meet them.
   read live (`src/lib/metrics`) and stamped with when they were read.
   Merged pull requests count only repositories he does not own.
 - "Selected for OpenAI DevDay 2026" is about him, not the company.
-- Words never say "Jarvis" or "Friday". No photo of him.
+- The names of his bots never appear on the public site ("Jarvis",
+  "Friday", "Grok Bot"). No photo of him.
 
 ## What may appear
 

@@ -5,7 +5,7 @@ import { Arrow } from '@/components/bits';
 import { openingLines } from '@/components/blog/opening';
 import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
 import { PageShell } from '@/components/PageShell';
-import { getAllPosts } from '@/lib/blog';
+import { getAllPosts } from '@/lib/posts';
 import { formatPostDate } from '@/lib/dates';
 import { pageMeta } from '@/lib/meta';
 

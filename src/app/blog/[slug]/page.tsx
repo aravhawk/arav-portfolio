@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
-import { getPostBySlug, getAllPostSlugs, getAdjacentPosts } from '@/lib/blog';
+import { getPostBySlug, getAllPostSlugs, getAdjacentPosts } from '@/lib/posts';
 import { postContents } from '@/components/blog/contents';
 import { mdxComponents } from '@/components/blog/MDXComponents';
 import { WAY_TO_WRITING } from '@/components/NextBand';

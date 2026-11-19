@@ -108,3 +108,18 @@ struggled.
 ## (e) PASS criteria
 
 The eight in `docs/site-system/consistency-checklist.md`.
+
+## Added: the blog is part of V4 (Arav, t309u)
+
+The blog index and post pages get the full V4 design: the same
+motion, light, materials, transitions and frame budget, as designed
+states. `content/posts` and `blog-editor/` stay untouched. No
+newsletter, CMS, MCP, backend or email work; the UI is kept
+separable from where posts come from (one typed `PostSource` seam,
+`docs/site-system/blog.md`). Dates in America/Chicago with the
+publication date kept apart from the date of the work; a designed
+share image for each post; every address on https://arav.pro; a post
+at 1440 and 390 in the typography checks and Lighthouse; the index
+designed for one post and for many; no bot names on the public site.
+The layout, type and seam are this thread's work; the scene behind
+the blog's pages is Astra's, in the inner pages' task.

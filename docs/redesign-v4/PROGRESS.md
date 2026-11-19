@@ -1518,3 +1518,18 @@ and where each point stands:
   are definitions, not one-offs. Before V4 is called done a fresh
   helper adds a throwaway section from the pack alone on a scratch
   branch.
+
+### The blog is part of V4 (Arav, t309u, Nov 18)
+
+The blog index and post pages are in scope as fully designed states
+with the site's motion, light, materials, transitions and frame
+budget; `content/posts` and `blog-editor/` stay untouched; no
+backend, CMS or newsletter work, but the UI is kept separable from
+the content's source and that seam is documented
+(`docs/site-system/blog.md`). Also from that note: bot names never
+appear on the public site. "Grok Bot" was in three lines of Agent
+Bridge's copy (the home line, the page's summary, the film's alt
+text); they now say "a second assistant". The project's own public
+README, repository description and launch film use that name; the
+site links to the repository and embeds the film as before, and that
+is flagged here for Arav's decision.

@@ -12,6 +12,7 @@ redesigning the whole.
 | [light-and-materials.md](light-and-materials.md) | The day and the night, the one ice, water, snow, air, and the surfaces of the DOM |
 | [performance.md](performance.md) | The budget and how to measure it on the owner's display |
 | [copy.md](copy.md) | How the site speaks, and what may appear on it |
+| [blog.md](blog.md) | The blog's pages, its rules, and the seam between its UI and where posts come from |
 | [recipes.md](recipes.md) | Step by step: add, retire or restore a station, a home section, an inner page |
 | [consistency-checklist.md](consistency-checklist.md) | The whole-site pass every change must clear, and the critics' PASS criteria |
 | [pitfalls.md](pitfalls.md) | What has gone wrong before |

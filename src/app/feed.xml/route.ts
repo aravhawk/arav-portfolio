@@ -1,5 +1,5 @@
 import { Feed } from 'feed';
-import { getAllPosts } from '@/lib/blog';
+import { getAllPosts } from '@/lib/posts';
 import { SITE_URL } from '@/lib/site';
 
 // The feed changes only when a post does: it is built once, with the site.
