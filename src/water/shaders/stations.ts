@@ -1336,10 +1336,10 @@ float faceNear(vec3 p) {
 // (D: how far the place is from the river's middle line.)
 float canyonAirD(vec3 p, float D) {
   float z = p.z + FREEBOARD;
+  float plumb = p.x > ${f(FACE.x - 160)} ? faceNear(p) : 0.0;
+  if (plumb >= 1.0) return CY_W - D;
   float along = (p.x + p.y) * 0.7;
   float relief = 9.0 * sin(along * 0.021 + 1.6 * sin(z * 0.017)) + 4.0 * sin(z * 0.09 + along * 0.004) + 3.0 * sin(along * 0.083 + z * 0.05);
-  // (Only the hall's east wall is cut plumb: nowhere else is it asked.)
-  float plumb = p.x > ${f(FACE.x - 160)} ? faceNear(p) : 0.0;
   return CY_W + (CY_LEAN * z + relief) * (1.0 - plumb) - D;
 }
 float canyonAir(vec3 p) { return canyonAirD(p, canyonD(p.xy)); }
@@ -1440,14 +1440,19 @@ vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
 float glacierTop(vec2 p) {
   vec2 e = min(p - CY_LO, CY_HI - p);
   float m = min(e.x, e.y);
-  // (Its front comes and goes in slow lobes along its length: one clean cliff, never islands of ice in snow.)
-  float rag = 34.0 * sin(p.x * 0.011 + 1.3) * cos(p.y * 0.004) + 16.0 * sin(p.y * 0.012 + 0.4) * cos(p.x * 0.004) + 10.0 * sin((p.x + p.y) * 0.0171 + 2.0);
-  // (At the glacier's own edge it has no height at all: nothing stands where the ice begins.)
-  float rise = smoothstep(0.0, 170.0, m + rag - 40.0) * smoothstep(0.0, 60.0, m);
+  if (m <= 0.0) return 0.0;
+  // The ragged front varies by at most 60 units. Beyond 270 both rise factors are one.
+  float rise = 1.0;
+  if (m < 270.0) {
+    float rag = 34.0 * sin(p.x * 0.011 + 1.3) * cos(p.y * 0.004) + 16.0 * sin(p.y * 0.012 + 0.4) * cos(p.x * 0.004) + 10.0 * sin((p.x + p.y) * 0.0171 + 2.0);
+    rise = smoothstep(0.0, 170.0, m + rag - 40.0) * smoothstep(0.0, 60.0, m);
+  }
   float roll = 0.92 + 0.05 * sin(p.x * 0.006 + 0.7) * sin(p.y * 0.0052 + 2.0) + 0.03 * sin(p.y * 0.021 + p.x * 0.004);
-  float cv = sin(p.y * 0.05 + 3.0 * sin(p.x * 0.004) + 1.7 * sin(p.x * 0.013));
-  // (The crevasses lie well back from the canyon: its rim is one unbroken lip of snow.)
-  float slot = smoothstep(0.84, 0.98, cv) * smoothstep(150.0, 300.0, m) * smoothstep(600.0, 760.0, abs(p.x - 1660.0));
+  float slot = 0.0;
+  if (m > 150.0 && abs(p.x - 1660.0) > 600.0) {
+    float cv = sin(p.y * 0.05 + 3.0 * sin(p.x * 0.004) + 1.7 * sin(p.x * 0.013));
+    slot = smoothstep(0.84, 0.98, cv) * smoothstep(150.0, 300.0, m) * smoothstep(600.0, 760.0, abs(p.x - 1660.0));
+  }
   return CY_H * rise * roll - 30.0 * slot;
 }
 // The hall's east wall is one flat plane where the picture lies. A ray the march has brought to that wall is set
@@ -1607,7 +1612,12 @@ vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
   float up = clamp((p.z + FREEBOARD) / (topZ + FREEBOARD), 0.0, 1.0);
   float smooth_ = wall > 1.5 ? 0.0 : faceNear(p);
   gShut = 1.0 - 0.72 * up;
-  vec3 col = wallIce(p, n, rd, t, up, topZ, smooth_);
+  // A fully covered display pixel replaces the wall beneath it. Keep the original ice
+  // through its antialiased rim and wherever the water can show through the reflection.
+  vec2 paneOffset = abs(p.yz - FACE_AT.yz);
+  vec2 paneInterior = vec2(${f(FACE.w / 2 - 6)}, ${f(FACE.h / 2 - 6)}) - t * uPxAng;
+  bool covered = pic == 1.0 && smooth_ == 1.0 && all(lessThan(paneOffset, paneInterior));
+  vec3 col = covered ? vec3(0.0) : wallIce(p, n, rd, t, up, topZ, smooth_);
   if (smooth_ > 0.0) col = faceIn(col, p, vec3(-1.0, 0.0, 0.0) * step(0.5, smooth_) + n * (1.0 - step(0.5, smooth_)), rd, pic);
   gShut = 0.0;
   // Wet and dark at the waterline.
