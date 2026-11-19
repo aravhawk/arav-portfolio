@@ -930,15 +930,6 @@ html[data-picture] .flight-root > .fl-poster {
   margin-top: 0;
   align-items: center;
 }
-.fl-end-row .end-haptics {
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  font-weight: 480;
-  line-height: 1.35;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--end-ink-2);
-}
 /* The entrance. The small line leads, alone, as the camera comes down to the sea (the block is on from then);
    when the camera rests the block sets (`data-set`): the headline wipes in and the links follow. It leaves fast. */
 .fl-end-words .ending-line {

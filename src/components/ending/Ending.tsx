@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CONTACT } from '@/content/projects';
-import { haptic, hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/lib/haptics';
+import { haptic } from '@/lib/haptics';
 import { Arrow } from '../bits';
 import './ending.css';
 
@@ -36,7 +36,7 @@ function CopyEmail() {
   useEffect(() => () => window.clearTimeout(timer.current), []);
   return (
     <span className="end-email">
-      <a className="end-link" href={`mailto:${CONTACT.email}`}>
+      <a className="end-link end-primary" href={`mailto:${CONTACT.email}`} onClick={() => haptic('medium')}>
         Email
       </a>
       <button type="button" className="end-copy label" onClick={copy} aria-label="Copy email address">
@@ -46,40 +46,18 @@ function CopyEmail() {
   );
 }
 
-/** The user's own switch for haptics. Shown only where a device can buzz. */
-type HapticsState = 'hidden' | 'on' | 'off';
-const subscribeHaptics = (cb: () => void) => {
-  window.addEventListener('hapticschange', cb);
-  return () => window.removeEventListener('hapticschange', cb);
-};
-const readHaptics = (): HapticsState => (hapticsAvailable() ? (hapticsEnabled() ? 'on' : 'off') : 'hidden');
-const readHapticsServer = (): HapticsState => 'hidden';
-
-export function HapticsSetting() {
-  const state = useSyncExternalStore(subscribeHaptics, readHaptics, readHapticsServer);
-  if (state === 'hidden') return null;
-  const toggle = () => {
-    const on = state !== 'on';
-    setHapticsEnabled(on);
-    window.dispatchEvent(new Event('hapticschange'));
-    // Turning it on answers with the thing itself.
-    if (on) haptic('light');
-  };
-  return (
-    <button type="button" className="end-haptics" role="switch" aria-checked={state === 'on'} onClick={toggle}>
-      Haptics {state}
-    </button>
-  );
-}
-
 /**
  * The ways to reach him. `feed`: the row also carries the feed (the home
- * page's ending, which has no footer under it). The haptics switch is a
- * setting and stands in the nav, by the sound control.
+ * page's ending, which has no footer under it). Email is the one action and
+ * leads the row. (The haptics switch is a setting and stands in the nav.)
  */
 export function Contact({ feed = false }: { feed?: boolean }) {
   return (
     <ul className="ending-links">
+      {/* The one action comes first; the rest is a quiet row. */}
+      <li>
+        <CopyEmail />
+      </li>
       <li>
         <a className="end-link" href={CONTACT.github} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
           GitHub <Arrow out />
@@ -94,9 +72,6 @@ export function Contact({ feed = false }: { feed?: boolean }) {
         <a className="end-link" href={CONTACT.linkedin} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
           LinkedIn <Arrow out />
         </a>
-      </li>
-      <li>
-        <CopyEmail />
       </li>
       {feed ? (
         <li>
@@ -129,7 +104,6 @@ export function Footer({ note }: Props) {
           <Link href="/work">Work</Link>
           <Link href="/blog">Writing</Link>
           <a href="/feed.xml">RSS</a>
-          <HapticsSetting />
         </nav>
       </div>
     </footer>

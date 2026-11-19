@@ -5,13 +5,19 @@
 
 .ending {
   --end-ink: #f4f7f8;
+  --end-on: #0b1a26;
   --end-ink-2: #dfe6ea;
   --end-line: rgba(244, 247, 248, 0.34);
 }
 
 .ending-kicker {
   color: var(--end-ink);
-  font-size: 0.75rem;
+  /* The one credential on the page: set as a line to be read, not as a caption. */
+  font-family: var(--font-display);
+  font-size: clamp(1.0625rem, 0.5vw + 0.9rem, 1.375rem);
+  font-weight: 520;
+  letter-spacing: -0.012em;
+  text-transform: none;
 }
 .ending-head {
   font-family: var(--font-accent);
@@ -86,6 +92,20 @@
   align-items: center;
   gap: 12px;
 }
+/* The one action: a solid pill in the row's own ink. */
+.end-link.end-primary {
+  min-height: 48px;
+  padding: 0 clamp(20px, 1.8vw, 30px);
+  border-radius: var(--r-pill);
+  background: var(--end-ink, var(--ink));
+  color: var(--end-on, var(--land));
+}
+.end-link.end-primary::after {
+  content: none;
+}
+.end-link.end-primary:active {
+  transform: scale(0.97);
+}
 .end-copy {
   min-height: 44px;
   padding: 0 12px;
@@ -110,13 +130,7 @@
   flex-wrap: wrap;
   gap: 0 22px;
 }
-.end-haptics {
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-}
-.foot-meta a,
-.end-haptics {
+.foot-meta a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -124,8 +138,7 @@
   transition: color var(--t-fast) ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .foot-meta a:hover,
-  .foot-meta .end-haptics:hover {
+  .foot-meta a:hover {
     color: var(--ink);
   }
 }
@@ -197,9 +210,6 @@
   color: var(--ink-2);
 }
 .foot-meta a,
-.foot-meta .end-haptics {
-  color: inherit;
-}
 /* (At the foot of a long page the ground is in the day's last shade: the small capitals take the stronger ink.) */
 .pg-ground .foot-meta {
   color: var(--ink-3);

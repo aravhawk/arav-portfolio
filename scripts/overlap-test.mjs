@@ -74,8 +74,8 @@ function linesOnPage() {
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (!node.nodeValue || !node.nodeValue.trim()) continue;
     const el = node.parentElement;
-    // (The nav's two controls stand on their own glass, as on the home page: they are not over the bare page.)
-    if (!el || el.closest('.sr-only, .skip, .glass, script, style, noscript, nextjs-portal, [data-nodry]')) continue;
+    // (The nav's two controls stand on their own solid plates, as on the home page: they are not over the bare page.)
+    if (!el || el.closest('.sr-only, .skip, .plate, script, style, noscript, nextjs-portal, [data-nodry]')) continue;
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden') continue;
     // A line that is still fading in or out is not being read yet.

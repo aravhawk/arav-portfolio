@@ -29,8 +29,8 @@ function linesOverPicture() {
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (!node.nodeValue || !node.nodeValue.trim()) continue;
       const el = node.parentElement;
-      // The nav sits on its own glass: it is not over the bare picture.
-      if (el.closest('.glass')) continue;
+      // The nav sits on its own solid plate: it is not over the bare picture.
+      if (el.closest('.plate')) continue;
       // A callout's caption stands on its own opaque plate (checked: not assumed).
       const plate = el.closest('.fl-call-label');
       if (plate && /^rgb\(/.test(getComputedStyle(plate).backgroundColor)) continue;

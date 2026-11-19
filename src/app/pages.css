@@ -36,14 +36,12 @@
   background-color: #e3e8ec;
   background-image:
     url('/media/ground/glint-day.webp'),
-    url('/media/ground/grain-day.webp'),
     linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0) 22%, rgba(255, 222, 184, 0.16) 58%, rgba(74, 98, 140, 0.2) 100%),
     linear-gradient(var(--g-a, 101deg), rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 44%, rgba(92, 124, 160, 0.2) 100%),
     url('/media/ground/drifts-b-day.svg'),
     url('/media/ground/drifts-a-day.svg');
   background-size:
     509px 509px,
-    192px 192px,
     100% 100%,
     100% 100%,
     1130px 1490px,
@@ -53,10 +51,9 @@
     0 0,
     0 0,
     0 0,
-    0 0,
     calc(-260px - var(--g-x, 0px)) calc(340px + var(--g-y, 0px)),
     var(--g-x, 0px) var(--g-y, 0px);
-  background-repeat: repeat, repeat, no-repeat, no-repeat, repeat, repeat;
+  background-repeat: repeat, no-repeat, no-repeat, repeat, repeat;
 }
 :root[data-theme='dark'] .pg-ground {
   --ink-3: #c1c9ce;
@@ -72,7 +69,6 @@
   background-color: #1a222d;
   background-image:
     url('/media/ground/glint-night.webp'),
-    url('/media/ground/grain-night.webp'),
     linear-gradient(180deg, rgba(2, 5, 10, 0) 0%, rgba(2, 5, 10, 0.2) 46%, rgba(2, 5, 10, 0.06) 78%, rgba(236, 160, 110, 0.09) 100%),
     linear-gradient(var(--g-a, 101deg), rgba(150, 178, 214, 0.1) 0%, rgba(150, 178, 214, 0) 40%, rgba(2, 5, 10, 0.34) 100%),
     url('/media/ground/drifts-b-night.svg'),
@@ -343,9 +339,8 @@
 .sec-h {
   margin-bottom: clamp(22px, 2.8vw, 46px);
   padding-top: clamp(18px, 2vw, 30px);
-  background:
-    var(--rule),
-    linear-gradient(180deg, color-mix(in srgb, var(--groove) 42%, transparent), transparent) 0 2px / 100% clamp(28px, 4vw, 64px) no-repeat;
+  /* (The rule alone. A band of shade under it read as a seam behind the heading.) */
+  background: var(--rule);
   font-family: var(--font-display);
   font-size: clamp(1.625rem, 1.5vw + 1.1rem, 2.75rem);
   font-weight: 700;
@@ -738,6 +733,18 @@
   }
   .next-words {
     padding-bottom: clamp(36px, 12vw, 56px);
+  }
+}
+/* On the narrowest phones the block's top line ("Next") stands above the calm the picture was taken with:
+   the same soft veil of the ground's tone, from the foot. */
+@media (max-width: 360px) {
+  .next-view::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--veil) 0%, var(--veil) 42%, transparent 74%);
+    opacity: 0.8;
+    pointer-events: none;
   }
 }
 
