@@ -44,6 +44,8 @@ Insert a definition in `FLIGHT` in `src/water/registry.ts`. The list runs upstre
 - To carve water, supply `paint(bed, tribs, gate)`. The render engine and the audio plan replay those operations. The hour follows the position in the flight. Live band cameras and project order follow the slug. Author any new content, page-specific UI, fallback stills and share art.
 - Run the camera and audio suites, the production build and the consistency checklist. Visit the new rail tick and its two neighbours.
 
+The figure layouts are `contributions` and `downloads`. Select one with `kind: 'figure', layout: 'contributions'` or its downloads equivalent. A title can use the default layout or select a project layout for an image, film or switch.
+
 ## Retire
 
 Remove the definition from the list and remove shader or geometry helpers used only by that definition. Recheck the new join and the water course. For the original eight, inspect specialty media, sound and case-page bindings as well. Archive published content separately when its URL must continue to resolve.

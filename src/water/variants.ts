@@ -1,5 +1,7 @@
-import { subjects, customSubjects, WATER_LOW, type Box } from './registry';
-export type { Box } from './registry';
+import { subjects, WATER_LOW } from './registry';
+import { boxInView, boxRectCut, type Rect, type Box } from './projection';
+export { boxInView, boxRect, boxRectCut, type Rect, type Box } from './projection';
+export { slabInFrame, tarnNear } from './registry';
 /**
  * Which parts of the flight's shading pass a frame needs.
  *
@@ -18,44 +20,18 @@ export type { Box } from './registry';
  * switch from one variant to the next cannot be seen.
  */
 
-import { type Basis, type V3, projectPoint } from './camera';
+import { type Basis } from './camera';
 import { stationsNear } from './moments';
-import { CONF_Y, DELTA, LAKE, POOL, SLAB, TARN } from './world';
+import { DELTA, LAKE } from './world';
 
 /** The theme a variant is compiled for: the day's, the night's, or neither (it is told each frame, and draws the turn between them). */
 export type Mode = 'day' | 'night' | 'any';
 
 /** One bit to a subject. The ground, the water, the sky and the ranges are in every variant. */
-const pass = (name: string) => subjects.find(subject => subject.pass === name);
-const slabSubject = pass('slab');
-const confluence = pass('confluence');
-const poolSubject = pass('pool');
 export const F = {
-  /** the lake's sheet of ice */
-  ICE: 1,
-  /** the block with the product picture, its shade, its image and the white water at its foot */
-  SLAB: slabSubject?.bit ?? 0,
-  /** the confluence: the snowfield, the cliff and its falls, the trails in the river */
-  CONF: confluence?.bit ?? 0,
-  /** the rock pool: its bed and plates, its rim, its boulders */
-  POOL: poolSubject?.bit ?? 0,
-  /** the tarn's two shards */
-  SHARDS: pass('shards')?.bit ?? 0,
-  /** the seracs */
-  COLS: pass('columns')?.bit ?? 0,
-  /** the dam and its sluices */
-  DAM: pass('dam')?.bit ?? 0,
-  /** the lattice of cubes */
-  LAT: pass('lattice')?.bit ?? 0,
-  /** the canyon */
-  CANYON: pass('canyon')?.bit ?? 0,
-  /** the delta's light, the open sea, the ending */
-  SEA: 512,
-  /** the name's letters standing on the sheet: the blocks, their shade, their image, what stands under the water, the pieces that come away (only with FIELD) */
-  NAME: 1024,
-  /** the stretch of bare swept ice the name stands on (only with ICE) */
-  FIELD: 2048,
-} as const;
+  ...Object.fromEntries(subjects.map(subject => [subject.define.replace(/^F_/, ''), subject.bit])),
+  ICE: 1, SEA: 512, NAME: 1024, FIELD: 2048,
+} as Record<string, number>;
 export const F_ALL = subjects.reduce((mask, subject) => mask | subject.bit, F.ICE | F.SEA | F.NAME | F.FIELD);
 /** The name each bit is known by in the pass's source. */
 export const F_DEFINES: string[] = [];
@@ -73,75 +49,11 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-/**
- * Whether any of a box of the world can be in the frame. It errs toward
- * yes: a box is ruled out only when all of it lies behind the eye or beyond
- * one side of the frame (with a little room, for the four rays a pixel may
- * be looked at through).
- */
-export function boxInView(cam: Basis, aspect: number, lo: V3, hi: V3): boolean {
-  const tx = cam.tan * aspect * 1.03 + 0.002;
-  const ty = cam.tan * 1.03 + 0.002;
-  let behind = 0;
-  let left = 0;
-  let right = 0;
-  let below = 0;
-  let above = 0;
-  for (let i = 0; i < 8; i++) {
-    const dx = (i & 1 ? hi[0] : lo[0]) - cam.pos[0];
-    const dy = (i & 2 ? hi[1] : lo[1]) - cam.pos[1];
-    const dz = (i & 4 ? hi[2] : lo[2]) - cam.pos[2];
-    const z = dx * cam.f[0] + dy * cam.f[1] + dz * cam.f[2];
-    const x = dx * cam.r[0] + dy * cam.r[1] + dz * cam.r[2];
-    const y = dx * cam.u[0] + dy * cam.u[1] + dz * cam.u[2];
-    if (z <= 0) behind++;
-    if (x < -z * tx) left++;
-    if (x > z * tx) right++;
-    if (y < -z * ty) below++;
-    if (y > z * ty) above++;
-  }
-  return !(behind === 8 || left === 8 || right === 8 || below === 8 || above === 8);
-}
-
-/** The block's place in the frame: the part of the screen it can be on (vUv: x0, y0, x1, y1), and how many of its corners are behind the eye. */
-export function slabInFrame(cam: Basis, aspect: number) {
-  const sin = Math.sin(SLAB.turn);
-  const cos = Math.cos(SLAB.turn);
-  const nx = -sin;
-  const ny = -cos;
-  const rx = cos;
-  const ry = -sin;
-  let x0 = 1;
-  let y0 = 1;
-  let x1 = 0;
-  let y1 = 0;
-  let behind = 0;
-  for (let i = 0; i < 8; i++) {
-    const side = (i & 1 ? 0.5 : -0.5) * SLAB.w;
-    const back = i & 2 ? SLAB.thick : 0;
-    const z = SLAB.lift + (i & 4 ? SLAB.h : 0);
-    const pr = projectPoint(cam, [SLAB.x + rx * side - nx * back, SLAB.y + ry * side - ny * back, z], aspect);
-    if (pr[2] < 1) behind++;
-    x0 = Math.min(x0, pr[0]);
-    x1 = Math.max(x1, pr[0]);
-    y0 = Math.min(y0, 1 - pr[1]);
-    y1 = Math.max(y1, 1 - pr[1]);
-  }
-  const box: [number, number, number, number] = behind > 0 ? [0, 0, 1, 1] : [x0 - 0.01, y0 - 0.01, x1 + 0.01, y1 + 0.01];
-  return { nx, ny, rx, ry, behind, box };
-}
-
 /** How near the open sea is: 0 too far to be seen, 1 over it (the pass's uSea.x). */
 export function seaNear(cam: Basis): number {
   const toSea = Math.hypot(cam.pos[0] - 1900, cam.pos[1] - DELTA.sea);
   return cam.pos[1] > DELTA.sea ? 1 : 1 - smooth(2600, 3400, toSea);
 }
-
-/** Whether the tarn's shards are near enough to be looked for (the pass's uShardOn). */
-export const tarnNear = (cam: Basis) => Math.hypot(cam.pos[0] - TARN.x, cam.pos[1] - TARN.y) < 3200 && cam.pos[2] < 700;
-
-const confNearCam = (cam: Basis) => cam.pos[1] > CONF_Y - 3300 && cam.pos[1] < CONF_Y + 1500;
-const poolNearCam = (cam: Basis) => Math.abs(cam.pos[0] - (POOL.x + POOL.w / 2)) < 2300 && Math.abs(cam.pos[1] - (POOL.y + POOL.h / 2)) < 2300;
 
 /**
  * What of the lake's ice there is to draw at a point in its melt.
@@ -193,74 +105,6 @@ export function reachInView(cam: Basis, aspect: number, y0: number, y1: number):
   return cy > y1 ? cam.f[1] - side < 0 : cam.f[1] + side > 0;
 }
 
-/** A part of the frame, in the pass's own vUv (u right, v up): x0, y0, x1, y1. */
-export type Rect = [number, number, number, number];
-/**
- * The part of the frame a box of the world can be seen in, with a little
- * room; null when any of it is behind the eye (then it is not known).
- */
-export function boxRect(cam: Basis, aspect: number, [lo, hi]: Box): Rect | null {
-  let x0 = 1e9;
-  let y0 = 1e9;
-  let x1 = -1e9;
-  let y1 = -1e9;
-  for (let i = 0; i < 8; i++) {
-    const pr = projectPoint(cam, [i & 1 ? hi[0] : lo[0], i & 2 ? hi[1] : lo[1], i & 4 ? hi[2] : lo[2]], aspect);
-    if (pr[2] < 1) return null;
-    x0 = Math.min(x0, pr[0]);
-    x1 = Math.max(x1, pr[0]);
-    y0 = Math.min(y0, 1 - pr[1]);
-    y1 = Math.max(y1, 1 - pr[1]);
-  }
-  return [x0 - 0.004, y0 - 0.004, x1 + 0.004, y1 + 0.004];
-}
-
-/**
- * The part of the frame a box of the world can be seen in, whatever of it is behind the eye: the box is cut at the
- * eye's own plane first, so what is left of it is all in front and its corners can be projected. null: none of it is
- * in front of the eye. (It errs wide: where the box runs past the eye the rectangle runs off the frame on that side.)
- */
-export function boxRectCut(cam: Basis, aspect: number, [lo, hi]: Box): Rect | null {
-  const NEAR = 0.5;
-  const tx = cam.tan * aspect;
-  const ty = cam.tan;
-  // The corners, in the eye's frame: across, up, forward.
-  const c: V3[] = [];
-  for (let i = 0; i < 8; i++) {
-    const dx = (i & 1 ? hi[0] : lo[0]) - cam.pos[0];
-    const dy = (i & 2 ? hi[1] : lo[1]) - cam.pos[1];
-    const dz = (i & 4 ? hi[2] : lo[2]) - cam.pos[2];
-    c.push([dx * cam.r[0] + dy * cam.r[1] + dz * cam.r[2], dx * cam.u[0] + dy * cam.u[1] + dz * cam.u[2], dx * cam.f[0] + dy * cam.f[1] + dz * cam.f[2]]);
-  }
-  let x0 = 1e9;
-  let y0 = 1e9;
-  let x1 = -1e9;
-  let y1 = -1e9;
-  let any = false;
-  const put = (x: number, y: number, z: number) => {
-    const u = 0.5 + x / (z * tx) / 2;
-    const v = 0.5 + y / (z * ty) / 2;
-    x0 = Math.min(x0, u);
-    x1 = Math.max(x1, u);
-    y0 = Math.min(y0, v);
-    y1 = Math.max(y1, v);
-    any = true;
-  };
-  for (let i = 0; i < 8; i++) {
-    const a = c[i];
-    if (a[2] >= NEAR) put(a[0], a[1], a[2]);
-    // Each of the box's twelve edges that crosses the eye's plane is cut there.
-    for (let k = 1; k < 8; k <<= 1) {
-      if (i & k) continue;
-      const b = c[i | k];
-      if (a[2] >= NEAR === b[2] >= NEAR) continue;
-      const t = (NEAR - a[2]) / (b[2] - a[2]);
-      put(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, NEAR);
-    }
-  }
-  return any ? [x0 - 0.004, y0 - 0.004, x1 + 0.004, y1 + 0.004] : null;
-}
-
 /** Where the sheet, its water and what lies on it can be in the frame: the lake's own ground and water, from side to side of the world and beyond. */
 const LAKE_GROUND: Box = [
   [-60000, LAKE_Y[0], WATER_LOW],
@@ -297,8 +141,6 @@ export interface Tile {
   /** the share of the frame these pieces cover */
   area: number;
 }
-const tiledSubjects = subjects.filter(s => s.pass !== 'slab' && s.pass !== 'confluence' && s.pass !== 'pool');
-
 export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Box[] | null, w: number, h: number): Tile[] {
   const whole: Tile[] = [{ mask: need, px: [[0, 0, w, h]], area: 1 }];
   const parts: { bits: number; r: [number, number, number, number] }[] = [];
@@ -327,25 +169,26 @@ export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Bo
   const name = need & F.NAME && nameBox ? nameBox.map((b) => boxRectCut(cam, aspect, b)).reduce((a, b) => join(a, b), null as Rect | null) : null;
   if (lake) take(lake, join(boxRectCut(cam, aspect, need & F.FIELD ? FIELD_GROUND : LAKE_GROUND), name) ?? NONE);
   if (need & F.NAME) take(F.NAME, name ?? NONE);
-  if (need & F.SLAB) {
-    const s = slabInFrame(cam, aspect);
-    if (s.behind === 0) take(F.SLAB, join(s.box, boxRectCut(cam, aspect, slabSubject!.boxes[0])));
-  }
-  const conf = need & F.CONF && !confNearCam(cam) ? (boxRectCut(cam, aspect, confluence!.boxes[0]) ?? NONE) : null;
-  const pool = need & F.POOL && !poolNearCam(cam) ? (boxRectCut(cam, aspect, poolSubject!.boxes[0]) ?? NONE) : null;
-  const both = join(conf, pool)!;
-  // (Two small far subjects side by side are one piece: a variant and a draw for each sliver between them would cost more than it saved.)
-  if (conf && pool && conf !== NONE && pool !== NONE && (both[2] - both[0]) * (both[3] - both[1]) < 0.06) take(F.CONF | F.POOL, both);
-  else {
-    if (conf) take(F.CONF, conf);
-    if (pool) take(F.POOL, pool);
-  }
-  for (const subject of tiledSubjects) {
-    if (!(need & subject.bit)) continue;
-    let rect: Rect | null = null;
+  let small: { bit: number; rect: Rect } | null = null;
+  for (const subject of subjects) {
+    if (!(need & subject.bit) || subject.wholeWhen?.(cam)) continue;
+    let rect = subject.silhouette?.(cam, aspect) ?? null;
+    if (subject.silhouette && !rect) continue;
     for (const box of subject.boxes) rect = join(rect, boxRectCut(cam, aspect, box));
-    take(subject.bit, rect ?? NONE);
+    if (subject.combine && rect) {
+      if (small) {
+        const both = join(small.rect, rect)!;
+        if ((both[2] - both[0]) * (both[3] - both[1]) < 0.06) {
+          take(small.bit | subject.bit, both);
+          small = null;
+          continue;
+        }
+        take(small.bit, small.rect);
+      }
+      small = { bit: subject.bit, rect };
+    } else take(subject.bit, rect ?? NONE);
   }
+  if (small) take(small.bit, small.rect);
   if (!parts.length) {
     whole[0].mask = need;
     return whole;
@@ -403,41 +246,26 @@ export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Bo
  */
 export function passNeeds(cam: Basis, aspect: number, ice: IceParts, slab: boolean): number {
   let need = 0;
-  const cx = cam.pos[0];
-  const cy = cam.pos[1];
   // The sheet, the swept field and the letters: each while it is there, and only while the lake can be in the frame.
   if (ice.on && reachInView(cam, aspect, LAKE_Y[0], LAKE_Y[1])) {
     need |= F.ICE;
     if (ice.field) need |= F.FIELD;
     if (ice.field && ice.blocks) need |= F.NAME;
   }
-  // The block (main: `slabNear`, the ground's `uSlabSize.x > 0.0 && length(uCamPos.xy - uSlabPos.xy) < 5200.0`).
-  if (slab && slabSubject) {
-    const s = slabInFrame(cam, aspect);
-    const dist = Math.hypot(cx - SLAB.x, cy - SLAB.y);
-    if (s.behind < 8) {
-      // Itself: inside its box of the screen, and near enough not to be lost in the air (it is gone past 2500 units).
-      const onScreen = s.box[0] < 1 && s.box[2] > 0 && s.box[1] < 1 && s.box[3] > 0;
-      const reachOut = Math.hypot(SLAB.w * 0.5 + SLAB.thick, SLAB.thick, SLAB.h + SLAB.lift);
-      if (onScreen && Math.hypot(dist, cam.pos[2]) < 2500 + reachOut) need |= F.SLAB;
-      // Its shade, its light, its image and its white water: on the ground and water within four widths of it.
-      if (dist < 5200 && boxInView(cam, aspect, slabSubject!.boxes[0][0], slabSubject!.boxes[0][1])) need |= F.SLAB;
+  const lanes = stationsNear(cam.pos);
+  for (const subject of subjects) {
+    if (subject.visible) {
+      if (subject.visible(cam, aspect, slab)) need |= subject.bit;
+      continue;
     }
-  }
-  // The confluence (`confNear`), and its trails in the river, which the water looks for by place.
-  if (confNearCam(cam)) need |= F.CONF;
-  else if (confluence && boxInView(cam, aspect, confluence!.boxes[0][0], confluence!.boxes[0][1])) need |= F.CONF;
-  // The rock pool (`poolNear`), and its water, looked for by place (the bed under a ray lies up to a few hundred units on).
-  if (poolNearCam(cam)) need |= F.POOL;
-  else if (poolSubject && boxInView(cam, aspect, poolSubject!.boxes[0][0], poolSubject!.boxes[0][1])) need |= F.POOL;
-  if (tarnNear(cam)) need |= F.SHARDS;
-  // The last four stations (`uSt`).
-  const st = stationsNear(cam.pos);
-  if (st[0] > 0) need |= F.COLS;
-  if (st[1] > 0) need |= F.DAM;
-  if (st[2] > 0) need |= F.LAT;
-  if (st[3] > 0) need |= F.CANYON;
-  for (const subject of customSubjects) {
+    if (subject.proximity) {
+      if (lanes[subject.proximity.lane] > 0) need |= subject.bit;
+      continue;
+    }
+    if (subject.wholeWhen?.(cam)) {
+      need |= subject.bit;
+      continue;
+    }
     for (const [lo, hi] of subject.boxes) {
       if (subject.reach !== undefined && Math.hypot(...lo.map((v, i) => Math.max(v - cam.pos[i], cam.pos[i] - hi[i], 0))) > subject.reach) continue;
       if (boxInView(cam, aspect, lo, hi)) {

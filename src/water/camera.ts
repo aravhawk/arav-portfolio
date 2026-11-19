@@ -586,14 +586,4 @@ export function groundUnder(b: Basis, sx: number, sy: number, aspect: number, z 
   return { x: b.pos[0] + d[0] * t, y: b.pos[1] + d[1] * t, t };
 }
 
-/** The slab's four corners on screen (0..1), for the bounds its work is kept inside. */
-export function projectPoint(b: Basis, p: V3, aspect: number): [number, number, number] {
-  const dx = p[0] - b.pos[0];
-  const dy = p[1] - b.pos[1];
-  const dz = p[2] - b.pos[2];
-  const z = dx * b.f[0] + dy * b.f[1] + dz * b.f[2];
-  const x = dx * b.r[0] + dy * b.r[1] + dz * b.r[2];
-  const y = dx * b.u[0] + dy * b.u[1] + dz * b.u[2];
-  const zz = Math.max(z, 1e-3);
-  return [0.5 + x / (zz * b.tan * aspect) / 2, 0.5 - y / (zz * b.tan) / 2, z];
-}
+export { projectPoint } from './projection';

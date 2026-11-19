@@ -2,8 +2,9 @@ import { BASIN_OBJECT, CONFLUENCE, ROCK_POOL, TARN_OBJECT } from './shaders/rive
 import { paintLake, paintReach, paintBasin, paintConfluence, paintPool, paintTarn, paintShallows, paintDam, paintLattice, paintCanyon, paintDelta } from './geography';
 import type { BedPainter } from './bed';
 import { COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, CANYON_ICE } from './shaders/stations';
-import type { Key, Move, Pose, V3 } from './camera';
-import { BENDS, BOARD_DEPTH, FACE, SHEET, boardSpan, sheetCols, CANYON, COLS, DAM, DY, LATTICE, LIP, POOL, SHARDS, SLAB, T2, TARN, TARN_BAY, lipY } from './geography';
+import { boxInView, projectPoint, type Box, type Rect } from './projection';
+import type { Basis, Key, Move, Pose, V3 } from './camera';
+import { BENDS, BOARD_DEPTH, FACE, SHEET, boardSpan, sheetCols, CANYON, COLS, CONF_Y, DAM, DY, LATTICE, LIP, POOL, SHARDS, SLAB, T2, TARN, TARN_BAY, lipY } from './geography';
 
 type FrameMove = (at: Pose, x: number, y: number, push: number, arc: number, rise: number, z?: number) => Move;
 export interface CameraContext {
@@ -17,12 +18,17 @@ export interface CameraContext {
 }
 
 /** Times are screens relative to the section's start. Camera keys use absolute screens. */
-interface Definition {
+type Words =
+  | { kind: 'section'; layout?: 'opening' | 'statement' | 'interests' | 'ending' }
+  | { kind: 'figure'; layout: 'contributions' | 'downloads' }
+  | { kind: 'title'; layout?: 'display' | 'table' | 'film' | 'switch' | 'pool' | 'wall' };
+
+type Definition = Words & {
   id: string; rail: string; length: number; offset: number;
   paint?: (bed: BedPainter, tribs: number[], gate: number) => void;
   subject?: Subject;
   steps?: Partial<Record<'eyebrow' | 'title' | 'line' | 'meta' | 'act' | 'leave', number>>;
-  project?: string; kind: 'section' | 'title' | 'figure';
+  project?: string;
   hold?: { name: string; before?: number; after?: number };
   bandLift?: number;
   camera: (frame: CameraContext) => Key[];
@@ -37,7 +43,7 @@ export const WATER_LOW = -64;
  */
 const FIELD_HIGH = LIP.h * 3.3;
 
-export type Box = [V3, V3];
+
 /** Where the block's shade, its light, its image and its white water can lie: the ground and water within four widths of it. */
 const SLAB_REACH = SLAB.w * 4 + 8;
 const SLAB_GROUND: Box = [
@@ -97,14 +103,63 @@ const SHARDS_BOX: Box = [
   [Math.max(TARN.x + TARN.rx + 20, TARN_BAY.x + TARN_BAY.r + 20, SHARDS[0].x + SHARD_GLOW, SHARDS[1].x + SHARD_GLOW), Math.max(TARN.y + TARN.ry + 20, TARN_BAY.y + TARN_BAY.r + 20, SHARDS[0].y + SHARD_GLOW, SHARDS[1].y + SHARD_GLOW), Math.max(SHARDS[0].h, SHARDS[1].h) + SHARD_GLOW],
 ];
 
+/** The block's place in the frame: the part of the screen it can be on (vUv: x0, y0, x1, y1), and how many of its corners are behind the eye. */
+export function slabInFrame(cam: Basis, aspect: number) {
+  const sin = Math.sin(SLAB.turn);
+  const cos = Math.cos(SLAB.turn);
+  const nx = -sin;
+  const ny = -cos;
+  const rx = cos;
+  const ry = -sin;
+  let x0 = 1;
+  let y0 = 1;
+  let x1 = 0;
+  let y1 = 0;
+  let behind = 0;
+  for (let i = 0; i < 8; i++) {
+    const side = (i & 1 ? 0.5 : -0.5) * SLAB.w;
+    const back = i & 2 ? SLAB.thick : 0;
+    const z = SLAB.lift + (i & 4 ? SLAB.h : 0);
+    const pr = projectPoint(cam, [SLAB.x + rx * side - nx * back, SLAB.y + ry * side - ny * back, z], aspect);
+    if (pr[2] < 1) behind++;
+    x0 = Math.min(x0, pr[0]);
+    x1 = Math.max(x1, pr[0]);
+    y0 = Math.min(y0, 1 - pr[1]);
+    y1 = Math.max(y1, 1 - pr[1]);
+  }
+  const box: [number, number, number, number] = behind > 0 ? [0, 0, 1, 1] : [x0 - 0.01, y0 - 0.01, x1 + 0.01, y1 + 0.01];
+  return { nx, ny, rx, ry, behind, box };
+}
+
+/** Whether the tarn's shards are near enough to be looked for (the pass's uShardOn). */
+export const tarnNear = (cam: Basis) => Math.hypot(cam.pos[0] - TARN.x, cam.pos[1] - TARN.y) < 3200 && cam.pos[2] < 700;
+
+const confNearCam = (cam: Basis) => cam.pos[1] > CONF_Y - 3300 && cam.pos[1] < CONF_Y + 1500;
+const poolNearCam = (cam: Basis) => Math.abs(cam.pos[0] - (POOL.x + POOL.w / 2)) < 2300 && Math.abs(cam.pos[1] - (POOL.y + POOL.h / 2)) < 2300;
+
+function slabVisible(cam: Basis, aspect: number, hasMedia: boolean) {
+  if (!hasMedia) return false;
+  const { box, behind } = slabInFrame(cam, aspect);
+  if (behind === 8) return false;
+  const dist = Math.hypot(cam.pos[0] - SLAB.x, cam.pos[1] - SLAB.y);
+  const extent = Math.hypot(SLAB.w * 0.5 + SLAB.thick, SLAB.thick, SLAB.h + SLAB.lift);
+  if (box[0] < 1 && box[2] > 0 && box[1] < 1 && box[3] > 0 && Math.hypot(dist, cam.pos[2]) < 2500 + extent) return true;
+  return dist < 5200 && boxInView(cam, aspect, ...SLAB_GROUND);
+}
+
 export interface Subject {
   bit: number;
   /** Furthest eye-to-box distance at which the object can contribute. */
   reach?: number;
   define: string;
   boxes: readonly Box[];
+  visible?: (cam: Basis, aspect: number, hasMedia: boolean) => boolean;
+  /** Near these objects their ground pass covers the frame. Far away small adjacent boxes can share a tile. */
+  wholeWhen?: (cam: Basis) => boolean;
+  combine?: boolean;
+  silhouette?: (cam: Basis, aspect: number) => Rect | null;
   /** A named GLSL function. Custom objects receive (colour, world ray, scroll progress). */
-  shader?: { source: string; fn: string };
+  shader: { source: string; fn: string };
   /** Existing objects whose rays also affect the ground, media or water pass. */
   pass?: 'slab' | 'confluence' | 'pool' | 'shards' | 'columns' | 'dam' | 'lattice' | 'canyon';
   proximity?: { lane: 0 | 1 | 2 | 3; x: number; y: number; from: number; to: number };
@@ -259,13 +314,14 @@ function canyonKeys(s8: number, fov: number, g = 1): Key[] {
 }
 
 const slabAim: V3 = [SLAB.x, SLAB.y, SLAB.h * 0.5];
+/** Registration order is the scroll order. A layout selects an existing server-rendered words block. */
 export const FLIGHT = [
   {
-    id: 'hero', paint: paintLake, rail: 'Arav Jain', length: 2.4, offset: 0, kind: 'section',
+    id: 'hero', paint: paintLake, rail: 'Arav Jain', length: 2.4, offset: 0, kind: 'section', layout: 'opening',
     camera: ({ opening }) => opening(),
   },
   {
-    id: 'say', paint: paintReach, rail: 'What I do', length: 2.2, offset: 0.7, kind: 'section',
+    id: 'say', paint: paintReach, rail: 'What I do', length: 2.2, offset: 0.7, kind: 'section', layout: 'statement',
     camera: ({ stop, end, upright, reach }) => upright ? [
       // The statement: the near bank fills the foot of the frame, the river crosses beyond it; the eye goes on down the reach.
       reach(1.98, 2060),
@@ -281,8 +337,12 @@ export const FLIGHT = [
     ],
   },
   {
-    id: 'infiniview', paint: paintBasin, rail: 'Infiniview', length: 2.6, offset: 1, kind: 'title',
-    subject: { bit: 2, define: 'F_SLAB', boxes: [SLAB_GROUND], pass: 'slab', shader: { source: BASIN_OBJECT, fn: 'slabHit' } },
+    id: 'infiniview', paint: paintBasin, rail: 'Infiniview', length: 2.6, offset: 1, kind: 'title', layout: 'display',
+    subject: { bit: 2, define: 'F_SLAB', boxes: [SLAB_GROUND], pass: 'slab', visible: slabVisible,
+      silhouette: (cam, aspect) => {
+        const frame = slabInFrame(cam, aspect);
+        return frame.behind === 0 ? frame.box : null;
+      }, shader: { source: BASIN_OBJECT, fn: 'slabHit' } },
     project: 'infiniview',
     hold: { name: 'Infiniview' },
     camera: ({ stop, end, upright, move, holdKeys }) => upright ? [
@@ -301,8 +361,8 @@ export const FLIGHT = [
   },
   {
     steps: { eyebrow: -1.3 },
-    id: 'upstream', paint: paintConfluence, rail: 'Open source', length: 2.8, offset: 1.25, kind: 'figure',
-    subject: { bit: 4, define: 'F_CONF', boxes: [CONF_RIVER_BOX], pass: 'confluence', shader: { source: CONFLUENCE, fn: 'confLift' } },
+    id: 'upstream', paint: paintConfluence, rail: 'Open source', length: 2.8, offset: 1.25, kind: 'figure', layout: 'contributions',
+    subject: { bit: 4, define: 'F_CONF', boxes: [CONF_RIVER_BOX], pass: 'confluence', wholeWhen: confNearCam, combine: true, shader: { source: CONFLUENCE, fn: 'confLift' } },
     project: 'open-source',
     hold: { name: 'Upstream' },
     camera: ({ start, stop, aspect, upright, band, move, holdKeys }) => upright ? [
@@ -319,8 +379,8 @@ export const FLIGHT = [
     ],
   },
   {
-    id: 'bench', paint: paintPool, rail: 'Kilo Bench', length: 2.6, offset: 1.15, kind: 'title',
-    subject: { bit: 8, define: 'F_POOL', boxes: [POOL_BOX], pass: 'pool', shader: { source: ROCK_POOL, fn: 'rockHit' } },
+    id: 'bench', paint: paintPool, rail: 'Kilo Bench', length: 2.6, offset: 1.15, kind: 'title', layout: 'table',
+    subject: { bit: 8, define: 'F_POOL', boxes: [POOL_BOX], pass: 'pool', wholeWhen: poolNearCam, combine: true, shader: { source: ROCK_POOL, fn: 'rockHit' } },
     project: 'kilo-bench',
     hold: { name: 'Kilo Bench' },
     camera: ({ start, stop, aspect, upright, move, holdKeys }) => upright ? [
@@ -335,8 +395,8 @@ export const FLIGHT = [
     ],
   },
   {
-    id: 'bridge', paint: paintTarn, rail: 'Agent Bridge', length: 2.8, offset: 1.2, kind: 'title',
-    subject: { bit: 16, define: 'F_SHARDS', boxes: [SHARDS_BOX], pass: 'shards', shader: { source: TARN_OBJECT, fn: 'shardHit' } },
+    id: 'bridge', paint: paintTarn, rail: 'Agent Bridge', length: 2.8, offset: 1.2, kind: 'title', layout: 'film',
+    subject: { bit: 16, define: 'F_SHARDS', boxes: [SHARDS_BOX], pass: 'shards', visible: tarnNear, shader: { source: TARN_OBJECT, fn: 'shardHit' } },
     project: 'agent-bridge',
     hold: { name: 'Agent Bridge' },
     camera: ({ start, stop, aspect, upright, band, move, holdKeys }) => upright ? [
@@ -353,7 +413,7 @@ export const FLIGHT = [
   },
   {
     steps: { eyebrow: -1.3 },
-    id: 'models', paint: paintShallows, rail: 'Open models', length: 2.8, offset: 1.2, kind: 'figure',
+    id: 'models', paint: paintShallows, rail: 'Open models', length: 2.8, offset: 1.2, kind: 'figure', layout: 'downloads',
     subject: { bit: 32, define: 'F_COLS', boxes: [COLS_BOX, COLS_DEEP], pass: 'columns', proximity: { lane: 0, x: 1340, y: COLS.y, from: 1750, to: 2350 }, shader: { source: COLUMNS, fn: 'columns' } },
     project: 'ollama',
     bandLift: 0.1,
@@ -374,7 +434,7 @@ export const FLIGHT = [
   },
   {
     steps: { eyebrow: -1.3, title: -0.45, line: -0.32, meta: -0.2 },
-    id: 'fork', paint: paintDam, rail: 'cc-switch', length: 2.8, offset: 1.2, kind: 'title',
+    id: 'fork', paint: paintDam, rail: 'cc-switch', length: 2.8, offset: 1.2, kind: 'title', layout: 'switch',
     subject: { bit: 64, define: 'F_DAM', boxes: [DAM_BOX], pass: 'dam', proximity: { lane: 1, x: 1300, y: DAM.y, from: 3300, to: 4000 }, shader: { source: [DAM_ICE, DAM_WATER].join('\n'), fn: 'dam' } },
     project: 'cc-switch',
     hold: { name: 'cc-switch', before: 0.45 },
@@ -396,7 +456,7 @@ export const FLIGHT = [
     ],
   },
   {
-    id: 'lattice', paint: paintLattice, rail: 'TensorPoW', length: 2.6, offset: 1.15, kind: 'title',
+    id: 'lattice', paint: paintLattice, rail: 'TensorPoW', length: 2.6, offset: 1.15, kind: 'title', layout: 'pool',
     subject: { bit: 128, define: 'F_LAT', boxes: [LAT_BOX], pass: 'lattice', proximity: { lane: 2, x: LATTICE.x, y: LATTICE.y, from: 2300, to: 2900 }, shader: { source: LATTICE_ICE, fn: 'lattice' } },
     project: 'tensorpow',
     bandLift: 0.05,
@@ -413,7 +473,7 @@ export const FLIGHT = [
   },
   {
     steps: { eyebrow: -2.15, leave: 0.75 },
-    id: 'canyon', paint: paintCanyon, rail: 'RydAR', length: 3.6, offset: 2.2, kind: 'title',
+    id: 'canyon', paint: paintCanyon, rail: 'RydAR', length: 3.6, offset: 2.2, kind: 'title', layout: 'wall',
     subject: { bit: 256, define: 'F_CANYON', boxes: [CANYON_BOX], pass: 'canyon', proximity: { lane: 3, x: 1700, y: (CANYON.y0 + CANYON.y1) / 2, from: 3700, to: 4600 }, shader: { source: CANYON_ICE, fn: 'canyon' } },
     project: 'rydar',
     hold: { name: 'RydAR', after: 0.6 },
@@ -427,22 +487,42 @@ export const FLIGHT = [
   },
   {
     steps: { leave: 1.75 },
-    id: 'delta', paint: paintDelta, rail: 'Interests', length: 2.6, offset: 1.1, kind: 'section',
+    id: 'delta', paint: paintDelta, rail: 'Interests', length: 2.6, offset: 1.1, kind: 'section', layout: 'interests',
     hold: { name: 'Interests' },
     camera: ({ ending }) => ending(false),
   },
   {
-    id: 'sea', rail: 'Contact', length: 2.3, offset: 1.3, kind: 'section',
+    id: 'sea', rail: 'Contact', length: 2.3, offset: 1.3, kind: 'section', layout: 'ending',
     camera: ({ ending }) => ending(true),
   },
 ] as const satisfies readonly Definition[];
 
 export type SectionId = typeof FLIGHT[number]['id'];
 export type ProjectScene = Extract<typeof FLIGHT[number], { project: string }>['project'];
-export const timeline = FLIGHT.map((definition: Definition, index) => {
-  const start = FLIGHT.slice(0, index).reduce((sum, entry) => sum + entry.length, 0);
-  return { ...definition, start, stop: start + definition.offset, end: start + definition.length };
-});
+function buildTimeline(definitions: readonly Definition[]) {
+  const ids = new Set<string>();
+  const features = new Set<string>(['SEA', 'F_FIELD', 'F_ICE', 'F_NAME']);
+  let bits = 1 | 512 | 1024 | 2048;
+  let end = 0;
+  return definitions.map(definition => {
+    const { id, length, offset, subject } = definition;
+    if (ids.has(id) || !Number.isFinite(length) || !(offset >= 0 && offset < length)) throw new Error(`Invalid flight section ${id}`);
+    ids.add(id);
+    if (subject) {
+      const { bit, define, event } = subject;
+      if (!Number.isInteger(Math.log2(bit)) || bit >= 2 ** 31 || (bits & bit) || features.has(define) || !/^F_[A-Z][A-Z0-9_]*$/.test(define)) {
+        throw new Error(`Invalid or repeated shader feature for ${id}: ${define}, bit ${bit}`);
+      }
+      if (event && !(0 <= event[0] && event[0] < event[1] && event[1] <= length)) throw new Error(`Invalid event interval for ${id}`);
+      bits |= bit;
+      features.add(define);
+    }
+    const start = end;
+    end += length;
+    return { ...definition, start, stop: start + offset, end };
+  });
+}
+export const timeline = buildTimeline(FLIGHT);
 export const byId = Object.fromEntries(timeline.map(entry => [entry.id, entry])) as Record<SectionId, typeof timeline[number]>;
 export const SECTIONS = Object.fromEntries(FLIGHT.map(entry => [entry.id, entry.length])) as Record<SectionId, number>;
 export const projectsInFlight = FLIGHT.flatMap(entry => 'project' in entry ? [entry.project] : []);

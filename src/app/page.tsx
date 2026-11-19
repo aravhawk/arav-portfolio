@@ -150,8 +150,8 @@ export default async function Home() {
   const rydar = RYDAR_P?.media[0];
 
   type RenderBlock = (section: typeof timeline[number], steps: Build, project: Project) => React.ReactNode;
-  const blocks: Partial<Record<string, RenderBlock>> = {
-    hero: (section) => (
+  const blocks: Record<NonNullable<(typeof timeline)[number]['layout']>, RenderBlock> = {
+    opening: (section) => (
       <section className="fl-sec fl-hero" data-fl style={len(section.length)} aria-labelledby="name">
         <div className="fl-pin">
           {/* The first paint is the scene's own first frame, a still (see scripts/capture-poster.mjs); the live picture comes up over it. */}
@@ -178,7 +178,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    say: (section) => (
+    statement: (section) => (
       <section className="fl-sec fl-say" data-fl style={len(section.length)} aria-label="What I do">
         <div className="fl-pin">
           <div className="fl-words fl-say-words" data-fl-from={SAY_FROM} data-fl-to={+(VIEW - 0.3).toFixed(3)}>
@@ -193,7 +193,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    infiniview: (section, view, p) => (
+    display: (section, view, p) => (
       <section className="fl-sec fl-view" data-fl style={len(section.length)} aria-label="Infiniview">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words" {...view.block}>
@@ -210,7 +210,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    upstream: (section, up) => (
+    contributions: (section, up) => (
       <section className="fl-sec fl-up" data-fl style={len(section.length)} aria-label="Open source">
         <div className="fl-pin">
           <div className="fl-calls">
@@ -277,7 +277,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    bench: (section, bench, p) => (
+    table: (section, bench, p) => (
       <section className="fl-sec fl-bench" data-fl style={len(section.length)} aria-label="Kilo Bench">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-bench-words" {...bench.block}>
@@ -293,7 +293,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    bridge: (section, bridge, p) => (
+    film: (section, bridge, p) => (
       <section className="fl-sec fl-bridge" data-fl style={len(section.length)} aria-label="Agent Bridge">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-bridge-words" {...bridge.block}>
@@ -310,7 +310,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    models: (section, mods) => (
+    downloads: (section, mods) => (
       <section className="fl-sec fl-models" data-fl style={len(section.length)} aria-label="Open models">
         <div className="fl-pin">
           <div className="fl-calls">
@@ -354,7 +354,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    fork: (section, fork, p) => (
+    switch: (section, fork, p) => (
       <section className="fl-sec fl-forks" data-fl style={len(section.length)} aria-label="cc-switch">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-fork-words" {...fork.block}>
@@ -389,7 +389,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    lattice: (section, tensor, p) => (
+    pool: (section, tensor, p) => (
       <section className="fl-sec fl-tensor" data-fl style={len(section.length)} aria-label="TensorPoW">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-tensor-words" {...tensor.block}>
@@ -403,7 +403,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    canyon: (section, canyon, p) => (
+    wall: (section, canyon, p) => (
       <section className="fl-sec fl-rydar" data-fl style={len(section.length)} aria-label="RydAR">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-rydar-words" {...canyon.block}>
@@ -419,7 +419,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    delta: (section, delta) => (
+    interests: (section, delta) => (
       <section className="fl-sec fl-delta" data-fl style={len(section.length)} aria-labelledby="into">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-into-words" {...delta.block}>
@@ -442,7 +442,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    sea: (section) => (
+    ending: (section) => (
       <section className="fl-sec fl-sea ending" data-fl style={len(section.length, true)} aria-label="Contact">
         <div className="fl-pin">
           <div className="fl-words fl-end-words" data-fl-from={+(SETTLE_AT - END_LEAD).toFixed(3)} data-fl-to={1e6} data-fl-set={+(SETTLE_AT - 0.04).toFixed(3)}>
@@ -480,7 +480,7 @@ export default async function Home() {
         />
 
         {timeline.map(section => {
-          const block = blocks[section.id];
+          const block = section.layout && blocks[section.layout];
           const project = PROJECTS.find(entry => entry.slug === section.project);
           const steps = build(section.stop, section.steps);
           if (block) return <Fragment key={section.id}>{block(section, steps, project!)}</Fragment>;

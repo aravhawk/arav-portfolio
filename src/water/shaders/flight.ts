@@ -109,6 +109,9 @@ uniform float uPxAng;      // the angle one device pixel spans, radians
 uniform vec4 uSim;         // x: world y of sim row 0, y: texel size, z: w, w: h
 uniform vec2 uBedSize;
 uniform float uBedDiv;
+${subjects.filter(s => s.event).map(s => `#ifdef ${s.define}
+uniform float uProgress_${s.define};
+#endif`).join('\n')}
 uniform float uTime;
 uniform float uFlowSpeed;
 uniform float uQuality;    // 0 low, 1 mid, 2 high
@@ -2492,11 +2495,8 @@ ${subjects.find(s => s.pass === 'canyon')?.shader?.source ?? ''}
 ${subjects.find(s => s.pass === 'shards')?.shader?.source ?? ''}
 #endif
 
-${subjects.filter(s => s.event).map(s => `#ifdef ${s.define}
-uniform float uProgress_${s.define};
-#endif`).join('\n')}
 ${customSubjects.map(s => `#ifdef ${s.define}
-${s.shader!.source}
+${s.shader.source}
 #endif`).join('\n')}
 void main() {
   skyKey();
@@ -2999,7 +2999,7 @@ ${subjects.flatMap(s => s.proximity && s.shader ? [`#ifdef ${s.define}
   }
 #endif
 ${customSubjects.map(s => `#ifdef ${s.define}
-  col = ${s.shader!.fn}(col, dir, ${s.event ? 'uProgress_' + s.define : '0.0'});
+  col = ${s.shader.fn}(col, dir, ${s.event ? 'uProgress_' + s.define : '0.0'});
 #endif`).join('\n')}
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
 #ifdef SEA
