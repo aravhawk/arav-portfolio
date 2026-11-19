@@ -1332,3 +1332,51 @@ part (retaking the stills, bands, cards and posters) is taken out of
 it and done once at the end of the round, when the home page's
 picture is final. The key is kept in a private file outside the
 repository and is deleted when the helper finishes.
+
+### R4b (the name and the melt), integrated Nov 18, 7:50 PM CT
+
+Six signed commits ending at `6b0b212`, merged without conflict;
+lint, typecheck, 315 tests, build and the site checks pass (200
+words). I looked at the merged build's first frame in both themes and
+the melt at nine positions at 1440 and on a phone.
+
+The name is now **ARAV JAIN in capitals, eight plates of clear lake
+ice** (TASA Orbiter's capitals at weight 640, set wide), lit from
+behind by a low sun whose path glitters down the black ice, glowing
+blue-green from within, with one clean image in the ice and no snow
+caps. On an upright screen it stands in two rows of four. The melt
+has no outline or glow: leads open with a pale cut edge, and each
+plate stays whole and sharp, settles, tips and founders, then rides
+on flat as a berg among the floes. The name's contrast against its
+ground from 0 to 1.0 screens: 5.8 to 7.7 by day, 4.8 to 5.5 before
+dawn, at 390, 768, 1440 and 1920.
+
+What it did not do, kept honestly:
+
+- **Cost went up, not level.** One real frame at 1440 at 2x by day:
+  15.85 to 16.35 ms at rest, 19.06 to 20.33 at 0.7 screens, 14.77 to
+  23.43 at 1.2 and 13.50 to 23.31 at 1.5 (before dawn up to 28.96).
+  The third frame-rate pass now has to make the plates cheap; its
+  brief carries these numbers.
+- Before dawn the plates still read as blue glass; a forked lead
+  through the snow in front of the words reads as drawn; on a phone
+  the words' lee over open water shows as a pale plate. All three are
+  handed to the light task.
+- The letterforms are the face's own capitals, not redrawn; chips are
+  painted, not cut; nothing behind a plate is truly refracted.
+- The foundering is bunched between 1.00 and 1.29 screens (the
+  sound's own test caps the stretch).
+
+After it, this thread (`6e73631`): the first screen's line and
+sentence were hidden until the entrance's cue, up to 2.6 s after
+load. They are now in the first paint (checked at 250 ms on a desktop
+and a phone), and the page's first script asks for the still at once.
+
+**The parallel helper on API credits ended after 17 minutes** when the
+key ran out of credit, with no commit. Its unfinished start on the
+inner pages is kept as a patch for the task that will redo that work
+on the subscription, in the serial queue. The key file is deleted.
+
+Running, alone: **R4c**, the light (one day across the flight in the
+light theme, one night toward dawn in the dark theme, air, tone and
+grain, and the three leftovers above).
