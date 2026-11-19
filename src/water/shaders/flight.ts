@@ -3965,7 +3965,7 @@ void main() {
     if (aIce > 0.0 && !(aIce >= 1.0 && nmK >= 1.0)) col = mix(col, iceTop(p, il, cr, f0, sd0, dir, foot), aIce);
 #endif
     // The name's blocks stand on the sheet: their shade, their image and the meltwater at their feet lie on it.
-#if defined(F_NAME) && !defined(DBG_NO_NAME)
+#if defined(F_FIELD) && !defined(DBG_NO_NAME)
     col = nameGround(col, p, dir, foot, aIce);
 #endif
 #endif

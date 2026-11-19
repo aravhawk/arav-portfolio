@@ -48,19 +48,32 @@ export interface NameGlyphs {
   /** each letter's left and right edge at `PROFILE` heights up it (from its cell's middle, in capitals' heights) */
   left: number[][];
   right: number[][];
+  /**
+   * Each row the name can stand in, drawn whole under the cells (the plates as they stand side by side), for
+   * what is asked of a row at once (its shade on the sheet, its image in the ice): the row's letters, where each
+   * letter's middle stands from the row's own (capitals' heights), half the row's width ink to ink, and where the
+   * row's middle and its baseline lie in the raster (texels).
+   */
+  strips: Record<string, { ids: number[]; mids: number[]; half: number; x: number; y: number }>;
 }
 const PROFILE = 24;
+/** The rows the name stands in: one row of eight on a wide screen, two rows of four on an upright one. */
+export const ROWS = ['ARAV JAIN', 'ARAV', 'JAIN'];
+/** How much room a row's strip has round its ink, in capitals' heights. */
+const STRIP_PAD = 0.22;
 
 /**
  * The eight letters, each drawn in its own cell: white on nothing, its
  * baseline `CELL.foot` up from the cell's lower edge, its ink centred. The
  * raster's rows run upward (row 0 is the foot), as the texture's do.
  */
-export function rasterGlyphs(fontFamily: string, weight: number, cap = 224): NameGlyphs {
+export function rasterGlyphs(fontFamily: string, cut: NameCut = NAME_CUT, cap = 224): NameGlyphs {
+  const weight = cut.weight;
   const cw = Math.round(CELL.w * cap);
   const ch = Math.round(CELL.h * cap);
-  const tw = cw * CELL.cols;
-  const th = ch * CELL.rows;
+  // (Under the two rows of cells: a strip for the one long row, and a strip the two short rows share.)
+  const tw = Math.max(cw * CELL.cols, Math.round(7.6 * cap));
+  const th = ch * (CELL.rows + 2);
   const c = document.createElement('canvas');
   c.width = tw;
   c.height = th;
@@ -96,7 +109,7 @@ export function rasterGlyphs(fontFamily: string, weight: number, cap = 224): Nam
     ink.push([-(l + r) / 2 / cap, (l + r) / 2 / cap]);
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const alpha = ctx.getImageData(0, 0, tw, th).data;
+  let alpha = ctx.getImageData(0, 0, tw, th).data;
   // Each letter's two edges, at heights up it: what its neighbours are set against.
   const left: number[][] = [];
   const right: number[][] = [];
@@ -129,7 +142,48 @@ export function rasterGlyphs(fontFamily: string, weight: number, cap = 224): Nam
     right.push(R);
     ink[i] = [(lo - cw / 2) / cap, (hi - cw / 2) / cap];
   }
-  return { alpha, tw, th, cap, ink, left, right };
+  // The rows, each drawn whole from its letters' cells, set as they will stand.
+  const g: NameGlyphs = { alpha, tw, th, cap, ink, left, right, strips: {} };
+  ctx.globalCompositeOperation = 'lighten';
+  let sx = 0;
+  ROWS.forEach((text, r) => {
+    const ids: number[] = [];
+    const mids: number[] = [];
+    let x = 0;
+    let word = false;
+    let i = text === 'JAIN' ? 4 : 0;
+    for (const c of text) {
+      if (c === ' ') {
+        word = true;
+        continue;
+      }
+      // (Between the two words the room is measured ink to ink: a word is a block.)
+      if (ids.length) x += word ? ink[ids[ids.length - 1]][1] + cut.word - ink[i][0] : pairStep(g, ids[ids.length - 1], i, cut.gap, cut.least);
+      word = false;
+      mids.push(x);
+      ids.push(i++);
+    }
+    const from = mids[0] + ink[ids[0]][0];
+    const to = mids[mids.length - 1] + ink[ids[ids.length - 1]][1];
+    const mid = (from + to) / 2;
+    const half = (to - from) / 2;
+    const wide = Math.ceil((2 * half + 2 * STRIP_PAD) * cap);
+    // (The long row has a strip to itself; the two short rows stand side by side in the next.)
+    if (r !== 2) sx = 0;
+    const y0 = ch * (CELL.rows + (r === 0 ? 0 : 1));
+    const cx = sx + wide / 2;
+    ids.forEach((id, k) => {
+      const col = id % CELL.cols;
+      const row = Math.floor(id / CELL.cols);
+      ctx.drawImage(c, col * cw, row * ch, cw, ch, Math.round(cx + (mids[k] - mid) * cap - cw / 2), y0, cw, ch);
+    });
+    g.strips[text] = { ids, mids: mids.map((m) => m - mid), half, x: cx, y: y0 + CELL.foot * cap };
+    sx += wide + Math.round(0.1 * cap);
+  });
+  ctx.globalCompositeOperation = 'source-over';
+  alpha = ctx.getImageData(0, 0, tw, th).data;
+  g.alpha = alpha;
+  return g;
 }
 
 /** One row of the name as the first frame composes it: its letters, the line on the lake its faces stand on, and how wide it is. */
@@ -191,29 +245,11 @@ function pairStep(g: NameGlyphs, a: number, b: number, gap: number, least: numbe
 /** Where each of the eight plates stands, for the rows the first frame composes. */
 export function layoutName(rows: NameRow[], g: NameGlyphs, cut: NameCut = NAME_CUT): Plate[] {
   const out: Plate[] = [];
-  let i = 0;
   rows.forEach((row, r) => {
-    // Each letter's middle along the row, in capitals' heights.
-    const mids: number[] = [];
-    const ids: number[] = [];
-    let x = 0;
-    let word = false;
-    for (const ch of row.text) {
-      if (ch === ' ') {
-        word = true;
-        continue;
-      }
-      // (Between the two words the room is measured ink to ink: a word is a block.)
-      if (ids.length) x += word ? g.ink[ids[ids.length - 1]][1] + cut.word - g.ink[i][0] : pairStep(g, ids[ids.length - 1], i, cut.gap, cut.least);
-      word = false;
-      mids.push(x);
-      ids.push(i++);
-    }
-    const from = mids[0] + g.ink[ids[0]][0];
-    const to = mids[mids.length - 1] + g.ink[ids[ids.length - 1]][1];
-    const h = row.width / (to - from);
-    ids.forEach((id, k) => {
-      out[id] = { x: NAME.x + (mids[k] - (from + to) / 2) * h, y: row.y, h, hw: ((g.ink[id][1] - g.ink[id][0]) / 2) * h, d: cut.depth * h, row: r };
+    const st = g.strips[row.text];
+    const h = row.width / (2 * st.half);
+    st.ids.forEach((id, k) => {
+      out[id] = { x: NAME.x + st.mids[k] * h, y: row.y, h, hw: ((g.ink[id][1] - g.ink[id][0]) / 2) * h, d: cut.depth * h, row: r };
     });
   });
   return out;

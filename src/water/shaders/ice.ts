@@ -27,7 +27,7 @@ uniform vec4 uIceN;        // the name as a melt pond (the flight): x: half its 
 uniform vec4 uLake;        // x: lake top, y: lake bottom, z: how wet the sheet is 0..1, w: 1 while the sheet is whole, 0 once it is gone
 uniform vec4 uNameG;       // the standing name. x: the line on the lake the far row's faces stand on (world y), y: the near row's (the same when there is one row), z: 1 when there are two rows (far below 0 when there is one), w: 1 when the letters stand on the sheet as plates (0: they are cut through it)
 uniform vec4 uNameB;       // xy: where the lead that carries the lake's water off leaves the name (y behind the far row, x), z: the near row's capitals' height, w: a plate's depth front to back
-uniform vec4 uNameM;       // y: a plate's depth, z: 1 once anything of a plate can stand under the water, w: 0..1 how much of the name still stands, of all eight plates
+uniform vec4 uNameM;       // x: how high the tallest plate stands, y: a plate's depth, z: 1 once anything of a plate can stand under the water, w: 0..1 how much of the name still stands, of all eight plates
 uniform vec4 uNameV;       // the name's box in the first camera's picture, as tangents: x: the height of its middle, y: its half width, z: its half height
 uniform vec4 uRowA;        // the far row as a strip of the lake: xy its middle, zw its half size (across, and front to back)
 uniform vec4 uRowB;        // the near row (the same strip when there is one row)
@@ -231,8 +231,8 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     // the outlet, and the plates and the water they ride in do not gather with it.)
     lsd = nameFoot(w);
     rowD = nameRows(w);
-    gFootAt = w;
-    gFootD = lsd;
+    // (The first place asked of a pixel is the pixel's own: that answer is the one kept.)
+    if (gFootAt.x < -1e8) { gFootAt = w; gFootD = lsd; }
     gIceBoxD = min(boxD, rowD);
   } else if (nearName) {
     vec2 cl = clamp(iuv, 0.002, 0.998);

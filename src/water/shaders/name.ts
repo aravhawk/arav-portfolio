@@ -52,9 +52,16 @@ export const NAME_ICE = `
 uniform vec4 uNameP;       // x: how far from the plates' feet meltwater lies on the sheet px, y: 0..1 how wet the plates and the ice round them are, z: 0..1 the fractures have run out from their feet, w: 0..1 the sheet has begun to open under them
 uniform vec4 uLtA[PLATES]; // each plate: xyz its middle, w its capitals' height
 uniform vec4 uLtQ[PLATES]; // its turn: a quaternion from the plate's own frame (x across, y back through it, z up it) to the world's
+uniform vec4 uLtM0[PLATES]; // the same the other way, as three rows: a place in the world, in the plate's own frame (xyz the row, w what is added)
+uniform vec4 uLtM1[PLATES];
+uniform vec4 uLtM2[PLATES];
 uniform vec4 uLtG[PLATES]; // xy: where its outline's middle lies in the raster, z: half its width, w: half its depth
 uniform vec4 uLtT;         // the raster: xy: how far a capital's height is in it, zw: how far from a cell's middle an outline is looked for, in capitals' heights
+uniform vec4 uRowT[2];     // each row whole in the raster (the far one, the near one): xy where its middle and its baseline lie, z: how far from its middle it is looked for, in capitals' heights
+uniform vec4 uRowH;        // xy: each row's capitals' height, zw: 0..1 how much of each row still stands in the light
 uniform vec4 uNameBx;      // the ground all eight plates stand or ride on: xy its least corner, zw its greatest
+uniform vec4 uFrac[PLATES]; // the fractures that run out from the rows as the sheet weakens: xy where each leaves its row, zw the way it runs
+uniform float uFracL[PLATES]; // how long each is, as a share of the longest
 
 // The first camera: the swept ice and the first frame's words are measured in its picture.
 vec3 gNmC = vec3(0.0);
@@ -71,6 +78,23 @@ vec2 gNmGrad = vec2(0.0, 1.0);
 float gNmShade = 0.0;
 float gNmPool = 0.0;
 
+/**
+ * A row's outline, as its plates stand side by side: the distance, in world
+ * units, from a place in the row's upright plane (x across from its middle,
+ * z up from the sheet) to the nearest letter's edge, negative inside. What is
+ * asked of a whole row at once (its shade, its image in the ice) asks this,
+ * so no plate need be found first.
+ */
+float rowSd(int r, vec2 xz) {
+  float H = r == 0 ? uRowH.x : uRowH.y;
+  vec4 T = uRowT[r];
+  vec2 c = xz / H;
+  vec2 cc = vec2(clamp(c.x, -T.z, T.z), clamp(c.y, -0.13, 1.13));
+  vec4 s = textureLod(uIceSdf, T.xy + cc * uLtT.xy, 0.0);
+  gNmGrad = s.ba;
+  return (s.r + length(c - cc)) * H;
+}
+
 #ifdef F_NAME
 vec3 qTo(vec4 q, vec3 v) { return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
 vec3 qFrom(vec4 q, vec3 v) { return v - 2.0 * cross(q.xyz, q.w * v - cross(q.xyz, v)); }
@@ -78,79 +102,87 @@ vec3 qFrom(vec4 q, vec3 v) { return v - 2.0 * cross(q.xyz, q.w * v - cross(q.xyz
 /**
  * A plate's outline: the distance, in world units, from a place in the
  * plate's own upright plane (x across, z up, from its middle) to the
- * letter's edge, negative inside.
+ * letter's edge, negative inside. cell: where the plate's outline lies in
+ * the raster; H: its capitals' height. (A plate's own numbers are handed in,
+ * never looked up by a number worked out for the pixel: that is slow here.)
  */
-float plateSd(int i, vec2 xz) {
-  float H = uLtA[i].w;
+float plateSd(vec2 cell, float H, vec2 xz) {
   vec2 c = xz / H;
   vec2 cc = clamp(c, -uLtT.zw, uLtT.zw);
-  vec4 s = textureLod(uIceSdf, uLtG[i].xy + cc * uLtT.xy, 0.0);
+  vec4 s = textureLod(uIceSdf, cell + cc * uLtT.xy, 0.0);
   gNmGrad = s.ba;
   return (s.r + length(c - cc)) * H;
 }
 
 /**
- * Where a piece has come away at an arris: how far the plate's surface
- * stands in from its sawn outline there, in capitals' heights. A chip is at
- * the front edge or at the back, never through the whole depth, and has
- * flat sides. (Sines, not a texture: it is asked at every step of a march.)
+ * Where a piece has come away at an arris: 0..1, how much of a chip lies at
+ * a place on a plate's face (c: capitals' heights from its middle). A chip
+ * has flat sides. (It is drawn on the face, not cut from the plate: the
+ * plate's own shape is its sawn outline, which is what a ray is tried
+ * against.)
  */
-float plateChip(float fi, vec2 c, float yd) {
+float plateChip(float fi, vec2 c) {
   float a = sin(c.x * 12.0 + fi * 7.1 + 2.3 * sin(c.y * 9.0 + fi));
   float b = sin(c.y * 15.0 + 1.9 * sin(c.x * 7.0 + 2.0 * fi) + fi * 3.3);
-  float k = clamp((a * b - 0.9) * 10.0, 0.0, 1.0);
-  float w = a > 0.0 ? max(1.0 - yd / 0.42, 0.0) : max(1.0 - (1.0 - yd) / 0.36, 0.0);
-  return 0.034 * k * w;
+  return clamp((a * b - 0.86) * 9.0, 0.0, 1.0);
+}
+
+// A ray in a plate's own frame, and where it crosses the plate's box (gPlA: in, gPlB: out; none when in >= out).
+vec3 gPlO = vec3(0.0);
+vec3 gPlD = vec3(0.0, 1.0, 0.0);
+vec3 gPlN = vec3(0.0);
+vec3 gPlF = vec3(0.0);
+/** Where a ray crosses plate i's own box: x where it goes in, y where it comes out (x >= y: it does not). Sets gPlO, gPlD, gPlN (the box's faces it comes in by). */
+vec2 plateBox(int i, vec3 ro, vec3 rd) {
+  vec4 A = uLtA[i];
+  vec4 G = uLtG[i];
+  vec4 m0 = uLtM0[i];
+  vec4 m1 = uLtM1[i];
+  vec4 m2 = uLtM2[i];
+  gPlO = vec3(dot(m0.xyz, ro) + m0.w, dot(m1.xyz, ro) + m1.w, dot(m2.xyz, ro) + m2.w);
+  gPlD = vec3(dot(m0.xyz, rd), dot(m1.xyz, rd), dot(m2.xyz, rd));
+  vec3 hb = vec3(G.z + 0.02 * A.w, G.w, 0.5 * A.w);
+  vec3 inv = 1.0 / (abs(gPlD) + 1e-6) * sign(gPlD + 1e-9);
+  vec3 ta = (-hb - gPlO) * inv;
+  vec3 tb = (hb - gPlO) * inv;
+  vec3 tn = min(ta, tb);
+  vec3 tf = max(ta, tb);
+  gPlN = tn;
+  gPlF = hb;
+  return vec2(max(max(tn.x, tn.y), max(tn.z, 0.0)), min(min(tf.x, tf.y), tf.z));
 }
 
 /**
- * A ray against one plate. Returns how much of the pixel the plate covers.
- * tH: where the ray meets it; pl: that place in the plate's own frame; nl:
- * the face's normal there; grad: the outline's gradient; sd: the outline's
- * distance; thick: how much ice the ray then crosses; kind: 0 the sawn
- * front, 1 the back, 2 an edge (a side, a top), 3 a chip.
+ * A ray against one plate, inside that plate's box (ab: where the ray
+ * crosses it, as plateBox gave it, with the ray in the plate's frame: o, d,
+ * and tn the faces it comes in by). Returns how much of the pixel the plate
+ * covers. tH: where the ray meets it; pl: that place in the plate's own
+ * frame; nl: the face's normal there; grad: the outline's gradient; sd: the
+ * outline's distance; thick: how much ice the ray then crosses; kind: 0 the
+ * sawn front, 1 the back, 2 an edge (a side, a top).
  */
-float plateHit(int i, vec3 ro, vec3 rd, out float tH, out vec3 pl, out vec3 nl, out vec2 grad, out float sd, out float thick, out float kind) {
-  tH = 0.0; pl = vec3(0.0); nl = vec3(0.0, -1.0, 0.0); grad = vec2(0.0, 1.0); sd = 1e3; thick = 0.0; kind = 0.0;
-  vec4 A = uLtA[i];
-  vec4 G = uLtG[i];
-  vec3 o = qFrom(uLtQ[i], ro - A.xyz);
-  vec3 d = qFrom(uLtQ[i], rd);
-  float H = A.w;
-  vec3 hb = vec3(G.z + 0.03 * H, G.w, 0.5 * H);
-  vec3 inv = 1.0 / (abs(d) + 1e-6) * sign(d + 1e-9);
-  vec3 ta = (-hb - o) * inv;
-  vec3 tb = (hb - o) * inv;
-  vec3 tn = min(ta, tb);
-  vec3 tf = max(ta, tb);
-  float tA = max(max(tn.x, tn.y), max(tn.z, 0.0));
-  float tB = min(min(tf.x, tf.y), tf.z);
-  if (tA >= tB) return 0.0;
-  float fi = float(i);
+float plateHit(vec2 cell, float H, vec3 o, vec3 d, vec3 tn, vec2 ab, out float tH, out vec3 pl, out vec3 nl, out vec2 grad, out float sd, out float thick, out float kind) {
+  tH = ab.x; pl = vec3(0.0); nl = vec3(0.0, -1.0, 0.0); grad = vec2(0.0, 1.0); sd = 1e3; thick = 0.0; kind = 0.0;
+  if (ab.x >= ab.y) return 0.0;
   // How fast the ray crosses the outline's plane, and what a pixel spans there.
   float rate = length(d.xz) + 1e-4;
-  float aa = 0.75 * tA * uPxAng;
-  float t = tA;
+  float aa = 0.75 * ab.x * uPxAng;
+  float t = ab.x;
   float best = 1e3;
-  float chipAt = 0.0;
   bool hit = false;
   bool first = false;
-  for (int k = 0; k < 14; k++) {
-    vec3 p = o + d * t;
-    float chip = plateChip(fi, p.xz / H, clamp(0.5 + 0.5 * p.y / hb.y, 0.0, 1.0)) * H;
-    float s = plateSd(i, p.xz) + chip;
-    if (s < best) { best = s; tH = t; grad = gNmGrad; chipAt = chip; }
+  for (int k = 0; k < 5; k++) {
+    float s = plateSd(cell, H, o.xz + d.xz * t);
+    if (s < best) { best = s; tH = t; grad = gNmGrad; }
     if (s < 0.0) { hit = true; first = k == 0; break; }
-    // (Where a chip is near, the surface changes through the plate's depth: the ray goes on by short steps.)
-    t += min(max(s, 0.3 * aa + 0.04) / rate, chip > 0.0 ? 0.24 * hb.y / max(abs(d.y), 0.05) : 1e9);
-    if (t > tB) break;
+    t += max(s, 0.3 * aa + 0.04) / rate;
+    if (t > ab.y) break;
   }
   if (best > aa) return 0.0;
   sd = best;
   pl = o + d * tH;
   vec2 gd = normalize(grad + vec2(1e-4, 0.0));
-  bool yFace = tn.y >= tn.x && tn.y >= tn.z;
-  if (hit && first && yFace) {
+  if (hit && first && tn.y >= tn.x && tn.y >= tn.z) {
     kind = d.y > 0.0 ? 0.0 : 1.0;
     nl = vec3(0.0, d.y > 0.0 ? -1.0 : 1.0, 0.0);
   } else if (hit && first && tn.z > tn.y && tn.z >= tn.x) {
@@ -159,21 +191,15 @@ float plateHit(int i, vec3 ro, vec3 rd, out float tH, out vec3 pl, out vec3 nl, 
     nl = vec3(0.0, 0.0, d.z > 0.0 ? -1.0 : 1.0);
     grad = vec2(0.0, nl.z);
   } else {
-    // An edge of the outline; where a chip has come away, a flat that leans to the face it broke from.
-    float ck = clamp(chipAt / (0.012 * H), 0.0, 1.0);
-    kind = 2.0 + ck;
-    nl = normalize(vec3(gd.x, (pl.y < 0.0 ? -1.0 : 1.0) * 0.9 * ck, gd.y));
+    kind = 2.0;
+    nl = vec3(gd.x, 0.0, gd.y);
   }
   // Where the ray leaves the plate's depth: how much ice it crosses.
-  vec3 pB = o + d * tB;
-  float sB = plateSd(i, pB.xz);
+  float sB = plateSd(cell, H, o.xz + d.xz * ab.y);
   float s0 = min(best, -0.01);
-  thick = (tB - tH) * (sB < 0.0 ? 1.0 : clamp(-s0 / (sB - s0), 0.05, 1.0));
+  thick = (ab.y - tH) * (sB < 0.0 ? 1.0 : clamp(-s0 / (sB - s0), 0.05, 1.0));
   // (An edge that the ray only grazes covers part of the pixel; one it goes in by covers it all.)
-  if (!hit) return 1.0 - smoothstep(-aa, aa, best);
-  if (first) return 1.0 - smoothstep(-aa, aa, min(best, sB));
-  vec3 pI = o + d * min(tH + (2.0 * aa + 1.0) / rate, tB);
-  return 1.0 - smoothstep(-aa, aa, min(best, plateSd(i, pI.xz)));
+  return 1.0 - smoothstep(-aa, aa, hit && !first ? -aa : min(best, hit ? sB : best));
 }
 #endif
 
@@ -200,32 +226,27 @@ vec3 nameLake() {
 /**
  * What stands behind the name, taken broadly, for what clear ice bends and
  * what a wet face gives back: the sky, the ranges in their haze along the
- * far shore, the pale sheet under them, the dark ice near by.
+ * far shore, the pale sheet under them, the dark ice near by. (A few mixes:
+ * it is asked for every pixel of a plate.)
  */
-vec3 nameEnv(vec3 d) {
-  float h = d.z;
-  if (h >= 0.0) {
-    vec3 sky = nameSky(normalize(vec3(d.xy, h + 0.004)), 0.0);
-    vec3 shore = mix(vec3(0.3, 0.4, 0.56) * (S.amb * 1.5 + S.key * 0.05), S.hor * 0.5 + vec3(0.01, 0.014, 0.022), uNight);
-    return mix(shore, sky, smoothstep(0.012, 0.07, h));
-  }
+vec3 nameEnv(float h) {
+  vec3 sky = mix(mix(S.hor, S.mid, smoothstep(0.0, 0.2, h)), S.zen, smoothstep(0.07, 0.62, h)) + uAurora * 0.5 * smoothstep(0.2, 0.6, h);
+  vec3 shore = mix(vec3(0.3, 0.4, 0.56) * (S.amb * 1.5 + S.key * 0.05), S.hor * 0.5 + vec3(0.01, 0.014, 0.022), uNight);
   vec3 far = mix(vec3(0.8, 0.86, 0.93) * (S.amb * 1.1 + S.key * 0.16), vec3(0.2, 0.26, 0.36) * S.amb * 2.4, uNight);
-  return mix(far, nameLake(), smoothstep(0.015, 0.2, -h));
+  vec3 up = mix(shore, sky, smoothstep(0.012, 0.07, h));
+  vec3 down = mix(far, nameLake(), smoothstep(0.015, 0.2, -h));
+  return h >= 0.0 ? up : down;
 }
 
 #ifdef F_NAME
 /**
  * The ice of a plate where the eye's ray meets it. The rest as plateHit gave
  * them; rd: the ray, in the world; t: how far along it; soft: 1 when the
- * plate is drawn as its image in the ice or through the water (its fine
- * inner work is not looked for).
+ * plate is drawn as its image in the ice or through the water (its finest
+ * inner work is let go).
  */
-vec3 plateLook(int i, vec3 pl, vec3 nl, vec2 grad, vec3 rd, float t, float sd, float thick, float kind, float soft) {
-  vec4 A = uLtA[i];
-  vec4 Q = uLtQ[i];
-  vec4 G = uLtG[i];
+vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, vec3 rd, float t, float sd, float thick, float kind, float soft) {
   float H = A.w;
-  float fi = float(i);
   vec3 n = qTo(Q, nl);
   vec3 L = keyDir();
   float px = max(t * uPxAng, 0.02);
@@ -234,14 +255,16 @@ vec3 plateLook(int i, vec3 pl, vec3 nl, vec2 grad, vec3 rd, float t, float sd, f
   float hK = clamp(c.y + 0.5, 0.0, 1.0);
   float e = max(-sd, 0.0) / H;
   float yd = clamp(0.5 + 0.5 * pl.y / max(G.w, 1.0), 0.0, 1.0);
-  bool isF = kind < 1.5;
+  float isF = kind < 1.5 ? 1.0 : 0.0;
   vec2 gd = normalize(grad + vec2(1e-4, 0.0));
   // A place on the face, in a measure that is the world's on a wide screen: on a sawn face, the letter's own; on an edge, along the outline and back through the plate.
-  vec2 q = isF ? c * 232.0 + fi * 61.0 : vec2(dot(c, vec2(-gd.y, gd.x)) * 232.0 + 113.0 + fi * 37.0, pl.y / H * 370.0 + 57.0);
+  vec2 q = mix(vec2(dot(c, vec2(-gd.y, gd.x)) * 232.0 + 113.0 + fi * 37.0, pl.y / H * 370.0 + 57.0), c * 232.0 + fi * 61.0, isF);
   float pxq = px * 232.0 / H;
   float wet = uNameP.y;
   // How upright it stands (1), or lies afloat (0): a plate lying in the water has only the sky over it.
-  float up = clamp(qTo(Q, vec3(0.0, 0.0, 1.0)).z, 0.0, 1.0);
+  vec3 upW = qTo(Q, vec3(0.0, 0.0, 1.0));
+  float up = clamp(upW.z, 0.0, 1.0);
+  float live = 1.0 - soft;
 
   // ---- the light that comes through it. Clear ice takes the red first: a hand of it is pale, a plate's depth is
   // turquoise, and along a plate's length it is a deep blue-green.
@@ -254,10 +277,10 @@ vec3 plateLook(int i, vec3 pl, vec3 nl, vec2 grad, vec3 rd, float t, float sd, f
   float toward = max(dot(rd, L), 0.0);
   float tw = toward * toward;
   tw *= tw;
-  vec3 behind = mix(S.key * (0.05 + 0.23 * tw) * (0.3 + 0.7 * up) + S.amb * 0.56, S.key * (0.16 + 1.0 * tw) + S.amb * 1.25 + uAurora * 0.04, uNight);
+  vec3 behind = mix(S.key * (0.05 + 0.23 * tw) * (0.3 + 0.7 * up) + S.amb * 0.56, S.key * (0.3 + 1.5 * tw) + S.amb * 1.9 + uAurora * 0.05, uNight);
   // It deepens toward the foot: the light has further to come down the plate, and the black ice under it gives none back.
-  float deep = mix(mix(0.22, 0.34, uNight), 1.0, smoothstep(0.0, 0.7, hK)) * mix(1.0, 0.78, (1.0 - up) * (1.0 - uNight));
-  vec3 footT = exp(-vec3(3.6, 0.42, 0.2) * (1.0 - hK) * (1.0 - hK) * up);
+  float deep = mix(mix(0.22, 0.56, uNight), 1.0, smoothstep(0.0, 0.7, hK)) * mix(1.0, 0.78, (1.0 - up) * (1.0 - uNight));
+  vec3 footT = exp(-vec3(3.6, 0.42, 0.2) * (1.0 - hK) * (1.0 - hK) * up * (1.0 - 0.5 * uNight));
   vec3 col = behind * T * footT * deep;
   // Which way the light comes along the face: an edge turned to the sun is where it pours in.
   vec3 Ll = qFrom(Q, L);
@@ -265,101 +288,91 @@ vec3 plateLook(int i, vec3 pl, vec3 nl, vec2 grad, vec3 rd, float t, float sd, f
   float toSun = clamp(0.5 + 0.5 * dot(gd, sunG), 0.0, 1.0);
   vec3 cold = mix(vec3(1.0, 0.97, 0.9), vec3(0.78, 0.9, 1.05), uNight);
   vec3 keyL = mix(S.key, S.key * 4.0 + S.amb * 1.6, uNight);
+  vec3 skyLit = mix(S.amb * 1.3 + S.key * 0.03, S.amb * 4.6 + uAurora * 0.24 + S.key * 0.6, uNight);
+  vec3 lake = nameLake();
 
-  if (isF) {
-    // ---- a sawn face: the letter itself.
-    // Trapped air: slow clouds and curtains drawn up through the ice, white where the light finds them.
-    vec4 sm = textureLod(uSnow, q / vec2(820.0, 960.0) + 0.37, 0.0);
-    float streak = textureLod(uSnow, vec2(q.x / 330.0, q.y / 2700.0) + 0.23, 0.0).g;
-    float cloud = smoothstep(0.08, 0.62, sm.r * 0.9 + streak * 0.6 + 0.25 * (hK - 0.5)) * (1.0 - 0.4 * wet);
-    col = mix(col, behind * (0.4 + 0.6 * T) * vec3(0.86, 0.94, 0.98) * mix(0.8, 1.0, hK), cloud * 0.36);
-    // Where there is none the eye goes through the plate to the dark ice beyond it.
-    float clearK = (1.0 - cloud) * smoothstep(0.2, -0.3, sm.g);
-    col = mix(col, nameLake() * T + col * 0.42, clearK * mix(0.5, 0.56, uNight) * up);
-    vec2 across = vec2(dot(rd, qTo(Q, vec3(1.0, 0.0, 0.0))), dot(rd, qTo(Q, vec3(0.0, 0.0, 1.0)))) / max(-dot(rd, n), 0.3) / 1.31;
-    if (soft < 0.5) {
-      // What is in it: veils of air, and fracture planes at three depths, each a hairline and a flash where it lies to the light.
-      vec3 in_ = iceInside(q * 1.7 + 31.0, across, thick * 1.7 * 232.0 / H, pxq * 1.7, 2.0 + fi);
-      col = mix(col, behind * vec3(0.94, 0.98, 1.0) * mix(1.05, 1.5, uNight), in_.x * 0.42);
-      float shift = 0.55 + 0.9 * n1(uTime * 0.45 + q.x / 170.0 + q.y / 90.0);
-      col += cold * (keyL * mix(0.2, 0.05, uNight) + S.amb * 0.45 + uAurora * 0.14) * in_.y * shift * 1.2;
-      // The broad planes of cleavage: the ice either side of one takes the light a little differently.
-      vec3 f3 = fracture(q / vec2(118.0, 176.0) + 5.3 + fi * 1.7);
-      col *= 0.84 + 0.3 * f3.y + 0.04 * sin(uTime * 0.5 + f3.z * 40.0);
-      float fl = (1.0 - smoothstep(0.0, 0.012 + 1.3 * pxq / 118.0, f3.x)) * step(0.3, f3.z);
-      col += cold * (keyL * mix(0.12, 0.03, uNight) + S.amb * 0.4 + uAurora * 0.08) * fl * 0.5 * shift * (0.4 + 0.6 * f3.y);
-    }
-    // The saw's marks: fine, nearly level, each blade's pass a little brighter or duller than the last. They hold the
-    // frost, and the frost holds the sky's light: this is what makes a clear plate a letter.
-    float ang = (hash11(fi * 3.7 + 1.3) - 0.5) * 0.36;
-    vec2 sw = vec2(q.x * cos(ang) + q.y * sin(ang), q.y * cos(ang) - q.x * sin(ang));
-    float fine = textureLod(uGrain, vec2(sw.x / 7000.0, sw.y / 330.0) + 0.21, 0.0).g;
-    float pass = textureLod(uGrain, vec2(sw.x / 20000.0 + 0.5, sw.y / 1900.0 + fi * 0.13), 0.0).b;
-    float mark = (fine - 0.5) * (1.0 - smoothstep(1.0, 3.0, pxq)) + (pass - 0.5) * 0.9;
-    col *= 1.0 + 0.3 * mark;
-    // (Under its top a plate is rimed; toward its foot it is wet and clear.)
-    float frost = clamp(mix(0.24, 0.13, uNight) + 0.3 * mark + 0.16 * smoothstep(0.55, 1.0, hK) - 0.12 * (1.0 - hK), 0.04, 0.8) * (1.0 - 0.45 * wet);
-    vec3 skyLit = mix(S.amb * 1.3 + S.key * 0.03, S.amb * 3.4 + uAurora * 0.2 + S.key * 0.4, uNight);
-    // (Its edges are clear: the frost stops a finger's breadth short of every arris.)
-    float edge = 1.0 - smoothstep(0.003, 0.014, e);
-    col = mix(col, vec3(0.9, 0.94, 0.98) * skyLit * (0.86 + 0.28 * hK), frost * (1.0 - edge));
-    // The arris. The ice is thin there and the light pours through: brightest on the edges turned to the sun; and it
-    // comes on into the ice a hand's breadth, so a thin stroke is lit right through and a broad one has a deeper heart.
-    float sunE = toSun * toSun;
-    col += cold * (keyL * mix(0.26, 0.55, uNight) + S.amb * 0.4) * (0.04 + 0.96 * sunE * toSun) * exp(-e / mix(0.009, 0.014, uNight)) * (0.35 + 0.65 * up);
-    col += vec3(0.62, 0.95, 1.0) * (keyL * 0.08 + S.amb * 0.1) * toSun * toSun * exp(-e / 0.06) * (0.4 + 0.6 * up);
-    if (edge > 0.0 && soft < 0.5) {
-      // Through the clear edge the far shore is seen, bent.
-      vec3 bent = normalize(rd + qTo(Q, vec3(gd.x, 0.0, gd.y)) * (0.5 - 0.9 * e / 0.022));
-      col = mix(col, nameEnv(bent) * (0.6 + 0.4 * T) + col * 0.5, edge * 0.42);
-    }
-    // A line of rime along a top edge, where the wind has left it.
-    float rime = exp(-e / 0.008) * smoothstep(0.55, 0.95, gd.y) * (1.0 - wet) * smoothstep(0.3, 0.6, textureLod(uGrain, q / 260.0 + 0.11, 0.0).g + 0.25);
-    col = mix(col, vec3(0.95, 0.97, 1.0) * skyLit * 1.25, rime * 0.75 * up);
-    // Meltwater runs down it in its own lanes: a moving sheen.
-    if (wet > 0.0 && soft < 0.5) {
-      float lane = textureLod(uGrain, vec2(q.x / 420.0 + 0.2, 0.37 + q.y / 9000.0), 0.0).g;
-      float film = wet * smoothstep(0.5, 0.68, lane);
-      float gw = textureLod(uGrain, vec2(q.x / 420.0, (q.y + uTime * (26.0 + 26.0 * lane)) / 1500.0) + 0.6, 0.0).g;
-      col *= 1.0 + film * (gw - 0.5) * 0.5;
-      col += (uAurora * 0.4 + S.amb * 0.25 * (1.0 - uNight)) * film * smoothstep(0.45, 0.9, gw);
-    }
-  } else {
-    // ---- an edge: a sawn side or a top, clear, the plate's whole body seen through it; or a chip, which glints.
-    float chip = clamp(kind - 2.0, 0.0, 1.0);
-    float flute = textureLod(uGrain, vec2(q.x / 520.0 + 0.4, q.y / 2400.0 + 0.2), lodFor(pxq, 520.0, 256.0)).g;
-    col *= 0.8 + 0.4 * flute;
-    // (A chip is a clean break: clear ice that the light finds.)
-    col += cold * (keyL * 0.12 + S.amb * 0.5) * chip;
-    // (The side the sun comes in by is lit through from end to end.)
-    col += vec3(0.6, 0.95, 1.0) * (keyL * 0.16 + S.amb * 0.2) * toSun * toSun * (0.4 + 0.6 * up) * (1.0 - 0.5 * chip);
-    // The arrises of an edge are its two sawn lines, front and back: each catches the light.
-    float ar = exp(-min(yd, 1.0 - yd) * 2.0 * G.w / (0.012 * H));
-    col += cold * (keyL * 0.13 + S.amb * 0.35) * ar * (0.3 + 0.7 * toSun);
-    if (soft < 0.5) {
-      vec3 bent = normalize(rd + n * 0.45);
-      col = mix(col, nameEnv(bent) * (0.5 + 0.5 * T) + col * 0.5, 0.3 * (1.0 - chip));
-    }
-    // A top is sawn and clear: a line of rime lies along its front edge and no more.
-    float top = smoothstep(0.5, 0.9, n.z) * up;
-    if (top > 0.0) col = mix(col, vec3(0.93, 0.95, 0.98) * mix(S.amb * 1.25 + S.key * 0.12, S.amb * 5.0 + uAurora * 0.2 + S.key, uNight), top * (1.0 - smoothstep(0.04, 0.2, yd)) * 0.6 * (1.0 - wet));
-  }
+  // What is in it, read once for a face and an edge alike: slow clouds of trapped air, curtains drawn up through
+  // the ice, and fracture planes seen a little way in (they shift against the face as the eye moves).
+  vec2 across = vec2(dot(rd, qTo(Q, vec3(1.0, 0.0, 0.0))), dot(rd, upW)) / max(-dot(rd, n), 0.3);
+  vec4 sm = textureLod(uSnow, q / vec2(820.0, 960.0) + 0.37, 0.0);
+  float streak = textureLod(uSnow, vec2(q.x / 330.0, q.y / 2700.0) + 0.23, 0.0).g;
+  vec4 fp = textureLod(uSnow, (q + across * 34.0) / vec2(430.0, 610.0) + 0.61 + fi * 0.17, 0.0);
+  // The saw's marks: fine, nearly level, each blade's pass a little brighter or duller than the last.
+  float ang = (fract(fi * 0.618 + 0.3) - 0.5) * 0.36;
+  vec2 sw = vec2(q.x + q.y * ang, q.y - q.x * ang);
+  vec4 gs = textureLod(uGrain, vec2(sw.x / 7000.0, sw.y / 330.0) + 0.21, 0.0);
+  float mark = (gs.g - 0.5) * (1.0 - smoothstep(1.0, 3.0, pxq)) + (gs.b - 0.5) * 0.5 + 0.35 * streak;
+
+  // ---- a sawn face: the letter itself.
+  float cloud = smoothstep(0.08, 0.62, sm.r * 0.9 + streak * 0.6 + 0.25 * (hK - 0.5)) * (1.0 - 0.4 * wet);
+  vec3 face = mix(col, behind * (0.4 + 0.6 * T) * vec3(0.86, 0.94, 0.98) * mix(0.8, 1.0, hK), cloud * 0.36);
+  // Where there is no air in it the eye goes through the plate to the dark ice beyond it.
+  float clearK = (1.0 - cloud) * smoothstep(0.2, -0.3, sm.g);
+  face = mix(face, lake * T + face * 0.42, clearK * mix(0.5, 0.36, uNight) * up);
+  // Fracture planes: each a hairline where it breaks the light, and on one side of it the break itself, a pale
+  // sheet going back into the ice that the light behind fills. They come and go a little as that light shifts.
+  float lineW = 0.012 + 0.02 * pxq;
+  float hair = (1.0 - smoothstep(0.0, lineW, abs(fp.r))) + 0.7 * (1.0 - smoothstep(0.0, lineW, abs(fp.b - 0.12)));
+  float sheet = step(0.0, fp.r) * exp(-fp.r * 9.0) + 0.6 * step(0.12, fp.b) * exp(-(fp.b - 0.12) * 12.0);
+  float cut = smoothstep(-0.1, 0.25, fp.g);
+  float shift = 0.7 + 0.5 * sin(uTime * 0.45 + fp.g * 9.0 + fi);
+  face += cold * (keyL * mix(0.16, 0.04, uNight) + S.amb * 0.4 + uAurora * 0.1) * (hair * 0.3 + sheet * 0.34 * shift) * cut * (0.4 + 0.6 * live) * (0.5 + 0.5 * T);
+  face *= 1.0 + 0.3 * mark;
+  // The frost the saw left holds the sky's light: this is what makes a clear plate a letter. (Under its top a plate
+  // is rimed; toward its foot it is wet and clear. Its edges are clear: the frost stops a finger's breadth short of every arris.)
+  float frost = clamp(mix(0.24, 0.2, uNight) + 0.3 * mark + 0.16 * smoothstep(0.55, 1.0, hK) - 0.12 * (1.0 - hK), 0.04, 0.8) * (1.0 - 0.45 * wet);
+  float edge = 1.0 - smoothstep(0.003, 0.014, e);
+  face = mix(face, vec3(0.9, 0.94, 0.98) * skyLit * (0.86 + 0.28 * hK), frost * (1.0 - edge));
+  // The arris. The ice is thin there and the light pours through: brightest on the edges turned to the sun; and it
+  // comes on into the ice a hand's breadth, so a thin stroke is lit right through and a broad one has a deeper heart.
+  float sunE = toSun * toSun * toSun;
+  face += cold * (keyL * mix(0.26, 0.55, uNight) + S.amb * 0.4) * (0.04 + 0.96 * sunE) * exp(-e / mix(0.009, 0.014, uNight)) * (0.35 + 0.65 * up);
+  face += vec3(0.62, 0.95, 1.0) * (keyL * 0.08 + S.amb * 0.1) * toSun * toSun * exp(-e / 0.06) * (0.4 + 0.6 * up);
+  // Through the clear edge what stands behind is seen, bent: over a top edge the far shore and the sky, at a side the dark ice.
+  face = mix(face, mix(lake, skyLit * vec3(0.8, 0.9, 1.0), smoothstep(0.3, 0.9, gd.y) * up) * (0.6 + 0.4 * T) + face * 0.5, edge * 0.42 * live);
+  // A chip at an arris: a clean break, clear ice that the light finds.
+  float chip = plateChip(fi, c) * (1.0 - smoothstep(0.012, 0.05, e)) * live;
+  face += cold * (keyL * 0.2 + S.amb * 0.7) * chip * (0.4 + 0.6 * toSun);
+  // A line of rime along a top edge, where the wind has left it.
+  float rime = exp(-e / 0.008) * smoothstep(0.55, 0.95, gd.y) * (1.0 - wet) * smoothstep(0.3, 0.6, gs.a + 0.25);
+  face = mix(face, vec3(0.95, 0.97, 1.0) * skyLit * 1.25, rime * 0.75 * up);
+  // Meltwater runs down it in its own lanes: a moving sheen.
+  float lane = smoothstep(0.0, 0.3, sm.b + 0.4 * streak);
+  float gw = 0.5 + 0.5 * sin((q.y + uTime * (26.0 + 26.0 * lane)) / 38.0 + sm.r * 9.0 + q.x / 17.0);
+  face *= 1.0 + wet * lane * (gw - 0.5) * 0.4 * live;
+  face += (uAurora * 0.4 + S.amb * 0.25 * (1.0 - uNight)) * wet * lane * smoothstep(0.55, 0.95, gw) * live;
+
+  // ---- an edge: a sawn side or a top, clear, the plate's whole body seen through it.
+  vec3 side = col * (0.8 + 0.4 * (0.5 + streak));
+  // (The side the sun comes in by is lit through from end to end.)
+  side += vec3(0.6, 0.95, 1.0) * (keyL * 0.16 + S.amb * 0.2) * toSun * toSun * (0.4 + 0.6 * up);
+  // (Its two sawn lines, front and back, each catch the light.)
+  float ar = exp(-min(yd, 1.0 - yd) * 2.0 * G.w / (0.012 * H));
+  side += cold * (keyL * 0.13 + S.amb * 0.35) * ar * (0.3 + 0.7 * toSun);
+  side += cold * (keyL * 0.05 + S.amb * 0.3) * (hair * 0.5 + sheet * 0.4) * cut;
+  side = mix(side, lake * (0.5 + 0.5 * T) + side * 0.5, 0.3 * live);
+  // (A top is sawn and clear: a line of rime lies along its front edge and no more.)
+  float top = smoothstep(0.5, 0.9, n.z) * up;
+  side = mix(side, vec3(0.93, 0.95, 0.98) * skyLit, top * (1.0 - smoothstep(0.04, 0.2, yd)) * 0.6 * (1.0 - wet));
+
+  col = mix(side, face, isF);
   // Every face is glass at a glance: it gives back what stands over it, more the more aslant the eye meets it.
   float cosi = clamp(dot(-rd, n), 0.0, 1.0);
-  float fres = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
-  if (soft < 0.5) {
-    vec3 rf = reflect(rd, n);
-    col = mix(col, nameEnv(rf), fres * (isF ? 0.55 + 0.4 * wet : 0.9));
-    // (And the low sun itself on what is turned to it: a top, a lit flank, a chip.)
-    float nh = max(dot(n, normalize(L - rd)), 0.0);
-    col += keyL * pow(nh, isF ? 36.0 : 90.0) * step(0.0, dot(n, L)) * (isF ? 0.1 : 0.55) * (1.0 - 0.4 * uNight);
-  }
+  float fr5 = 1.0 - cosi;
+  float fres = 0.02 + 0.98 * fr5 * fr5 * fr5 * fr5 * fr5;
+  vec3 rfl = reflect(rd, n);
+  col = mix(col, nameEnv(rfl.z), fres * mix(0.9, 0.55 + 0.4 * wet, isF) * live);
+  // (And the low sun itself on what is turned to it: a top, a lit flank.)
+  float nh = max(dot(n, normalize(L - rd)), 0.0);
+  float nh8 = nh * nh; nh8 *= nh8; nh8 *= nh8; nh8 *= nh8; nh8 *= nh8;
+  col += keyL * nh8 * mix(nh8, 1.0, isF) * step(0.0, dot(n, L)) * mix(0.55, 0.1, isF) * (1.0 - 0.4 * uNight) * live;
   // Where it stands in water: wet and dark at the waterline.
   float zw = (A.xyz + qTo(Q, pl)).z + gFree;
-  col *= 1.0 - 0.4 * uNameP.w * (1.0 - smoothstep(1.0, 9.0, zw)) * (1.0 - soft);
+  col *= 1.0 - 0.4 * uNameP.w * (1.0 - smoothstep(1.0, 9.0, zw)) * live;
   return col;
 }
 #endif
+
 
 /**
  * The swept ice: bare lake ice, nearly black, that the sky slides on. White
@@ -436,7 +449,7 @@ vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, ve
   rf.z = abs(rf.z) + 0.01;
   vec3 sky = nameSky(normalize(rf), 1.0 - wet);
   // (In a block's shade a little less of it: the frost on the ice is unlit there.)
-  col = mix(col, sky, clamp(fres * mix(0.15, 0.3, uNight) * (1.0 + mix(1.5, 0.8, uNight) * wet) * (1.0 - 0.45 * shade), 0.0, 0.95));
+  col = mix(col, sky, clamp(fres * mix(0.15, 0.3, uNight) * (1.0 + mix(0.9, 0.6, uNight) * wet) * (1.0 - 0.45 * shade), 0.0, 0.95));
   // The sun's path: under the sun the ice's scratches and its frost throw the light back in a long broken column that
   // comes down the lake toward the eye, close and bright far off, sparser near. A plate's shade cuts it.
   // (Before dawn it is the moon's, fainter and colder.)
@@ -446,10 +459,9 @@ vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, ve
   if (path > 0.004 && shade < 1.0) {
     // (Long soft dashes that lie along the eye's line, as scratched ice gives a low sun back: never a point of light.)
     vec2 vq = vec2(dot(il, vec2(vd.y, -vd.x)), dot(il, vd));
-    float ga = textureLod(uSnow, vq / vec2(300.0, 5200.0) + 0.17, 0.0).r;
-    float gb = textureLod(uSnow, vq / vec2(900.0, 9000.0) + vec2(0.37, 0.11) + vec2(0.0, 0.002) * uTime, 0.0).g;
+    vec4 gp = textureLod(uSnow, vq / vec2(300.0, 5200.0) + vec2(0.17, 0.17 + 0.002 * uTime), 0.0);
     float low = exp(-max(rf.z - keyDir().z, 0.0) / 0.3);
-    float glint = 0.55 + 0.45 * smoothstep(-0.3, 0.6, ga + 0.6 * gb);
+    float glint = 0.55 + 0.45 * smoothstep(-0.3, 0.6, gp.r + 0.6 * gp.g);
     col += mix(mix(S.band, vec3(1.0), 0.5) * 0.14, vec3(0.5, 0.62, 0.8) * 0.06, uNight) * path * low * glint * (1.0 - shade) * (1.0 - 0.5 * wet);
   }
   return col;
@@ -464,74 +476,64 @@ vec3 nameFloor(vec2 p, vec2 il, vec3 dir, float foot, float shade, float wet, ve
  */
 vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWater);
 
-#ifdef F_NAME
-/**
- * What stands under the water. A plate that has gone down is still all
- * there: the eye's ray goes into the water in front of it, is bent down by
- * the surface, and meets the plate lower than it would have. So what is sunk
- * of each letter hangs under its waterline drawn short, pale turquoise near
- * the surface and lost in the deep further down, and every ripple shakes
- * it. onWater: how much of the pixel is open water.
- */
-vec3 nameUnder(vec3 col, vec3 dir, float onWater) {
-  float tW = (uCamPos.z + gFree) / -dir.z;
-  vec3 at = uCamPos + dir * tW;
-  // (A sunk plate is seen through water no further off than its own height.)
-  float room = 1.2 * uNameB.z;
-  if (at.x < uNameBx.x - room || at.x > uNameBx.z + room || at.y < uNameBx.y - 2.2 * room || at.y > uNameBx.w + room) return col;
-  // The surface there: the simulation's waves and the pool's own small ripples.
-  vec2 slope = textureLod(uWave, simUv(at.xy), 0.0).zw * 2.2;
-  slope += (textureLod(uGrain, at.xy / 96.0 + vec2(0.011, 0.007) * uTime, 0.0).gb - 0.5) * 0.07;
-  // (Bent a little less than water truly bends it: from this low the sunk part of a letter would be drawn a third as
-  // tall as it is. It is drawn short, and moves with the surface, and that says water.)
-  vec3 rr = normalize(mix(dir, refract(dir, normalize(vec3(-slope, 1.0)), 0.752), 0.55));
-  for (int i = 0; i < PLATES; i++) {
-    float tH;
-    vec3 pl;
-    vec3 nl;
-    vec2 grad;
-    float sd;
-    float thick;
-    float kind;
-    float cov = plateHit(i, at, rr, tH, pl, nl, grad, sd, thick, kind);
-    if (cov <= 0.0) continue;
-    vec3 c = plateLook(i, pl, nl, grad, rr, tW + tH, sd, thick, kind, 1.0);
-    // The water takes the red first and then the rest: pale turquoise just under the surface, the lake's own dark below.
-    float down = max(-(at.z + rr.z * tH + gFree), 0.0);
-    float path = tH + down;
-    vec3 thru = exp(-path * mix(vec3(0.021, 0.0064, 0.0048), vec3(0.015, 0.0058, 0.0046), uNight));
-    vec3 deep = mix(vec3(0.004, 0.035, 0.05) * (S.amb * 1.2 + S.key * 0.12), vec3(0.002, 0.009, 0.014) + uAurora * 0.004, uNight);
-    c = c * mix(vec3(0.6, 0.94, 1.0), vec3(0.6, 0.9, 0.95), uNight) * thru + deep * (1.0 - thru.g);
-    // (The surface gives back some of the sky over it: a little, from this high; and what is deep is dim.)
-    col = mix(col, c, cov * (0.9 - 0.1 * uNight) * mix(1.0, thru.g, 0.4) * onWater);
-  }
-  return col;
-}
-#endif
+// The plates' image in the ice at this pixel, as the swept field found it (the plate, the place on its face, how
+// strong the image is there): it is given its ice with the plates themselves, in nameIce.
+int gMirI = -1;
+vec4 gMirH = vec4(0.0);
+vec2 gMirG = vec2(0.0, 1.0);
+float gMirK = 0.0;
+vec3 gMirRd = vec3(0.0, 1.0, 0.0);
+vec4 gMirPA = vec4(0.0, 0.0, 0.0, 1.0);
+vec4 gMirPG = vec4(0.0);
 
 vec3 nameIce(vec3 col, vec3 dir, float tG, float onIce, float tWall) {
   if (uNameG.w < 0.5) return col;
   nameFrame();
+  gMirI = -1;
+  gMirK = 0.0;
 #ifndef DBG_NO_NFIELD
   if (tG < 1e8 && dir.z < -0.0006) col = nameField(col, uCamPos.xy + dir.xy * tG, dir, tG * uPxAng, onIce, tWall < 1e8 ? 0.0 : 1.0 - onIce);
 #endif
 #if defined(F_NAME) && !defined(DBG_NO_NHIT)
+  // What of a plate this pixel shows, if anything: the plate itself; or, where the eye's ray goes into open water
+  // before it meets one, the plate as it stands under the water (the ray is bent down by the surface, so what is
+  // sunk of each letter hangs under its waterline drawn short, and every ripple shakes it); or the plate's image in
+  // the ice. Whichever it is, its ice is worked out once.
+  int bi = -1;
+  float bCov = 0.0;
+  float bT = 0.0;
+  vec3 bPl = vec3(0.0);
+  vec3 bNl = vec3(0.0, -1.0, 0.0);
+  vec2 bGrad = vec2(0.0, 1.0);
+  vec3 bK = vec3(0.0);
+  float mode = 0.0;
+  vec4 bA = vec4(0.0, 0.0, 0.0, 1.0);
+  vec4 bQ = vec4(0.0, 0.0, 0.0, 1.0);
+  vec4 bG = vec4(0.0);
+  vec3 rdL = dir;
+  float tW = 0.0;
   // Most of the frame's rays pass nowhere near the plates: that is settled against the one box that holds all eight.
-  {
-    float top = 2.2 * uNameB.z;
-    vec3 lo = vec3(uNameBx.xy, -gFree - top);
-    vec3 hi = vec3(uNameBx.zw, top);
-    vec3 inv = 1.0 / (abs(dir) + 1e-6) * sign(dir + 1e-9);
-    vec3 ta = (lo - uCamPos) * inv;
-    vec3 tb = (hi - uCamPos) * inv;
-    vec3 tn = min(ta, tb);
-    vec3 tf = max(ta, tb);
-    if (max(max(tn.x, tn.y), max(tn.z, 0.0)) >= min(min(tf.x, tf.y), tf.z)) return col;
-  }
-  // What stands under the water, seen through it: before the plates themselves, which stand in front of it.
-  if (uNameM.z > 0.5 && tG < 1e8 && dir.z < -0.0006 && onIce < 1.0 && tWall >= 1e8) col = nameUnder(col, dir, 1.0 - onIce);
-  // (The far row first: the near one stands in front of it.)
-  for (int i = 0; i < PLATES; i++) {
+  vec3 lo = vec3(uNameBx.xy, -gFree - 0.6 * uNameM.x);
+  vec3 hi = vec3(uNameBx.zw, uNameM.x);
+  vec3 inv = 1.0 / (abs(dir) + 1e-6) * sign(dir + 1e-9);
+  vec3 ta = (lo - uCamPos) * inv;
+  vec3 tb = (hi - uCamPos) * inv;
+  vec3 tn = min(ta, tb);
+  vec3 tf = max(ta, tb);
+  if (max(max(tn.x, tn.y), max(tn.z, 0.0)) < min(min(tf.x, tf.y), tf.z)) {
+    // The two plates whose boxes the ray comes to first: it may pass through the first one's open side and meet the next.
+    int i1 = -1;
+    int i2 = -1;
+    vec2 ab1 = vec2(1e9);
+    vec2 ab2 = vec2(1e9);
+    vec3 o1 = vec3(0.0), d1 = vec3(0.0), n1_ = vec3(0.0), o2 = vec3(0.0), d2 = vec3(0.0), n2_ = vec3(0.0), f1 = vec3(1.0);
+    vec4 A1 = vec4(0.0, 0.0, 0.0, 1.0), Q1 = vec4(0.0, 0.0, 0.0, 1.0), G1 = vec4(0.0), A2 = vec4(0.0, 0.0, 0.0, 1.0), Q2 = vec4(0.0, 0.0, 0.0, 1.0), G2 = vec4(0.0);
+    for (int i = 0; i < PLATES; i++) {
+      vec2 ab = plateBox(i, uCamPos, dir);
+      if (ab.x >= ab.y) continue;
+      if (ab.x < ab1.x) { i2 = i1; ab2 = ab1; o2 = o1; d2 = d1; n2_ = n1_; A2 = A1; Q2 = Q1; G2 = G1; i1 = i; ab1 = ab; o1 = gPlO; d1 = gPlD; n1_ = gPlN; f1 = gPlF; A1 = uLtA[i]; Q1 = uLtQ[i]; G1 = uLtG[i]; }
+      else if (ab.x < ab2.x) { i2 = i; ab2 = ab; o2 = gPlO; d2 = gPlD; n2_ = gPlN; A2 = uLtA[i]; Q2 = uLtQ[i]; G2 = uLtG[i]; }
+    }
     float tH;
     vec3 pl;
     vec3 nl;
@@ -539,69 +541,121 @@ vec3 nameIce(vec3 col, vec3 dir, float tG, float onIce, float tWall) {
     float sd;
     float thick;
     float kind;
-    float cov = plateHit(i, uCamPos, dir, tH, pl, nl, grad, sd, thick, kind);
-    if (cov <= 0.0) continue;
-    vec3 p = uCamPos + dir * tH;
-    // Below the sheet's top a plate is seen only through an opening, and only if it stands nearer than the opening's far wall.
-    if (p.z < 0.0 && tH > tG) {
-      cov *= (1.0 - onIce) * step(tH, tWall);
-      // (What stands under the water is seen through the water, bent by it: see nameUnder. Here, only what stands over it.)
-      cov *= smoothstep(-0.6, 0.6, (p.z + gFree) / max(tH * uPxAng, 0.05));
+    for (int k = 0; k < 2; k++) {
+      int ii = k == 0 ? i1 : i2;
+      if (ii < 0 || bCov >= 0.99) break;
+      float cov = plateHit(k == 0 ? G1.xy : G2.xy, k == 0 ? A1.w : A2.w, k == 0 ? o1 : o2, k == 0 ? d1 : d2, k == 0 ? n1_ : n2_, k == 0 ? ab1 : ab2, tH, pl, nl, grad, sd, thick, kind);
+      float pz = uCamPos.z + dir.z * tH;
+      // Below the sheet's top a plate is seen only through an opening, and only if it stands nearer than the opening's far wall.
+      if (pz < 0.0 && tH > tG) {
+        cov *= (1.0 - onIce) * step(tH, tWall);
+        // (What stands under the water is seen through the water: below. Here, only what stands over it.)
+        cov *= smoothstep(-0.6, 0.6, (pz + gFree) / max(tH * uPxAng, 0.05));
+      }
+      if (cov > bCov) { bi = ii; bCov = cov; bT = tH; bPl = pl; bNl = nl; bGrad = grad; bK = vec3(sd, thick, kind); bA = k == 0 ? A1 : A2; bQ = k == 0 ? Q1 : Q2; bG = k == 0 ? G1 : G2; }
     }
-    if (cov <= 0.0) continue;
-    // (Where words stand in the frame nothing is busy behind them: a berg that rides under them is let go there.)
-    cov *= 1.0 - 0.85 * wordsNear();
-    vec3 c = plateLook(i, pl, nl, grad, dir, tH, sd, thick, kind, 0.0);
-    // (The plates stand close under the eye and are kept clear of most of the lake's haze; a berg far down the lake is in it.)
-    col = mix(col, mix(c, inAir(c, dir, tH), mix(0.04, 0.7, smoothstep(1800.0, 5200.0, tH))), cov);
-    gNmCov = max(gNmCov, cov);
+#ifndef DBG_NO_NUNDER
+    if (bCov < 0.5 && uNameM.z > 0.5 && tG < 1e8 && dir.z < -0.0006 && onIce < 1.0 && tWall >= 1e8) {
+      // Through the water. The surface there: the simulation's waves and the pool's own small ripples.
+      tW = (uCamPos.z + gFree) / -dir.z;
+      vec3 at = uCamPos + dir * tW;
+      vec2 slope = textureLod(uWave, simUv(at.xy), 0.0).zw * 2.2;
+      slope += (textureLod(uGrain, at.xy / 96.0 + vec2(0.011, 0.007) * uTime, 0.0).gb - 0.5) * 0.07;
+      // (Bent a little less than water truly bends it: from this low the sunk part of a letter would be drawn a third
+      // as tall as it is. It is drawn short, and moves with the surface, and that says water.)
+      vec3 rr = normalize(mix(dir, refract(dir, normalize(vec3(-slope, 1.0)), 0.752), 0.55));
+      // (The plate whose box the eye's own ray came to first is the one that stands in this water. The bent ray is
+      // taken into that plate's own frame as the eye's ray was: a foundered plate leans only a little.)
+      if (i1 >= 0) {
+        vec3 oU = o1 + d1 * tW;
+        vec3 dU = normalize(d1 + rr - dir);
+        vec3 invU = 1.0 / (abs(dU) + 1e-6) * sign(dU + 1e-9);
+        vec3 taU = (-f1 - oU) * invU;
+        vec3 tbU = (f1 - oU) * invU;
+        vec3 tnU = min(taU, tbU);
+        vec3 tfU = max(taU, tbU);
+        vec2 abU = vec2(max(max(tnU.x, tnU.y), max(tnU.z, 0.0)), min(min(tfU.x, tfU.y), tfU.z));
+        float cov = plateHit(G1.xy, A1.w, oU, dU, tnU, abU, tH, pl, nl, grad, sd, thick, kind) * (1.0 - onIce);
+        if (cov > bCov) { bi = i1; bCov = cov; bT = tH; bPl = pl; bNl = nl; bGrad = grad; bK = vec3(sd, thick, kind); mode = 1.0; rdL = rr; bA = A1; bQ = Q1; bG = G1; }
+      }
+    }
+#endif
+  }
+  // (Where words stand in the frame nothing is busy behind them: a berg that rides under them is let go there.)
+  bCov *= 1.0 - 0.85 * wordsNear();
+  // Its image in the ice, where no plate itself is seen.
+  if (bCov < 0.5 && gMirI >= 0 && gMirK > bCov) {
+    bi = gMirI; bCov = gMirK; bT = gMirH.w; bPl = vec3(gMirH.x, -gMirPG.w, gMirH.y); bNl = vec3(0.0, -1.0, 0.0); bGrad = gMirG; bK = vec3(gMirH.z, 2.0 * gMirPG.w, 0.0); mode = 2.0; rdL = gMirRd; bA = gMirPA; bQ = vec4(0.0, 0.0, 0.0, 1.0); bG = gMirPG;
+  }
+  if (bi >= 0 && bCov > 0.0) {
+#ifdef DBG_NO_NLOOK
+    vec3 c = vec3(0.3, 0.6, 0.7);
+#else
+    vec3 c = plateLook(bA, bQ, bG, float(bi), bPl, bNl, bGrad, rdL, bT + tW, bK.x, bK.y, bK.z, mode > 0.5 ? 1.0 : 0.0);
+#endif
+    if (mode < 0.5) {
+      // (The plates stand close under the eye and are kept clear of most of the lake's haze; a berg far down the lake is in it.)
+      col = mix(col, mix(c, inAir(c, dir, bT), mix(0.04, 0.7, smoothstep(1800.0, 5200.0, bT))), bCov);
+      gNmCov = max(gNmCov, bCov);
+    } else if (mode < 1.5) {
+      // The water takes the red first and then the rest: pale turquoise just under the surface, the lake's own dark below.
+      float down = max(-(uCamPos.z + dir.z * tW + rdL.z * bT + gFree), 0.0);
+      vec3 thru = exp(-(bT + down) * mix(vec3(0.021, 0.0064, 0.0048), vec3(0.015, 0.0058, 0.0046), uNight));
+      vec3 deepW = mix(vec3(0.004, 0.035, 0.05) * (S.amb * 1.2 + S.key * 0.12), vec3(0.002, 0.009, 0.014) + uAurora * 0.004, uNight);
+      c = c * mix(vec3(0.6, 0.94, 1.0), vec3(0.6, 0.9, 0.95), uNight) * thru + deepW * (1.0 - thru.g);
+      // (The surface gives back some of the sky over it: a little, from this high; and what is deep is dim.)
+      col = mix(col, c, bCov * (0.9 - 0.1 * uNight) * mix(1.0, thru.g, 0.4));
+    } else {
+      col = mix(col, c * mix(vec3(0.7, 0.84, 0.98), vec3(0.6, 0.78, 0.95), uNight), bCov);
+    }
   }
 #endif
   return col;
 }
 
-#ifdef F_NAME
 /**
  * What the plates do to the sheet they stand on, before the air. Each
  * throws a long shade toward the eye, away from the low sun behind it, and
  * the light that came through the plate lies in that shade: a blue-green
  * pool, brightest at its core. p: the place on the sheet's top; onIce: how
- * much of the pixel is that top.
+ * much of the pixel is that top. (It is the swept field's work, not the
+ * plates' own: it lies a long way out from them, and the plates' own code is
+ * carried only close round them.)
  */
 vec3 nameGround(vec3 col, vec2 p, vec3 dir, float foot, float onIce) {
   gNmShade = 0.0;
   gNmPool = 0.0;
+#ifdef DBG_NO_NGROUND
+  return col;
+#endif
   if (uNameG.w < 0.5 || onIce <= 0.0) return col;
   nameFrame();
   vec3 L = keyDir();
   if (L.z <= 0.02) return col;
   // (The shade lies from the plates away from the light, and is gone this far out.)
-  const float REACH = 2400.0;
+  const float REACH = 1100.0;
   vec2 way = normalize(L.xy) * REACH;
   vec2 lo = uNameBx.xy - max(way, 0.0) - 60.0;
   vec2 hi = uNameBx.zw - min(way, 0.0) + 60.0;
   if (p.x < lo.x || p.y < lo.y || p.x > hi.x || p.y > hi.y) return col;
+  // (Each row is taken as it stands, upright: the plate of it whose shade this place can lie in is found by its
+  // place across the row, and that one's outline is looked at once.)
   float shade = 0.0;
   float pool = 0.0;
-  for (int i = 0; i < PLATES; i++) {
-    float stands = uLtR[i].w;
-    if (stands < 0.02) continue;
-    vec4 A = uLtA[i];
-    vec4 G = uLtG[i];
-    vec3 o = qFrom(uLtQ[i], vec3(p, 0.0) - A.xyz);
-    vec3 d = qFrom(uLtQ[i], L);
-    if (abs(d.y) < 0.03) continue;
-    // (Toward the light, to the plate's middle plane.)
-    float s = -o.y / d.y;
-    if (s <= 0.0 || s > REACH) continue;
-    vec2 h = o.xz + d.xz * s;
-    if (abs(h.x) > G.z + 0.12 * A.w || abs(h.y) > 0.56 * A.w) continue;
+  for (int r = 0; r < 2; r++) {
+    bool near = r == 1;
+    vec4 row = near ? uRowB : uRowA;
+    float H = near ? uRowH.y : uRowH.x;
+    float stands = (near ? uRowH.w : uRowH.z) * (near || uNameG.z > 0.0 ? 1.0 : 0.0);
+    float s = (row.y - p.y) / L.y;
+    vec2 h = vec2(p.x + L.x * s - row.x, L.z * s);
+    float in_ = step(0.0, s) * step(s, REACH) * step(abs(h.x), row.z + 0.12 * H) * step(h.y, 1.06 * H);
     float soft = 1.2 + s * 0.022;
-    float sdv = plateSd(i, h);
-    float m = (1.0 - smoothstep(-soft, soft, sdv)) * exp(-s / 1250.0) * stands * (1.0 - smoothstep(0.46, 0.54, abs(h.y) / A.w));
-    shade = max(shade, m);
+    float sdv = rowSd(r, h);
+    float fade = stands * in_ * (1.0 - smoothstep(0.6 * REACH, REACH, s));
+    shade = max(shade, (1.0 - smoothstep(-soft, soft, sdv)) * exp(-s / 800.0) * fade * (1.0 - smoothstep(0.96, 1.04, h.y / H)));
     // (The light that came through lies in the shade's heart: a soft pool, never a second image of the letter.)
-    pool = max(pool, (1.0 - smoothstep(-0.2 * A.w, 0.16 * A.w, sdv)) * exp(-s / (3.2 * A.w)) * stands * (1.0 - smoothstep(0.3, 0.54, abs(h.y) / A.w)));
+    pool = max(pool, (1.0 - smoothstep(-0.2 * H, 0.16 * H, sdv)) * exp(-s / (3.2 * H)) * fade * (1.0 - smoothstep(0.8, 1.04, h.y / H)));
   }
   // (It stops short of where the first frame's words stand: they stand on calm snow.)
   float keep = smoothstep(0.02, 0.2, wordsClear(p));
@@ -614,7 +668,6 @@ vec3 nameGround(vec3 col, vec2 p, vec3 dir, float foot, float onIce) {
   vec3 nightS = mix(vec3(0.72, 0.76, 0.84), vec3(0.8, 0.98, 1.04), pool * 0.5);
   return col * mix(vec3(1.0), mix(dayS, nightS, uNight), shade * onIce);
 }
-#endif
 
 /**
  * The swept field, laid over the sheet after the air (it lies close under
@@ -727,24 +780,21 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
   // The sheet's fractures on the bare ice, and those that run out from the plates' feet as the sheet weakens: each
   // a break going down into the ice, white where it catches the light, uneven in width, and dark along its middle
   // where it has begun to open.
+#ifndef DBG_NO_NFRAC
   if (K * onIce > 0.0 && footL < 16.0) {
     float cw = max(foot * 0.9, 0.5);
     float crk = gIceCr;
     float wide = 1.0;
     if (uNameP.z > 0.0) {
       // (They leave the rows at their own angles, wander, and stop: none is ruled, none crosses the whole field.)
-      vec2 q2 = p + textureLod(uSnow, il / vec2(700.0, 520.0) + 0.37, 0.0).rg * 90.0 + (textureLod(uGrain, il / 170.0, 0.0).gb - 0.5) * 9.0;
+      vec2 q2 = p + textureLod(uSnow, il / vec2(700.0, 520.0) + 0.37, 0.0).rg * 90.0;
       float len = uNameB.z * 4.6 * uNameP.z;
       for (int i = 0; i < PLATES; i++) {
-        float fi = float(i);
-        vec4 row = i < 4 ? uRowA : uRowB;
-        float fx = (fi - (i < 4 ? 1.5 : 5.5)) / 1.5;
-        vec2 a = row.xy + vec2(fx * row.z * 0.86, 0.0);
-        float ang = fx * 0.75 + (hash11(fi * 3.7 + 1.3) - 0.5) * 1.1;
-        vec2 d = vec2(sin(ang), (i == 2 || i == 5 ? 1.0 : -1.0) * cos(ang));
-        float l = len * (0.5 + 0.7 * hash11(fi * 5.1 + 2.2));
-        float t = clamp(dot(q2 - a, d), 0.0, l);
-        float di = length(q2 - a - d * t) + 6.0 * smoothstep(0.7, 1.0, t / l);
+        vec4 fr = uFrac[i];
+        float l = len * uFracL[i];
+        vec2 v = q2 - fr.xy;
+        float t = clamp(dot(v, fr.zw), 0.0, l);
+        float di = length(v - fr.zw * t) + 6.0 * smoothstep(0.7, 1.0, t / l);
         if (di < crk) { crk = di; wide = 0.6 + 1.6 * (1.0 - t / l) * uNameP.w; }
       }
     }
@@ -757,38 +807,40 @@ vec3 nameField(vec3 col, vec2 p, vec3 dir, float foot, float onIce, float onWate
       col *= 1.0 - 0.85 * (1.0 - smoothstep(0.25 * cw * wide, 0.7 * cw * wide, crk)) * K * onIce * min(1.0, wide);
     }
   }
+#endif
   // The plates' image: once, in the black ice. Sharp at each foot, it is gone a little over half the plate's height
   // down, where the ice's scratches and its frost take over; meltwater standing on the ice holds it clearer, and the
   // pointer's waves in that water shake it.
 #ifdef F_NAME
   float mirK = K * onIce;
-  if (DBG_MIR mirK > 0.0 && fd < 3.2 * uNameB.z) {
+  if (DBG_MIR mirK > 0.0 && fd < 290.0) {
     vec3 from = vec3(p, 0.0);
     vec3 rf = normalize(vec3(dir.xy + slope * 4.0 + tilt * 0.35 * (1.0 - pond), -dir.z));
     float mir = 0.0;
-    vec3 mc = vec3(0.0);
-    for (int i = 0; i < PLATES; i++) {
-      float stands = uLtR[i].w;
-      if (stands < 0.02) continue;
-      vec4 A = uLtA[i];
-      vec4 G = uLtG[i];
-      vec3 o = qFrom(uLtQ[i], from - A.xyz);
-      vec3 d = qFrom(uLtQ[i], rf);
-      if (d.y < 0.03) continue;
-      // (To the plate's sawn front.)
-      float s2 = (-G.w - o.y) / d.y;
-      if (s2 <= 0.0) continue;
-      vec2 h = o.xz + d.xz * s2;
-      float zUp = h.y / A.w + 0.5;
-      if (abs(h.x) > G.z + 0.04 * A.w || zUp > 0.64 || zUp < -0.02) continue;
-      float sdm = plateSd(i, h);
-      float m = (1.0 - smoothstep(-0.5 - s2 * 0.012, 0.5 + s2 * 0.03, sdm)) * (1.0 - smoothstep(0.0, 0.6, zUp)) * stands;
-      if (m > mir) {
-        mir = m;
-        mc = plateLook(i, vec3(h.x, -G.w, h.y), vec3(0.0, -1.0, 0.0), gNmGrad, rf, s2 + length(from - uCamPos), sdm, 2.0 * G.w, 0.0, 1.0);
-      }
+    int mi = -1;
+    vec4 mh = vec4(0.0);
+    vec2 mg = vec2(0.0, 1.0);
+    // (Each row is taken as it stands, upright: the plate of it whose image this place can hold is found by its
+    // place across the row, and that one's outline is looked at once. The near row's image is the one kept.)
+    float ry = max(rf.y, 0.03);
+    vec4 mA = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 mG = vec4(0.0);
+    for (int r = 0; r < 2; r++) {
+      bool near = r == 1;
+      vec4 row = near ? uRowB : uRowA;
+      float H = near ? uRowH.y : uRowH.x;
+      float stands = (near ? uRowH.w : uRowH.z) * (near || uNameG.z > 0.0 ? 1.0 : 0.0);
+      // (To the row's sawn fronts.)
+      float s2 = (row.y - row.w - from.y) / ry;
+      vec2 h = vec2(from.x + rf.x * s2 - row.x, rf.z * s2);
+      float zUp = h.y / H;
+      float sdm = rowSd(r, h);
+      float m = (1.0 - smoothstep(-0.5 - s2 * 0.012, 0.5 + s2 * 0.03, sdm)) * (1.0 - smoothstep(0.0, 0.6, zUp)) * stands * step(0.0, s2) * step(abs(h.x), row.z + 0.04 * H);
+      // (The image is given the row's own ice as a plate of its height and depth has it, a place on its face.)
+      if (m > mir) { mi = r; mir = m; mh = vec4(h.x, h.y - 0.5 * H, sdm, s2); mg = gNmGrad; mA = vec4(row.x, row.y, 0.5 * H, H); mG = vec4(0.0, 0.0, row.z, row.w); }
     }
-    col = mix(col, mc * mix(vec3(0.7, 0.84, 0.98), vec3(0.6, 0.78, 0.95), uNight), mir * mix(0.46, 0.66, pond) * mirK);
+    // (It is given its ice with the plates themselves: see nameIce.)
+    if (mi >= 0 && mir > 0.0) { gMirI = mi; gMirPA = mA; gMirPG = mG; gMirH = mh; gMirH.w += length(from - uCamPos); gMirG = mg; gMirK = mir * mix(0.46, 0.66, pond) * mirK; gMirRd = rf; }
   }
 #endif
   // Snow snakes: thin streamers the wind drives across the bare ice.

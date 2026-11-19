@@ -40,6 +40,8 @@ const CELL = [4, 5, 6, 8];
 const SPAN = 2300;
 /** How thick the lake's sheet stands above the water, world units. */
 const ICE_H = 16;
+/** How far toward the eye from a plate its image in the ice is looked for, world units (the name's own shader looks no further). */
+const NAME_SHADE = 300;
 /** How far the water under the name has spread from where its rows stood at a point in the melt, world units: it opens as the plates founder. */
 const nameReach = (m: number) => 150 * smooth(0.52, 0.74, m) + 120 * smooth(0.7, 0.9, m);
 
@@ -987,7 +989,7 @@ export class FlightEngine extends WaterEngine {
    * raster's measures (uv to a capital's height, and how far from a cell's middle an outline is looked for), and
    * where the lead that carries the lake's water off leaves the name.
    */
-  nameStand: { plates: Plate[]; rows: [number, number, number, number][]; seat: [number, number, number]; tex: [number, number, number, number]; cells: [number, number][]; lead: [number, number] } | null = null;
+  nameStand: { plates: Plate[]; rows: [number, number, number, number][]; seat: [number, number, number]; tex: [number, number, number, number]; cells: [number, number][]; lead: [number, number]; frac: Float32Array; fracL: Float32Array; strips: [number, number, number, number][] } | null = null;
   /**
    * Where the first frame's words stand, as shares of the frame: the right end of the left block, the left end of the
    * right one (both 1 when they are stacked), and how far up the frame their top is. The bare ice round the name keeps clear of them.
@@ -1028,6 +1030,7 @@ export class FlightEngine extends WaterEngine {
   private posesStill: PlatePose[] = [];
   private ltA = new Float32Array(PLATES * 4);
   private ltQ = new Float32Array(PLATES * 4);
+  private ltM = [new Float32Array(PLATES * 4), new Float32Array(PLATES * 4), new Float32Array(PLATES * 4)];
   private ltG = new Float32Array(PLATES * 4);
   private ltF = new Float32Array(PLATES * 4);
   private ltR = new Float32Array(PLATES * 4);
@@ -1049,18 +1052,32 @@ export class FlightEngine extends WaterEngine {
       this.posesStill[i] = b;
       this.ltA.set([a.pos[0], a.pos[1], a.pos[2], p.h], i * 4);
       this.ltQ.set(a.q, i * 4);
+      // (The world in the plate's own frame: the turn undone, as three rows, each with what the plate's place adds.)
+      {
+        const [x, y, z, w] = a.q;
+        const rows = [
+          [1 - 2 * (y * y + z * z), 2 * (x * y + w * z), 2 * (x * z - w * y)],
+          [2 * (x * y - w * z), 1 - 2 * (x * x + z * z), 2 * (y * z + w * x)],
+          [2 * (x * z + w * y), 2 * (y * z - w * x), 1 - 2 * (x * x + y * y)],
+        ];
+        rows.forEach((r, k) => this.ltM[k].set([r[0], r[1], r[2], -(r[0] * a.pos[0] + r[1] * a.pos[1] + r[2] * a.pos[2])], i * 4));
+      }
       this.ltG.set([st.cells[i][0], st.cells[i][1], p.hw, p.d / 2], i * 4);
       this.ltF.set(a.foot, i * 4);
       // (w: how much of it stands in the light, to throw a shade and have an image in the ice: less once it has foundered, none afloat.)
       this.ltR.set([Math.cos(a.yaw), Math.sin(a.yaw), a.open, (1 - a.flat) * (1 - 0.8 * a.down)], i * 4);
       this.ltFS.set(b.foot, i * 4);
       this.ltRS.set([Math.cos(b.yaw), Math.sin(b.yaw), b.open, (1 - b.flat) * (1 - 0.8 * b.down)], i * 4);
-      // (A plate is nowhere further from its middle than half its diagonal.)
-      const r = Math.hypot(p.h / 2, p.hw, p.d / 2) + 8;
-      x0 = Math.min(x0, a.pos[0] - r);
-      x1 = Math.max(x1, a.pos[0] + r);
-      y0 = Math.min(y0, a.pos[1] - r);
-      y1 = Math.max(y1, a.pos[1] + r);
+      // (How far the turned plate reaches from its middle, across the lake and along it.)
+      {
+        const [x, y, z, w] = a.q;
+        const rx = Math.abs(1 - 2 * (y * y + z * z)) * p.hw + (Math.abs(2 * (x * y - w * z)) * p.d) / 2 + (Math.abs(2 * (x * z + w * y)) * p.h) / 2 + 6;
+        const ry = Math.abs(2 * (x * y + w * z)) * p.hw + (Math.abs(1 - 2 * (x * x + z * z)) * p.d) / 2 + (Math.abs(2 * (y * z - w * x)) * p.h) / 2 + 6;
+        x0 = Math.min(x0, a.pos[0] - rx);
+        x1 = Math.max(x1, a.pos[0] + rx);
+        y0 = Math.min(y0, a.pos[1] - ry);
+        y1 = Math.max(y1, a.pos[1] + ry);
+      }
     }
     this.nameBounds.set([x0, y0, x1, y1]);
   }
@@ -1098,15 +1115,36 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(prog.u.uNameG, st.plates[0].y, near.y, two ? 1 : -1e4, 1);
     gl.uniform4f(prog.u.uNameB, st.lead[0], st.lead[1], near.h, near.d);
     // (z: something of them stands under the water; w: how much of them stands, of all eight.)
-    if (prog.u.uNameM) gl.uniform4f(prog.u.uNameM, 0, near.d, m > FOUNDER.from - 0.26 ? 1 : 0, left);
+    // (x: how high the tallest of them stands; z: something of them stands under the water; w: how much of them stands, of all eight.)
+    if (prog.u.uNameM) gl.uniform4f(prog.u.uNameM, st.plates[0].h * 1.1 + 12, near.d, m > FOUNDER.from - 0.26 ? 1 : 0, left);
     if (prog.u.uNameV) gl.uniform4f(prog.u.uNameV, st.seat[0], st.seat[1], st.seat[2], 0);
     if (prog.u.uRowA) gl.uniform4fv(prog.u.uRowA, st.rows[0]);
     if (prog.u.uRowB) gl.uniform4fv(prog.u.uRowB, st.rows[1]);
     if (prog.u.uLtA) gl.uniform4fv(prog.u.uLtA, this.ltA);
     if (prog.u.uLtQ) gl.uniform4fv(prog.u.uLtQ, this.ltQ);
+    if (prog.u.uLtM0) gl.uniform4fv(prog.u.uLtM0, this.ltM[0]);
+    if (prog.u.uLtM1) gl.uniform4fv(prog.u.uLtM1, this.ltM[1]);
+    if (prog.u.uLtM2) gl.uniform4fv(prog.u.uLtM2, this.ltM[2]);
     if (prog.u.uLtG) gl.uniform4fv(prog.u.uLtG, this.ltG);
     if (prog.u.uLtT) gl.uniform4fv(prog.u.uLtT, st.tex);
     if (prog.u.uNameBx) gl.uniform4fv(prog.u.uNameBx, this.nameBounds);
+    if (prog.u.uRowT) gl.uniform4fv(prog.u.uRowT, [...st.strips[0], ...st.strips[1]]);
+    // (Each row's capitals' height, and how much of each still stands in the light: its plates' own, taken together.)
+    if (prog.u.uRowH) {
+      const stands = (r: number) => {
+        let sum = 0;
+        let n = 0;
+        st.plates.forEach((p, i) => {
+          if (p.row !== r) return;
+          sum += this.ltR[i * 4 + 3];
+          n++;
+        });
+        return n ? sum / n : 0;
+      };
+      gl.uniform4f(prog.u.uRowH, st.plates[0].h, near.h, stands(0), stands(near.row));
+    }
+    if (prog.u.uFrac) gl.uniform4fv(prog.u.uFrac, st.frac);
+    if (prog.u.uFracL) gl.uniform1fv(prog.u.uFracL, st.fracL);
     // The sheet under them. First meltwater lies on the ice round their feet and spreads (the simulation takes all
     // of that film for open water, so the pointer wakes it and shakes their image in it); then, plate by plate,
     // the ice under each goes and it founders; the water under the rows joins and spreads; and from there on
@@ -1128,7 +1166,7 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(prog.u.uIceC, ice.c[0], ice.c[1], smooth(0.36, 0.57, m), ice.c[3]);
     // x: how far from their feet the meltwater lies on the sheet, y: 0..1 how wet the plates and the ice round them are, z: 0..1 the
     // first fractures have run out from their feet, w: 0..1 the sheet has begun to open under them.
-    if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * (0.4 + 2.6 * film), smooth(0, 0.3, m), smooth(0.16, 0.5, m), smooth(0.44, 0.56, m));
+    if (prog.u.uNameP) gl.uniform4f(prog.u.uNameP, pond * 3 * film, smooth(0, 0.3, m), smooth(0.16, 0.5, m), smooth(0.44, 0.56, m));
     // The water spreads from where the rows stood (see the ice field), and leaves by one lead down the lake to the
     // outlet: how far along the lake that lead has opened, and how wide it has become. (It is wide enough for the
     // plates to ride down.)
@@ -1404,8 +1442,11 @@ export class FlightEngine extends WaterEngine {
   /** The pieces the last frame was drawn in, and what drew each: for the checks. */
   private drawnTiles: { mask: number; area: number; by: Variant }[] = [];
 
-  /** The box the plates are in, standing or afloat (the pass's own test of it), with room: where in the frame they can be. */
-  private nameBox(): Box | null {
+  /**
+   * Where in the frame the name's own code is needed: the box the plates are in, standing or afloat (the pass's own
+   * test of it), and the ground toward the eye from them, where their image in the ice and their shade lie.
+   */
+  private nameBox(): Box[] | null {
     const st = this.nameStand;
     if (!st) return null;
     this.namePoses();
@@ -1413,8 +1454,15 @@ export class FlightEngine extends WaterEngine {
     let top = 0;
     for (const p of st.plates) top = Math.max(top, p.h);
     return [
-      [b[0] - 30, b[1] - 30, -FLIGHT_FREEBOARD - top * 0.5],
-      [b[2] + 30, b[3] + 30, top * 1.1 + 20],
+      [
+        [b[0] - 12, b[1] - 12, -FLIGHT_FREEBOARD - top * 0.5],
+        [b[2] + 12, b[3] + 12, top * 1.04 + 8],
+      ],
+      // (Their image in the ice lies toward the eye from their feet, as far as the pass looks for it: NAME_SHADE.)
+      [
+        [b[0] - 12 - NAME_SHADE * 0.25, b[1] - 12 - NAME_SHADE, -FLIGHT_FREEBOARD - 4],
+        [b[2] + 12 + NAME_SHADE * 0.25, b[3] + 12, 4],
+      ],
     ];
   }
 
@@ -1980,7 +2028,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const token = ++buildToken;
     if (!glyphs) {
       const family = getComputedStyle(document.documentElement).getPropertyValue('--f-orbiter').trim() || getComputedStyle(document.body).fontFamily;
-      const g = rasterGlyphs(family, cut.weight);
+      const g = rasterGlyphs(family, cut);
       // (Distances in capitals' heights.)
       const sd = await solver.solve({ alpha: g.alpha, w: g.tw, h: g.th, clamp: g.cap * 0.6, scale: 1 / g.cap });
       if (destroyed || token !== buildToken) return;
@@ -2009,12 +2057,36 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const top = seen(plates[0].y, plates[0].h);
     const halfX = Math.max(rows[0][2] / seen(plates[0].y, plates[0].h / 2).depth, rows[1][2] / seen(plates[PLATES - 1].y, plates[PLATES - 1].h / 2).depth);
     const far = plates[0];
+    // The fractures that run out from the rows as the sheet weakens: where each leaves, the way it runs, how long it is.
+    const hash = (n: number) => {
+      const v = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    const frac = new Float32Array(PLATES * 4);
+    const fracL = new Float32Array(PLATES);
+    for (let i = 0; i < PLATES; i++) {
+      const row = rows[i < 4 ? 0 : 1];
+      const fx = (i - (i < 4 ? 1.5 : 5.5)) / 1.5;
+      const ang = fx * 0.75 + (hash(i * 3.7 + 1.3) - 0.5) * 1.1;
+      // (Most run toward the eye; one from each row runs back up the lake.)
+      frac.set([row[0] + fx * row[2] * 0.86, row[1], Math.sin(ang), (i === 2 || i === 5 ? 1 : -1) * Math.cos(ang)], i * 4);
+      fracL[i] = 0.5 + 0.7 * hash(i * 5.1 + 2.2);
+    }
+    // Each row whole, in the raster (see rasterGlyphs): where its middle and its baseline lie, and half its width in capitals' heights.
+    const stripOf = (text: string): [number, number, number, number] => {
+      const st = g.strips[text];
+      return [st.x / g.tw, st.y / g.th, st.half + 0.18, 0];
+    };
+    const strips: [number, number, number, number][] = [stripOf(hero.rows[0].text), stripOf(hero.rows[hero.rows.length - 1].text)];
     engine.nameStand = {
       plates,
+      frac,
+      fracL,
+      strips,
       rows,
       seat: [(foot.ty + top.ty) / 2, halfX, (top.ty - foot.ty) / 2],
       tex: [g.cap / g.tw, g.cap / g.th, GLYPH_CELL.w / 2 - 0.03, 0.5 + Math.min(GLYPH_CELL.foot, GLYPH_CELL.h - 1 - GLYPH_CELL.foot) - 0.03],
-      cells: plates.map((_, i) => [((i % GLYPH_CELL.cols) + 0.5) / GLYPH_CELL.cols, (Math.floor(i / GLYPH_CELL.cols) * GLYPH_CELL.h + GLYPH_CELL.foot + 0.5) / (GLYPH_CELL.rows * GLYPH_CELL.h)]),
+      cells: plates.map((_, i) => [(((i % GLYPH_CELL.cols) + 0.5) * GLYPH_CELL.w * g.cap) / g.tw, ((Math.floor(i / GLYPH_CELL.cols) * GLYPH_CELL.h + GLYPH_CELL.foot + 0.5) * g.cap) / g.th]),
       // (The lead leaves from behind the far row, between the two words where they stand side by side.)
       lead: [far.y + far.d, NAME.x + (rows[0] === rows[1] || plates[0].row === plates[PLATES - 1].row ? (plates[3].x + plates[3].hw + plates[4].x - plates[4].hw) / 2 - NAME.x : 0)],
     };

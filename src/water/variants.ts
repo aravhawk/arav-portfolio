@@ -348,7 +348,7 @@ const SHARDS_BOX: Box = [
  * rectangle, the frame is cut along the rectangles' edges, and every piece is drawn once, by a variant that carries
  * what stands in that piece and nothing else. A subject that fills nearly all of the frame is the frame's own.
  * @param need what the whole frame needs (passNeeds)
- * @param nameBox the box the letters stand in, while they stand
+ * @param nameBox the box the name's plates are in, and the box of ground their image and their shade lie on
  * @param w, h the frame's size in device pixels
  * @returns each different need, with the pieces of the frame that have it (x, y, width, height in device pixels, y up)
  */
@@ -358,7 +358,7 @@ export interface Tile {
   /** the share of the frame these pieces cover */
   area: number;
 }
-export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Box | null, w: number, h: number): Tile[] {
+export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Box[] | null, w: number, h: number): Tile[] {
   const whole: Tile[] = [{ mask: need, px: [[0, 0, w, h]], area: 1 }];
   const parts: { bits: number; r: [number, number, number, number] }[] = [];
   const take = (bits: number, r: Rect | null) => {
@@ -379,8 +379,13 @@ export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Bo
   };
   const NONE: Rect = [0, 0, 0, 0];
   const join = (a: Rect | null, b: Rect | null): Rect | null => (!a ? b : !b ? a : [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]);
-  const lake = need & (F.ICE | F.FIELD | F.NAME);
-  if (lake) take(lake, join(boxRectCut(cam, aspect, need & F.FIELD ? FIELD_GROUND : LAKE_GROUND), need & F.NAME && nameBox ? boxRectCut(cam, aspect, nameBox) : null) ?? NONE);
+  // (The plates are a subject of their own on the lake: their code is carried only where they, their image in the ice
+  // and their shade can be, and the rest of the lake is drawn without it.)
+  const lake = need & (F.ICE | F.FIELD);
+  // (The boxes' parts of the frame, taken together: the plates' own, and the ground before them.)
+  const name = need & F.NAME && nameBox ? nameBox.map((b) => boxRectCut(cam, aspect, b)).reduce((a, b) => join(a, b), null as Rect | null) : null;
+  if (lake) take(lake, join(boxRectCut(cam, aspect, need & F.FIELD ? FIELD_GROUND : LAKE_GROUND), name) ?? NONE);
+  if (need & F.NAME) take(F.NAME, name ?? NONE);
   if (need & F.SLAB) {
     const s = slabInFrame(cam, aspect);
     if (s.behind === 0) take(F.SLAB, join(s.box, boxRectCut(cam, aspect, SLAB_GROUND)));
