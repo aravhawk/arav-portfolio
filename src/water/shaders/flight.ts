@@ -37,6 +37,12 @@ const shD = (() => {
   return [d[0] / l, d[1] / l];
 })();
 
+/** Blend between the two baked snow horizons for this frame's light. */
+export function snowShadowBearing(x: number, y: number) {
+  const weight = (x - Math.sin(SHADE_AZ.a)) * shD[0] + (y - Math.cos(SHADE_AZ.a)) * shD[1];
+  return Math.max(0, Math.min(1, weight));
+}
+
 const smoothJs = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -90,6 +96,7 @@ const FLIGHT_SRC = `#version 300 es
 #endif
 precision highp float;
 in vec2 vUv;
+in vec3 vRay;
 out vec4 o;
 
 uniform vec3 uCamPos;
@@ -125,6 +132,10 @@ uniform vec3 uSkyBand;
 uniform vec3 uSunDir;
 uniform vec3 uKeyCol;
 uniform vec3 uKeyDir;
+uniform vec4 uShadow;   // key slope, snow horizon blend, sun azimuth, bank-shadow reach per unit height
+uniform vec4 uBearings; // unit vectors in the ground plane, sun then key
+uniform vec4 uFilm;     // vignette strength, grain phase, grain amplitude, lunar haze gain
+uniform vec4 uLee;      // centre and reciprocal radii of the words' lee
 uniform vec3 uAmbCol;
 uniform vec4 uMoon;        // the first screen's moon before dawn: xyz where it stands, w: how much of it there is (none by day, none once the eye has left the lake)
 uniform vec4 uSkyK;        // x: haze, y: how much aurora is left, z: 0..1 how far the sky has come to the ending's, w: the light left in the water's own body
@@ -269,23 +280,24 @@ vec3 sunBloom(float sd) {
 
 /** The colour of the air at the horizon toward a bearing: what distance fades to. */
 vec3 airAt(vec2 dxy) {
-  float a = max(dot(normalize(dxy + 1e-5), normalize(S.sun.xy)), 0.0);
+  vec2 bearing = normalize(dxy + 1e-5);
+  float a = max(dot(bearing, uBearings.xy), 0.0);
   // (Late in the day the air is gold only toward the sun: away from it distance fades to the sky's own blue, so
   // far snow and dark water are not laid over with the horizon's warmth.)
   vec3 hz = mix(S.hor, S.amb * 1.45 + S.hor * 0.12, uHour.x * (1.0 - a * a));
   vec3 c = hz + S.band * (pow(a, 5.0) * 0.3 + pow(a, 2.0) * 0.08) * mix(0.5, 1.0, max(uNight, gDusk));
   // (Before dawn the air is brightest under the moon, while it is up.)
   if (uNight > 0.0 && uMoon.w > 0.0) {
-    float am = max(dot(normalize(dxy + 1e-5), normalize(uMoon.xy + 1e-5)), 0.0);
+    float am = max(dot(bearing, uBearings.zw), 0.0);
     float am2 = am * am;
-    c += S.key * (am2 * am2 * am2 * 0.42 + am2 * 0.1) * uMoon.w * smoothstep(-0.05, 0.05, uMoon.z);
+    c += S.key * (am2 * am2 * am2 * 0.42 + am2 * 0.1) * uFilm.w;
   }
   return c;
 }
 
 /** The hour's low mist: paler than the air it lies in, lit by whatever lights the ground, most toward that light. */
 vec3 mistColor(vec2 dxy) {
-  float a = max(dot(normalize(dxy + 1e-5), normalize(uKeyDir.xy + 1e-5)), 0.0);
+  float a = max(dot(normalize(dxy + 1e-5), uBearings.zw), 0.0);
   return S.hor * 0.72 + S.amb * 0.12 + S.key * (0.085 + 0.07 * a * a * a);
 }
 
@@ -342,7 +354,7 @@ vec3 aurora(vec3 d) {
     sum += tint * prof * drape * pile * (0.07 + 0.93 * reach) * (0.56 - 0.14 * k);
   }
   // Nothing of it toward the dawn.
-  float dawn = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
+  float dawn = max(dot(normalize(d.xy + 1e-5), uBearings.xy), 0.0);
   sum *= 1.0 - 0.85 * dawn * dawn * dawn * (1.0 - smoothstep(0.14, 0.4, h));
   // Its light is bounded: however the curtains overlap, it stays under white.
   float m = max(sum.g, max(sum.r, sum.b));
@@ -436,7 +448,7 @@ vec3 skyColor(vec3 d, float clouds) {
   // (Under the light ending's low sun the gold climbs further before it gives way to the blue: a long even fall, not a band.)
   vec3 col = mix(S.hor, S.mid, smoothstep(0.0, mix(0.24, mix(0.17, mix(0.165, 0.115, uNight), gDusk), max(uNight, gDusk)), h));
   col = mix(col, S.zen, smoothstep(0.07, 0.62, h));
-  float az = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
+  float az = max(dot(normalize(d.xy + 1e-5), uBearings.xy), 0.0);
   // Warmth pools on the sun's side of the horizon; it is not a stripe.
   // (And the warmth that pools toward the dawn is thinner in that band: it is one tone from end to end.)
   float warm = mix(0.45, 1.0, max(uNight, gDusk)) * (1.0 - 0.65 * calmS);
@@ -480,7 +492,7 @@ vec3 skyColor(vec3 d, float clouds) {
     float starK = 1.0 - gDusk * (1.0 - 0.62 * smoothstep(0.1, 0.34, h));
     if (gDirect) col += starSky(d) * uNight * starK * starK * uAir.z * (1.0 - min(dot(au, vec3(2.2)), 0.88));
   }
-  if (clouds > 0.0) {
+  if (clouds > 0.0 && (uAir.y > 0.0 || (h > 0.03 && h < 0.85))) {
     // Thin high cloud: white where the sun finds it by day, a faint warm
     // underside before dawn.
     // (Two reads of the baked noise, laid over the dome from above so there is no seam.)
@@ -504,87 +516,94 @@ vec3 skyColor(vec3 d, float clouds) {
  * under the sky, their snow faintly lit by it.
  * soft: how many levels blunter to read it (a mirror image in moving water is not sharp).
  */
-vec3 withRidges(vec3 col, vec3 d, float soft) {
-  // (Well above the ranges and their mist there is only sky.)
-  if (d.z > 0.14) return col;
-  float el = asin(clamp(d.z, -1.0, 1.0));
+vec3 withRidges(vec3 d, float clouds, float soft, float pond) {
+  // An opaque range hides the dome. Resolve coverage first so that its
+  // pixels never sample the stars or clouds behind the mountain.
+  bool nearHorizon = d.z <= 0.14 && pond < 1.0;
+  float el = nearHorizon ? asin(clamp(d.z, -1.0, 1.0)) : 0.0;
+  vec2 uv = vec2(0.0);
+  float lod = 0.0;
+  float cover = 0.0;
+  vec4 m = vec4(0.0);
+  if (nearHorizon && el < PANO_EL) {
+    uv = vec2(atan(d.x, d.y) / (2.0 * PANO_AZ) + 0.5, max(el, 0.0) / PANO_EL);
+    lod = log2(max(uPxAng * float(textureSize(uPano, 0).x) / (2.0 * PANO_AZ), 1.0)) + soft;
+    m = textureLod(uPano, uv, lod);
+    cover = 1.0 - smoothstep(0.86, 0.97, m.a);
+  }
+  vec3 sky = cover < 1.0 || pond > 0.0 ? skyColor(d, clouds) : vec3(0.0);
+  if (!nearHorizon) return sky;
+  vec3 col = sky;
   vec3 air = airAt(d.xy);
-  if (el < PANO_EL) {
-    float az = atan(d.x, d.y);
-    vec2 uv = vec2(az / (2.0 * PANO_AZ) + 0.5, max(el, 0.0) / PANO_EL);
-    float lod = log2(max(uPxAng * float(textureSize(uPano, 0).x) / (2.0 * PANO_AZ), 1.0)) + soft;
-    vec4 m = textureLod(uPano, uv, lod);
-    float cover = 1.0 - smoothstep(0.86, 0.97, m.a);
-    if (cover > 0.0) {
-      // (By day snow holds only on the easier slopes: the steep faces are bare rock, which is what gives a range its drawing.)
-      // (Snow lies only where the ground is easy: every steeper face, by day and before dawn, is the rock itself.)
-      float snowK = m.b * mix(smoothstep(0.885, 0.965, m.g), smoothstep(0.84, 0.95, m.g), uNight);
-      vec3 alb = mix(mix(vec3(0.085, 0.09, 0.105), vec3(0.05, 0.055, 0.07), uNight), mix(vec3(0.92, 0.93, 0.95), vec3(0.5, 0.56, 0.66), uNight), snowK);
-      float sunAz = max(dot(normalize(d.xy + 1e-5), normalize(S.sun.xy)), 0.0);
-      // (What the sun does not reach is lit by the sky alone: blue, and deep in the folds.)
-      // (The sun is low and behind them: level snow is only grazed by it, and it is the faces turned to it that are bright.)
-      // (The hour says which faces the light finds: the ones the morning's low sun was baked on, the ones turned
-      // from it, which a light from the other side finds, and, under a high sun, whatever lies open to the sky.)
-      float foundD = uRange.x * m.r * smoothstep(0.015, 0.21, m.r) + uRange.y * m.g * m.g * 0.62 + uRange.z * m.g * (1.0 - smoothstep(0.02, 0.34, m.r)) * 0.8;
-      vec3 day = S.key * 0.95 * foundD + S.amb * vec3(0.78, 0.93, 1.14) * (0.02 + 0.36 * m.g * m.g);
-      // Before dawn: the sky's own light, and the first warmth on what faces it.
-      // (And the faces the coming light will find first already hold a little of it: a range has its drawing before dawn too.)
-      // (The night's cold light comes from the side the curtains hang on, which is the side the morning sun will
-      // come from: the faces it finds are pale blue, with the shadows the country throws, and the rest is deep.)
-      // (Before dawn the one light is the moon's, on the faces the hour says it finds, with the shadows the country
-      // throws; the rest has the sky's glow alone. When the moon has gone, the sky's glow is all there is, until the
-      // first rose light touches the highest peaks, far off, on the faces turned to it.)
-      vec3 night = S.amb * (0.3 + 0.7 * m.g) + (S.key * 0.8 + uAurora * 0.04) * foundD
-        + S.band * 0.035 * pow(sunAz, 3.0) * m.g
-        + vec3(1.0, 0.4, 0.38) * (0.2 * uRange.w * smoothstep(0.022, 0.06, el) * (0.35 + 0.65 * sunAz) * (0.3 + 0.7 * m.b) * (0.4 + 0.6 * m.g));
-      vec3 rock = alb * mix(day, night, uNight);
-      float far = clamp(m.a / 0.84, 0.0, 1.0);
-      // (The air is thin in front of the near ranges and gathers with distance: they stand dark and drawn, and each
-      // range behind them is paler.)
-      float airK = 1.0 - exp(-(mix(0.015, 0.04, uNight) + far * mix(0.3, 0.5, uNight) + far * far * mix(1.25, 2.4, uNight)) * S.haze);
-      // (Against the morning sun a range is a shape before it is a surface: less of the sun's own glare lies in front of it than behind.)
-      vec3 airR = mix(air, mix(S.hor * 0.9, air, 0.4), (1.0 - uNight) * (1.0 - gDusk));
-      // (Before dawn the air in front of them is the cold air the ground lies in, warm only toward the light.)
-      airR = mix(airR, mix(S.hor, air, 0.45), uNight * (1.0 - gDusk));
+  if (cover > 0.0) {
+    // (By day snow holds only on the easier slopes: the steep faces are bare rock, which is what gives a range its drawing.)
+    // (Snow lies only where the ground is easy: every steeper face, by day and before dawn, is the rock itself.)
+    float snowK = m.b * mix(smoothstep(0.885, 0.965, m.g), smoothstep(0.84, 0.95, m.g), uNight);
+    vec3 alb = mix(mix(vec3(0.085, 0.09, 0.105), vec3(0.05, 0.055, 0.07), uNight), mix(vec3(0.92, 0.93, 0.95), vec3(0.5, 0.56, 0.66), uNight), snowK);
+    float sunAz = max(dot(normalize(d.xy + 1e-5), uBearings.xy), 0.0);
+    // (What the sun does not reach is lit by the sky alone: blue, and deep in the folds.)
+    // (The sun is low and behind them: level snow is only grazed by it, and it is the faces turned to it that are bright.)
+    // (The hour says which faces the light finds: the ones the morning's low sun was baked on, the ones turned
+    // from it, which a light from the other side finds, and, under a high sun, whatever lies open to the sky.)
+    float foundD = uRange.x * m.r * smoothstep(0.015, 0.21, m.r) + uRange.y * m.g * m.g * 0.62 + uRange.z * m.g * (1.0 - smoothstep(0.02, 0.34, m.r)) * 0.8;
+    vec3 day = S.key * 0.95 * foundD + S.amb * vec3(0.78, 0.93, 1.14) * (0.02 + 0.36 * m.g * m.g);
+    // Before dawn: the sky's own light, and the first warmth on what faces it.
+    // (And the faces the coming light will find first already hold a little of it: a range has its drawing before dawn too.)
+    // (The night's cold light comes from the side the curtains hang on, which is the side the morning sun will
+    // come from: the faces it finds are pale blue, with the shadows the country throws, and the rest is deep.)
+    // (Before dawn the one light is the moon's, on the faces the hour says it finds, with the shadows the country
+    // throws; the rest has the sky's glow alone. When the moon has gone, the sky's glow is all there is, until the
+    // first rose light touches the highest peaks, far off, on the faces turned to it.)
+    vec3 night = S.amb * (0.3 + 0.7 * m.g) + (S.key * 0.8 + uAurora * 0.04) * foundD
+      + S.band * 0.035 * pow(sunAz, 3.0) * m.g
+      + vec3(1.0, 0.4, 0.38) * (0.2 * uRange.w * smoothstep(0.022, 0.06, el) * (0.35 + 0.65 * sunAz) * (0.3 + 0.7 * m.b) * (0.4 + 0.6 * m.g));
+    vec3 rock = alb * mix(day, night, uNight);
+    float far = clamp(m.a / 0.84, 0.0, 1.0);
+    // (The air is thin in front of the near ranges and gathers with distance: they stand dark and drawn, and each
+    // range behind them is paler.)
+    float airK = 1.0 - exp(-(mix(0.015, 0.04, uNight) + far * mix(0.3, 0.5, uNight) + far * far * mix(1.25, 2.4, uNight)) * S.haze);
+    // (Against the morning sun a range is a shape before it is a surface: less of the sun's own glare lies in front of it than behind.)
+    vec3 airR = mix(air, mix(S.hor * 0.9, air, 0.4), (1.0 - uNight) * (1.0 - gDusk));
+    // (Before dawn the air in front of them is the cold air the ground lies in, warm only toward the light.)
+    airR = mix(airR, mix(S.hor, air, 0.45), uNight * (1.0 - gDusk));
 #ifdef SEA
-      if (gDusk > 0.0) {
-        // Against the low light the ranges are the ending's: shaded faces
-        // in the sky's own deep colour, the faces the light finds a little
-        // warmer, a thin bright edge on the crest toward the sun, and each
-        // range further off deeper in the lit air.
-        float off = acos(clamp(sunAz, 0.0, 1.0));
-        float found = smoothstep(0.02, 0.3, m.r) * 0.55 + 0.45 * m.g * m.b;
-        // (A crest is where a little higher is a good deal further off: the next range, or the sky. The low light
-        // behind the ranges catches every one of them.)
-        // (Four blunt looks higher and higher: the light lies on a crest and falls away down the slope under it, more
-        // on the ground that faces up, so it is a lit top that fades and never a line drawn round the range.)
-        float crest = 0.5 * clamp((textureLod(uPano, uv + vec2(0.0, 0.012), lod + 2.0).a - m.a) / 0.3, 0.0, 1.0)
-          + 0.3 * clamp((textureLod(uPano, uv + vec2(0.0, 0.03), lod + 3.0).a - m.a) / 0.3, 0.0, 1.0)
-          + 0.2 * clamp((textureLod(uPano, uv + vec2(0.0, 0.065), lod + 3.0).a - m.a) / 0.3, 0.0, 1.0);
-        // (Against the light a range has three tones. Its body is deep and warm: rock and shaded snow with the
-        // light behind them. Snow that lies open to the sky overhead holds a little of the sky's blue, which is
-        // what draws the snowfields from the faces. And the light comes over each crest and falls a way down the
-        // slope under it, most toward the sun.)
-        vec3 shade = S.hor * 0.04 + S.zen * 0.15 + S.mid * 0.02;
-        vec3 open = shade + S.mid * 0.3 * m.g * m.g;
-        // (A face turned from the morning's side is turned toward this light: it is the paler of the two.)
-        vec3 low = mix(shade, open, m.b * smoothstep(0.8, 0.98, m.g)) * (1.5 - 0.95 * smoothstep(0.02, 0.4, m.r));
-        low += S.band * (0.005 + 0.13 * exp(-off * 3.0)) * crest * crest * (0.3 + 0.7 * m.g * m.g);
-        rock = mix(rock, low, gDusk);
-        // (The air between the ranges is lit: each one further off is paler and nearer the glow's own colour,
-        // and toward the sun the air is brightest, so the ranges under it melt into the light.)
-        float glow = sunAz * sunAz; glow *= glow; glow *= glow;
-        airK = mix(airK, clamp((0.008 + far * 0.2 + far * far * 0.62) * S.haze + 0.1 * glow, 0.0, 0.8), gDusk);
-        airR = mix(airR, S.hor * (0.4 + 0.3 * far) + S.band * (0.05 + 0.1 * far) * glow, gDusk);
-      }
-#endif
-      rock = mix(rock, airR, airK);
-      col = mix(col, rock, cover);
-#ifdef SEA
-      // The sun's glow spills over whatever stands in front of it.
-      if (gDusk > 0.0) col += sunBloom(max(dot(d, S.sun), 0.0)) * 0.42 * cover * gDusk * gSunK;
-#endif
+    if (gDusk > 0.0) {
+      // Against the low light the ranges are the ending's: shaded faces
+      // in the sky's own deep colour, the faces the light finds a little
+      // warmer, a thin bright edge on the crest toward the sun, and each
+      // range further off deeper in the lit air.
+      float off = acos(clamp(sunAz, 0.0, 1.0));
+      float found = smoothstep(0.02, 0.3, m.r) * 0.55 + 0.45 * m.g * m.b;
+      // (A crest is where a little higher is a good deal further off: the next range, or the sky. The low light
+      // behind the ranges catches every one of them.)
+      // (Four blunt looks higher and higher: the light lies on a crest and falls away down the slope under it, more
+      // on the ground that faces up, so it is a lit top that fades and never a line drawn round the range.)
+      float crest = 0.5 * clamp((textureLod(uPano, uv + vec2(0.0, 0.012), lod + 2.0).a - m.a) / 0.3, 0.0, 1.0)
+        + 0.3 * clamp((textureLod(uPano, uv + vec2(0.0, 0.03), lod + 3.0).a - m.a) / 0.3, 0.0, 1.0)
+        + 0.2 * clamp((textureLod(uPano, uv + vec2(0.0, 0.065), lod + 3.0).a - m.a) / 0.3, 0.0, 1.0);
+      // (Against the light a range has three tones. Its body is deep and warm: rock and shaded snow with the
+      // light behind them. Snow that lies open to the sky overhead holds a little of the sky's blue, which is
+      // what draws the snowfields from the faces. And the light comes over each crest and falls a way down the
+      // slope under it, most toward the sun.)
+      vec3 shade = S.hor * 0.04 + S.zen * 0.15 + S.mid * 0.02;
+      vec3 open = shade + S.mid * 0.3 * m.g * m.g;
+      // (A face turned from the morning's side is turned toward this light: it is the paler of the two.)
+      vec3 low = mix(shade, open, m.b * smoothstep(0.8, 0.98, m.g)) * (1.5 - 0.95 * smoothstep(0.02, 0.4, m.r));
+      low += S.band * (0.005 + 0.13 * exp(-off * 3.0)) * crest * crest * (0.3 + 0.7 * m.g * m.g);
+      rock = mix(rock, low, gDusk);
+      // (The air between the ranges is lit: each one further off is paler and nearer the glow's own colour,
+      // and toward the sun the air is brightest, so the ranges under it melt into the light.)
+      float glow = sunAz * sunAz; glow *= glow; glow *= glow;
+      airK = mix(airK, clamp((0.008 + far * 0.2 + far * far * 0.62) * S.haze + 0.1 * glow, 0.0, 0.8), gDusk);
+      airR = mix(airR, S.hor * (0.4 + 0.3 * far) + S.band * (0.05 + 0.1 * far) * glow, gDusk);
     }
+#endif
+    rock = mix(rock, airR, airK);
+    col = mix(col, rock, cover);
+#ifdef SEA
+    // The sun's glow spills over whatever stands in front of it.
+    if (gDusk > 0.0) col += sunBloom(max(dot(d, S.sun), 0.0)) * 0.42 * cover * gDusk * gSunK;
+#endif
   }
   // A thin band of mist lies along the foot of the ranges.
   // (At the ending it is the evening's (or the morning's) haze over the water: deeper, lit from behind, and it
@@ -594,11 +613,11 @@ vec3 withRidges(vec3 col, vec3 d, float soft) {
   col = mix(col, air, mist);
   // (An hour that has mist has it here too: it lies deeper along their foot, lit, and the ranges stand clear above it.)
   if (uAir.x > 0.0) col = mix(col, mistColor(d.xy), uAir.x * exp(-elp / 0.011) * 0.8);
-  return col;
+  return mix(col, sky, pond);
 }
 
 /** What a ray that leaves the world sees. */
-vec3 skyAll(vec3 d, float clouds) { return withRidges(skyColor(d, clouds), d, clouds > 0.5 ? 0.0 : 1.5); }
+vec3 skyAll(vec3 d, float clouds) { return withRidges(d, clouds, clouds > 0.5 ? 0.0 : 1.5, 0.0); }
 
 
 
@@ -622,7 +641,7 @@ vec3 dawnDir() { return uKeyDir; }
 vec3 skyNightOn(vec3 r) {
   float h = max(r.z, 0.0);
   vec3 c = mix(mix(S.hor, S.mid, smoothstep(0.0, 0.2, h)), S.zen, smoothstep(0.07, 0.62, h));
-  float az = max(dot(normalize(r.xy + 1e-5), normalize(S.sun.xy)), 0.0);
+  float az = max(dot(normalize(r.xy + 1e-5), uBearings.xy), 0.0);
   c += S.band * exp(-h * 9.0) * az * az * az * 0.34;
   float up = h - 0.27;
   // (Ice gives the curtain back colder than it is: a little of its green is lost in the blue of the ice.)
@@ -1075,7 +1094,7 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
   // (Snow is lit as the land's is: level snow at one brightness whatever the sun's height, a lobe's face
   // turned to the sun brighter, one turned away in the sky's blue shade, its underside darkest. Before dawn
   // it has the sky's light, the curtain's and what the block itself gives off, so it is the palest thing on the block.)
-  float toSun = dot(normalize(nS.xy + 1e-4), normalize(L.xy));
+  float toSun = dot(normalize(nS.xy + 1e-4), uBearings.zw);
   float lobeSh = top ? 1.0 : 1.0 - 0.22 * smoothstep(10.0, 0.0, -below);
   vec3 sn = vec3(0.93, 0.94, 0.96) * (S.key * 0.24 * (top ? 0.86 + 0.5 * toSun * (1.0 - nS.z) : 0.9 + 0.45 * toSun) + S.amb * 0.8 * (0.62 + 0.38 * nS.z)) * lobeSh;
   if (uNight > 0.0) sn = mix(sn, (snowNight(nS) * 1.5 + uSlabTint * 0.2) * lobeSh, uNight);
@@ -1176,7 +1195,7 @@ vec2 hash2(vec2 p) {
   p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
   return fract(sin(p) * 43758.5453);
 }
-vec3 fracture(vec2 x) {
+vec3 fractureDistance(vec2 x, bool hairline) {
   vec2 n = floor(x);
   vec2 f = fract(x);
   vec2 mg = vec2(0.0);
@@ -1190,6 +1209,10 @@ vec3 fracture(vec2 x) {
       if (d < md) { md = d; mr = r; mg = g; }
     }
   }
+  vec2 seed = hash2(n + mg);
+  // Only a few cells carry a hairline in bare lake ice. Their neighbours
+  // still determine the nearest cell, but unmarked cells need no edge.
+  if (hairline && (seed.x < 0.7 || seed.y > 0.5)) return vec3(8.0, seed);
   md = 8.0;
   for (int j = -1; j <= 1; j++) {
     for (int i = -1; i <= 1; i++) {
@@ -1199,18 +1222,15 @@ vec3 fracture(vec2 x) {
       if (dot(dr, dr) > 1e-5) md = min(md, dot(0.5 * (mr + r), normalize(dr)));
     }
   }
-  return vec3(md, hash2(n + mg));
+  return vec3(md, seed);
 }
+vec3 fracture(vec2 x) { return fractureDistance(x, false); }
 
 /* ---------- the ground: wind-cut snow ---------- */
 
 const mat2 RW = mat2(0.9563, -0.2924, 0.2924, 0.9563);
 // The world, turned so that x runs with the wind: the baked snow's own frame.
 const mat2 GS = mat2(${Math.sin(WIND).toFixed(5)}, ${(-Math.cos(WIND)).toFixed(5)}, ${Math.cos(WIND).toFixed(5)}, ${Math.sin(WIND).toFixed(5)});
-// The two bearings its shadows were baked for, and the way from the first to the second.
-const vec2 SH_A = vec2(${Math.sin(SHADE_AZ.a).toFixed(5)}, ${Math.cos(SHADE_AZ.a).toFixed(5)});
-const vec2 SH_D = vec2(${shD[0].toFixed(5)}, ${shD[1].toFixed(5)});
-
 /** The size of a pixel on the ground, as two vectors: set once per pixel. */
 vec2 gGx;
 vec2 gGy;
@@ -1270,10 +1290,10 @@ float sparkle(vec2 p, float foot, vec3 dir) {
 
 vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShade) {
   vec3 L = keyDir();
-  vec2 Lxy = normalize(L.xy + 1e-5);
-  float tanEl = L.z / max(length(L.xy), 0.05);
+  vec2 Lxy = uBearings.zw;
+  float tanEl = uShadow.x;
   // How far the light has come round from the first baked bearing to the second.
-  float kAz = clamp(dot(Lxy - SH_A, SH_D), 0.0, 1.0);
+  float kAz = uShadow.y;
   float calm = wordsNear();
 
   // Three sizes of the same wind-cut field: the valley's long drifts, the
@@ -1385,7 +1405,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
   vec3 rr = reflect(dir, n);
   float toKey = max(dot(rr, L), 0.0);
   // A rough crystal flashes only near the reflected light, and only on the lit side.
-  if (glintK > 0.0 && toKey > 0.72 && lit > 0.25) {
+  if (glintK > 0.0 && toKey > 0.72 && lit > 0.25 && mix(sun, moonN, uNight) >= 0.3) {
     float sp = sparkle(p, foot, dir);
     float tk = toKey * toKey; tk *= tk;
     col += (S.key * 0.55 * lit * step(0.3, sun) * (1.0 - uNight) + S.key * (0.03 + 7.0 * tk * tk) * step(0.3, moonN) * uNight) * sp * glintK;
@@ -1397,7 +1417,7 @@ vec3 landColor(vec2 p, float sd, vec2 grad, float foot, vec3 dir, float slabShad
     float lodW = lodFor(foot, 520.0, 256.0);
     float veilW = textureLod(uGrain, vec2(wq.x / 2600.0 - uTime * 0.021, wq.y / 520.0 + 0.11 * sin(wq.x / 900.0)), lodW).g;
     float gust = 0.5 + 0.5 * sin(wq.x / 1700.0 - uTime * 0.11 + 2.0 * sin(wq.y / 1300.0));
-    float toSunW = max(dot(normalize(dir.xy + 1e-5), normalize(L.xy + 1e-5)), 0.0);
+    float toSunW = max(dot(normalize(dir.xy + 1e-5), uBearings.zw), 0.0);
     col += (S.key * (0.02 + 0.11 * toSunW * toSunW) + S.amb * 0.05) * smoothstep(0.6, 0.92, veilW) * (0.25 + 0.75 * gust) * uHour.y * (1.0 - bare) * (1.0 - calm);
   }
   // Wet shore: dark and glossy at the water.
@@ -1448,7 +1468,7 @@ float snowAt(vec2 wl, float big) {
  */
 vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foot) {
   vec3 L = keyDir();
-  vec2 LXY = normalize(L.xy);
+  vec2 LXY = uBearings.zw;
   vec2 wl = RW * il;
   // (Where the swept field has just read the snow's three fields at this very place, they are taken from it.)
   // (While the sheet's own frame is the lake's: late in the melt it gathers toward the outlet, and the two places part.)
@@ -1519,8 +1539,8 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   float nearSnow = nearK * (1.0 - uNight) * (1.0 - smoothstep(3.0, 7.6, foot));
   if (nearSnow > 0.0) {
     vec3 flatLit = lightOn(vec3(0.0, 0.0, 1.0), 1.0);
-    float tanEl = L.z / max(length(L.xy), 0.05);
-    float kAz = clamp(dot(LXY - SH_A, SH_D), 0.0, 1.0);
+    float tanEl = uShadow.x;
+    float kAz = uShadow.y;
     vec4 sc = snowTile(p, 286.0, vec2(0.37, 0.11));
     vec4 sb = snowTile(p, 96.0, vec2(0.71, 0.29));
     float shC = smoothstep(0.0, 0.07 * clamp(foot / 0.28, 1.0, 3.0), mix(sc.z, sc.w, kAz) - tanEl);
@@ -1534,12 +1554,12 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   col = mix(col, white * 1.12, lip * 0.7);
   col *= 1.0 - lee * mix(0.2, 0.42, uNight);
   col *= 1.0 + ((g.r - 0.5) * mix(0.03, 0.085, drift) + (g.a - 0.45) * 0.05);
-  if (uQuality > 0.5 && gL1 < 1.0 && drift < 0.99 && foot < 2.2) {
+  if (uQuality > 0.5 && gL1 < 1.0 && drift < 0.99 && foot < 2.2 && nameD > 18.0) {
     // (Hairlines: short wandering threads, a few to a plate; never a closed cell.)
     vec2 hw2 = (textureLod(uDetail, il / 900.0 + 0.4, 0.0).gb - 0.5) * 420.0 + (g.gb - 0.5) * 30.0;
-    vec3 fr = fracture((il + hw2) / 330.0 + vec2(3.7, 1.9));
+    vec3 fr = fractureDistance((il + hw2) / 330.0 + vec2(3.7, 1.9), true);
     float hw = 0.006 * max(1.0, foot);
-    float hair = (1.0 - smoothstep(0.0, hw, fr.x)) * step(0.7, fr.y) * step(fr.z, 0.5) * (1.0 - drift) * smoothstep(18.0, 70.0, nameD) * (1.0 - smoothstep(1.2, 2.2, foot)) * (1.0 - gL1);
+    float hair = (1.0 - smoothstep(0.0, hw, fr.x)) * (1.0 - drift) * smoothstep(18.0, 70.0, nameD) * (1.0 - smoothstep(1.2, 2.2, foot)) * (1.0 - gL1);
     // (Before dawn a hairline is a faint thread: nothing on the dark ice is bright but the name.)
     col = mix(col, uIceCol * mix(1.04, 0.2, uNight), hair * mix(0.55, 0.3, uNight));
   }
@@ -1565,7 +1585,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   rf.z = abs(rf.z) + 0.02;
   // (Ice is a poorer mirror than water, and before dawn that difference is what draws the name.)
   gDull = true;
-  vec3 mir = airAt(rf.xy);
+  vec3 mir = gL2 > 0.0 ? airAt(rf.xy) : vec3(0.0);
   // Toward the far shore, by day, the swept ice holds a soft, broken mirror
   // of what stands over it: the ranges hang down into it from the shore,
   // paler than they are, and the snow lying on the ice breaks the picture
@@ -1583,7 +1603,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
       float dep = asin(clamp(-dir.z, 0.0, 1.0)) - atan(uCamPos.z, max(uLake.y - 260.0 - uCamPos.y, 1.0));
       float elF = clamp(dep * 0.95 + rel.y * 0.05 + (g.b - 0.5) * 0.006, 0.0015, 0.6);
       vec3 rl = vec3(normalize(rf.xy + 1e-6) * cos(elF), sin(elF));
-      far = withRidges(skyColor(rl, 0.0), rl, 0.6) * vec3(0.84, 0.92, 1.0);
+      far = withRidges(rl, 0.0, 0.6, 0.0) * vec3(0.84, 0.92, 1.0);
     }
     // (Where the leaned mirror is all of it, the plain one is not worked out.)
     vec3 plain = farDay < 1.0 ? skyAll(rn, 0.0) : vec3(0.0);
@@ -1596,7 +1616,7 @@ vec3 iceTop(vec2 p, vec2 il, vec3 cr, float f0, float shore, vec3 dir, float foo
   col = mix(col, mir, mirK);
   if (farDay > 0.0) {
     // The sun's column: under the sun the ice gives its light back in a long broken streak that comes down the lake toward the eye.
-    float daz = atan(rf.x, rf.y) - atan(S.sun.x, S.sun.y);
+    float daz = atan(rf.x, rf.y) - uShadow.z;
     float colm = exp(-daz * daz / 0.0022) * (0.35 + 0.65 * smoothstep(0.3, 0.7, g.g)) * (0.5 + 0.5 * smoothstep(0.35, 0.65, big + 0.5));
     col += S.band * colm * gloss * farDay * 0.42 * step(0.0, S.sun.z);
   }
@@ -2334,7 +2354,7 @@ float gIceF = 1e3;
 
 vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceShade, float slabOn) {
   vec3 L = keyDir();
-  vec2 LXY = normalize(L.xy);
+  vec2 LXY = uBearings.zw;
   vec2 suv = simUv(pw);
   // The simulation covers a window of the world: outside it the surface is
   // the drawn ripples alone.
@@ -2447,7 +2467,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 
   // The bank on the light's side shades the water below it. The light is
   // low, so the shade is long; it is kept to a few bank heights.
-  vec2 toSun = LXY * min(L.z > 0.0 ? length(L.xy) / L.z : 0.0, 2.6);
+  vec2 toSun = LXY * uShadow.w;
   // (Far from any bank there is no bank's shade to look for.)
   float bankShade = bw.r > -(2.6 * gFree + 12.0) ? smoothstep(-5.0, 5.0, textureLod(uBedA, bedUv(pw + toSun * gFree), 0.0).r) : 0.0;
   float shade = max(bankShade, iceShade) * (1.0 - 0.6 * uNight);
@@ -2652,9 +2672,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 #ifdef DBG_NO_REFL
   vec3 refl = S.mid;
 #else
-  vec3 refl = skyColor(rf, uQuality > 1.5 ? (1.0 - uNight) * (1.0 - gL1) * (1.0 - pondK) : 0.0);
-  // (A pond mirrors the sky alone: the ranges, small and upside down in a letter, would only be a dark torn band.)
-  if (pondK < 1.0) refl = mix(withRidges(refl, rf, uQuality > 1.5 ? 1.5 * gL1 : 1.5), refl, pondK);
+  float clouds = uQuality > 1.5 ? (1.0 - uNight) * (1.0 - gL1) * (1.0 - pondK) : 0.0;
+  vec3 refl = withRidges(rf, clouds, uQuality > 1.5 ? 1.5 * gL1 : 1.5, pondK);
 #endif
   gWash = 0.0;
   gSkyQ = 1.0;
@@ -2826,7 +2845,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     if (skirt > 0.0) col = mix(col, vec3(0.36, 0.62, 0.68) * (S.amb * 1.3 + S.key * 0.1 * (1.0 - longShade)), dlt * skirt * 0.8);
   }
   if (uSea.x > 0.0 && S.sun.z > 0.0) {
-    float daS = atan(dir.x, dir.y) - atan(S.sun.x, S.sun.y);
+    float daS = atan(dir.x, dir.y) - uShadow.z;
     // (By day the path is narrow: contrast, not more light everywhere, is what makes it blaze.)
     float pathS = exp(-daS * daS / mix(0.014, 0.1, uNight));
     if (pathS > 0.01) {
@@ -2851,7 +2870,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // the first letters, as the mirror is.)
   if (gDeep > 0.0) {
     float lim = atan(uLens.x * uLens.y) * 0.56;
-    float azC = clamp(atan(S.sun.x, S.sun.y), -lim, lim);
+    float azC = clamp(uShadow.z, -lim, lim);
     float da = atan(dir.x, dir.y) - azC;
     float nearK = smoothstep(1.0, -1.0, gCutA);
     // (As wide a share of the frame through any lens.)
@@ -3239,8 +3258,11 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   calm *= mix(1.0, 0.8 * exp(-dist * dist / 42.0), still);
   float tt = uTime * 0.32;
   vec2 qa = q * 1.7 + vec2(tt, 0.3 * tt);
-  float f0 = seaH(qa);
-  vec2 g = vec2(f0 - seaH(qa + vec2(0.11, 0.0)), f0 - seaH(qa + vec2(0.0, 0.11))) * broad;
+  vec2 g = vec2(0.0);
+  if (broad > 0.0) {
+    float f0 = seaH(qa);
+    g = vec2(f0 - seaH(qa + vec2(0.11, 0.0)), f0 - seaH(qa + vec2(0.0, 0.11))) * broad;
+  }
   // (A lean frame lets the finest ripples go.)
   fine *= 1.0 - gL2;
   if (fine > 0.0) {
@@ -3285,7 +3307,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float blobN = uNight * (1.0 - smoothstep(0.0, 0.22, gDusk));
   gSunK = mix(mix(0.22, 1.0, blobN), 0.4, still);
   gDiscK = (1.0 - still) * blobN;
-  vec3 refl = withRidges(skyColor(r, 0.0), r, 1.0 - still);
+  vec3 refl = withRidges(r, 0.0, 1.0 - still, 0.0);
   gSunK = 1.0;
   gDiscK = 1.0;
   // Seen from above the water shows its depth; at a glancing angle, the sky.
@@ -3309,7 +3331,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   // (How far under the horizon the eye's ray dips, as a tangent.)
   float em = -dir.z * inv;
   float up = smoothstep(-0.02, 0.012, S.sun.z);
-  float da = atan(dir.x, dir.y) - atan(S.sun.x, S.sun.y);
+  float da = atan(dir.x, dir.y) - uShadow.z;
   float nearK = 1.0 / (1.0 + dist * 0.03);
   if (still < 1.0) {
     // Under way, the sea moves: sun glitter as a broken streak toward the sun.
@@ -3457,7 +3479,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
 vec3 deltaBar(vec3 col, float y, float sd, vec2 ba) {
   float k = smoothstep(${(DELTA.apex.y - 200).toFixed(1)}, ${(DELTA.y - 60).toFixed(1)}, y) * (1.0 - uNight) * (1.0 - gDusk);
   if (k <= 0.0) return col;
-  float toSun = dot(-ba, normalize(keyDir().xy));
+  float toSun = dot(-ba, uBearings.zw);
   float lit = smoothstep(0.05, 0.75, toSun) * (1.0 - smoothstep(3.0, 44.0, sd));
   // (Its shade keeps to the rim: a wide band of it round every bar is a smear, and it is the sky's blue, not mauve.)
   float lee = smoothstep(0.05, 0.75, -toSun) * (1.0 - smoothstep(6.0, 46.0, sd));
@@ -3653,8 +3675,7 @@ void main() {
   skyKey();
   gL1 = clamp(uLean, 0.0, 1.0);
   gL2 = clamp(uLean - 1.0, 0.0, 1.0);
-  vec2 ndc = vUv * 2.0 - 1.0;
-  vec3 dir = normalize(uCamF + uCamR * (ndc.x * uLens.y * uLens.x) + uCamU * (ndc.y * uLens.x));
+  vec3 dir = normalize(vRay);
 //#DBG_A
 #ifdef DBG_EMPTY
   o = vec4(vUv, 0.5, 1.0);
@@ -3856,9 +3877,15 @@ void main() {
         float face;
         // Three rays toward the light, a little apart: a soft-edged shadow.
         float sh = 0.0;
-        for (int i = 0; i < 3; i++) {
-          vec3 l = normalize(L + vec3(-L.y, L.x, 0.0) * (float(i) - 1.0) * 0.03 + vec3(0.0, 0.0, (float(i) - 1.0) * 0.012));
-          sh += slabHit(vec3(p, 0.5), l, suv, face) > 0.0 ? 1.0 : 0.0;
+        // Only a strip down-light of the footprint can see the block.
+        // Pad its cross-light radius for the two outer penumbra rays.
+        vec2 keyXY = uBearings.zw;
+        float radius = length(vec2(uSlabSize.x * 0.55, uSlabSize.z * 1.1));
+        if (dot(ds, keyXY) <= radius && abs(dot(ds, vec2(-keyXY.y, keyXY.x))) <= radius + 0.031 * reach) {
+          for (int i = 0; i < 3; i++) {
+            vec3 l = normalize(L + vec3(-L.y, L.x, 0.0) * (float(i) - 1.0) * 0.03 + vec3(0.0, 0.0, (float(i) - 1.0) * 0.012));
+            sh += slabHit(vec3(p, 0.5), l, suv, face) > 0.0 ? 1.0 : 0.0;
+          }
         }
         slabShade = 1.0 - sh / 3.0 * mix(0.92, 0.5, uNight);
         // Where it stands on the ground the corner is dark.
@@ -4016,7 +4043,7 @@ void main() {
     // The hour's mist. It lies low, in a layer a few times a man's height, thickest over the water and along its
     // banks, in long banks with thinner air between; near the eye there is none, and it gathers with distance until
     // the far reach is lost in it. It is lit by whatever lights the ground.
-    if (uAir.x > 0.0) {
+    if (uAir.x > 0.0 && t > 420.0) {
       float overW = 1.0 - smoothstep(0.0, 520.0, sd0);
       float bankM = 0.72 + 0.28 * sin(p.x * 0.0029 + 1.7 * sin(p.y * 0.0021 + uTime * 0.012) + uTime * 0.008);
       float mistK = (1.0 - exp(-max(t - 420.0, 0.0) * uHour.w * bankM)) * mix(0.25, 1.0, overW) * uAir.x;
@@ -4073,7 +4100,7 @@ void main() {
       // Water takes no sharp shadow: where each shard keeps the low sun off it, the water only gives back a little less sky,
       // in a long soft lane that widens and fades away from the shard's foot.
       if (uNight < 1.0 && L.z > 0.02) {
-        vec2 away = -normalize(L.xy);
+        vec2 away = -uBearings.zw;
         float shd = 0.0;
         for (int i = 0; i < 2; i++) {
           vec4 s = i == 0 ? SH0 : SH1;
@@ -4177,7 +4204,7 @@ void main() {
   // (Before dawn, while the name is cut in the sheet, the letters are light in a slot, not a lamp: they throw almost no halo over the ice.)
   if (uBloom > 0.0) col += textureLod(uGlowTex, vUv, 0.0).rgb * uBloom * (1.0 - 0.86 * uNight * smoothstep(0.75, 1.0, uGlow)) * (1.0 - 0.85 * gNmCov);
   vec2 vc = vUv - 0.5;
-  col *= 1.0 - dot(vc, vc) * mix(0.42, 0.5, uSea.y);
+  col *= 1.0 - dot(vc, vc) * uFilm.x;
   // The words' lee. Where words stand the picture keeps itself readable
   // behind them, softly: under dark words nothing is left darker than a
   // light haze, under light words nothing brighter than a deep shade. Only
@@ -4189,9 +4216,7 @@ void main() {
   // The falloff follows an ellipse around the ink. Its centre has no flat plateau,
   // and the density falls to zero before the support boundary.
   if (uCalmK.x > 0.0 && uCalmK.y < 0.5) {
-    vec2 halfBox = 0.5 * (uCalmBox.zw - uCalmBox.xy);
-    vec2 radii = halfBox + vec2(0.15 / uLens.y, 0.19);
-    vec2 q = (vUv - uCalmBox.xy - halfBox) / radii;
+    vec2 q = (vUv - uLee.xy) * uLee.zw;
     float r2 = dot(q, q);
     float ck = (1.0 - smoothstep(0.0, 4.0, r2)) * uCalmK.x;
     if (ck > 0.002) {
@@ -4223,13 +4248,13 @@ void main() {
       col += (lifted - l) * vec3(0.95, 1.0, 1.07) * ck * (1.0 - uNight);
     }
   }
-  vec3 xa = col * 1.12;
+  mediump vec3 xa = min(col * 1.12, 64.0);
   // Display-referred fit to the filmic response: a lifted toe, a long shoulder
   // below display white, and the transfer to screen space in one quotient.
-  col = (xa * (3.39 * xa + 6.0) + 0.0127) / (xa * (3.42 * xa + 5.95) + 1.0);
+  mediump vec3 display = 0.994 - 0.9813 / (1.0 + xa * (6.0 + 4.2 * xa));
   // Interleaved gradient noise in display space. The offset advances the grain without moving the scene.
-  float gn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)) + fract(uTime * 0.73))) - 0.5;
-  float lum = dot(col, vec3(0.3, 0.6, 0.1));
-  col += gn * (1.4 / 255.0 + 0.020 * (1.0 - 0.6 * uSea.y) * (0.35 + 2.6 * lum * (1.0 - lum)));
-  o = vec4(col, 1.0);
+  float gn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)) + uFilm.y)) - 0.5;
+  mediump float lum = dot(display, vec3(0.3, 0.6, 0.1));
+  display += gn * (1.4 / 255.0 + uFilm.z * (0.35 + 1.3 * min(lum, 1.0 - lum)));
+  o = vec4(display, 1.0);
 }`;

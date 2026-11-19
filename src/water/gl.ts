@@ -20,10 +20,18 @@ const VERT = `#version 300 es
 precision highp float;
 layout(location = 0) in vec2 aPos;
 out vec2 vUv;
+// Only flight fragments consume vRay. Other linked programs discard it.
+uniform vec3 uCamF;
+uniform vec3 uCamR;
+uniform vec3 uCamU;
+uniform vec2 uLens;
+out vec3 vRay;
 void main() {
   // One oversized triangle covers the viewport.
   vUv = aPos;
-  gl_Position = vec4(aPos * 2.0 - 1.0, 0.0, 1.0);
+  vec2 ndc = aPos * 2.0 - 1.0;
+  gl_Position = vec4(ndc, 0.0, 1.0);
+  vRay = uCamF + uCamR * (ndc.x * uLens.y * uLens.x) + uCamU * (ndc.y * uLens.x);
 }`;
 
 /**

@@ -118,8 +118,7 @@ float gDepth = 1e9;
 float gShut = 0.0;
 /** The air between the eye and something t away. */
 vec3 inAir(vec3 c, vec3 dir, float t) {
-  float thin = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
-  float fog = 1.0 - exp(-t * 0.00021 * S.haze * thin);
+  float fog = 1.0 - exp(-t * uAir.w);
   vec3 air = airAt(dir.xy);
   air = mix(air, mix(S.hor, air, 0.45), uNight);
   return mix(c, air, fog);
@@ -1645,8 +1644,7 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
     // (Before dawn the air in and over the glacier is the night's own cold blue: seen from far off down the valley its
     // dark mouth is not warmed to brown by the horizon's first light.)
     if (uNight > 0.0) {
-      float thinA = (1.0 - exp(-uCamPos.z / 320.0)) / max(uCamPos.z / 320.0, 1e-3);
-      c = mix(c, mix(c0, S.hor * 0.22 + vec3(0.012, 0.034, 0.078), 1.0 - exp(-t * 0.00021 * S.haze * thinA)), 0.85 * uNight * veil);
+      c = mix(c, mix(c0, S.hor * 0.22 + vec3(0.012, 0.034, 0.078), 1.0 - exp(-t * uAir.w)), 0.85 * uNight * veil);
     }
     c = mix(c, mistC, (1.0 - exp(-t / 2600.0)) * inK * (1.0 - 0.8 * faceNear(uCamPos + dir * t)) * veil);
     return mix(col, c, gSt.w * foot);

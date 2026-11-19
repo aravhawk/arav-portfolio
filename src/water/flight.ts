@@ -21,7 +21,7 @@ import { type Pending, type Program, type Target, bindTex, compileBegin, compile
 import { DAWN, ENTER, GATE, LAP, PULSE, RIBBON, breathAt, dawnLight, enterAt, firstLight, heroLight, heroLightAt, nextDrip, stationsNear, stepGates } from './moments';
 import { opening } from './opening';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
-import { FLIGHT_FREEBOARD, flightSource, freeboardAt } from './shaders/flight';
+import { FLIGHT_FREEBOARD, flightSource, freeboardAt, snowShadowBearing } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
 import { skyAt } from './sky';
 import { makeSolver } from './stage';
@@ -1478,7 +1478,7 @@ export class FlightEngine extends WaterEngine {
   }
 
   /** All tiles see the same hour and atmospheric column. */
-  private frameLight(cam: Basis, at: FlightMoment, night: number) {
+  private frameLight(cam: Basis, aspect: number, at: FlightMoment, night: number) {
     const sky = skyAt(night, at.day, this.lift, this.sunAz, this.ridge, at.hour);
     // (The first screen has its own sun and moon, behind the name: let go as the eye leaves the lake.)
     const heroK = heroLightAt(MELT.from + at.melt * (MELT.to - MELT.from));
@@ -1491,7 +1491,19 @@ export class FlightEngine extends WaterEngine {
     const mistDepth = cam.pos[2] / 70;
     const extinction = 0.00021 * sky.haze * -Math.expm1(-depth) / Math.max(depth, 0.001);
     const lowExtinction = 0.0022 * -Math.expm1(-mistDepth) / Math.max(mistDepth, 0.001);
-    return { sky, moon, extinction, lowExtinction };
+    const sunLength = Math.hypot(sky.sun[0], sky.sun[1]) || 1;
+    const keyLength = Math.hypot(sky.keyDir[0], sky.keyDir[1]) || 1;
+    const bearings = [sky.sun[0] / sunLength, sky.sun[1] / sunLength, sky.keyDir[0] / keyLength, sky.keyDir[1] / keyLength];
+    const elevation = sky.keyDir[2];
+    const shadow = [
+      elevation / Math.max(keyLength, 0.05), snowShadowBearing(bearings[2], bearings[3]),
+      Math.atan2(sky.sun[0], sky.sun[1]), elevation > 0 ? Math.min(keyLength / elevation, 2.6) : 0,
+    ];
+    const grainPhase = this.time * 0.73;
+    const film = [0.42 + 0.08 * at.settle, grainPhase - Math.floor(grainPhase), 0.020 * (1 - 0.6 * at.settle), moon[3] * smooth(-0.05, 0.05, moon[2])];
+    const [left, bottom, right, top] = at.box;
+    const lee = [(left + right) / 2, (bottom + top) / 2, 1 / ((right - left) / 2 + 0.15 / aspect), 1 / ((top - bottom) / 2 + 0.19)];
+    return { sky, moon, extinction, lowExtinction, bearings, shadow, film, lee };
   }
 
   private draw(cam: Basis, aspect: number, at: FlightMoment) {
@@ -1500,7 +1512,11 @@ export class FlightEngine extends WaterEngine {
     this.needed = need;
     const night = Math.min(1, Math.max(0, this.theme));
     this.drawnTiles = [];
-    const light = this.frameLight(cam, at, night);
+    const light = this.frameLight(cam, aspect, at, night);
+    // Every tile will be replaced. Discarding the old colour lets tile-based
+    // GPUs open this render pass without loading last frame's full-size colour.
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR]);
     if (this.forced) {
       this.drawn = this.forced;
       this.drawnTiles.push({ mask: this.forced.mask, area: 1, by: this.forced });
@@ -1599,6 +1615,10 @@ export class FlightEngine extends WaterEngine {
     // The light: the hour's keys.
     const { sky, moon, extinction, lowExtinction } = light;
     if (r.u.uMoon) gl.uniform4fv(r.u.uMoon, moon);
+    gl.uniform4fv(r.u.uBearings, light.bearings);
+    gl.uniform4fv(r.u.uShadow, light.shadow);
+    gl.uniform4fv(r.u.uFilm, light.film);
+    gl.uniform4fv(r.u.uLee, light.lee);
     gl.uniform3fv(r.u.uSkyZen, sky.zen);
     gl.uniform3fv(r.u.uSkyMid, sky.mid);
     gl.uniform3fv(r.u.uSkyHor, sky.hor);

@@ -1,29 +1,39 @@
 # Light and materials
 
-Status: the hours are **as built** (first pass) and being finished;
-the one shared ice is **planned** (the one-ice task). Solid UI
-surfaces are as built.
+The hours and solid UI surfaces are in use. A single ice material for all objects is planned.
 
 ## Light
 
-- The light theme is **one day**, first light to sunset; the dark
-  theme is **one night that ends at sunrise**. Every station has its
-  own hour: sun or moon height and bearing, the colour of light and
-  of shade, its air. `src/water/sky.ts` holds the hours as keys along
-  scroll; the light moves continuously, never in a step.
-- A new station takes its hour from its place on the timeline. Do not
-  give a station a private light.
-- Snow is never one white: lit snow and shaded snow are two colours
-  at every hour. Water takes its colour from the sky it mirrors and
-  its depth.
-- The night is moonlight: nearly colourless, one low key, deep
-  neutral shadows. No colour wash. The aurora appears twice only (the
-  first screen, faint; Kilo Bench, full).
-- Air: distance is told by haze that takes the sky's colour and
-  brightens toward the sun. Tone: one filmic curve; no clipped white.
-  Grain: fine, luminance only. **No blur of any kind** (no bloom, no
-  depth of field).
-- No emissive outline or glow where water meets ice or snow.
+| Stop | Day | Night |
+| --- | --- | --- |
+| Lake | Low sun behind the plates | Low moon and a faint aurora |
+| Statement | Long blue shadows in morning mist | Silver moonlight across the river |
+| Infiniview | Cold morning and clear ranges | Moonlit snow around the screen |
+| Upstream | Late morning, mist at the falls | Silver falls against a shaded cliff |
+| Kilo Bench | White noon light over the pool | Aurora over the pool |
+| Agent Bridge | Pale overcast light | Moonset and stars on the tarn |
+| Open models | Cream afternoon light | First blue sky after moonset |
+| cc-switch | Low gold key and blue shade | Brighter blue hour |
+| TensorPoW | Amber light across the banks | First rose light on the peaks |
+| RydAR | Last sunlight at the rim | Rose horizon over the shaded canyon |
+| Delta | Peach sky and pink ice | Warm dawn reflected in the sea |
+| Ending | Setting sun | Rising sun |
+
+A new stop inherits its hour from its scroll position. To author a new
+hour, add the stop to the day and night key sequences in
+`src/water/sky.ts`. The interpolation carries key direction, fill,
+water, haze and mist through the neighbouring hours. The visible sun
+and the ground's shadow-casting key have separate elevations.
+
+The engine integrates air density from the camera height once per
+frame. Ground and station shaders use the distance along each ray to
+fade surfaces toward the horizon colour. The lower mist layer favours
+water. The panorama stores range depth for its own haze. A new object
+must apply air at its hit distance before compositing it into the scene.
+
+The scene shader applies the vignette before the display curve. Both
+themes share the same highlight shoulder and moving luminance grain.
+Keep the scene sharp and the shore free of emissive outlines.
 
 ## The ice (planned: one function for every object)
 
