@@ -212,9 +212,9 @@ export const PROJECTS: Project[] = [
     n: '04',
     name: 'Agent Bridge',
     kicker: 'Apache 2.0',
-    line: 'One inbox between an OpenAI Dot and a Grok Bot. Messages are data, never permission.',
+    line: 'An OpenAI Dot and a second assistant exchange messages and handoffs through one self-hosted inbox.',
     summary:
-      'Agent Bridge connects an OpenAI Dot to a Grok Bot. It is a self hosted MCP inbox for one owner who wants the two to exchange messages, status updates and handoff requests in both directions without copying context between chats.',
+      'Agent Bridge connects an OpenAI Dot to a second AI assistant. It is a self hosted MCP inbox for one owner who wants the two to exchange messages, status updates and handoff requests in both directions without copying context between chats.',
     how: [
       {
         title: 'Store, then wake',
@@ -251,7 +251,7 @@ export const PROJECTS: Project[] = [
         kind: 'video',
         src: '/media/agent-bridge-demo.mp4',
         poster: '/media/agent-bridge-poster.jpg',
-        alt: 'The Agent Bridge launch video: an OpenAI Dot and a Grok Bot exchanging a handoff through the bridge.',
+        alt: 'The Agent Bridge launch video: an OpenAI Dot and a second assistant exchanging a handoff through the bridge.',
         w: 1280,
         h: 720,
       },
