@@ -1458,3 +1458,43 @@ lands.
   and the inner pages' scenes.
 - Meanwhile this thread does the DOM work that was in the inner
   pages' task.
+
+### The hand-over must be graceful (Arav, t308u, Nov 18, 9:33 PM CT)
+
+This reached this thread after R4c had been stopped. What it asks,
+and where each point stands:
+
+- **Nothing killed midway, no work lost.** R4c was stopped right
+  after its sixth commit with a clean working tree, so no code was
+  lost. Its own thread shows it had finished its picture work and
+  its checks (legibility 0 failures of 5,324 lines; titles 95 of 96,
+  the one being RydAR on a phone as before; words 0 faults) and was
+  measuring cost and writing its report. What was lost is that
+  report and its last cost measurement. I wrote its hand-over from
+  its thread (`.tools/out/r4c/HANDOVER.md`), kept its captures, and
+  gave both to Astra's task, which continues the light from R4c's
+  commits with that context. From here Astra takes over at brief
+  boundaries only; no task is stopped part way again.
+- **The page is always coherent.** No commit may leave one stretch in
+  a new light, motion or material while its neighbours are in the
+  old one, or make one part lag more than another. So from here:
+  work that changes one station at a time is gathered on a local
+  staging branch and reaches `redesign/fable-v4b-20261115` only as a
+  whole, after the consistency pass below; work that changes one
+  thing across the whole flight (the light; one ice for every
+  object) is briefed as one task. The task queue is reordered to
+  match: after the light, **one ice across every object on the page
+  in one task**, then the stations' subjects and events gathered on
+  staging.
+- **A whole-site consistency pass before any stage is called done**:
+  motion feel and easing, light, materials, the transition between
+  every pair of neighbouring sections, and frame pacing and input
+  latency section by section at this display's size. Any mismatch is
+  a FAIL.
+- **The glass comes back in one pass**: it was one commit across the
+  whole site (`296ad70`: the nav, the rail, the selector; no other
+  glass surface exists in the styles). The two glass-like panels
+  inside the scene go with the station work, together.
+- A detailed quality brief is coming; when it arrives it is reviewed
+  against the frontend skills installed on this machine and answered
+  with a plan.
