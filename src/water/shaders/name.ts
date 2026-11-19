@@ -115,7 +115,7 @@ float plateSd(vec2 cell, float H, vec2 xz) {
   vec2 along = vec2(0.73, 0.68);
   float coordinate = dot(c, along) * 9.0 + dot(cell,vec2(7.1,13.7));
   float phase = fract(coordinate) - 0.5;
-  float depth = 0.012 * max(0.0, fract(floor(coordinate)*0.618+cell.x*17.0)-0.28);
+  float depth = 0.023 * max(0.0, fract(floor(coordinate)*0.618+cell.x*17.0)-0.16);
   float chip = max(0.0, depth - abs(phase) * 0.19);
   gNmGrad = s.ba - (chip > 0.0 ? along * sign(phase) * 1.71 : vec2(0));
   return (s.r + length(c - cc) + chip) * H;
@@ -228,6 +228,12 @@ vec3 nameEnv(float h) {
  * inner work is let go).
  */
 vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, vec3 rd, float t, float sd, float thick, float kind, float soft) {
+  // A long saw cut wanders slightly. Its normal changes the refracted
+  // shore while the chipped outline still comes from the hit test.
+  if (kind < 1.5) {
+    vec2 sweep = pl.xz/A.w;
+    nl = normalize(nl + vec3(0.026*sin(9.0*sweep.x+fi),0.0,0.019*sin(12.0*sweep.y-fi)));
+  }
   vec3 n = qTo(Q,nl);
   vec3 p = A.xyz + qTo(Q,pl);
   vec2 q = kind < 1.5 ? pl.xz : vec2(dot(pl.xz,vec2(-grad.y,grad.x)), pl.y);
@@ -249,7 +255,7 @@ vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, ve
   return clearIce(n,rd,q*232.0/A.w+fi*61.0,t*uPxAng*232.0/A.w,thick*232.0/A.w,
     edge*232.0/A.w, kind < 1.5 ? 0.0 : 1.0,wet,
     (behind * 0.58 + light*0.22) * mix(vec3(0.23,0.42,0.49),vec3(1),h), light*(1.0-0.25*soft), nameEnv(reflect(rd,n).z),
-    kind < 1.5 ? mix(0.20,0.47,uNight) : 0.0);
+    kind < 1.5 ? mix(0.19,0.52,uNight) * smoothstep(0.0,0.052,edge/A.w) : 0.0);
 }
 #endif
 

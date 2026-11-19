@@ -597,7 +597,7 @@ vec3 clearIce(vec3 n, vec3 rd, vec2 q, float px, float thickness, float edge,
   mediump float fresnel = 0.018 + 0.982 * pow(1.0 - cosine,5.0);
   // Air caught in the saw cuts returns diffuse light before it enters
   // the body. Wet cuts clear first; untouched edges still transmit.
-  body += light * sawFrost * (0.72 + 0.55 * skin.g) * (1.0 - 0.72 * wet);
+  body += light * sawFrost * (0.22 + 1.5 * smoothstep(0.22,0.78,skin.g)) * (1.0 - 0.72 * wet);
   mediump vec3 result = mix(body, environment, fresnel);
   mediump float highlight = max(dot(reflect(rd,face),keyDir()),0.0);
   mediump float glint = pow(highlight,160.0) + 0.05 * (1.0 - broken) * pow(highlight,18.0);

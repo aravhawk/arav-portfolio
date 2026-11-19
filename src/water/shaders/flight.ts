@@ -230,6 +230,15 @@ vec2 bedUv(vec2 w) { return w / (uBedSize * uBedDiv); }
 #define NO_ICE_FIELD
 #endif
 ${ICE_FIELD}
+// FIELD is registered only for the lake with standing plates. The water
+// on that sheet has neither a cut-letter pond nor its glitter and floes.
+float standingName() {
+#ifdef F_FIELD
+  return 1.0;
+#else
+  return uNameG.w;
+#endif
+}
 vec2 simUv(vec2 w) { return vec2(w.x / (uSim.z * uSim.y), (w.y - uSim.x) / (uSim.w * uSim.y)); }
 
 /* ---------- small noise (the ending's) ---------- */
@@ -740,6 +749,7 @@ float shallowsAt(vec2 p);
 vec3 fracture(vec2 x);
 // (Stations 1 to 4 are made of the same glacier ice as the later ones: it is written with them, further on.)
 vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky, float sun, float cups, float edge, float seed);
+vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky, float sun, float cups, float edge, float seed, bool deepFace);
 vec3 corniceOn(vec3 col, vec3 n, float dz, float hang, float px);
 vec3 iciclesOn(vec3 col, float along, float dz, float px, float reach);
 vec3 waterlineOn(vec3 col, float z, float g);
@@ -945,7 +955,7 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
   float inImg = front ? smoothstep(0.0,2.5,min(e0.x,e0.y)) : 0.0;
   vec3 col = vec3(0);
   if (snowK < 1.0 && inImg * uSlabTint.a < 1.0)
-    col = iceGlacier(pW,n,rd,t,q,thick,1.0,1.0,front ? 0.0 : 1.0,edgeD,face*0.61);
+    col = iceGlacier(pW,n,rd,t,q,thick,1.0,1.0,front ? 0.0 : 1.0,edgeD,face*0.61,true);
   float aCov = 1.0;
   if (front && uSlabTint.a > 0.0 && snowK < 1.0) {
     vec3 unlitFace = col;
@@ -955,30 +965,33 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
     float nearE = 1.0-smoothstep(0.0,4.0,min(e0.x,e0.y));
     pq += (gr.gb-0.5)*3.0*nearE;
     vec2 iuv = (pq-io)/vec2(iw,ih);
-    vec3 img;
-    if (gSlabSoft > 0.5) {
-      // (Its image in moving water is light, not letters: the water keeps the picture's colours and breaks its words.)
-      // (Read far down its chain of smaller copies: its headline is a soft glow there, never a smudge of white.)
-      img = pow(textureLod(uSlabTex, vec2(iuv.x, 1.0 - iuv.y), 6.4).rgb, vec3(2.2));
-    } else {
-      // (Where the two rays beside this one meet the face: how far the picture moves under one device pixel.)
-      vec3 ca = hl - dl * t;
-      vec3 d1 = normalize(rd + uCamR * uPxAng);
-      vec3 d2 = normalize(rd + uCamU * uPxAng);
-      d1 = vec3(dot(d1.xy, uSlabDir.zw), -dot(d1.xy, uSlabDir.xy), d1.z);
-      d2 = vec3(dot(d2.xy, uSlabDir.zw), -dot(d2.xy, uSlabDir.xy), d2.z);
-      float den = SLF[0].w - dot(ca, nl);
-      vec3 h1 = ca + d1 * (den / dot(d1, nl));
-      vec3 h2 = ca + d2 * (den / dot(d2, nl));
-      vec2 u1 = (vec2(h1.x + uSlabSize.x * 0.5, h1.z) + vec2(d1.x, d1.z) / max(-dot(d1, nl), 0.25) / 1.31 * 16.0 - io) / vec2(iw, ih);
-      vec2 u2 = (vec2(h2.x + uSlabSize.x * 0.5, h2.z) + vec2(d2.x, d2.z) / max(-dot(d2, nl), 0.25) / 1.31 * 16.0 - io) / vec2(iw, ih);
-      vec2 u0 = (q + across * 16.0 - io) / vec2(iw, ih);
-      img = pow(picRead(uSlabTex, vec2(iuv.x, 1.0 - iuv.y), (u1 - u0) * vec2(1.0, -1.0), (u2 - u0) * vec2(1.0, -1.0)), vec3(2.2));
+    vec3 seen = vec3(0.0);
+    if (inImg > 0.0) {
+      vec3 img;
+      if (gSlabSoft > 0.5) {
+        // (Its image in moving water is light, not letters: the water keeps the picture's colours and breaks its words.)
+        // (Read far down its chain of smaller copies: its headline is a soft glow there, never a smudge of white.)
+        img = pow(textureLod(uSlabTex, vec2(iuv.x, 1.0 - iuv.y), 6.4).rgb, vec3(2.2));
+      } else {
+        // (Where the two rays beside this one meet the face: how far the picture moves under one device pixel.)
+        vec3 ca = hl - dl * t;
+        vec3 d1 = normalize(rd + uCamR * uPxAng);
+        vec3 d2 = normalize(rd + uCamU * uPxAng);
+        d1 = vec3(dot(d1.xy, uSlabDir.zw), -dot(d1.xy, uSlabDir.xy), d1.z);
+        d2 = vec3(dot(d2.xy, uSlabDir.zw), -dot(d2.xy, uSlabDir.xy), d2.z);
+        float den = SLF[0].w - dot(ca, nl);
+        vec3 h1 = ca + d1 * (den / dot(d1, nl));
+        vec3 h2 = ca + d2 * (den / dot(d2, nl));
+        vec2 u1 = (vec2(h1.x + uSlabSize.x * 0.5, h1.z) + vec2(d1.x, d1.z) / max(-dot(d1, nl), 0.25) / 1.31 * 16.0 - io) / vec2(iw, ih);
+        vec2 u2 = (vec2(h2.x + uSlabSize.x * 0.5, h2.z) + vec2(d2.x, d2.z) / max(-dot(d2, nl), 0.25) / 1.31 * 16.0 - io) / vec2(iw, ih);
+        vec2 u0 = (q + across * 16.0 - io) / vec2(iw, ih);
+        img = pow(picRead(uSlabTex, vec2(iuv.x, 1.0 - iuv.y), (u1 - u0) * vec2(1.0, -1.0), (u2 - u0) * vec2(1.0, -1.0)), vec3(2.2));
+      }
+      // (By day it keeps its own blacks and whites: only a breath of the ice's blue lies over it. Before dawn it is a screen lit from behind.)
+      seen = img * mix(vec3(0.9, 0.96, 0.99), vec3(0.95, 1.05, 1.08), uNight) + img * img * 0.3 * uNight + vec3(0.003, 0.008, 0.011) * (1.0 - uNight);
+      // (The first veil of air and a hairline or two lie in front of it, faintly: it is in the ice, not on it.)
+      seen += vec3(0.75, 0.9, 1.0) * S.amb * 0.05 * inclusions.g;
     }
-    // (By day it keeps its own blacks and whites: only a breath of the ice's blue lies over it. Before dawn it is a screen lit from behind.)
-    vec3 seen = img * mix(vec3(0.9, 0.96, 0.99), vec3(0.95, 1.05, 1.08), uNight) + img * img * 0.3 * uNight + vec3(0.003, 0.008, 0.011) * (1.0 - uNight);
-    // (The first veil of air and a hairline or two lie in front of it, faintly: it is in the ice, not on it.)
-    seen += vec3(0.75, 0.9, 1.0) * S.amb * 0.05 * inclusions.g;
     // (Its edge is a break in the ice: a bright line of refracted light round it, and a thin shade outside that.)
     float dImg = max(-min(e0.x, e0.y), 0.0);
     col *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 16.0, dImg)) * (1.0 - inImg);
@@ -993,6 +1006,10 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
     // surface reflection from clearIce.
     col += S.hor * inImg * (0.005 + 0.5*pow(1.0-cosi,5.0)) * mix(1.0,0.4,uNight);
     col = mix(unlitFace, col, uSlabTint.a);
+    // Above the largest splash and clear of the cornice and chipped
+    // silhouette, a fully exposed display already owns the whole pixel.
+    if (inImg == 1.0 && uSlabTint.a == 1.0 && below >= 13.0 &&
+        zUp > 103.0 && silD > 21.0 + max(foot,0.2)) return vec4(col,1.0);
   } else if (!front && !top) {
     // (Before dawn the picture's light is in the ice of the faces beside it.)
     col += uSlabTint.rgb * 0.5 * exp(-edgeD / 60.0) * uNight;
@@ -2472,7 +2489,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     }
     el = clamp(el, 0.002, 0.95);
     // (Before dawn the water round the standing letters is not leaned at the curtain: it holds the sky that truly stands over it.)
-    rf = normalize(mix(rf, vec3(azd * sqrt(1.0 - el * el), el), sheetK * (1.0 - uNameG.w * uNight)));
+    rf = normalize(mix(rf, vec3(azd * sqrt(1.0 - el * el), el), sheetK * (1.0 - standingName() * uNight)));
   }
 #endif
   // (Before dawn the thin cloud is too faint to be seen in moving water: it is not asked for.)
@@ -2494,7 +2511,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     // (And cools it: even the glare under the sun comes back as blue water, not as grey.)
     refl = mix(refl, mix(refl, vec3(rl), 0.65) * vec3(0.52, 0.88, 1.32) * min(clamp(pow(rl / 0.6, 1.3), 0.22, 1.5), 0.5 / rl), sheetK * (1.0 - uNight) * (1.0 - pondK));
   }
-  if (sheetK * uNight > 0.0 && pondK < 1.0 && uNameG.w < 0.5) {
+  if (sheetK * uNight > 0.0 && pondK < 1.0 && standingName() < 0.5) {
     // Before dawn the letters hold the curtain itself: its rays stand in
     // the water as long strokes with dark water between them, green where
     // the far side of each letter catches the hem and turning violet in
@@ -2506,7 +2523,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     vec3 cur = refl * (0.56 + 1.5 * ray * ray * ray) * (0.7 + 0.9 * ray2) * mix(vec3(1.0), vec3(0.76, 0.86, 1.42), deepV * 0.8) * 1.62;
     refl = mix(refl, cur, sheetK * uNight * (1.0 - pondK));
   }
-  if (pondK * uNight > 0.0 && uNameG.w < 0.5) {
+  if (pondK * uNight > 0.0 && standingName() < 0.5) {
     // Still water holds the stars too: in the dark under the hem and between the rays.
     vec3 md = normalize(vec3(dir.xy, -dir.z) + vec3(slope * 0.5, 0.0));
     // The curtain in it is the high one, drawn here in full whatever the
@@ -2576,7 +2593,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // Elsewhere it falls off as water does: a mirror toward the horizon, and
   // close under the eye dark water you look down into.
   // (Steeply under the eye it is a little less of a mirror: you look down into it.)
-  fres = mix(fres, max(fres * 1.3 + 0.1, mix(0.97, 0.66, smoothstep(0.27, 0.44, cosi)) * sheetK * (1.0 - uNameG.w)), uNight);
+  fres = mix(fres, max(fres * 1.3 + 0.1, mix(0.97, 0.66, smoothstep(0.27, 0.44, cosi)) * sheetK * (1.0 - standingName())), uNight);
   // A bank stands over the water at its edge: there the mirror shows the dark bank, not the sky.
   // (Wider in the walled basin, where the project's words stand over the near bank.)
   refl *= 1.0 - mix(0.3, 0.8, gWalled) * uNight * (1.0 - smoothstep(4.0, mix(46.0, 150.0, gWalled), -bw.r)) * (1.0 - sheetK);
@@ -2609,13 +2626,13 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     float z = max(gIceF, 0.0) / shelfP;
     // (Its bed is not level either: here and there a shoal of ice comes up under the middle of a stroke, and the deep water over it is teal, not black.)
     // (Not where the letters stand as blocks: that water is the lake's own depth, dark all through, and pale ice stands in it.)
-    float shoalP = smoothstep(0.44, 0.84, textureLod(uSnow, pw / vec2(900.0, 2700.0) + 0.57, 0.0).g + 0.5) * (1.0 - uNameG.w);
+    float shoalP = smoothstep(0.44, 0.84, textureLod(uSnow, pw / vec2(900.0, 2700.0) + 0.57, 0.0).g + 0.5) * (1.0 - standingName());
     float hw = min(0.03 + 2.0 * pow(z, 1.5), mix(9.0, 2.1, shoalP));
     vec3 thru = exp(-vec3(2.7, 0.95, 1.0) * hw);
     // The net of light lies on the shallow bed by day.
     float netP = smoothstep(0.3, 0.75, df.a) * (1.0 - uNight) * (1.0 - smoothstep(1.5, 4.0, footL));
     // (Before dawn the shelf round the standing letters' water is only a little paler than the water: a bright rim to every bay of its shore was a scribble.)
-    vec3 lightP = mix(S.amb * 1.3 + S.key * 0.25, (S.amb * 2.0 + uAurora * 0.7 + vec3(0.05, 0.13, 0.15)) * mix(1.0, 0.4, uNameG.w), uNight);
+    vec3 lightP = mix(S.amb * 1.3 + S.key * 0.25, (S.amb * 2.0 + uAurora * 0.7 + vec3(0.05, 0.13, 0.15)) * mix(1.0, 0.4, standingName()), uNight);
     vec3 deepP = mix(vec3(0.0003, 0.015, 0.016), vec3(0.002, 0.009, 0.014), uNight) * (0.75 + 0.5 * shaft);
     vec3 body = vec3(0.7, 0.9, 0.97) * thru * lightP * (0.84 + 0.42 * netP) + deepP * (1.0 - thru.g);
     body *= 1.0 + clamp(wf * 6.5, -0.3, 0.7);
@@ -2623,7 +2640,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
     // (Dark water cools what it mirrors.)
     refl = mix(refl, refl * vec3(0.45, 0.9, 1.0), pondK * (1.0 - uNight));
     // By day a pond seen from this high is mostly its own colour, with a little sky on it; before dawn still dark water is nearly a whole mirror, a little less of one over the pale shelf.
-    fres = mix(fres, mix(clamp(fres0 * PONDK.z + 0.02, 0.03, 0.4) + 0.1 * pawP, mix(mix(0.92, 0.4, thru.g), clamp(fres0 * 1.5 + 0.12, 0.0, 0.6), uNameG.w), uNight), pondK);
+    fres = mix(fres, mix(clamp(fres0 * PONDK.z + 0.02, 0.03, 0.4) + 0.1 * pawP, mix(mix(0.92, 0.4, thru.g), clamp(fres0 * 1.5 + 0.12, 0.0, 0.6), standingName()), uNight), pondK);
   }
   vec3 col = mix(water, refl, fres);
 #ifdef F_ICE
@@ -2701,14 +2718,14 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
       glint = mix(glint, 0.12 * (1.0 - pondK), smoothstep(2.0, 6.0, footL) * (1.0 - 0.6 * pondK));
       // (It is the name's own: once the sheet is plates the sun's true path on the open lake takes over.)
       // (Not where the letters stand as blocks: on that water single glints were specks round the word.)
-      col += S.band * path * glint * mix(1.0, 0.7, nearK) * gDeep * sheetK * sheetK * (1.0 - uNameG.w);
+      col += S.band * path * glint * mix(1.0, 0.7, nearK) * gDeep * sheetK * sheetK * (1.0 - standingName());
     }
   }
 #endif
   // A few plates of ice lie afloat in the name's water, turning slowly:
   // angular, of different sizes, each with its own thin shade.
   // (Where the letters stand as blocks the pieces that come away from them are drawn with them: see the name's own shader.)
-  if (sheetK > 0.0 && uNameG.w < 0.5 && gIceF1 > 6.0 && gIceF > shelfP * 1.6 * pondK && footL < 12.0) {
+  if (sheetK > 0.0 && standingName() < 0.5 && gIceF1 > 6.0 && gIceF > shelfP * 1.6 * pondK && footL < 12.0) {
     vec2 q = pw / vec2(150.0, 330.0);
     vec2 hq = hash2(floor(q) + 3.0);
     if (hq.x > 0.64) {
@@ -3696,7 +3713,7 @@ void main() {
       if (uIceN.y > 0.0) {
         // (Not where the name stands as plates: the water that opens under them is the lake's own, and the sheet's
         // thickness stands round it from the first.)
-        gPond = uIceN.y * (1.0 - uNameG.w) * (1.0 - smoothstep(40.0 + uIceN.z, 130.0 + uIceN.z, gIceBoxD));
+        gPond = uIceN.y * (1.0 - standingName()) * (1.0 - smoothstep(40.0 + uIceN.z, 130.0 + uIceN.z, gIceBoxD));
         gNameK = uIceN.y * (1.0 - smoothstep(0.0, 1500.0, gIceBoxD));
         gNameK *= gNameK;
         gFree *= 1.0 - gPond;
@@ -3723,6 +3740,8 @@ void main() {
     }
 
 #endif
+    float aLand = smoothstep(-aa, aa, sd0);
+
     // ---- the slab's shade and its own light on the ground round it
     float slabShade = 1.0;
     vec3 slabLight = vec3(0.0);
@@ -3734,26 +3753,29 @@ void main() {
       float reach = uSlabSize.x * 4.0;
       if (dd < reach * reach) {
         slabOn = 1.0;
-        vec3 L = keyDir();
-        vec3 suv;
-        float face;
-        // Three rays toward the light, a little apart: a soft-edged shadow.
-        float sh = 0.0;
-        // Only a strip down-light of the footprint can see the block.
-        // Pad its cross-light radius for the two outer penumbra rays.
-        vec2 keyXY = uBearings.zw;
-        float radius = length(vec2(uSlabSize.x * 0.55, uSlabSize.z * 1.1));
-        if (dot(ds, keyXY) <= radius && abs(dot(ds, vec2(-keyXY.y, keyXY.x))) <= radius + 0.031 * reach) {
-          for (int i = 0; i < 3; i++) {
-            vec3 l = normalize(L + vec3(-L.y, L.x, 0.0) * (float(i) - 1.0) * 0.03 + vec3(0.0, 0.0, (float(i) - 1.0) * 0.012));
-            sh += slabHit(vec3(p, 0.5), l, suv, face) > 0.0 ? 1.0 : 0.0;
+        // Only the land and its grounded shelf use the block's shadow.
+        if (aLand > 0.0) {
+          vec3 L = keyDir();
+          vec3 suv;
+          float face;
+          // Three rays toward the light, a little apart: a soft-edged shadow.
+          float sh = 0.0;
+          // Only a strip down-light of the footprint can see the block.
+          // Pad its cross-light radius for the two outer penumbra rays.
+          vec2 keyXY = uBearings.zw;
+          float radius = length(vec2(uSlabSize.x * 0.55, uSlabSize.z * 1.1));
+          if (dot(ds, keyXY) <= radius && abs(dot(ds, vec2(-keyXY.y, keyXY.x))) <= radius + 0.031 * reach) {
+            for (int i = 0; i < 3; i++) {
+              vec3 l = normalize(L + vec3(-L.y, L.x, 0.0) * (float(i) - 1.0) * 0.03 + vec3(0.0, 0.0, (float(i) - 1.0) * 0.012));
+              sh += slabHit(vec3(p, 0.5), l, suv, face) > 0.0 ? 1.0 : 0.0;
+            }
           }
+          slabShade = 1.0 - sh / 3.0 * mix(0.92, 0.5, uNight);
+          // Where it stands on the ground the corner is dark.
+          float along = clamp(dot(ds, uSlabDir.zw), -uSlabSize.x * 0.5, uSlabSize.x * 0.5);
+          float dFoot = length(ds - uSlabDir.zw * along);
+          slabShade *= 1.0 - 0.6 * exp(-dFoot / 9.0);
         }
-        slabShade = 1.0 - sh / 3.0 * mix(0.92, 0.5, uNight);
-        // Where it stands on the ground the corner is dark.
-        float along = clamp(dot(ds, uSlabDir.zw), -uSlabSize.x * 0.5, uSlabSize.x * 0.5);
-        float dFoot = length(ds - uSlabDir.zw * along);
-        slabShade *= 1.0 - 0.6 * exp(-dFoot / 9.0);
         // The screen throws its light forward onto what lies before it.
         vec3 toP = vec3(ds, -uSlabSize.y * 0.5);
         float facing = max(dot(normalize(toP.xy + 1e-4), uSlabDir.xy), 0.0);
@@ -3762,7 +3784,6 @@ void main() {
     }
 
 #endif
-    float aLand = smoothstep(-aa, aa, sd0);
     col = vec3(0.0);
 #ifdef DBG_NO_LAND
     if (aLand > 0.0) col = vec3(0.8) * aLand;

@@ -52,6 +52,15 @@ and a stable piece seed. It gathers the terrain or sky behind the ice
 and the light at this hour, then calls `clearIce`. For a sheet with a
 known bed, pass that backing directly to `clearIce`. The object owns
 its intersection, snow cover, submerged shelf and reflected ray.
+For a thick exposed face such as the display block or a column, pass
+`true` as the final argument to `iceGlacier`. Its clear edges admit
+the horizon. Deeper in the chord, a second fracture is sampled along
+the refracted ray, at a different depth and scale from the front
+inclusions. The display samples its image inside its aperture. Opaque pixels above
+the splash and clear of snow and wear finish there. Only land and its
+grounded ice shelf receive the block’s three-ray ground shadow.
+The plate outline uses the same chipped distance for the
+direct hit and its reflection. Frost clears toward a fresh arris.
 Apply `inAir` over the complete camera path after shading.
 The block and shard find their entry and exit by clipping the ray
 against flat faces. When the first six faces leave an empty interval,
@@ -62,8 +71,9 @@ opening melt. At 1440 × 900 and DPR 2, the shared material's first pass
 took 15.80–16.01 ms at the daylight opening across three sessions.
 The standing name already requests the field shader. Compiling its ice
 field for ground-level plates lets the driver omit the overhead lake
-and cut-letter paths. Inner-page lake shaders and the water simulation
-still select their own field from their uniforms.
+and cut-letter paths. The water on that same field also omits the
+cut-letter glitter, pond and drifting chips. Inner-page lake shaders
+and the water simulation select their own field from their uniforms.
 
 With the water held and the three browsers rotating every ten measured
 draws, the daylight opening measured 11.70–11.75 ms against its

@@ -175,7 +175,7 @@ vec3 gLastIce = vec3(0.0);
 vec3 gIceLight = vec3(0.0);
 // Gather the station's incident light and the terrain or sky on the bent
 // ray. The same optical material also receives lake and letter hits.
-vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky, float sun, float cups, float edge, float seed) {
+vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky, float sun, float cups, float edge, float seed, bool deepFace) {
   vec3 ri = refract(rd, n, 0.763);
   vec3 reflected = reflect(rd,n);
   vec3 light = S.amb * (0.55 + sky * mix(1.1, 2.0, uNight)) + gIceLamp
@@ -185,16 +185,43 @@ vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky
   light += S.hor * (0.16 * sky * uNight);
   vec3 backing = light * 0.21;
   float through = 1.0 - smoothstep(145.0,270.0,thick);
-  if (gShut <= 0.0 && through > 0.0)
+  if (deepFace) {
+    // A second cleave sits behind the inclusions nearest the surface.
+    // Its offset follows the bent chord, so the two slide apart in motion.
+    vec2 side = normalize(vec2(-n.y,n.x) + 1e-5);
+    vec2 drift = vec2(dot(ri.xy,side),ri.z) * min(thick*0.58,135.0);
+    vec2 uv = fract((q + drift + seed*133.0) / 680.0 + vec2(0.28,0.34));
+    float lod = lodFor(t*uPxAng,680.0,512.0);
+    float pad = min(0.25,exp2(lod)/512.0);
+    vec2 cleave = textureLod(uIceInclusions,vec2(uv.x,clamp(uv.y,pad,1.0-pad)*0.5),lod).rg;
+    float rim = 1.0-smoothstep(0.0,38.0,min(edge,thick*0.45));
+    vec3 horizon = S.hor * (0.38 + 0.62*(1.0-smoothstep(0.04,0.55,abs(ri.z))));
+    backing = mix(light*0.025, horizon*(0.8+uNight), rim*rim);
+    // Fractures return light from within, even on a shadowed face.
+    float facet = clamp(1.65*cleave.r + cleave.g,0.0,1.0);
+    backing += (light + S.hor*(1.8+3.6*uNight)) * facet;
+    thick = mix(thick,min(thick,42.0),facet);
+  } else if (gShut <= 0.0 && through > 0.0)
     backing = mix(backing,beyond(p + ri * thick,ri),through);
-  vec3 skyImage = gShut > 0.0 && reflected.z < gShut * 0.8
-    ? light * vec3(0.09,0.22,0.32) : beyond(p,reflected);
+  vec3 skyImage;
+  if (deepFace) {
+    // At a worn arris the broad horizon is the reflection. The shared
+    // surface still resolves the narrow specular and the sharp fracture lips.
+    skyImage = mix(light*vec3(0.12,0.22,0.27),S.hor,smoothstep(-0.24,0.02,reflected.z));
+    skyImage = mix(skyImage,S.mid,smoothstep(0.04,0.44,reflected.z));
+  } else {
+    skyImage = gShut > 0.0 && reflected.z < gShut * 0.8
+      ? light * vec3(0.09,0.22,0.32) : beyond(p,reflected);
+  }
   float wet = 1.0 - smoothstep(-FREEBOARD, 9.0-FREEBOARD, p.z);
   vec3 color = clearIce(n, rd, q + seed * 133.0, max(0.03,t*uPxAng), thick,
     edge, cups, wet, backing, light, skyImage);
   gIceLight = light;
   gLastIce = color;
   return color;
+}
+vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky, float sun, float cups, float edge, float seed) {
+  return iceGlacier(p,n,rd,t,q,thick,sky,sun,cups,edge,seed,false);
 }
 /**
  * Icicles under a lip of snow or ice. along: the place along the lip; dz: how far under it; px: a pixel's size there.
@@ -314,7 +341,7 @@ vec3 colColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, int i, int part) {
   vec4 gr = textureLod(uGrain, q / 190.0 + fi * 0.37, 0.0);
   // It is the glacier's ice, clear: the years run through pillar, shoulder and block alike (they dip a little, the
   // way the glacier lay), the eye sees into it, and where a piece is thin the country behind shows through, bent.
-  vec3 col = iceGlacier(ro + rd * t, n, rd, t, vec2(q.x, hp.z + 0.22 * hp.x + 0.1 * hp.y), tF - t, 1.0, 1.0, 1.0 - top, edge, fi * 0.61 + 0.2);
+  vec3 col = iceGlacier(ro + rd * t, n, rd, t, vec2(q.x, hp.z + 0.22 * hp.x + 0.1 * hp.y), tF - t, 1.0, 1.0, 1.0 - top, edge, fi * 0.61 + 0.2, true);
   // A face that leans back lies open to the sky and is paler; one that overhangs is in its own shade.
   col *= 1.0 + 0.22 * clamp(n.z, -0.6, 0.6) * (1.0 - top);
   if (top < 1.0) {
