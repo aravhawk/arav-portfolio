@@ -1783,3 +1783,45 @@ thread and its helpers): everything else to date.
   the flight re-timed on the registry to about 24 screens with the
   eye never under a quarter of travel speed at a station, velocity
   and the pointer felt in the picture, no blur, no bounce.
+
+## Direction change: quiet pages, one line, no 3D (Arav, Nov 19, 12:18 PM CT)
+
+Arav looked at the latest preview: "still very laggy and nowhere near
+as clean + fluid + super fast and quick loading as lando norris,
+lusion, or igloo"; the scene reads as "the current ai slop blender
+animation"; build it to be phenomenal and "super clean + minimalist
+in many ways/pages", then make it "50x more performant", because it
+is sluggish on his M5 Pro. This overrides the plan.
+
+- **Stopped**: the Astra motion helper (A4b) is cancelled; no more
+  ice, light or motion polish. A4's motion commit was never pushed
+  and is dropped from this branch (it remains on its helper branch).
+  The pushed head before this change is `5ef6d8e`.
+- **Phase 1, the design**: the direction is written in
+  `docs/redesign-v4/direction-nov19.md` and built without waiting
+  for approval. In short: the whole 3D scene, the sound and the
+  animation libraries go; the site becomes type on a strict grid
+  with one accent and one signature, **the line** (the river reduced
+  to a single SVG stroke that does one true thing at each project,
+  drawn from that project's real numbers); most pages are quiet.
+- **Phase 2, performance, a hard gate**: Lighthouse 95 or more on a
+  throttled phone and 100 on a desktop for every page; LCP under 1.2
+  s on a desktop and 2.0 s on a phone; CLS under 0.02; INP under 100
+  ms; under about 120 KB of JavaScript on the home page's first
+  load; no WebGL in the initial bundle; 120 fps scrolling with no
+  task over 50 ms; before and after numbers in the maintainer pack.
+- **Who**: Fable owns the design and the frontend. Nothing 3D
+  survives in the direction, so nothing goes to Astra unless that
+  changes. One helper at a time; signed commits on this branch; no
+  PR; PRs #18 to #20 untouched.
+- Standing rules restated by Arav: layers scale from their trigger;
+  no em dashes in new copy; plain specific copy; no fleet names;
+  public work only plus Infiniview and his business work; DevDay is
+  about him; the ending stays "This was the warm-up." / "The next
+  station isn't built yet."; the blog's content and editor are
+  untouched.
+
+**Who built what, to this point** (for the final write-up): Astra
+built the second half of the flight's light, the one shared ice, the
+canyon's fix and the station registry, all of which leave with the
+scene. Fable built everything else, and builds the new site.
