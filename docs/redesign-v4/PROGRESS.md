@@ -1971,3 +1971,30 @@ Who built what: Astra built the authoring scripts, the bake and the
 lake renderer. Fable set the direction, gathered the references,
 reviewed each pass, integrated and measured.
 
+### The hero's art, second and third revisions (Nov 19, night)
+
+Two more Astra passes on the lab hero, the first sent back by Fable
+(still a stack of grey bands, an overcast, and a night that had gone
+charcoal), the second taken:
+
+- **Composition.** A monument shot: the camera low and close, the
+  row of slabs receding at about 30 degrees so "Arav" is near and
+  large and "Jain" farther, the frame built on that diagonal.
+- **Light.** The sun low behind the far end of the name. The slabs
+  are lit through, with bright rims, long shadows toward the camera
+  and the sun's broken path on the black ice.
+- **Night.** Its own bake: a blue hour in colour (mean saturation
+  about 0.26), the name 4.8 to 1 or more over its ground.
+- **The move.** Two screens of scroll travel along the row.
+- **Cost.** 2.9 ms of GPU time a frame at a 3456 by 2234 backing at
+  worst, across both themes (Apple M4). 2.46 MB shipped. Lighthouse
+  on the merged build: lab route 100 and 100 (LCP 0.24 s desktop,
+  0.90 s phone).
+
+Still wrong, and next: on a phone the end of the move stretches the
+projected snow into streaks; the snow's margin on the ice is
+saw-toothed; the green shafts of light are too hard and regular; the
+cracks near the end of the move are straight polygon lines; the sun
+is a hard disc. The home page still runs the old scene (phone 97,
+with 177 ms of blocking time).
+
