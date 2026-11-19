@@ -228,8 +228,8 @@ html[data-hero-words] .fl-hero-words .fl-rise > .fl-rise-in {
   flex-direction: column;
   padding: 10px 0;
   border-radius: var(--r-1);
-  background: var(--plate);
-  box-shadow: var(--plate-shadow), inset 0 0 0 1px var(--plate-edge);
+  background: var(--chrome);
+  box-shadow: var(--chrome-shadow), inset 0 0 0 1px var(--chrome-edge);
   transform: translate3d(0, -50%, 0);
   transition: opacity 320ms var(--ease-out);
 }

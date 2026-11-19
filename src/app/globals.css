@@ -17,9 +17,9 @@
   --line-2: rgba(10, 12, 14, 0.07);
   --basin: #0f5466;
   --basin-2: #093a48;
-  --plate: #f5f7f8;
-  --plate-edge: rgba(10, 12, 14, 0.12);
-  --plate-shadow: 0 1px 2px rgba(10, 20, 26, 0.1), 0 8px 18px -12px rgba(10, 20, 26, 0.4);
+  --chrome: #f5f7f8;
+  --chrome-edge: rgba(10, 12, 14, 0.12);
+  --chrome-shadow: 0 1px 2px rgba(10, 20, 26, 0.1), 0 8px 18px -12px rgba(10, 20, 26, 0.4);
   --live: #0b7a5c;
   --focus: #0a0c0e;
   color-scheme: light;
@@ -85,9 +85,9 @@
   --line-2: rgba(241, 244, 245, 0.08);
   --basin: #0b3b52;
   --basin-2: #061f2e;
-  --plate: #10161a;
-  --plate-edge: rgba(241, 244, 245, 0.14);
-  --plate-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 22px -12px rgba(0, 0, 0, 0.8);
+  --chrome: #10161a;
+  --chrome-edge: rgba(241, 244, 245, 0.14);
+  --chrome-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 22px -12px rgba(0, 0, 0, 0.8);
   --live: #52dcae;
   --focus: #f1f4f5;
   color-scheme: dark;
@@ -456,8 +456,8 @@ html:not([data-water='on']) [data-bed][data-basin] {
    ice before dawn, with a hairline edge and a close shadow. Nothing is seen
    through it and nothing behind it is blurred. */
 .plate {
-  background: var(--plate);
-  box-shadow: var(--plate-shadow), inset 0 0 0 1px var(--plate-edge);
+  background: var(--chrome);
+  box-shadow: var(--chrome-shadow), inset 0 0 0 1px var(--chrome-edge);
 }
 
 /* ---------- reveals ---------- */
