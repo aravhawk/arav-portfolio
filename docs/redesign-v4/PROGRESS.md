@@ -1873,3 +1873,58 @@ project 56, writing 85, a post 85; desktop 100, 92, 98, 99, 99;
 about 360 to 380 KB of JavaScript on every page; the home page
 blocked the main thread for 1.5 s on a phone; the work page's LCP on
 a phone was 12.7 s.
+
+### How igloo.inc is made, and what the overhaul does about it
+
+A first-hand study of igloo.inc's pipeline (its network, its shaders,
+its render targets and its frame pacing, measured in a real browser)
+found that its look does not come from heavier real-time graphics
+than ours. It comes from the opposite:
+
+- Its lighting is **baked offline** into 2048 px colour textures on
+  light, authored meshes. It has no real-time lights and no shadow
+  maps. 88 of its 90 shader programs are a texture read and a few
+  terms. A whole landscape is about 105,000 triangles in 49 draws.
+- It spends on **one material at a time**: the ice block (reflections
+  from a prefiltered HDR environment, a 2048 px normal map, and a
+  refraction of the scene behind it).
+- Its depth is cheap layers: fog by height and distance that fades
+  to the sky's own gradient, faded world edges, drifting haze, 1,200
+  snow sprites, pre-blurred art in place of depth of field.
+- Its finish is a short HDR chain: a 16-bit float target, a colour
+  LUT, a wide soft bloom, SMAA.
+- Its restraint is measurable: one hue, a mean saturation near 0.12,
+  white only where something emits, one subject a frame, up to three
+  quarters of a frame fog.
+- It pays for everything before the first frame, then never compiles
+  or uploads while scrolling: 0.7 to 2 ms of main thread a frame, no
+  dropped frame over a long scroll at 60 Hz.
+- It renders at a third of the device's pixels (pixel ratio capped
+  at 1.15). Its sharpness is baked detail, not resolution.
+
+Our scene is the reverse: about 9,000 lines of procedural shader
+compute the world for every pixel at twice the device's pixels. That
+is why it is both slow and synthetic.
+
+**The decision: bake, do not compute.** The picture is rebuilt as
+authored meshes with offline-baked lighting and real surface detail
+(Blender driven by scripts, with CC0 photoscans and HDR environments
+from Poly Haven and ambientCG), compressed and drawn by tiny shaders,
+with one physically based hero material a frame and a short HDR
+chain (grade, bloom, anti-aliasing). Because shading becomes almost
+free, the drawing buffer can hold the **full device pixel ratio** on
+a capable machine, which is more than the reference does, and adapt
+only when measured frame time demands it. The page's words and a
+still of the same frame paint first; the 3D loads after.
+
+The first task is a proof on one frame: the hero (the lake at first
+light, the name as clear lake ice), on a lab route beside the live
+site, with its cost measured at the owner's screen size. If that
+frame does not stand beside Igloo's, the approach is rethought
+before anything else is built on it. An Astra helper (gpt-6.2-astra,
+high) is building it.
+
+The risk, stated plainly: Igloo's assets were made by 3D artists in
+Houdini. Ours will be made by scripts and scans. The proof frame is
+there to find out early whether that is enough.
+
