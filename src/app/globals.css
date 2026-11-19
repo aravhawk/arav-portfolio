@@ -17,9 +17,9 @@
   --line-2: rgba(10, 12, 14, 0.07);
   --basin: #0f5466;
   --basin-2: #093a48;
-  --glass: rgba(236, 240, 241, 0.72);
-  --glass-edge: rgba(255, 255, 255, 0.7);
-  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 10px 30px -12px rgba(10, 20, 26, 0.35);
+  --plate: #f5f7f8;
+  --plate-edge: rgba(10, 12, 14, 0.12);
+  --plate-shadow: 0 1px 2px rgba(10, 20, 26, 0.1), 0 8px 18px -12px rgba(10, 20, 26, 0.4);
   --live: #0b7a5c;
   --focus: #0a0c0e;
   color-scheme: light;
@@ -85,9 +85,9 @@
   --line-2: rgba(241, 244, 245, 0.08);
   --basin: #0b3b52;
   --basin-2: #061f2e;
-  --glass: rgba(28, 33, 37, 0.7);
-  --glass-edge: rgba(255, 255, 255, 0.14);
-  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 12px 34px -12px rgba(0, 0, 0, 0.7);
+  --plate: #10161a;
+  --plate-edge: rgba(241, 244, 245, 0.14);
+  --plate-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 22px -12px rgba(0, 0, 0, 0.8);
   --live: #52dcae;
   --focus: #f1f4f5;
   color-scheme: dark;
@@ -451,25 +451,13 @@ html:not([data-water='on']) [data-bed][data-basin] {
   }
 }
 
-/* Glass: for controls only. Tinted and solid enough that text on it passes
-   AA over water or land; solid when transparency is reduced. */
-.glass {
-  background: var(--glass);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
-  box-shadow: var(--glass-shadow), inset 0 0 0 1px var(--glass-edge);
-}
-@media (prefers-reduced-transparency: reduce) {
-  .glass {
-    background: var(--land-2);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass {
-    background: var(--land-2);
-  }
+/* A plate: the surface of the few controls that stand over the picture
+   (the nav, the rail, a switch). Solid, like packed snow by day and night
+   ice before dawn, with a hairline edge and a close shadow. Nothing is seen
+   through it and nothing behind it is blurred. */
+.plate {
+  background: var(--plate);
+  box-shadow: var(--plate-shadow), inset 0 0 0 1px var(--plate-edge);
 }
 
 /* ---------- reveals ---------- */

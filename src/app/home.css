@@ -315,7 +315,7 @@
   display: inline-grid;
   grid-template-columns: repeat(3, 92px);
   padding: 4px;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-2);
 }
 .switch-thumb {
   position: absolute;
@@ -323,7 +323,7 @@
   left: 4px;
   width: 92px;
   height: 44px;
-  border-radius: var(--r-pill);
+  border-radius: 8px;
   background: var(--ink);
   /* Critically damped: it lands, it does not bounce. */
   transition: transform 300ms var(--ease-out);
@@ -335,7 +335,7 @@
   font-size: 0.75rem;
   font-weight: 520;
   color: var(--ink-2);
-  border-radius: var(--r-pill);
+  border-radius: 8px;
   transition: color 200ms ease;
 }
 .switch-opt[aria-checked='true'] {

@@ -1,4 +1,4 @@
-/* The nav is two small glass controls on the frame, like a menu bar's
+/* The nav is two small solid plates on the frame, like a menu bar's
    extras. It leaves when you scroll down and returns when you scroll up, so
    it is never parked over what you are reading. */
 
@@ -24,7 +24,7 @@ html[data-nav-hidden] .nav:not(:focus-within) {
 .nav-mark,
 .nav-links {
   pointer-events: auto;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-2);
   height: 44px;
   display: inline-flex;
   align-items: center;

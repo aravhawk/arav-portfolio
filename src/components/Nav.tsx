@@ -99,10 +99,10 @@ export function Nav() {
   const pathname = usePathname();
   return (
     <header className="nav" data-chrome>
-      <Link href="/" className="nav-mark glass" aria-label="Arav Jain, home" onClick={() => haptic('selection')}>
+      <Link href="/" className="nav-mark plate" aria-label="Arav Jain, home" onClick={() => haptic('selection')}>
         <span>Arav Jain</span>
       </Link>
-      <nav className="nav-links glass" aria-label="Main">
+      <nav className="nav-links plate" aria-label="Main">
         {LINKS.map((l) => {
           const current = pathname === l.href || pathname.startsWith(l.href + '/');
           return (

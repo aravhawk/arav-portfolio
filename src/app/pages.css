@@ -15,7 +15,7 @@
    shade after it; before dawn through the deep of the night toward the
    first warmth at the foot). */
 .pg-ground {
-  /* Small labels stand on a textured ground: the third ink is a shade stronger here than on the home page's glass. */
+  /* Small labels stand on a textured ground: the third ink is a shade stronger here than on the home page's plates. */
   --ink-3: #323a40;
   --ink-dim: #6a7379;
   --pg-body: clamp(1.0625rem, 0.46vw + 0.86rem, 1.5rem);

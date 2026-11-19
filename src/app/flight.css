@@ -215,7 +215,7 @@ html[data-hero-words] .fl-hero-words .fl-rise > .fl-rise-in {
 /* ---------- the rail ----------
    One tick to a section, the current one drawn out: where in the flight
    this is, and a way to any part of it. It has a lane of its own: a narrow
-   strip of the same glass as the nav, set in from the frame's right edge,
+   strip of the same solid plate as the nav, set in from the frame's right edge,
    so its ticks stand on one ground over snow and over night ice alike and
    never over a subject or a crack at the frame's side. No words at rest;
    each tick names its section when it is pointed at or has focus. */
@@ -227,20 +227,11 @@ html[data-hero-words] .fl-hero-words .fl-rise > .fl-rise-in {
   display: none;
   flex-direction: column;
   padding: 10px 0;
-  border-radius: var(--r-pill);
-  background: var(--glass);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
-  box-shadow: var(--glass-shadow), inset 0 0 0 1px var(--glass-edge);
+  border-radius: var(--r-1);
+  background: var(--plate);
+  box-shadow: var(--plate-shadow), inset 0 0 0 1px var(--plate-edge);
   transform: translate3d(0, -50%, 0);
   transition: opacity 320ms var(--ease-out);
-}
-@media (prefers-reduced-transparency: reduce) {
-  .fl-rail {
-    background: var(--land-2);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
 }
 html[data-flight='on'] .fl-rail {
   display: flex;

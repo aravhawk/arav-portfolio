@@ -41,7 +41,7 @@ export function ProfileSwitch() {
   };
 
   return (
-    <div ref={host} className="switch glass" role="radiogroup" aria-label="Active Claude Code profile" data-dry>
+    <div ref={host} className="switch plate" role="radiogroup" aria-label="Active Claude Code profile" data-dry>
       <span className="switch-thumb" style={{ transform: `translate3d(${active * 100}%,0,0)` }} aria-hidden="true" />
       {PROFILES.map((p, i) => (
         <button
