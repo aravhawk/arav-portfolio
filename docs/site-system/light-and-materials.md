@@ -52,6 +52,13 @@ and a stable piece seed. It gathers the terrain or sky behind the ice
 and the light at this hour, then calls `clearIce`. For a sheet with a
 known bed, pass that backing directly to `clearIce`. The object owns
 its intersection, snow cover, submerged shelf and reflected ray.
+For a rough vertical wall backed by more ice, call `clearIce` with the
+shaded wall as its backing and reflection. Map the air-rich layers in
+world space, dip them along the cut and offset them across joints. Use
+distance below the lip for the thin edge. Give direct reflection only
+to fracture lips exposed to the key. The canyon uses the same inputs
+for the wall in the river reflection.
+
 For a thick exposed face, include its existing station feature in
 `DEEP_ICE_FEATURES` in `shaders/stations.ts` and pass `true` as the
 final argument to `iceGlacier`. The block and columns use this finish.
@@ -87,7 +94,7 @@ dawn exceeded their ceilings in the route sweep. Repeating the same
 draws in a different time window moved their means by 3.08 and 2.45 ms.
 
 On the standing name, the sawn face scatters incident light before it
-passes through the body. The field overload of `clearIce` takes a
+passes through the body. The extended form of `clearIce` takes a
 saw-frost weight followed by a direct-reflection weight. Melt clears
 the frost first at the feet.
 The swept sheet darkens toward a steep view into the lake. Its glancing

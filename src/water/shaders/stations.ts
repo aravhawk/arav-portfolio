@@ -172,7 +172,6 @@ vec3 beyond(vec3 ro, vec3 rd) {
   return mix(c, mix(S.hor, vec3(0.012, 0.03, 0.06), min(gShut * 4.0, 1.0) * uNight), exp(rd.z / 0.04) * 0.7);
 }
 float cyH(float x) { return fract(sin(x * 12.9898 + 4.1) * 43758.5453); }
-vec3 gIceLamp = vec3(0.0);
 // The body colour and the light of the ice last asked for: what stands on it (snow's shade, icicles) is lit the same.
 vec3 gLastIce = vec3(0.0);
 vec3 gIceLight = vec3(0.0);
@@ -193,7 +192,7 @@ vec3 iceGlacier(vec3 p, vec3 n, vec3 rd, float t, vec2 q, float thick, float sky
                 ) {
   vec3 ri = refract(rd, n, 0.763);
   vec3 reflected = reflect(rd,n);
-  vec3 light = S.amb * (0.55 + sky * mix(1.1, 2.0, uNight)) + gIceLamp
+  vec3 light = S.amb * (0.55 + sky * mix(1.1, 2.0, uNight))
     + S.key * sun * (0.12 + 0.62 * max(dot(n,keyDir()),0.0))
     + uAurora * (0.07 * sky * uNight);
   // Fractures scatter some of the horizon that the shadowed face sees.
@@ -1079,19 +1078,41 @@ const vec2 CY_HI = vec2(${f(CANYON.x1)}, ${f(CANYON.y1)});
 const float CY_XE = ${f(BENDS[1].x + CANYON.r)};
 // How far a place is from the river's middle line. (The second bend's outside is cut square.)
 float canyonD(vec2 p) {
-  float h;
-  float d = segD(p, vec2(1300.0, ${f(T2 + 5000)}), vec2(1300.0, CY_C1.y), h);
   vec2 r1 = p - CY_C1;
-  if (r1.x < 0.0 && r1.y > 0.0) d = min(d, abs(length(r1) - CY_R));
-  d = min(d, segD(p, vec2(CY_C1.x, CY_C1.y + CY_R), vec2(${f(BENDS[1].x)}, CY_C1.y + CY_R), h));
-  d = min(d, segD(p, vec2(CY_XE, ${f(BENDS[1].y)}), vec2(CY_XE, ${f(T2 + 7700)}), h));
+  // In the first reach and the quarter bend the other two reaches and the
+  // hall lie farther east. The nearest point is on the inlet or the arc.
+  if (r1.x <= 0.0 && r1.y <= CY_R && p.y >= ${f(T2 + 5000)}) {
+    return r1.y <= 0.0 ? abs(p.x - 1300.0) : abs(length(r1) - CY_R);
+  }
+  // Beyond the hall the outlet is nearest wherever its lateral distance
+  // is less than the distance back to the hall and the earlier reaches.
+  float outlet = abs(p.x - CY_XE);
+  if (outlet < p.y - ${f(HALL.y1)} && p.y <= ${f(T2 + 7700)}) return outlet;
   // (The hall: measured square, so its walls meet at true corners.)
   vec2 b = abs(p - vec2(${f((HALL.x0 + HALL.x1) / 2)}, ${f((HALL.y0 + HALL.y1) / 2)})) - vec2(${f((HALL.x1 - HALL.x0) / 2)}, ${f((HALL.y1 - HALL.y0) / 2)});
-  return min(d, max(b.x, b.y) + CY_W);
+  float hall = max(b.x, b.y) + CY_W;
+  // Every earlier reach is west of the hall entrance. The outlet is
+  // at least its lateral distance away, even below its first point.
+  if (hall <= min(p.x - ${f(BENDS[1].x)}, outlet)) return hall;
+  vec2 inletGap = vec2(p.x - 1300.0, p.y - clamp(p.y, ${f(T2 + 5000)}, CY_C1.y));
+  vec2 crossGap = vec2(p.x - clamp(p.x, CY_C1.x, ${f(BENDS[1].x)}), r1.y - CY_R);
+  vec2 exitGap = vec2(outlet, p.y - clamp(p.y, ${f(BENDS[1].y)}, ${f(T2 + 7700)}));
+  float d = sqrt(min(dot(inletGap, inletGap), min(dot(crossGap, crossGap), dot(exitGap, exitGap))));
+  if (r1.x < 0.0 && r1.y > 0.0) d = min(d, abs(length(r1) - CY_R));
+  return min(d, hall);
 }
 // 0..1: by the face in the hall's east wall, where the wall stands plumb and smooth over the picture.
 float faceNear(vec3 p) {
   return (1.0 - smoothstep(${f(FACE.w * 0.5 + 10)}, ${f(FACE.w * 0.5 + 90)}, abs(p.y - ${f(FACE.y)}))) * smoothstep(${f(FACE.x - 150)}, ${f(FACE.x - 40)}, p.x);
+}
+// Water-cut relief and its derivatives along the cut and up the face.
+float canyonRelief(vec3 p, out vec2 slope) {
+  float along = (p.x + p.y) * 0.7;
+  float z = p.z + FREEBOARD;
+  vec3 phase = vec3(along * 0.021 + 1.6 * sin(z * 0.017), z * 0.09 + along * 0.004, along * 0.083 + z * 0.05);
+  vec3 rate = cos(phase) * vec3(9.0, 4.0, 3.0);
+  slope = vec2(dot(rate, vec3(0.021, 0.004, 0.083)), dot(rate, vec3(0.0272 * cos(z * 0.017), 0.09, 0.05)));
+  return dot(sin(phase), vec3(9.0, 4.0, 3.0));
 }
 // How far inside the canyon's open air a place is (under 0: in the ice). The walls lean back as they rise,
 // and the water has scalloped them: long hollows along the flow, ledges where one year's ice lies on the last.
@@ -1100,8 +1121,8 @@ float canyonAirD(vec3 p, float D) {
   float z = p.z + FREEBOARD;
   float plumb = p.x > ${f(FACE.x - 160)} ? faceNear(p) : 0.0;
   if (plumb >= 1.0) return CY_W - D;
-  float along = (p.x + p.y) * 0.7;
-  float relief = 9.0 * sin(along * 0.021 + 1.6 * sin(z * 0.017)) + 4.0 * sin(z * 0.09 + along * 0.004) + 3.0 * sin(along * 0.083 + z * 0.05);
+  vec2 slope;
+  float relief = canyonRelief(p, slope);
   return CY_W + (CY_LEAN * z + relief) * (1.0 - plumb) - D;
 }
 float canyonAir(vec3 p) { return canyonAirD(p, canyonD(p.xy)); }
@@ -1267,6 +1288,10 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, bool blunt, out float 
     float D = canyonD(p.xy);
     // (In the hall the wall ahead may be the plumb one: no lean is counted on there, or a long step would end inside it.)
     float room = CY_W + (p.x > ${f(HALL.x0 - 120)} ? 0.0 : CY_LEAN * (p.z + FREEBOARD)) - D - 16.0;
+    // (Well inside the glacier and well under its top, the top is not what a ray meets next: it is not worked out.)
+    vec2 eg = min(p.xy - CY_LO, CY_HI - p.xy);
+    // (Away from its ragged front the top rolls gently: a ray over it takes longer steps.)
+    float top = (min(eg.x, eg.y) > 320.0 || blunt) && p.z < ${f(CANYON.h * 0.84 - 60)} ? -12.0 : (p.z - glacierTop(p.xy)) * (min(eg.x, eg.y) > 320.0 ? 0.85 : 0.42);
     float w;
     // (lo: the least a step may be.)
     float lo = 0.0;
@@ -1275,13 +1300,13 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, bool blunt, out float 
     else {
       // Close to a wall its true face is followed. A ray that slides along one takes steps that grow no smaller than
       // a few pixels: it never leaves the face it is following for the plain wall behind it, so a wall's outline is one line.
-      w = canyonAirD(p, D) * 0.7;
+      // A ray landing on the outer glacier can be far from the cut. If even
+      // the highest possible wall distance is below the roof distance and
+      // the wall-hit threshold, the scallops cannot affect this step.
+      float wallBound = 0.7 * (CY_W + max(0.0, CY_LEAN * (p.z + FREEBOARD) + 16.0) - D);
+      w = wallBound < min(top, -45.0) ? wallBound : canyonAirD(p, D) * 0.7;
       if (fine++ > 9) lo = 0.8 + 0.01 * t;
     }
-    // (Well inside the glacier and well under its top, the top is not what a ray meets next: it is not worked out.)
-    vec2 eg = min(p.xy - CY_LO, CY_HI - p.xy);
-    // (Away from its ragged front the top rolls gently: a ray over it takes longer steps.)
-    float top = (min(eg.x, eg.y) > 320.0 || blunt) && p.z < ${f(CANYON.h * 0.84 - 60)} ? -12.0 : (p.z - glacierTop(p.xy)) * (min(eg.x, eg.y) > 320.0 ? 0.85 : 0.42);
     float d = max(w, top);
     // (What is far off is found to within a pixel, not a hair: the steps there are longer.)
     if (d < 0.4 + t * 0.002) {
@@ -1316,7 +1341,7 @@ float glacierHit(vec3 ro, vec3 rd, float tMax, int steps, bool blunt, out float 
   return -1.0;
 }
 /**
- * A canyon wall: the glacier's own ice (iceGlacier), closed in by the wall across from it, lit down the slot; before
+ * A canyon wall: the glacier's own ice (clearIce), closed in by the wall across from it, lit down the slot; before
  * dawn the app's page is a lamp on every face turned to it. Snow lies along its lip in one clean cornice, and icicles
  * hang under that.
  * up: 0 at the water, 1 at the lip; topZ: how high the glacier's top is there; flat_: 0..1 the plumb, polished face.
@@ -1325,14 +1350,40 @@ vec3 wallIce(vec3 p, vec3 n, vec3 rd, float t, float up, float topZ, float flat_
   float px = max(t * uPxAng, 0.02);
   float along = (p.x + p.y) * 0.7;
   bool mir = gMirror > 0.5;
-  gIceLamp = vec3(0.0);
+  vec3 lamp = vec3(0.0);
   if (uNight > 0.0 && p.x > ${f(HALL.x0 - 260)}) {
     vec3 toF = FACE_AT - p;
     float dF = dot(toF, toF);
-    gIceLamp = FACE_LAMP * pow(textureLod(uSlabTex, vec2(0.5), 7.0).rgb, vec3(2.2)) * max(dot(n, toF) / sqrt(dF), 0.0) * 30000.0 / (dF + 30000.0) * smoothstep(0.0, 60.0, FACE_AT.x - p.x) * 1.6;
+    lamp = FACE_LAMP * pow(textureLod(uSlabTex, vec2(0.5), 7.0).rgb, vec3(2.2)) * max(dot(n, toF) / sqrt(dF), 0.0) * 30000.0 / (dF + 30000.0) * smoothstep(0.0, 60.0, FACE_AT.x - p.x) * 1.6;
   }
-  vec3 col = iceGlacier(p, n, rd, t, vec2(along, p.z + FREEBOARD), mix(300.0, 60.0, up), 0.16 + 0.84 * up * up, mix(0.5 * smoothstep(0.25, 1.0, up), 2.6 * smoothstep(0.6, 0.84, up), uHour.z), 1.0 - 0.9 * flat_, 1e3, 0.0);
-  gIceLamp = vec3(0.0);
+  // Air-rich layers follow the bedding through each bend. A steep joint
+  // offsets the bedding on its two sides, including the buried fractures.
+  float jointPhase = along / 77.0 + 0.21 * sin(along * 0.039) + p.z * 0.0017;
+  float blockTilt = sin(floor(jointPhase) * 4.7);
+  float bed = p.z + 6.0 * sin(along * 0.009) + 1.8 * sin(along * 0.029)
+    + 3.5 * blockTilt;
+  float joint = 1.0 - smoothstep(0.0, 0.018 + px / 77.0, abs(fract(jointPhase + 0.5) - 0.5));
+  float lamina = bed / 24.0 + 0.32 * sin(bed * 0.087);
+  float seam = 1.0 - smoothstep(0.0, 0.13 + px / 24.0, abs(fract(lamina + 0.5) - 0.5));
+  float cut = (1.0 - flat_) * (1.0 - smoothstep(1.0, 4.0, px));
+  float lens = 0.5 + 0.5 * sin(along * 0.016 + bed * 0.075);
+  float faceTurn = blockTilt * cut;
+  n = normalize(n + vec3(-n.y, n.x, 0.0) * (0.16 * faceTurn));
+  // Bubbly beds scatter light across their thickness. Clear beds between
+  // them show the sharper, refracted inclusions farther inside the face.
+  float bedCore = smoothstep(0.12, 0.83, sin(bed * 0.18 + 1.4 * sin(bed * 0.044)));
+  float air = (0.012 + lens * (0.085 * seam + 0.078 * bedCore) + 0.025 * joint) * cut;
+  float rimDepth = max(topZ - p.z, 0.0);
+  float rim = exp(-rimDepth / 26.0);
+  float facing = max(dot(n, keyDir()), 0.0);
+  vec3 light = S.amb * (0.75 + up * 0.85 + 0.85 * facing) + S.hor * (0.08 + up * 0.12)
+    + S.key * rim * (0.14 + 0.85 * facing) + lamp;
+  vec3 opposite = light * vec3(0.075, 0.17, 0.24);
+  vec3 col = clearIce(n, rd, vec2(along * 2.8, bed * 2.1), px * 2.8,
+    285.0, rimDepth * 1.8, 0.0, 1.0 - smoothstep(0.0, 9.0, p.z + FREEBOARD),
+    opposite, light, mix(opposite, S.mid * 0.48, rim), air, rim * joint * cut);
+  gLastIce = col;
+  gIceLight = light;
   if (mir) return col;
   // The lip: one cornice of snow along the wall's top, its lower edge a slow clean line; icicles hang under it.
   float hang = 13.0 + 5.0 * sin(along * 0.017 + 1.0) + 3.0 * sin(along * 0.053 + 2.0);
@@ -1341,10 +1392,10 @@ vec3 wallIce(vec3 p, vec3 n, vec3 rd, float t, float up, float topZ, float flat_
   if (dz < 60.0 && topZ > CY_H * 0.8) col = corniceOn(iciclesOn(col, along, dz, px, 46.0), n, dz, hang, px);
   return col;
 }
-vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
+vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic, float topZ) {
   vec3 p = ro + rd * t;
   vec3 L = keyDir();
-  float topZ = max(glacierTop(p.xy), 1.0);
+  topZ = max(topZ, 1.0);
   if (wall < 0.5) {
     // The top: wind-packed snow where it lies easy; blue ice where it is too steep to hold snow (the cliff, a crevasse's lip).
     vec2 g = vec2(glacierTop(p.xy + vec2(5.0, 0.0)), glacierTop(p.xy + vec2(0.0, 5.0))) - topZ;
@@ -1365,14 +1416,22 @@ vec3 glacierColor(vec3 ro, vec3 rd, float t, float wall, float pic) {
     return snowOn(vec3(0.0, 0.0, 1.0), (gf.r - 0.5) * 0.5) * (0.5 + 0.2 * gf.g) * mix(1.0, 0.7, uNight);
   }
   // The wall's true face: the slope of the canyon's own field. (The crevasse's walls are cut straight.)
+  float smooth_ = wall > 1.5 ? 0.0 : faceNear(p);
   vec3 n;
-  if (wall > 1.5) n = normalize(vec3(p.x > SL_X ? -1.0 : 1.0, 0.0, SL_B));
+  if (smooth_ >= 1.0) n = vec3(-1.0, 0.0, 0.0);
+  else if (wall > 1.5) n = normalize(vec3(p.x > SL_X ? -1.0 : 1.0, 0.0, SL_B));
+  else if (smooth_ == 0.0) {
+    float plan = canyonD(p.xy);
+    vec2 planSlope = (vec2(canyonD(p.xy + vec2(2.0, 0.0)), canyonD(p.xy + vec2(0.0, 2.0))) - plan) * 0.5;
+    vec2 reliefSlope;
+    canyonRelief(p, reliefSlope);
+    n = normalize(vec3(0.7 * reliefSlope.x - planSlope, CY_LEAN + reliefSlope.y));
+  }
   else {
     float d0 = canyonAir(p);
     n = normalize(vec3(canyonAir(p + vec3(2.0, 0.0, 0.0)) - d0, canyonAir(p + vec3(0.0, 2.0, 0.0)) - d0, canyonAir(p + vec3(0.0, 0.0, 2.0)) - d0));
   }
   float up = clamp((p.z + FREEBOARD) / (topZ + FREEBOARD), 0.0, 1.0);
-  float smooth_ = wall > 1.5 ? 0.0 : faceNear(p);
   gShut = 1.0 - 0.72 * up;
   // A fully covered display pixel replaces the wall beneath it. Keep the original ice
   // through its antialiased rim and wherever the water can show through the reflection.
@@ -1393,12 +1452,29 @@ float gWallT = -2.0;
 float gWallK = 0.0;
 bool canyonEye() { return uSt.w >= 0.3 && all(greaterThan(uCamPos.xy, CY_LO)) && all(lessThan(uCamPos.xy, CY_HI)) && uCamPos.z < CY_H; }
 void canyonFirst(vec3 dir) {
+  // Through the straight reach into the hall, a ray above the deepest
+  // scallop and below the lowest roof can meet the plumb east face directly.
+  // Test its crossing of the hall entrance so an intervening side still wins.
+  float reachY = CY_C1.y + CY_R;
+  if (dir.x > 0.0 && uCamPos.x >= CY_C1.x && uCamPos.x <= ${f(HALL.x0)}
+      && abs(uCamPos.y - reachY) < CY_W && uCamPos.z > 16.0 / CY_LEAN && uCamPos.z < CY_H * 0.84) {
+    float entranceY = uCamPos.y + dir.y * ((${f(HALL.x0)} - uCamPos.x) / dir.x);
+    float t = (${f(HALL.x1)} - uCamPos.x) / dir.x;
+    vec2 end = uCamPos.yz + dir.yz * t;
+    if (abs(entranceY - reachY) < CY_W && entranceY > ${f(HALL.y0)} && entranceY < ${f(HALL.y1)}
+        && end.x > ${f(HALL.y0)} && end.x < ${f(HALL.y1)} && abs(end.x - FACE_AT.y) < ${f(FACE.w / 2 + 10)}
+        && end.y > 16.0 / CY_LEAN && end.y < CY_H * 0.84) {
+      gWallT = t;
+      gWallK = 1.0;
+      return;
+    }
+  }
   gWallT = glacierHit(uCamPos, dir, dir.z < -0.0006 ? (uCamPos.z + FREEBOARD) / -dir.z : 1e5, uLean > 0.5 ? 30 : 40, false, gWallK);
 }
 /** The glacier over the finished ground, and its walls in the water between them. */
 vec3 canyon(vec3 col, vec3 dir, float tw) {
   float wall = gWallK;
-  float t = gWallT > -1.5 ? gWallT : glacierHit(uCamPos, dir, tw > 0.0 ? tw : 1e5, uLean > 0.5 ? 30 : 40, false, wall);
+  float t = gWallT > -1.5 ? gWallT : glacierHit(uCamPos, dir, min(gDepth, tw > 0.0 ? tw : 1e5), uLean > 0.5 ? 30 : 40, false, wall);
   // Cold air lies between the walls: what is far down the canyon stands in it, paler, and the day at the canyon's end shows through it.
   float inK = smoothstep(CY_LO.y - 60.0, CY_LO.y + 120.0, uCamPos.y) * (1.0 - smoothstep(CY_HI.y - 120.0, CY_HI.y + 60.0, uCamPos.y)) * step(uCamPos.z, CY_H);
   // (Before dawn that air is the night's own blue: the aurora is overhead, not between the walls.)
@@ -1408,13 +1484,14 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
     // (The glacier lies on the land: seen from outside, what of its side would stand under the land's own surface is not there to be seen.)
     vec3 hp = uCamPos + dir * t;
     // (Nor is a wall where the glacier has not yet any height: its front begins as snow on the land, not as an end of ice in the river.)
-    if (gWallT < -1.5 && wall > 0.5 && wall < 1.5 && ((glacierTop(hp.xy) < 5.0 && hp.z < 8.0) || (hp.z < 0.5 && textureLod(uBedA, bedUv(hp.xy), 0.0).r > 0.0))) return col;
+    float topZ = glacierTop(hp.xy);
+    if (gWallT < -1.5 && wall > 0.5 && wall < 1.5 && ((topZ < 5.0 && hp.z < 8.0) || (hp.z < 0.5 && textureLod(uBedA, bedUv(hp.xy), 0.0).r > 0.0))) return col;
     gDepth = t;
     gFaceK = 0.0;
-    vec3 c0 = glacierColor(uCamPos, dir, t, wall, 1.0);
+    vec3 c0 = glacierColor(uCamPos, dir, t, wall, 1.0, topZ);
     // (At its foot the glacier's front lies down into the land's own snow: no line is drawn where it begins.)
     // (From between the walls nothing was drawn behind it: there it is drawn whole.)
-    float foot = wall < 1.5 && gWallT < -1.5 ? smoothstep(6.0, 44.0, glacierTop((uCamPos + dir * t).xy)) : 1.0;
+    float foot = wall < 1.5 && gWallT < -1.5 ? smoothstep(6.0, 44.0, topZ) : 1.0;
     // (The picture is a few steps off through clear cold air: by day almost none of the valley's haze lies over it.)
     float veil = 1.0 - 0.85 * gFaceK;
     vec3 c = mix(c0, inAir(c0, dir, t), veil);
@@ -1440,7 +1517,7 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
     // The walls stand in the water: their fractures, their snow and the page, the more the lower the eye looks across it.
     // (By day the water keeps its own colour under their image where the eye looks down into it.)
     float mirK = mix(0.86, 0.4, smoothstep(0.06, 0.55, -dir.z));
-    col = mix(col, inAir(glacierColor(pwp, rd2, t2, wall, mix(0.45, 0.9, uNight)), dir, tw + t2) * 0.82, mirK * mix(0.7, 0.92, uNight) * gSt.w);
+    col = mix(col, inAir(glacierColor(pwp, rd2, t2, wall, mix(0.45, 0.9, uNight), glacierTop(pwp.xy + rd2.xy * t2)), dir, tw + t2) * 0.82, mirK * mix(0.7, 0.92, uNight) * gSt.w);
     gMirror = 0.0;
   }
   // Fast water on the outside of each bend, piled white against the wall; slack on the inside.

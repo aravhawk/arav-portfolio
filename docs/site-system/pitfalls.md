@@ -2,6 +2,7 @@
 
 Each of these cost time on this build.
 
+- Full broken-face relief with unrestricted key reflection put yellow highlights in the shaded canyon, and thinning the whole upper wall produced a green band.
 - **A shader program is really built at its first draw** on Apple
   GPUs (0.1 to 1.6 s each), and the driver keeps it between visits.
   A harness that has run before will not see the stall; a first
