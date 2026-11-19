@@ -28,7 +28,12 @@ old one.
    `scripts/titles-test.mjs` pass at 390, 768, 1440 (and the wide
    ones); nothing clipped or covered; 200 words or fewer on the home
    page; copy follows `copy.md`.
-8. **Inner pages**: `scripts/overlap-test.mjs`, `scripts/fill-test.mjs`.
+8. **Inner pages**: `scripts/overlap-test.mjs`, `scripts/fill-test.mjs`
+   on every page, **a blog post and the blog index included**, at
+   320, 390, 768 and 1440 in both themes. Lighthouse on the home
+   page, one project page and one blog post, at 1440 and at 390.
+   Every address (canonical, share image, feed, sitemap, robots,
+   structured data) on `https://arav.pro`.
 9. **Code**: `pnpm lint`, `pnpm exec tsc --noEmit`,
    `pnpm exec vitest run`, `pnpm build`; no console errors; pages read
    with scripts off.

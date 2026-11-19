@@ -165,12 +165,13 @@
   padding-bottom: 0.06em;
   max-width: 12ch;
 }
+/* A post's title on its own page: at the size the index shows it, so it arrives as the same line. */
 .band-title-long {
-  font-size: clamp(1.9rem, 2.6vw + 0.7rem, 3.6rem);
-  font-weight: 680;
-  line-height: 1.02;
-  letter-spacing: -0.022em;
-  max-width: 21ch;
+  font-size: clamp(2.1rem, 3.9vw + 0.5rem, 4.9rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  max-width: 20ch;
 }
 .band-lead {
   max-width: 27ch;

@@ -68,4 +68,21 @@ CMS can replace the files without a redesign.
 - Not the hardened look of November 9 (rejected). The references are
   igloo.inc, landonorris.com and lusion.co.
 
-Change log: 2026-11-18 first version (orchestrator).
+## As built (2026-11-18)
+
+- The index leads with the newest post as the page (its title at
+  display size, when it was published, how long it reads, what it is
+  about and how it opens, one action), and lists the rest under it
+  when there are more. With one post there is no empty list.
+- A post's page opens on the lake's band with the title at the size
+  the index shows it (`.band-title-long` in `src/app/pages.css`), so
+  the title arrives as the same line through the shared view
+  transition (`post-<slug>`). The band's first line says "Published"
+  with the date; the margin beside the text holds the date, the
+  reading time, the tags and the post's own headings.
+- Checked on 2026-11-18: the canonical, `og:url`, `og:image`, the
+  feed's links, the sitemap, robots and the `BlogPosting` data all
+  give `https://arav.pro` addresses.
+
+Change log: 2026-11-18 first version; the seam and the post's title
+as built (orchestrator).

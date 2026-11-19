@@ -88,7 +88,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         back: { href: '/blog', label: 'Writing' },
         label: (
           <>
-            <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date)}</time> / {post.readingTime}
+            {/* The date the post was published (not the date of the work it describes). */}
+            Published <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date)}</time> / {post.readingTime}
           </>
         ),
         title: post.frontmatter.title,
