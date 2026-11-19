@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
 import { Ways, nextOf } from '@/components/work/blocks';
 import { Case, SwitchInScene } from '@/components/work/cases';
-import { SCENE_OF } from '@/components/work/stations';
+import { sceneOf } from '@/water/registry';
 import { PROJECTS, projectBySlug } from '@/content/projects';
 import { pageMeta } from '@/lib/meta';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
@@ -38,7 +38,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
   return (
     <PageShell
-      scene={SCENE_OF[p.slug] ?? 'delta'}
+      scene={sceneOf(p.slug) ?? 'delta'}
       head={{
         // (The way back says where the page belongs. Nothing else stands over a project's name.)
         back: { href: '/work', label: 'Work' },
@@ -49,7 +49,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       }}
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
       next={{
-        scene: SCENE_OF[next.slug] ?? 'delta',
+        scene: sceneOf(next.slug) ?? 'delta',
         href: `/work/${next.slug}`,
         label: 'Next',
         title: next.name,

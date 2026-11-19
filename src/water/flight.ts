@@ -1,3 +1,4 @@
+import { events } from './registry';
 /**
  * The flight: the water engine behind a fixed, full-viewport canvas, seen
  * through a camera that scroll moves through an authored world.
@@ -1577,6 +1578,10 @@ export class FlightEngine extends WaterEngine {
     gl.uniform2f(r.u.uBedSize, this.bedMeta.w, this.bedMeta.h);
     gl.uniform1f(r.u.uBedDiv, this.bedMeta.div);
     gl.uniform1f(r.u.uTime, this.time);
+    for (const event of events) {
+      const location = r.u[event.uniform];
+      if (location) gl.uniform1f(location, smooth(event.from, event.to, at.hour ?? 0));
+    }
     // The tarn's shards are only worked out from near by.
     const nearTarn = tarnNear(cam);
     gl.uniform1f(r.u.uShardOn, nearTarn ? 1 : 0);

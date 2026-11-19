@@ -1,3 +1,4 @@
+import { byId, composed } from './registry';
 /**
  * The flight's light, hour by hour.
  *
@@ -199,7 +200,7 @@ const MORNING: Key = {
  * @param elEnd how high the sun stands at the ending
  */
 function dayKeys(sunAz: number, ridge: number, elEnd: number): [number, Key][] {
-  const [, say, view, up, bench, bridge, models, fork, lattice, canyon, delta] = stillStops();
+  const { say, infiniview: view, upstream: up, bench, bridge, models, fork, lattice, canyon, delta } = composed;
   const end = sunAz - TAU;
   return [
     [0, MORNING],
@@ -491,7 +492,7 @@ const MOONLIGHT: V3 = [0.176, 0.185, 0.197];
  * ground.
  */
 function nightKeys(sunAz: number, elEnd: number): [number, Key][] {
-  const [, say, view, up, bench, bridge, models, fork, lattice, canyon, delta] = stillStops();
+  const { say, infiniview: view, upstream: up, bench, bridge, models, fork, lattice, canyon, delta } = composed;
   // Deep night over the lake: a low moon behind the name (the first screen's own), a broad faint aurora, every star.
   const lake: Key = {
     zen: [0.004, 0.011, 0.04],
@@ -688,7 +689,7 @@ function nightKeys(sunAz: number, elEnd: number): [number, Key][] {
  * eye arrives and has gone before the tarn.
  */
 function auroraAt(s: number): number {
-  const bench = stillStops()[4];
+  const bench = byId.bench.stop;
   return Math.max(1 - smooth(SECTIONS.hero, SECTIONS.hero + 0.6, s), smooth(bench - 1.6, bench - 0.5, s) * (1 - smooth(bench + 0.75, bench + 1.6, s)));
 }
 

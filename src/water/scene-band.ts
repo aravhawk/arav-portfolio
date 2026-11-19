@@ -1,3 +1,4 @@
+import { timeline, type ProjectScene } from './registry';
 /**
  * A scene band: the flight's own engine and world, held at one composed
  * frame at the head of an inner page. Nothing scrolls the camera here. It
@@ -14,7 +15,7 @@
 
 import { onFrame } from '@/lib/frame';
 import { BedPainter } from './bed';
-import { type Basis, type Key, type Pose, basisOf, dayAt, flightKeys, groundUnder, poseAt, stillStops } from './camera';
+import { type Basis, type Key, type Pose, basisOf, dayAt, flightKeys, groundUnder, poseAt } from './camera';
 import { boardMask, boardReady } from './board';
 import { FlightEngine, scenePicture } from './flight';
 import { freeboardAt } from './shaders/flight';
@@ -25,29 +26,8 @@ import { LAKE, NAME, OUTLET, SHOAL_Y, TRIBS, WORLD, paintWorld, tribWidth } from
 /** An inner page's lake: the sheet whole, and no name on it (the name in ice is the home page's alone). */
 const LAKE_ICE: IceParts = { on: true, blocks: false, field: false };
 
-export type SceneId = 'infiniview' | 'open-source' | 'kilo-bench' | 'agent-bridge' | 'ollama' | 'cc-switch' | 'tensorpow' | 'rydar' | 'delta' | 'lake' | 'snow';
-
-/** Which of the flight's composed frames each subject is (see stillStops in camera.ts). */
-const STOP: Partial<Record<SceneId, number>> = {
-  infiniview: 2,
-  'open-source': 3,
-  'kilo-bench': 4,
-  'agent-bridge': 5,
-  ollama: 6,
-  'cc-switch': 7,
-  tensorpow: 8,
-  rydar: 9,
-  delta: 10,
-};
-
-/**
- * On the home page a station's words are a few short lines at the foot of
- * a tall frame. A page's title block is taller and its band is lower, so
- * where the subject stands low in the frame the camera looks down a little
- * more and the subject rises clear of the words: this much of the frame's
- * height, on a wide band only (an upright one keeps its bank at the foot).
- */
-const LIFT: Partial<Record<SceneId, number>> = { ollama: 0.1, tensorpow: 0.05 };
+export type SceneId = ProjectScene | 'delta' | 'lake' | 'snow';
+const bandFor = (scene: SceneId) => timeline.find(entry => entry.project === scene || entry.id === scene);
 
 /**
  * The two frames that are not stations. Each is a pair of poses the camera
@@ -169,7 +149,7 @@ async function carve(s: Shared, tribs: number[] | undefined, isDead: () => boole
 /** The pose a scene is first seen from (its own first pose, or its station's composed frame). */
 function firstPose(scene: SceneId, aspect: number): Pose {
   const own = ownPoses(scene, aspect);
-  return own ? own[0] : poseAt(flightKeys(aspect, undefined, true), stillStops()[STOP[scene] ?? 0]);
+  return own ? own[0] : poseAt(flightKeys(aspect, undefined, true), (bandFor(scene)?.stop ?? 0));
 }
 
 function start(first: BandOpts, aspect: number): Promise<Shared | null> {
@@ -272,7 +252,7 @@ function start(first: BandOpts, aspect: number): Promise<Shared | null> {
         const mix = (x: number, y: number) => x + (y - x) * swing;
         pose = { pos: [mix(p.pos[0], q.pos[0]), mix(p.pos[1], q.pos[1]), mix(p.pos[2], q.pos[2])], aim: [mix(p.aim[0], q.aim[0]), mix(p.aim[1], q.aim[1]), mix(p.aim[2], q.aim[2])], fov: mix(p.fov, q.fov) };
       } else {
-        const stop = stillStops()[STOP[a.opts.scene] ?? 0];
+        const stop = (bandFor(a.opts.scene)?.stop ?? 0);
         // The hold runs from the frame's own key to the next one.
         let next = stop + 0.4;
         for (const k of a.keys) {
@@ -284,7 +264,7 @@ function start(first: BandOpts, aspect: number): Promise<Shared | null> {
         s0 = stop;
         pose = poseAt(a.keys, stop + Math.min(0.5, next - stop) * swing);
         pose.roll = 0;
-        const lift = a.aspect >= 0.9 ? (LIFT[a.opts.scene] ?? 0) : 0;
+        const lift = a.aspect >= 0.9 ? (bandFor(a.opts.scene)?.bandLift ?? 0) : 0;
         if (lift) {
           // Raising the picture by a share of the frame is a turn of the sight line downward.
           const far = Math.hypot(pose.aim[0] - pose.pos[0], pose.aim[1] - pose.pos[1], pose.aim[2] - pose.pos[2]);

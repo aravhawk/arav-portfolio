@@ -1,3 +1,4 @@
+import { byId } from './registry';
 /**
  * The results on the rock pool's bed, set as type.
  *
@@ -17,7 +18,7 @@
  * proportions, on a slab that lies in perspective.
  */
 
-import { type Pose, basisOf, flightKeys, poseAt, projectPoint, stillStops } from './camera';
+import { type Pose, basisOf, flightKeys, poseAt, projectPoint } from './camera';
 import { BOARD, BOARD_CH, BOARD_DEPTH, BOARD_DOT, BOARD_HEAD, BOARD_KERN, BOARD_ROWS, SHEET, boardEdges, boardRun, boardSpan, sheetCols } from './world';
 
 /** How far under the land the table is seen to lie (the water's surface, and the water over it as the eye sees it). */
@@ -157,7 +158,7 @@ export async function boardReady(): Promise<void> {
  * @param devW the picture's width in device pixels
  */
 export function boardMask(aspect: number, devW: number): HTMLCanvasElement {
-  const pose = poseAt(flightKeys(aspect), stillStops()[4]);
+  const pose = poseAt(flightKeys(aspect), byId.bench.stop);
   const upright = aspect < 0.9;
   // (How many device pixels a world unit of the table's near edge takes in that frame, and half as much again.)
   const need = (1.6 * devW * (upright ? 0.92 : 0.56)) / boardSpan(sheetCols(aspect));

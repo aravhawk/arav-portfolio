@@ -1,3 +1,4 @@
+import { projectsInFlight } from '@/water/registry';
 /**
  * Featured work. Every statement here is sourced in
  * docs/redesign-v4/content-sources.md. Live numbers are not stored here:
@@ -38,7 +39,7 @@ export interface Project {
   media: ProjectMedia[];
 }
 
-export const PROJECTS: Project[] = [
+const entries: Project[] = [
   {
     slug: 'infiniview',
     n: '01',
@@ -415,6 +416,12 @@ export const PROJECTS: Project[] = [
     ],
   },
 ];
+
+export const PROJECTS = projectsInFlight.map(slug => {
+  const project = entries.find(entry => entry.slug === slug);
+  if (!project) throw new Error(`Missing project content for ${slug}`);
+  return project;
+});
 
 export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === slug);
 

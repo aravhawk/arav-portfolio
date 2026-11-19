@@ -5,7 +5,7 @@ import { Arrow } from '@/components/bits';
 import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
 import { PageShell } from '@/components/PageShell';
 import { ArchiveList } from '@/components/work/ArchiveList';
-import { SCENE_OF } from '@/components/work/stations';
+import { sceneOf } from '@/water/registry';
 import { stillVars } from '@/components/work/stills';
 import { ARCHIVE, MORE, PROJECTS } from '@/content/projects';
 import { pageMeta } from '@/lib/meta';
@@ -46,7 +46,7 @@ export default async function Work() {
             <li key={p.slug}>
               <Link className="row feat-row" data-row href={`/work/${p.slug}`}>
                 <span className="label feat-n">{p.n}</span>
-                <span className="feat-pic" data-fill style={stillVars(SCENE_OF[p.slug])} aria-hidden="true" />
+                <span className="feat-pic" data-fill style={stillVars(sceneOf(p.slug) ?? 'delta')} aria-hidden="true" />
                 <span className="feat-copy">
                   <ViewTransition name={`title-${p.slug}`} share="title" default="none">
                     <span className="feat-name">{p.name}</span>

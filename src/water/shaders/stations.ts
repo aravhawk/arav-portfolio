@@ -13,7 +13,7 @@
  * the faces ripple.
  */
 
-import { BENDS, CANYON, COLS, DAM, FACE, HALL, LATTICE, SLUICES, T2 } from '../world';
+import { BENDS, CANYON, COLS, DAM, FACE, HALL, LATTICE, SLUICES, T2 } from '../geography';
 
 /** Existing station features whose hits supply the deep fracture and exposed horizon. */
 export const DEEP_ICE_FEATURES = 'defined(F_SLAB) || defined(F_COLS)';

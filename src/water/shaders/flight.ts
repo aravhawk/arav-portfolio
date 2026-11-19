@@ -22,8 +22,9 @@
 
 import { CLEAR_ICE, ICE_FIELD } from './ice';
 import { NAME_ICE } from './name';
-import { BOX_HIT, CANYON_ICE, COLUMNS, DAM_ICE, DAM_WATER, DEEP_ICE_FEATURES, GLACIER_ICE, LATTICE_ICE, SEG_D, SHALLOWS, STATION_COMMON } from './stations';
+import { BOX_HIT, DEEP_ICE_FEATURES, GLACIER_ICE, SEG_D, SHALLOWS, STATION_COMMON } from './stations';
 import { PANO, SHADE_AZ, WIND } from './terrain';
+import { customSubjects, subjects, byId } from '../registry';
 import { F_DEFINES } from '../variants';
 import { BASIN, BOARD, BOARD_DEPTH, boardSpan, CONF_RIVER, FIELD_ROLL, CONF_Y, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, POOL, ROCK_FACES, rockFaces, ROCKS, SHARDS, SHEET, slabFaces, STREAM, T2, TARN, TARN_BAY, TRIBS } from '../world';
 
@@ -84,7 +85,7 @@ const FLIGHT_SRC = `#version 300 es
 #if defined(F_COLS) || defined(F_DAM) || defined(F_LAT) || defined(F_CANYON)
 #define F_STATION
 #endif
-#if defined(F_STATION) || defined(F_SLAB) || defined(F_CONF) || defined(F_POOL) || defined(F_SHARDS)
+#if defined(F_STATION) || defined(F_SLAB) || defined(F_CONF) || defined(F_POOL) || defined(F_SHARDS)${customSubjects.map(s => " || defined(" + s.define + ")").join("")}
 #define F_GLACIER
 #endif
 // (The letters stand on the swept field, and the field lies on the sheet.)
@@ -3368,23 +3369,22 @@ float gNmCov = 0.0;
 #endif
 ${SHALLOWS}
 #ifdef F_COLS
-${COLUMNS}
+${byId.models.subject!.shader!.source}
 #endif
 #if defined(F_DAM) || defined(F_LAT) || defined(F_CANYON)
 ${BOX_HIT}
 #endif
 #ifdef F_DAM
-${DAM_ICE}
-${DAM_WATER}
+${byId.fork.subject!.shader!.source}
 #endif
 #if defined(F_LAT) || defined(F_CANYON)
 ${SEG_D}
 #endif
 #ifdef F_LAT
-${LATTICE_ICE}
+${byId.lattice.subject!.shader!.source}
 #endif
 #ifdef F_CANYON
-${CANYON_ICE}
+${byId.canyon.subject!.shader!.source}
 #endif
 #ifdef F_SHARDS
 // ---- the tarn's two shards of ice, each lit from within
@@ -3541,6 +3541,12 @@ vec3 shardColor(vec3 ro, vec3 rd, float t, float tF, vec3 n, vec4 s, float glow)
 }
 #endif
 
+${subjects.filter(s => s.event).map(s => `#ifdef ${s.define}
+uniform float uProgress_${s.define};
+#endif`).join('\n')}
+${customSubjects.map(s => `#ifdef ${s.define}
+${s.shader!.source}
+#endif`).join('\n')}
 void main() {
   skyKey();
   gL1 = clamp(uLean, 0.0, 1.0);
@@ -4037,19 +4043,22 @@ void main() {
     float twS = dir.z < -0.0006 ? (uCamPos.z + FREEBOARD) / -dir.z : -1.0;
     gSt = smoothstep(0.0, 0.3, uSt);
 #ifdef F_COLS
-    if (uSt.x > 0.0) col = columns(col, dir, twS);
+    if (uSt.x > 0.0) col = ${byId.models.subject!.shader!.fn}(col, dir, twS);
 #endif
 #ifdef F_DAM
-    if (uSt.y > 0.0) col = dam(col, dir, twS);
+    if (uSt.y > 0.0) col = ${byId.fork.subject!.shader!.fn}(col, dir, twS);
 #endif
 #ifdef F_LAT
-    if (uSt.z > 0.0) col = lattice(col, dir, twS);
+    if (uSt.z > 0.0) col = ${byId.lattice.subject!.shader!.fn}(col, dir, twS);
 #endif
 #ifdef F_CANYON
-    if (uSt.w > 0.0) col = canyon(col, dir, twS);
+    if (uSt.w > 0.0) col = ${byId.canyon.subject!.shader!.fn}(col, dir, twS);
 #endif
   }
 #endif
+${customSubjects.map(s => `#ifdef ${s.define}
+  col = ${s.shader!.fn}(col, dir, ${s.event ? 'uProgress_' + s.define : '0.0'});
+#endif`).join('\n')}
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
 #ifdef SEA
   // The ribbon of light stands in front of the ranges: it is only looked for in the strip of the frame it can be in.

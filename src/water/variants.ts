@@ -1,3 +1,5 @@
+import { byId, subjects, customSubjects, WATER_LOW, type Box } from './registry';
+export type { Box } from './registry';
 /**
  * Which parts of the flight's shading pass a frame needs.
  *
@@ -18,7 +20,7 @@
 
 import { type Basis, type V3, projectPoint } from './camera';
 import { stationsNear } from './moments';
-import { CANYON, COLS, CONF_Y, DAM, DELTA, LAKE, LATTICE, LIP, POOL, SHARDS, SLAB, TARN, TARN_BAY, lipY } from './world';
+import { CONF_Y, DELTA, LAKE, POOL, SLAB, TARN } from './world';
 
 /** The theme a variant is compiled for: the day's, the night's, or neither (it is told each frame, and draws the turn between them). */
 export type Mode = 'day' | 'night' | 'any';
@@ -28,21 +30,21 @@ export const F = {
   /** the lake's sheet of ice */
   ICE: 1,
   /** the block with the product picture, its shade, its image and the white water at its foot */
-  SLAB: 2,
+  SLAB: byId.infiniview.subject!.bit,
   /** the confluence: the snowfield, the cliff and its falls, the trails in the river */
-  CONF: 4,
+  CONF: byId.upstream.subject!.bit,
   /** the rock pool: its bed and plates, its rim, its boulders */
-  POOL: 8,
+  POOL: byId.bench.subject!.bit,
   /** the tarn's two shards */
-  SHARDS: 16,
+  SHARDS: byId.bridge.subject!.bit,
   /** the seracs */
-  COLS: 32,
+  COLS: byId.models.subject!.bit,
   /** the dam and its sluices */
-  DAM: 64,
+  DAM: byId.fork.subject!.bit,
   /** the lattice of cubes */
-  LAT: 128,
+  LAT: byId.lattice.subject!.bit,
   /** the canyon */
-  CANYON: 256,
+  CANYON: byId.canyon.subject!.bit,
   /** the delta's light, the open sea, the ending */
   SEA: 512,
   /** the name's letters standing on the sheet: the blocks, their shade, their image, what stands under the water, the pieces that come away (only with FIELD) */
@@ -50,9 +52,11 @@ export const F = {
   /** the stretch of bare swept ice the name stands on (only with ICE) */
   FIELD: 2048,
 } as const;
-export const F_ALL = 4095;
+export const F_ALL = subjects.reduce((mask, subject) => mask | subject.bit, F.ICE | F.SEA | F.NAME | F.FIELD);
 /** The name each bit is known by in the pass's source. */
-export const F_DEFINES = ['F_ICE', 'F_SLAB', 'F_CONF', 'F_POOL', 'F_SHARDS', 'F_COLS', 'F_DAM', 'F_LAT', 'F_CANYON', 'SEA', 'F_NAME', 'F_FIELD'];
+export const F_DEFINES: string[] = [];
+for (const [bit, name] of [[F.ICE, 'F_ICE'], [F.SEA, 'SEA'], [F.NAME, 'F_NAME'], [F.FIELD, 'F_FIELD']] as const) F_DEFINES[Math.log2(bit)] = name;
+for (const subject of subjects) F_DEFINES[Math.log2(subject.bit)] = subject.define;
 
 /** For the checks: a mask as words. */
 export const maskName = (mask: number) =>
@@ -132,32 +136,6 @@ export function seaNear(cam: Basis): number {
 /** Whether the tarn's shards are near enough to be looked for (the pass's uShardOn). */
 export const tarnNear = (cam: Basis) => Math.hypot(cam.pos[0] - TARN.x, cam.pos[1] - TARN.y) < 3200 && cam.pos[2] < 700;
 
-/** The water lies at most this far below the land (the walled basin's freeboard, with room). */
-const WATER_LOW = -64;
-/**
- * The ground under a ray can stand this far above the land: at the confluence the pass takes the place where the ray
- * comes down on the snowfield for the ground's (confLift), and looks for whatever lies by place from there. So a
- * subject near the snowfield can be found by a ray that is still this high over it.
- */
-const FIELD_HIGH = LIP.h * 3.3;
-
-export type Box = [V3, V3];
-/** Where the block's shade, its light, its image and its white water can lie: the ground and water within four widths of it. */
-const SLAB_REACH = SLAB.w * 4 + 8;
-const SLAB_GROUND: Box = [
-  [SLAB.x - SLAB_REACH, SLAB.y - SLAB_REACH, WATER_LOW],
-  [SLAB.x + SLAB_REACH, SLAB.y + SLAB_REACH, 2],
-];
-/** Where the confluence's trails lie in the river (the water looks for them by place). */
-const CONF_RIVER_BOX: Box = [
-  [700, lipY(LIP.x0) - 900, WATER_LOW],
-  [2500, lipY(700) + 40, FIELD_HIGH],
-];
-/** Where the pool's water is (the bed under a ray lies up to a few hundred units on). */
-const POOL_BOX: Box = [
-  [POOL.x - 560, POOL.y - 560, WATER_LOW],
-  [POOL.x + POOL.w + 560, POOL.y + POOL.h + 560, FIELD_HIGH],
-];
 const confNearCam = (cam: Basis) => cam.pos[1] > CONF_Y - 3300 && cam.pos[1] < CONF_Y + 1500;
 const poolNearCam = (cam: Basis) => Math.abs(cam.pos[0] - (POOL.x + POOL.w / 2)) < 2300 && Math.abs(cam.pos[1] - (POOL.y + POOL.h / 2)) < 2300;
 
@@ -295,49 +273,6 @@ const FIELD_GROUND: Box = [
 ];
 
 /**
- * Where each of the later stations' subjects can be: what the pass's own tests admit (each names the test it mirrors).
- * All of a subject's own ice is inside its box, and so is every place on the water or the ground where its image, its
- * shade or its light is looked for: a ray that meets such a place passes through the box's foot.
- */
-// The seracs: themselves, and the water and bank within `rect` of them (columns: `abs(pwp.x - 1340.0) < 800.0 && abs(pwp.y - COL_Y) < 560.0`).
-const COLS_BOX: Box = [
-  [1340 - 830, COLS.y - 590, WATER_LOW],
-  [1340 + 830, COLS.y + 590, COLS.hMax * 1.25 + 40],
-];
-// (And a serac is looked for along the whole of a ray, under the water too: a ray that would meet one below the water
-// is given the seracs' long shade on the water it meets first, wherever that is (columns: `best > tw`). So every pixel
-// under a serac in the frame can need them: the box they stand in, carried down out of sight.)
-const COL_REACH = 2.7 * COLS.r + 40;
-const COLS_DEEP: Box = [
-  [COLS.xs[0] - COL_REACH, COLS.y - 26 - COL_REACH, -1e5],
-  [COLS.xs[3] + COL_REACH, COLS.y + 26 + COL_REACH, COLS.hMax * 1.25 + 40],
-];
-// The dam: its wall and hips, its pond behind it and its three channels below it (dam: `d < -pond - 120 || d > 1010 || abs(pwp.x - 1300) > 640`).
-const DAM_BOX: Box = [
-  [Math.min(DAM.x0 - 180, 1300 - 660), DAM.y - DAM.pond - 150, WATER_LOW],
-  [Math.max(DAM.x1 + 180, 1300 + 660), DAM.y + 1040, DAM.h + 40],
-];
-// The lattice: its cubes, and the pool's water round them (lattice: `max(abs(q.x), abs(q.y)) > 2.0 * LAT_P + 300.0`).
-const LAT_REACH = 2 * LATTICE.pitch + 330;
-const LAT_BOX: Box = [
-  [LATTICE.x - LAT_REACH, LATTICE.y - LAT_REACH, WATER_LOW],
-  [LATTICE.x + LAT_REACH, LATTICE.y + LAT_REACH, LATTICE.h * 3 + 60],
-];
-// The canyon: the glacier's own box (glacierHit's), which its water lies in too.
-const CANYON_BOX: Box = [
-  [CANYON.x0 - 4, CANYON.y0 - 4, WATER_LOW],
-  [CANYON.x1 + 4, CANYON.y1 + 4, CANYON.h + 6],
-];
-// The tarn's shards: the tarn and its bay (their image, their rings, the pulse), and the light each throws into the
-// air and onto the water round it, which dies away with distance (to a three-thousandth of itself, eight of its own
-// lengths off: far under one step of the screen's 255).
-const SHARD_GLOW = 8 * 1.9 * Math.max(SHARDS[0].r, SHARDS[1].r);
-const SHARDS_BOX: Box = [
-  [Math.min(TARN.x - TARN.rx - 20, TARN_BAY.x - TARN_BAY.r - 20, SHARDS[0].x - SHARD_GLOW, SHARDS[1].x - SHARD_GLOW), Math.min(TARN.y - TARN.ry - 20, TARN_BAY.y - TARN_BAY.r - 20, SHARDS[0].y - SHARD_GLOW, SHARDS[1].y - SHARD_GLOW), -SHARD_GLOW],
-  [Math.max(TARN.x + TARN.rx + 20, TARN_BAY.x + TARN_BAY.r + 20, SHARDS[0].x + SHARD_GLOW, SHARDS[1].x + SHARD_GLOW), Math.max(TARN.y + TARN.ry + 20, TARN_BAY.y + TARN_BAY.r + 20, SHARDS[0].y + SHARD_GLOW, SHARDS[1].y + SHARD_GLOW), Math.max(SHARDS[0].h, SHARDS[1].h) + SHARD_GLOW],
-];
-
-/**
  * A frame, cut into parts that each need less than the whole.
  *
  * A subject the pass looks for by place stands in a part of the frame: the lake's sheet and the name on it (the
@@ -358,6 +293,8 @@ export interface Tile {
   /** the share of the frame these pieces cover */
   area: number;
 }
+const tiledSubjects = subjects.filter(s => s.pass !== 'slab' && s.pass !== 'confluence' && s.pass !== 'pool');
+
 export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Box[] | null, w: number, h: number): Tile[] {
   const whole: Tile[] = [{ mask: need, px: [[0, 0, w, h]], area: 1 }];
   const parts: { bits: number; r: [number, number, number, number] }[] = [];
@@ -388,10 +325,10 @@ export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Bo
   if (need & F.NAME) take(F.NAME, name ?? NONE);
   if (need & F.SLAB) {
     const s = slabInFrame(cam, aspect);
-    if (s.behind === 0) take(F.SLAB, join(s.box, boxRectCut(cam, aspect, SLAB_GROUND)));
+    if (s.behind === 0) take(F.SLAB, join(s.box, boxRectCut(cam, aspect, byId.infiniview.subject!.boxes[0])));
   }
-  const conf = need & F.CONF && !confNearCam(cam) ? (boxRectCut(cam, aspect, CONF_RIVER_BOX) ?? NONE) : null;
-  const pool = need & F.POOL && !poolNearCam(cam) ? (boxRectCut(cam, aspect, POOL_BOX) ?? NONE) : null;
+  const conf = need & F.CONF && !confNearCam(cam) ? (boxRectCut(cam, aspect, byId.upstream.subject!.boxes[0]) ?? NONE) : null;
+  const pool = need & F.POOL && !poolNearCam(cam) ? (boxRectCut(cam, aspect, byId.bench.subject!.boxes[0]) ?? NONE) : null;
   const both = join(conf, pool)!;
   // (Two small far subjects side by side are one piece: a variant and a draw for each sliver between them would cost more than it saved.)
   if (conf && pool && conf !== NONE && pool !== NONE && (both[2] - both[0]) * (both[3] - both[1]) < 0.06) take(F.CONF | F.POOL, both);
@@ -399,11 +336,12 @@ export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Bo
     if (conf) take(F.CONF, conf);
     if (pool) take(F.POOL, pool);
   }
-  if (need & F.SHARDS) take(F.SHARDS, boxRectCut(cam, aspect, SHARDS_BOX) ?? NONE);
-  if (need & F.COLS) take(F.COLS, join(boxRectCut(cam, aspect, COLS_BOX), boxRectCut(cam, aspect, COLS_DEEP)) ?? NONE);
-  if (need & F.DAM) take(F.DAM, boxRectCut(cam, aspect, DAM_BOX) ?? NONE);
-  if (need & F.LAT) take(F.LAT, boxRectCut(cam, aspect, LAT_BOX) ?? NONE);
-  if (need & F.CANYON) take(F.CANYON, boxRectCut(cam, aspect, CANYON_BOX) ?? NONE);
+  for (const subject of tiledSubjects) {
+    if (!(need & subject.bit)) continue;
+    let rect: Rect | null = null;
+    for (const box of subject.boxes) rect = join(rect, boxRectCut(cam, aspect, box));
+    take(subject.bit, rect ?? NONE);
+  }
   if (!parts.length) {
     whole[0].mask = need;
     return whole;
@@ -479,15 +417,15 @@ export function passNeeds(cam: Basis, aspect: number, ice: IceParts, slab: boole
       const reachOut = Math.hypot(SLAB.w * 0.5 + SLAB.thick, SLAB.thick, SLAB.h + SLAB.lift);
       if (onScreen && Math.hypot(dist, cam.pos[2]) < 2500 + reachOut) need |= F.SLAB;
       // Its shade, its light, its image and its white water: on the ground and water within four widths of it.
-      if (dist < 5200 && boxInView(cam, aspect, SLAB_GROUND[0], SLAB_GROUND[1])) need |= F.SLAB;
+      if (dist < 5200 && boxInView(cam, aspect, byId.infiniview.subject!.boxes[0][0], byId.infiniview.subject!.boxes[0][1])) need |= F.SLAB;
     }
   }
   // The confluence (`confNear`), and its trails in the river, which the water looks for by place.
   if (confNearCam(cam)) need |= F.CONF;
-  else if (boxInView(cam, aspect, CONF_RIVER_BOX[0], CONF_RIVER_BOX[1])) need |= F.CONF;
+  else if (boxInView(cam, aspect, byId.upstream.subject!.boxes[0][0], byId.upstream.subject!.boxes[0][1])) need |= F.CONF;
   // The rock pool (`poolNear`), and its water, looked for by place (the bed under a ray lies up to a few hundred units on).
   if (poolNearCam(cam)) need |= F.POOL;
-  else if (boxInView(cam, aspect, POOL_BOX[0], POOL_BOX[1])) need |= F.POOL;
+  else if (boxInView(cam, aspect, byId.bench.subject!.boxes[0][0], byId.bench.subject!.boxes[0][1])) need |= F.POOL;
   if (tarnNear(cam)) need |= F.SHARDS;
   // The last four stations (`uSt`).
   const st = stationsNear(cam.pos);
@@ -495,6 +433,9 @@ export function passNeeds(cam: Basis, aspect: number, ice: IceParts, slab: boole
   if (st[1] > 0) need |= F.DAM;
   if (st[2] > 0) need |= F.LAT;
   if (st[3] > 0) need |= F.CANYON;
+  for (const subject of customSubjects) {
+    if (subject.boxes.some(([lo, hi]) => boxInView(cam, aspect, lo, hi))) need |= subject.bit;
+  }
   if (seaNear(cam) > 0) need |= F.SEA;
   return need;
 }
