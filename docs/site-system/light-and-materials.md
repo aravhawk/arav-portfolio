@@ -38,17 +38,21 @@ Keep the scene sharp and the shore free of emissive outlines.
 
 ## Ice
 
-The columns, dam, lattice and canyon walls use `iceGlacier` in
-`src/water/shaders/stations.ts`. It shades the depth of the ice,
-its white strata and its reflections. After moonset the pale horizon
-lights exposed facets and shines through thin ice. The lake sheet,
-name plates and polished display faces have dedicated shading.
+The name plates, frozen lake, station objects and drift ice use
+`clearIce` in `src/water/shaders/ice.ts`. It absorbs red first along
+the ray through the solid. A mipmapped 512 × 1024 map holds shell-shaped surface breaks, fracture
+facets, their lips and veils of air. The shader samples it behind the
+face along the refracted ray. The front surface carries the saw marks,
+wet sheen and glancing reflection.
 
-Use Lake Baikal ice as the reference. Clear ice transmits blue-green
-light through white fracture planes and veils of bubbles. Sawn faces
-show fine saw marks. Broken edges catch the light. The wet foot is
-darker, and a still pool carries one reflection.
-The longer-term aim is one ice material across the flight.
+For a station, call `iceGlacier` with the hit position, normal, view
+ray, hit distance, local face coordinates, exit minus entry distance,
+sky exposure, key exposure, broken-face fraction, distance to an edge
+and a stable piece seed. It gathers the terrain or sky behind the ice
+and the light at this hour, then calls `clearIce`. For a sheet with a
+known bed, pass that backing directly to `clearIce`. The object owns
+its intersection, snow cover, submerged shelf and reflected ray.
+Apply `inAir` over the complete camera path after shading.
 
 ## Objects
 

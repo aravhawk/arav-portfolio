@@ -19,6 +19,7 @@ import { type Basis, END_AT, HOLDS, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basis
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Pending, type Program, type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
 import { DAWN, ENTER, GATE, LAP, PULSE, RIBBON, breathAt, dawnLight, enterAt, firstLight, heroLight, heroLightAt, nextDrip, stationsNear, stepGates } from './moments';
+import { iceInclusions } from './ice-inclusions';
 import { opening } from './opening';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
 import { FLIGHT_FREEBOARD, flightSource, freeboardAt, snowShadowBearing } from './shaders/flight';
@@ -181,6 +182,7 @@ export class FlightEngine extends WaterEngine {
     this.warmOne(first);
     for (let n = 0; n < 500 && this.warming(); n++) await new Promise<void>((r) => setTimeout(r, 8));
     super.bake();
+    this.inclusions = iceInclusions(gl);
     await tick();
     // The snow: its cut forms first, then (a task later) its slope and the shade those forms throw.
     // Half floats: an edge is cut from these values in the picture, and eight bits would show as steps along it.
@@ -539,6 +541,7 @@ export class FlightEngine extends WaterEngine {
 
   /** The snow's relief, baked once. */
   private ground!: Target;
+  private inclusions!: WebGLTexture;
   /** The ranges, marched once into a panorama and lit each frame. */
   private pano!: Target;
 
@@ -1677,6 +1680,7 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 1, this.bedB!.tex, r.u.uBedB);
     bindTex(gl, 2, this.waveOut!.tex, r.u.uWave);
     bindTex(gl, 3, this.vel!.read.tex, r.u.uVel);
+    if (r.u.uIceInclusions) bindTex(gl, 4, this.inclusions, r.u.uIceInclusions);
     bindTex(gl, 5, this.detail.tex, r.u.uDetail);
     bindTex(gl, 6, this.grain.tex, r.u.uGrain);
     bindTex(gl, 8, this.heat.read.tex, r.u.uHeat);
@@ -1768,6 +1772,7 @@ export class FlightEngine extends WaterEngine {
   }
 
   destroy() {
+    if (this.inclusions) this.gl.deleteTexture(this.inclusions);
     for (const t of this.film) freeTarget(this.gl, t);
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
     if (this.faceTex) this.gl.deleteTexture(this.faceTex);

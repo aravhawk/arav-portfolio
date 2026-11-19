@@ -540,3 +540,56 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
 }
 #endif
 `;
+
+export const CLEAR_ICE = `
+// q follows the cut, independent of the camera. backing is radiance on
+// the bent ray after it leaves the solid (or from the bed under a sheet).
+vec3 clearIce(vec3 n, vec3 rd, vec2 q, float px, float thickness, float edge,
+              float broken, float wet, vec3 backing, vec3 light, vec3 environment) {
+  vec3 across = abs(n.z) > 0.9 ? vec3(1,0,0) : normalize(vec3(-n.y,n.x,0));
+  vec3 up = cross(n, across);
+  vec3 ray = refract(rd, n, 0.763);
+  vec2 offset = vec2(dot(ray, across), dot(ray, up)) * min(26.0, thickness * 0.45);
+  float lod = max(0.0, log2(max(px, 0.05) * 512.0 / 385.0));
+  vec2 layer = fract((q + offset) / 385.0);
+  float inset = min(0.25,exp2(lod)/512.0);
+  layer.y = clamp(layer.y,inset,1.0-inset);
+  mediump vec4 inclusions = textureLod(uIceInclusions, vec2(layer.x, layer.y * 0.5), lod);
+  // Both finishes need one surface sample. A broken face has shell-shaped
+  // slopes and cavities. A polished face has grain running with the saw.
+  mediump vec3 skin;
+  mediump vec2 slope;
+  mediump float reliefMask;
+  if (broken > 0.0) {
+    vec2 cutUV = fract(q / 212.0);
+    cutUV.y = clamp(cutUV.y,inset,1.0-inset);
+    skin = textureLod(uIceInclusions, vec2(cutUV.x,0.5+0.5*cutUV.y), lod+0.85).rgb;
+    slope = (skin.rg-0.5)*(0.94*broken);
+    reliefMask = (skin.b-0.5)*broken;
+  } else {
+    skin = textureLod(uGrain, q / vec2(520.0,35.0),lod).rgb;
+    slope = (skin.gb-0.5)*0.05;
+    reliefMask = 0.0;
+  }
+  mediump vec3 face = normalize(n + (across*slope.x + up*slope.y) * (1.0-0.6*wet));
+  float depth = max(0.4, min(thickness, 12.0 + 3.5 * max(edge, 0.0)));
+  mediump vec3 transmission = exp(-depth * vec3(0.026, 0.008, 0.0048));
+  mediump float backlit = max(dot(rd, keyDir()), 0.0);
+  mediump vec3 body = backing * transmission + light * vec3(0.012,0.074,0.103) * (1.0 - transmission);
+  body += light * vec3(0.06,0.34,0.31) * exp(-depth / 70.0) * (0.18 + 0.65 * backlit);
+  mediump float azimuth = inclusions.a * 2.0 - 1.0;
+  mediump vec3 plane = normalize(face + across * azimuth + up * (0.7 - 1.4*abs(azimuth)));
+  mediump float flash = 0.25 + 0.75 * max(dot(reflect(rd, plane), keyDir()),0.0);
+  body += light * (1.0+0.8*uNight) * (inclusions.r * flash * 0.88 + inclusions.g * 0.66 + inclusions.b * 1.1) * (0.4 + 0.6 * transmission);
+  mediump float relief = dot(face-n,normalize(keyDir()+vec3(0,0,0.45)));
+  body *= (1.0 + relief*1.2 + reliefMask*0.32) * (1.0 - 0.24 * wet);
+  body += light * max(relief,0.0) * broken * vec3(0.18,0.24,0.25);
+  mediump float cosine = clamp(dot(-rd, face),0.0,1.0);
+  mediump float fresnel = 0.018 + 0.982 * pow(1.0 - cosine,5.0);
+  mediump vec3 result = mix(body, environment, fresnel);
+  mediump float highlight = max(dot(reflect(rd,face),keyDir()),0.0);
+  mediump float glint = pow(highlight,160.0) + 0.05 * (1.0 - broken) * pow(highlight,18.0);
+  mediump float chip = (1.0 - smoothstep(0.0, 2.0 + px, edge)) * smoothstep(0.35,0.66,skin.r);
+  return result + S.key * glint + light * chip * (0.12 + 0.38 * backlit);
+}
+`;

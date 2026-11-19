@@ -42,8 +42,8 @@ of the same world.
   ending, the melt).
 - `src/water/shaders/`: `flight.ts` (the main pass: ground, water,
   sky, lighting, final colour), `stations.ts` (the stations'
-  objects and the shared ice), `name.ts` (the name's plates),
-  `ice.ts` (the lake's sheet), `terrain.ts`, `sim.ts` (the water
+  objects and their lighting), `name.ts` (the name's plates),
+  `ice.ts` (the lake field and shared ice material), `terrain.ts`, `sim.ts` (the water
   simulation the pointer and the events disturb), `finish.ts`.
 - `src/water/variants.ts`: the main pass is compiled in a variant per
   stretch of the flight and per theme (`#define`s), and a frame is
