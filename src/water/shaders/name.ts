@@ -277,7 +277,11 @@ vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, ve
   float toward = max(dot(rd, L), 0.0);
   float tw = toward * toward;
   tw *= tw;
-  vec3 behind = mix(S.key * (0.05 + 0.23 * tw) * (0.3 + 0.7 * up) + S.amb * 0.56, S.key * (0.3 + 1.5 * tw) + S.amb * 1.9 + uAurora * 0.05, uNight);
+  // (Before dawn the plates are ice in moonlight: clear and dark in the body, the sky's own colour in the frost of
+  // their sawn faces, and the moon in their edges. As the first screen comes up the light arrives across them, from
+  // the moon's side to the other.)
+  vec3 keyP = S.key * mix(1.0, mix(0.3, 1.0, smoothstep(0.0, 0.3, uArrive * 1.45 - vUv.x)), uNight);
+  vec3 behind = mix(S.key * (0.05 + 0.23 * tw) * (0.3 + 0.7 * up) + S.amb * 0.56, keyP * (0.05 + 0.62 * tw) + S.amb * 0.8 + uAurora * 0.03, uNight);
   // It deepens toward the foot: the light has further to come down the plate, and the black ice under it gives none back.
   float deep = mix(mix(0.22, 0.56, uNight), 1.0, smoothstep(0.0, 0.7, hK)) * mix(1.0, 0.78, (1.0 - up) * (1.0 - uNight));
   vec3 footT = exp(-vec3(3.6, 0.42, 0.2) * (1.0 - hK) * (1.0 - hK) * up * (1.0 - 0.5 * uNight));
@@ -287,8 +291,8 @@ vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, ve
   vec2 sunG = normalize(Ll.xz + vec2(1e-4, 0.3));
   float toSun = clamp(0.5 + 0.5 * dot(gd, sunG), 0.0, 1.0);
   vec3 cold = mix(vec3(1.0, 0.97, 0.9), vec3(0.78, 0.9, 1.05), uNight);
-  vec3 keyL = mix(S.key, S.key * 4.0 + S.amb * 1.6, uNight);
-  vec3 skyLit = mix(S.amb * 1.3 + S.key * 0.03, S.amb * 4.6 + uAurora * 0.24 + S.key * 0.6, uNight);
+  vec3 keyL = mix(S.key, keyP * 4.8 + S.amb * 1.0, uNight);
+  vec3 skyLit = mix(S.amb * 1.3 + S.key * 0.03, mix(S.amb, vec3(dot(S.amb, vec3(0.3333))), 0.45) * 2.7 + uAurora * 0.1 + keyP * 0.45, uNight);
   vec3 lake = nameLake();
 
   // What is in it, read once for a face and an edge alike: slow clouds of trapped air, curtains drawn up through
@@ -326,7 +330,7 @@ vec3 plateLook(vec4 A, vec4 Q, vec4 G, float fi, vec3 pl, vec3 nl, vec2 grad, ve
   // The arris. The ice is thin there and the light pours through: brightest on the edges turned to the sun; and it
   // comes on into the ice a hand's breadth, so a thin stroke is lit right through and a broad one has a deeper heart.
   float sunE = toSun * toSun * toSun;
-  face += cold * (keyL * mix(0.26, 0.55, uNight) + S.amb * 0.4) * (0.04 + 0.96 * sunE) * exp(-e / mix(0.009, 0.014, uNight)) * (0.35 + 0.65 * up);
+  face += cold * (keyL * mix(0.26, 0.7, uNight) + S.amb * 0.4) * (mix(0.04, 0.2, uNight) + mix(0.96, 0.8, uNight) * sunE) * exp(-e / mix(0.009, 0.02, uNight)) * (0.35 + 0.65 * up);
   face += vec3(0.62, 0.95, 1.0) * (keyL * 0.08 + S.amb * 0.1) * toSun * toSun * exp(-e / 0.06) * (0.4 + 0.6 * up);
   // Through the clear edge what stands behind is seen, bent: over a top edge the far shore and the sky, at a side the dark ice.
   face = mix(face, mix(lake, skyLit * vec3(0.8, 0.9, 1.0), smoothstep(0.3, 0.9, gd.y) * up) * (0.6 + 0.4 * T) + face * 0.5, edge * 0.42 * live);

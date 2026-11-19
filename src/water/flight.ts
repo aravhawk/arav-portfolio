@@ -1597,6 +1597,8 @@ export class FlightEngine extends WaterEngine {
     gl.uniform4f(r.u.uSkyK, sky.haze, sky.aurora * sky.air[3], sky.dusk, sky.under);
     if (r.u.uAir) gl.uniform4f(r.u.uAir, sky.air[0], sky.air[1], sky.air[2], 0);
     if (r.u.uRange) gl.uniform4fv(r.u.uRange, sky.range);
+    if (r.u.uArrive) gl.uniform1f(r.u.uArrive, this.first);
+    if (r.u.uHour) gl.uniform4f(r.u.uHour, sky.ground[0], sky.ground[1], sky.ground[2], 0);
     this.dusk = sky.dusk;
     gl.uniform4f(r.u.uSea, seaOn, at.settle, at.calm, at.near);
     gl.uniform4fv(r.u.uCalmBox, at.box);
