@@ -50,8 +50,8 @@ void main(){
   vec2 uv=.5+.5*projected.xy/projected.z;
   vec3 c=readField(atlas,baseMap,uv,vec2(0.,320.));
   if(tall==1 && (uv.y<.006 || uv.y>.994)){
-    const float extent=.5*(390./844.)/(1.6*.85);
-    vec2 p=vec2((uv.x-.5)/.85+.5,.5+(uv.y-.5)*2.*extent);
+    const float extent=.5*(390./844.)/(1.6*.99);
+    vec2 p=vec2((uv.x-.5)/.99+.5,.5+(uv.y-.5)*2.*extent);
     float row=p.y<.5 ? .5*p.y/(.5-extent+.002) : .5+.5*(p.y-(.5+extent-.002))/(.5-extent+.002);
     float blend=1.-smoothstep(-.005,.006,min(uv.y,1.-uv.y));
     c=mix(c,texture(extension,vec2(p.x,row)).rgb,blend);
@@ -86,9 +86,9 @@ void main(){
   vec3 spec=linearLight(textureLod(environment,env,2.).rgb);
   vec2 refr=gl_FragCoord.xy/resolution+(2.+5.*optical.b)*n.xy/resolution;
   vec3 bg=fromShape(textureLod(behind,refr,.9+optical.b).rgb);
-  vec3 c=fromShape(readField(body,baseMap,uv,vec2(328.,112.)))+.12*optical.a+(.05-.025*optical.b)*bg;
+  vec3 c=fromShape(readField(body,baseMap,uv,vec2(328.,112.)))+(.05-.025*optical.b)*bg;
   float glint=pow(max(0.,dot(n,normalize(vec3(.81+.04*sin(time*.37),.49,-.24)))),18.);
-  color=vec4(toShape(c+spec*(.004+.052*fres)+glint*.060),1.);
+  color=vec4(toShape(c+spec*(.004+.052*fres)+glint*.11*(.55+.45*sin(world.x*2.5-time*.55))),1.);
 }`;
 
 export const bloomFragment = `#version 300 es
@@ -147,22 +147,29 @@ void main(){
   }
   c+=textureLod(bloom,uv,1.65).rgb*.0028;
   vec3 shaped=clamp(c,0.,1.);
-  color=vec4(texture(grade,(shaped*31.+.5)/32.).rgb,1.);
+  float dither=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))-.5;
+  color=vec4(texture(grade,(shaped*31.+.5)/32.).rgb+dither/255.,1.);
 }`;
 
 export const driftVertex = `#version 300 es
 precision highp float;
 uniform float time,dpr;
 uniform vec3 eye;
+uniform vec2 lens,aim;
+uniform vec4 waterPlane;
 out float opacity;
 float hash(float x){return fract(sin(x)*43758.5453);}
 void main(){
   float i=float(gl_VertexID+1),layer=mod(i,3.);
-  float x=fract(hash(i*2.17)+time*(.012+.005*layer));
-  float y=hash(i*4.73);
-  gl_Position=vec4(2.*x-1.-eye.x*(.10+.08*layer),-.62+y*.30+sin(time*.66+i)*.004,0.,1.);
-  gl_PointSize=(1.+layer*.32)*dpr;
-  opacity=(.024+.014*layer)*smoothstep(0.,.08,x)*smoothstep(0.,.08,1.-x);
+  float phase=fract(hash(i*2.17)+time*(.008+.003*layer));
+  float z=6.+layer*6.+4.*hash(i*4.73);
+  float x=(phase-.5)*z*.9;
+  float height=.03+.23*hash(i*5.41)+.025*sin(time*.54+i);
+  float y=(height-waterPlane.w-dot(waterPlane.xz,vec2(x,z)))/waterPlane.y;
+  vec3 p=vec3(x,y,z)-eye;
+  gl_Position=vec4(p.xy/lens+p.z*aim,p.z*.99985-.11,p.z);
+  gl_PointSize=dpr*clamp(18./p.z,.85,2.4);
+  opacity=(.10+.07*hash(i*3.39))*smoothstep(0.,.08,phase)*smoothstep(0.,.08,1.-phase);
 }`;
 export const driftFragment = `#version 300 es
 precision mediump float;

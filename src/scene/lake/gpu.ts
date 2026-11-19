@@ -32,6 +32,15 @@ type Message =
   | { kind: 'error'; message: string };
 type Program = { id: WebGLProgram; u: Record<string, WebGLUniformLocation> };
 export type Pose = { x: number; y: number; z: number; t: number };
+// The portrait camera pushes the name into the upper middle of the gate.
+function horizontalLens(half: number, ratio: number) {
+  return half * (ratio <= 1 ? 0.81 * Math.min(1, ratio / 0.43) : Math.min(1, ratio / 1.2));
+}
+
+function verticalAim(pose: Pose, ratio: number) {
+  return pose.y * 0.19 + (ratio <= 1 ? 0.18 : 0);
+}
+
 export const rest: Pose = { x: 0, y: 0, z: 0, t: 0 };
 export const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 export const stages = ['refraction', 'bloom', 'ground', 'slab', 'drift', 'grade'] as const;
@@ -290,16 +299,18 @@ export class LakeGPU {
     gl.uniform3f(u.eye, pose.x, pose.y, pose.z);
     gl.uniform2f(u.restLens, half[0], half[1]);
     const ratio = w / h;
-    const lens = half[0] * (ratio <= 1 ? 0.85 * Math.min(1, ratio / 0.43) : Math.min(1, ratio / 1.2));
+    const lens = horizontalLens(half[0], ratio);
     gl.uniform2f(u.lens, lens, (lens * h) / w);
-    gl.uniform2f(u.aim, pose.x * 0.12, pose.y * 0.19);
+    gl.uniform2f(u.aim, pose.x * 0.12, verticalAim(pose, ratio));
     gl.bindVertexArray(draw.vao);
     gl.drawElements(gl.TRIANGLES, draw.info.indices, gl.UNSIGNED_SHORT, 0);
   }
-  draw(pose: Pose, output: WebGLFramebuffer | null = null, last = 6, showSlab = true) {
+  draw(travel: Pose, output: WebGLFramebuffer | null = null, last = 6, showSlab = true) {
     const gl = this.gl,
       [scene, copy, a] = this.targets,
       { w, h } = scene;
+    const pose =
+      w <= h ? { x: travel.x - 0.28, y: travel.y + 0.1, z: travel.z + 0.55, t: travel.t } : travel;
     const bind = (t: Target) => {
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
       gl.viewport(0, 0, t.w, t.h);
@@ -309,6 +320,7 @@ export class LakeGPU {
     const gp = this.programs.ground;
     const ground = (target: Target) => {
       bind(target);
+      if (target === scene) gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.useProgram(gp.id);
       gl.uniform1i(gp.u.tall, this.textures[5] ? 1 : 0);
       this.texture(gp.u.extension, 5, this.textures[5] || this.textures[4]);
@@ -332,22 +344,21 @@ export class LakeGPU {
       [bw, bh] = this.meta.size;
     const ratio = w / h,
       half = this.meta.half;
-    const lens = half[0] * (ratio <= 1 ? 0.85 * Math.min(1, ratio / 0.43) : Math.min(1, ratio / 1.2));
+    const lens = horizontalLens(half[0], ratio);
     gl.uniform4f(bloom.u.crop, x / bw, y / bh, (r - x) / bw, (d - y) / bh);
     gl.uniform2f(bloom.u.lens, lens, (lens * h) / w);
     gl.uniform2fv(bloom.u.restLens, half);
     gl.uniform3f(bloom.u.eye, pose.x, pose.y, pose.z);
     gl.uniform1f(bloom.u.time, pose.t);
-    gl.uniform2f(bloom.u.aim, pose.x * 0.12, pose.y * 0.19);
+    gl.uniform2f(bloom.u.aim, pose.x * 0.12, verticalAim(pose, ratio));
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindTexture(gl.TEXTURE_2D, a.tex);
     gl.generateMipmap(gl.TEXTURE_2D);
     if (last === 2) return;
-    ground(scene);
-    if (last === 3) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
-    gl.clear(gl.DEPTH_BUFFER_BIT);
+    ground(scene);
+    if (last === 3) return;
     const ice = this.programs.ice;
     gl.useProgram(ice.id);
     gl.uniform4fv(ice.u.waterPlane, this.meta.plane);
@@ -362,15 +373,20 @@ export class LakeGPU {
     if (showSlab) this.mesh(ice, this.draws[1], pose, w, h);
     if (last === 4) return;
     gl.bindVertexArray(this.empty);
-    gl.disable(gl.DEPTH_TEST);
     const drift = this.programs.drift;
     gl.useProgram(drift.id);
     gl.uniform1f(drift.u.time, pose.t);
     gl.uniform1f(drift.u.dpr, Math.min(2, devicePixelRatio));
     gl.uniform3f(drift.u.eye, pose.x, pose.y, pose.z);
+    gl.uniform4fv(drift.u.waterPlane, this.meta.plane);
+    gl.uniform2f(drift.u.lens, lens, lens / ratio);
+    gl.uniform2f(drift.u.aim, pose.x * 0.12, verticalAim(pose, ratio));
+    gl.depthMask(false);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.drawArrays(gl.POINTS, 0, 180);
+    gl.drawArrays(gl.POINTS, 0, 540);
+    gl.depthMask(true);
+    gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
     gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.DEPTH_ATTACHMENT]);
     if (last === 5) return;
@@ -387,7 +403,7 @@ export class LakeGPU {
     const sx = (half[0] / lens) * zoom,
       sy = (half[1] / ((lens * h) / w)) * zoom;
     const cx = 0.5 + pose.x * (0.06 - 0.5 / ((dist - pose.z) * lens));
-    const cy = 0.5 + pose.y * (0.095 - 0.5 / (((dist - pose.z) * lens * h) / w));
+    const cy = 0.5 + verticalAim(pose, ratio) * 0.5 - (pose.y * 0.5) / (((dist - pose.z) * lens * h) / w);
     gl.uniform4f(
       post.u.slabBounds,
       cx + (x / bw - 0.5) * sx - 0.02,
@@ -401,7 +417,7 @@ export class LakeGPU {
   get triangles() {
     return this.draws.reduce((n, d) => n + d.info.indices / 3, 0) + this.draws[0].info.indices / 3 + 2;
   }
-  async measure(w: number, h: number, breakdown: boolean) {
+  async measure(w: number, h: number, breakdown: boolean, pose: Pose = rest) {
     const gl = this.gl;
     this.resize(w, h);
     const memory = this.assetMemory + this.targetMemory;
@@ -416,7 +432,7 @@ export class LakeGPU {
     const results: number[] = [],
       cpu: number[] = [];
     try {
-      for (let i = 0; i < 5; i++) this.draw(rest, alt[i % 2].fbo);
+      for (let i = 0; i < 5; i++) this.draw(pose, alt[i % 2].fbo);
       flush();
       for (const stage of breakdown ? [1, 2, 3, 4, 5, 6] : [6]) {
         const times: number[] = [];
@@ -427,7 +443,7 @@ export class LakeGPU {
             const q = gl.createQuery()!;
             gl.beginQuery(timer.TIME_ELAPSED_EXT, q);
             const start = performance.now();
-            for (let j = 0; j < n; j++) this.draw(rest, alt[j % 2].fbo, stage);
+            for (let j = 0; j < n; j++) this.draw(pose, alt[j % 2].fbo, stage);
             if (stage === 6) cpu.push((performance.now() - start) / n);
             gl.endQuery(timer.TIME_ELAPSED_EXT);
             gl.flush();
@@ -441,7 +457,7 @@ export class LakeGPU {
             gl.finish();
             const overhead = performance.now() - base;
             const start = performance.now();
-            for (let j = 0; j < n; j++) this.draw(rest, alt[j % 2].fbo, stage);
+            for (let j = 0; j < n; j++) this.draw(pose, alt[j % 2].fbo, stage);
             const submitted = performance.now();
             // Complete intermediate passes as well as the alternating outputs.
             gl.finish();

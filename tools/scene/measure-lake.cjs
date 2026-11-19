@@ -3,7 +3,7 @@
 const { chromium } = require('playwright');
 const fs = require('node:fs');
 const path = require('node:path');
-const out = process.env.LAKE_EVIDENCE || '.tools/out/o1c';
+const out = process.env.LAKE_EVIDENCE || '.tools/out/o2';
 const modes = new Set(process.argv.slice(2));
 const theme = process.env.LAKE_THEME || 'light';
 const profile = process.env.LAKE_PROFILE || 'desktop';
@@ -54,7 +54,7 @@ const dump = (file, data) => save(file, JSON.stringify(data, null, 2));
     const client = await context.newCDPSession(page);
     await client.send('Network.enable');
     await client.send('Network.setCacheDisabled', { cacheDisabled: true });
-    await page.goto('http://localhost:3183/lab/hero', { waitUntil: 'load' });
+    await page.goto('http://localhost:3184/lab/hero', { waitUntil: 'load' });
     await page.waitForFunction(() => window.__lakeProof, undefined, { timeout: 60000 });
     const state = await page.evaluate(() => window.__lakeProof.state());
     console.log('Live', state);
@@ -73,12 +73,13 @@ const dump = (file, data) => save(file, JSON.stringify(data, null, 2));
       savePng(prefix + '-raw.png', await page.evaluate(() => window.__lakeProof.capture()));
       await page.screenshot({ path: path.join(out, prefix + '-words.png') });
       savePng(prefix + '-ground.png', await page.evaluate(() => window.__lakeProof.capture(false)));
+      if (!phone) savePng(prefix + '-close.png', await page.evaluate(() => window.__lakeProof.frame(1, 0, 0)));
     }
     if (modes.has('motion')) {
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 8; i++) {
         await page.evaluate(
           (s) => window.scrollTo({ top: s * 2 * innerHeight, behavior: 'instant' }),
-          i / 5,
+          i / 7,
         );
         await page.waitForTimeout(830);
         await page.screenshot({ path: path.join(out, 'scroll-' + i + '.png') });
@@ -99,6 +100,7 @@ const dump = (file, data) => save(file, JSON.stringify(data, null, 2));
     if (modes.has('cadence')) {
       const sample = await page.evaluate(async () => {
         window.__lakeProof.sample(true);
+        const started = performance.now();
         await new Promise((resolve) => {
           const start = performance.now();
           function step(t) {
@@ -109,7 +111,10 @@ const dump = (file, data) => save(file, JSON.stringify(data, null, 2));
           }
           requestAnimationFrame(step);
         });
-        return window.__lakeProof.sample(false);
+        return {
+          ...window.__lakeProof.sample(false),
+          longTasks: window.lakeTimings.tasks.filter((task) => task.startTime >= started),
+        };
       });
       dump(prefix + '-cadence.json', sample);
     }
@@ -129,6 +134,10 @@ const dump = (file, data) => save(file, JSON.stringify(data, null, 2));
         costs.push(cost);
         console.log(cost);
         dump(prefix + '-cost.json', costs);
+      }
+      if (!phone) {
+        const close = await page.evaluate(() => window.__lakeProof.measure(3456, 2234, false, 1));
+        dump(prefix + '-close-cost.json', close);
       }
     }
   } finally {

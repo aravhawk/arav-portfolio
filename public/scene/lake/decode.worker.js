@@ -12,7 +12,7 @@ self.onmessage = async ({ data }) => {
     const { theme, rgb, rgba } = data;
     const metadata = await (await fetch('mesh.json')).json();
     const textures = [
-      'ground-day',
+      'ground-' + theme,
       'body-day',
       'optics',
       'environment',
@@ -20,11 +20,22 @@ self.onmessage = async ({ data }) => {
       ...(data.portrait ? ['portrait-' + theme] : []),
     ];
     const resources = textures.map((name) => bytes(name + '.ktx2'));
-    const [wasm, geometry, grade] = await Promise.all([
+    const [wasm, geometry, packedGrade] = await Promise.all([
       bytes('codecs/basis_transcoder.wasm.gz'),
       bytes('lake.meshopt.gz'),
       bytes('grade-' + theme + '.rgb.gz'),
     ]);
+    const planes = new Uint8Array(packedGrade);
+    const lut = new Uint8Array(planes.length);
+    const entries = planes.length / 3;
+    for (let c = 0; c < 3; c++) {
+      let value = 0;
+      for (let i = 0; i < entries; i++) {
+        value = (value + planes[c * entries + i]) & 255;
+        lut[3 * i + c] = value;
+      }
+    }
+    const grade = lut.buffer;
     const [basis] = await Promise.all([BASIS({ wasmBinary: wasm }), self.MeshoptDecoder.ready]);
     basis.initializeBasis();
     let offset = 0;

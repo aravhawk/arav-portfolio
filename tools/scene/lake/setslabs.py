@@ -20,13 +20,13 @@ for l0,r0,island in ranges_x:
         glyphs[-1][0]=min(glyphs[-1][0],l0);glyphs[-1][1]=max(glyphs[-1][1],r0);glyphs[-1][2].append(island)
     else:glyphs.append([l0,r0,[island]])
 assert len(glyphs)==8,glyphs
-turn=np.deg2rad([-9,7,4,-6,12,4,-5,10])
+turn=np.deg2rad([-18,-21,-18,-16,-20,-18,-18,-17])
 toward=np.array([-.06,.039,.012,-.054,.036,-.029,.019,-.04])
 centers=np.array([(l+r)*.5 for l,r,ids in glyphs])
 def move(vertices,index):
-    a=turn[index];cx=centers[index];dx=vertices[:,0]-cx;dy=vertices[:,1].copy()
-    vertices[:,0]=cx+dx*np.cos(a)-dy*np.sin(a)
-    vertices[:,1]=toward[index]+dx*np.sin(a)+dy*np.cos(a)
+    a=turn[index];cx=centers[index];dx=vertices[:,0]-cx;dy=1.38*vertices[:,1].copy()
+    vertices[:,0]=1.10*cx+dx*np.cos(a)-dy*np.sin(a)
+    vertices[:,1]=toward[index]+.13*cx+dx*np.sin(a)+dy*np.cos(a)
     return vertices
 for j,(l,r,ids) in enumerate(glyphs):
     sel=np.isin(components,ids)
@@ -37,8 +37,8 @@ for ob in faults:
     inv=np.asarray(ob.matrix_world.inverted())
     verts=np.empty((len(ob.data.vertices),3),np.float32);ob.data.vertices.foreach_get("co",verts.ravel())
     worldv=verts@mat[:3,:3].T+mat[:3,3]
-    distance=np.column_stack([np.maximum.reduce([l-worldv[:,0],worldv[:,0]-r,np.zeros(len(worldv))]) for l,r,ids in glyphs])
-    which=distance.argmin(axis=1)
+    glyph_distance=np.column_stack([np.maximum.reduce([l-worldv[:,0],worldv[:,0]-r,np.zeros(len(worldv))]) for l,r,ids in glyphs])
+    which=glyph_distance.argmin(axis=1)
     for j in range(8):
         sel=which==j
         if sel.any():worldv[sel]=move(worldv[sel].copy(),j)

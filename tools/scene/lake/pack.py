@@ -48,12 +48,12 @@ def encode(rgb):
     return np.uint8(np.rint(np.clip(coded,0,1)*255))
 def ktx(name,pixels,quality,universal=False):
     pixels.save(src/(name+'.png'))
-    codec=["--encode","uastc","--uastc_quality","3","--uastc_rdo_l",("3.5" if theme=="night" or name.startswith("portrait") else "0.5"),"--zcmp","18"] if universal else ["--encode","etc1s","--qlevel",str(quality),"--clevel","3"]
+    codec=["--encode","uastc","--uastc_quality","3","--uastc_rdo_l",("4.2" if theme=="night" or name.startswith("portrait") else "3.2"),"--zcmp","18"] if universal else ["--encode","etc1s","--qlevel",str(quality),"--clevel","4"]
     subprocess.run([os.environ.get("TOKTX","toktx"),"--t2",*codec,"--genmipmap","--assign_oetf","linear","--assign_primaries","bt709",
                     str(dest/(name+".ktx2")),str(src/(name+'.png'))],check=True)
 size=tuple(meta['size'])
 source=Image.open(src/(theme+'.png')).resize(size,Image.Resampling.LANCZOS)
-ground=Image.open(src/'ground.png').resize(size,Image.Resampling.LANCZOS)
+ground=Image.open(src/'ground.png')
 mask=np.asarray(Image.open(src/'name-0001.png').convert('L').resize(size,Image.Resampling.NEAREST))>127
 x0,y0,x1,y1=meta["crop"]
 slab=source.crop((x0,y0,x1,y1))
@@ -61,20 +61,16 @@ zone=mask[y0:y1,x0:x1]
 nearest=distance_transform_edt(~zone,return_distances=False,return_indices=True)
 slab_lin=radiance(slab)[tuple(nearest)]
 opt=np.asarray(Image.open(shared/'optics.png').convert('RGB')).copy()
-# The baked emission term is separated from the bulk colour so transmission
-# and reflection do not suppress the frost and air sheets at grazing angles.
-emit=np.minimum(.048,.058*slab_lin.min(axis=2))
-mat=np.dstack([opt,np.rint(emit*255/.12).astype(np.uint8)])
 bg=radiance(ground)
 # Split off the scene behind each facet at its resting UV. The runtime reads
 # the moving, mipped scene at the corresponding refracted position.
 nx,ny=(opt[:,:,:2].astype(float)/127.5-1).transpose(2,0,1)
 yy,xx=np.mgrid[y0:y1,x0:x1]
 thick=opt[:,:,2]/255
-sample_x=np.clip(np.rint(xx+nx*(2+5*thick)).astype(int),0,bg.shape[1]-1)
-sample_y=np.clip(np.rint(yy-ny*(2+5*thick)).astype(int),0,bg.shape[0]-1)
+sample_x=np.clip(np.rint((xx+nx*(2+5*thick))*ground.width/size[0]).astype(int),0,bg.shape[1]-1)
+sample_y=np.clip(np.rint((yy-ny*(2+5*thick))*ground.height/size[1]).astype(int),0,bg.shape[0]-1)
 trans=.025+.025*(1-thick)
-body=np.maximum(0,slab_lin-emit[:,:,None]-bg[sample_y,sample_x]*trans[:,:,None])
+body=np.maximum(0,slab_lin-bg[sample_y,sample_x]*trans[:,:,None])
 # Split the low-frequency chromatic field from one high-frequency luminance
 # channel. This preserves smooth fog through block compression while retaining
 # a one-to-one sample grid for the name. Both fields stay attached to the UVs.
@@ -87,7 +83,15 @@ def split_field(name,lin,size,offset):
                        for c in low.transpose(2,0,1)],axis=-1)
     residual=(signal-expanded)@np.array([.25,.5,.25])
     high=np.rint(255*np.clip(.5+2.5*residual,0,1)).astype(np.uint8)
-    if theme=="day": ktx(name+'-'+theme,Image.fromarray(high).convert("RGB"),205)
+    if theme=="day":
+        detail=Image.fromarray(high).convert("RGB")
+        if name=="ground":
+            detail=detail.resize((2880,1800),Image.Resampling.LANCZOS)
+        ktx(name+'-'+theme,detail,116 if name=="ground" else 140)
+    elif name=="ground":
+        # Preserve the stars and the absence of a direct solar reflection.
+        detail=Image.fromarray(high).convert("RGB").resize((1440,900),Image.Resampling.LANCZOS)
+        ktx(name+'-'+theme,detail,156)
     # Select only the solar core and glinting ice. Filter the radiance mask
     # before resizing so tiny hot edges contribute to the wide bloom.
     hot=np.clip((lin.max(axis=2)-1.65)/3,0,1).astype(np.float32)
@@ -97,14 +101,18 @@ def split_field(name,lin,size,offset):
 split_field("ground",bg,(512,320),0)
 split_field("body",body,(512,112),328)
 ktx("base-"+theme,base_image,0,True)
-if theme=='day':ktx('optics',Image.fromarray(mat),165)
+if theme=='day':ktx('optics',Image.fromarray(opt),105)
 # A regular table in log-shaped scene-linear space covers the expanded
 # highlights. Texel centres correspond exactly to the 32 grid coordinates.
 u=np.linspace(0,1,32,dtype=np.float32)
 bb,gg,rr=np.meshgrid(u,u,u,indexing='ij')
 grid=(np.exp2(14*np.stack((rr,gg,bb),axis=-1))-1)/1024
 rgb=transform(grid,ocio.TRANSFORM_DIR_FORWARD)
-(dest/('grade-'+theme+'.rgb.gz')).write_bytes(gzip.compress(np.rint(rgb.clip(0,1)*255).astype('uint8').tobytes(),mtime=0))
+# Adjacent entries have nearly identical colours. Difference each channel
+# before compression; the worker reverses this byte-for-byte on load.
+table=np.rint(rgb.clip(0,1)*255).astype("uint8").reshape(-1,3)
+table[1:]=table[1:]-table[:-1]
+(dest/('grade-'+theme+'.rgb.gz')).write_bytes(gzip.compress(table.T.tobytes(),mtime=0))
 if theme=='day':
     (dest/'lake.meshopt.gz').write_bytes(gzip.compress((src/'geometry.bin').read_bytes(),mtime=0))
     shutil.copyfile(src/'mesh.json',dest/'mesh.json')
@@ -123,7 +131,7 @@ if args.portrait:
     h,w=shaped.shape[:2]
     # The central band is available at higher resolution in the ground atlas.
     # Pack the upper and lower extensions into one compact RGB illumination map.
-    crop=.5*(390/844)/(1.6*.85)
+    crop=.5*(390/844)/(1.6*.99)
     upper=shaped[:int(h*(.5-crop))+3]
     lower=shaped[int(h*(.5+crop))-3:]
     def half(values):

@@ -44,7 +44,12 @@ def store_mesh(positions, normals, triangles):
 # A depth field across the actual terrain and lake gives the baked background
 # its parallax. The camera-projected colour includes the fog, contact shadows,
 # reflections and sub-surface fractures which Cycles integrated.
-objects = [r[0] for r in ranges] + [cover, nextbank]
+plate_meshes = {ob.data for ob in bigplates}
+plates = [ob for ob in scene.objects if ob.type == "MESH" and ob.data in plate_meshes]
+# The centimetre-scale windpack is baked on the lake support. Resolving
+# each tiny drift as a foreground occluder would fold the projected image
+# across itself at the low endpoint. Collar plates retain their own depth.
+objects = [r[0] for r in ranges] + [cover, far_bank, near] + plates
 surfaces = []
 for ob in objects:
     if ob.hide_render: continue
@@ -65,7 +70,15 @@ for v in ys:
         for tree in surfaces:
             hit,_,_,length=tree.ray_cast(eye,ray,dist)
             if hit is not None: dist=min(dist,length)
-        delta=np.array(ray)*dist
+        # The ridge line and sky share a distant projection. A coarse cell
+        # spanning the mountain silhouette would stretch a slice of sky as
+        # the camera descended. Keep true near-field parallax and smoothly
+        # converge distant rays to one backdrop depth in camera space.
+        ray_depth = -np.array(ray) @ backward
+        depth = dist * ray_depth
+        if depth > 35:
+            depth = 35 + 25 * (1 - math.exp(-(depth - 35) / 25))
+        delta=np.array(ray)*(depth/ray_depth)
         gp.append([delta@right,delta@up,-delta@backward]);gn.append([0,0,1])
 grid=np.arange(len(gp),dtype=np.uint32).reshape(len(ys),len(xs))
 a,b,c,e=grid[:-1,:-1],grid[:-1,1:],grid[1:,:-1],grid[1:,1:]

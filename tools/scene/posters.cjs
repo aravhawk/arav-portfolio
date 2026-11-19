@@ -6,7 +6,7 @@ const fs = require('node:fs'),
   path = require('node:path'),
   os = require('node:os');
 (async () => {
-  const temp = '.tools/out/o1c/bake/posters';
+  const temp = '.tools/out/o2/bake/posters';
   fs.mkdirSync(temp, { recursive: true });
   const browser = await chromium.launch({
     headless: false,
@@ -18,9 +18,9 @@ const fs = require('node:fs'),
       ['night', 'dark'],
     ]) {
       for (const phone of [false, true]) {
-        const viewport = phone ? { width: 430, height: 1000 } : { width: 1440, height: 1200 };
+        const viewport = phone ? { width: 390, height: 844 } : { width: 1440, height: 1200 };
         const page = await browser.newPage({ viewport, deviceScaleFactor: 2, colorScheme });
-        await page.goto('http://localhost:3183/lab/hero');
+        await page.goto('http://localhost:3184/lab/hero');
         await page.waitForFunction(() => window.__lakeProof, undefined, { timeout: 60000 });
         const data = await page.evaluate(() => window.__lakeProof.capture());
         const name = 'still-' + theme + (phone ? '-phone' : '');

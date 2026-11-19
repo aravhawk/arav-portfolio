@@ -2,7 +2,7 @@ import { LakeGPU, nextFrame, rest, type Pose } from './gpu';
 
 export type LakeProof = {
   capture: (showSlab?: boolean) => string;
-  measure: (width: number, height: number, breakdown?: boolean) => ReturnType<LakeGPU['measure']>;
+  measure: (width: number, height: number, breakdown?: boolean, scroll?: number) => ReturnType<LakeGPU['measure']>;
   sample: (enabled: boolean) => { intervals: number[]; main: number[] };
   frame: (scroll: number, x: number, y: number) => string;
   state: () => { width: number; height: number; drawing: boolean; scale: number };
@@ -49,9 +49,9 @@ export async function mount(canvas: HTMLCanvasElement, theme: string, signal: Ab
     gpu.resize(Math.round(canvas.clientWidth * dpr), Math.round(canvas.clientHeight * dpr));
   };
   const update = (s: number, px: number, py: number, clock: number): Pose => ({
-    x: px * 0.14 + Math.sin(clock * 0.18) * 0.013,
-    y: py * 0.055 - s * 0.16 + Math.sin(clock * 0.22) * 0.009,
-    z: s * 1.7 + Math.sin(clock * 0.15) * 0.024,
+    x: px * 0.14 - s * 0.22 + Math.sin(clock * 0.18) * 0.013,
+    y: py * 0.055 - s * 0.78 + Math.sin(clock * 0.22) * 0.009,
+    z: s * 4.15 + Math.sin(clock * 0.15) * 0.024,
     t: clock,
   });
   const frame = (now: number) => {
@@ -137,12 +137,12 @@ export async function mount(canvas: HTMLCanvasElement, theme: string, signal: Ab
       return { intervals, main: cpu };
     },
     state: () => ({ width: canvas.width, height: canvas.height, drawing: !!raf, scale }),
-    measure: async (w, h, details = false) => {
+    measure: async (w, h, details = false, progress = 0) => {
       pinned = true;
       busy = true;
       resume();
       try {
-        return await gpu.measure(w, h, details);
+        return await gpu.measure(w, h, details, update(progress, 0, 0, 0));
       } finally {
         busy = false;
         scale = 1;

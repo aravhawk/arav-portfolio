@@ -16,7 +16,7 @@ from PIL import Image
 parser = argparse.ArgumentParser()
 parser.add_argument("--width", type=int, default=2880)
 parser.add_argument("--samples", type=int, default=48)
-parser.add_argument("--output", default=".tools/out/o1c/bake/day.png")
+parser.add_argument("--output", default=".tools/out/o2/bake/day.png")
 parser.add_argument("--geometry", action="store_true", help="Export the light meshes and slab normal atlas instead of rendering the plate")
 parser.add_argument("--bake-geometry", action="store_true", help="Export the original rendered scene after both passes")
 parser.add_argument("--theme", choices=["day","night"],default="day")
@@ -959,11 +959,12 @@ exec((Path(__file__).parent/"dayplate.py").read_text())
 exec((Path(__file__).parent/"submerged.py").read_text())
 exec((Path(__file__).parent/"freezing.py").read_text())
 exec((Path(__file__).parent/"shearwall.py").read_text())
+exec((Path(__file__).parent/"firstlight.py").read_text())
 if args.theme=="night":
     exec((Path(__file__).parent/"bluehour.py").read_text())
 if args.portrait:
     cam.data.sensor_fit="HORIZONTAL"
-    cam.data.lens/=.85
+    cam.data.lens/=.99
     scene.render.resolution_y=round(args.width*844/390)
     maskfile.mute=True
     for ob in [name,*faults]: ob.visible_camera=False
@@ -973,6 +974,14 @@ if args.portrait:
 if args.geometry:
     exec((Path(__file__).parent/"geometry.py").read_text())
     raise SystemExit(0)
+# Only the slab needs the oversampled gate. Render its full vertical
+# extent, including the bevels, and keep the original camera projection.
+if args.bake_geometry:
+    corners=[world_to_camera_view(scene,cam,name.matrix_world@Vector(c)) for c in name.bound_box]
+    scene.render.use_border=True
+    scene.render.use_crop_to_border=False
+    scene.render.border_min_y=max(0,min(c.y for c in corners)-.015)
+    scene.render.border_max_y=min(1,max(c.y for c in corners)+.015)
 maskfile.file_slots[0].path="name-"
 scene.render.filepath=str(out)
 bpy.ops.render.render(write_still=True)
@@ -981,10 +990,23 @@ bpy.ops.render.render(write_still=True)
 hidden=[name,*faults]
 for ob in hidden: ob.visible_camera=False
 maskfile.mute=True
+# The ground atlas remains at its native shipping size. The subject is
+# oversampled separately to hold texel density at the end of the push.
+scene.render.use_border=False
+if args.bake_geometry and args.width > 2880:
+    scene.render.resolution_x=2880
+    scene.render.resolution_y=1800
 scene.render.filepath=str(out.parent/"ground.png")
 bpy.ops.render.render(write_still=True)
 maskfile.mute=False
 for ob in hidden: ob.visible_camera=True
 
 if args.bake_geometry:
+    from PIL import ImageFilter
+    # Reconstruct the full proof plate from the two matched Cycles passes.
+    # Retain a two-pixel guard around the name for antialiased boundaries.
+    slab_render=Image.open(out).convert("RGB")
+    clean=Image.open(out.parent/"ground.png").convert("RGB").resize(slab_render.size,Image.Resampling.LANCZOS)
+    coverage=Image.open(out.parent/"name-0001.png").convert("L").filter(ImageFilter.MaxFilter(5))
+    Image.composite(slab_render,clean,coverage).save(out)
     exec((Path(__file__).parent/"geometry.py").read_text())
