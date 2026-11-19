@@ -24,3 +24,9 @@ Run `tools/scene/render-lake` from the checkout to render the approved camera, i
 | [Mountainside](https://polyhaven.com/a/mountainside), [Rock 09](https://polyhaven.com/a/rock_09) | Scanned headland source and rematerialled ice fragments |
 
 Poly Haven and ambientCG publish these assets under CC0. The existing TASA Orbiter font uses its repository licence. Exact upstream URLs and SHA-256 hashes are in [the input manifest](lake/inputs.json). The comparison photographs are outside the authoring pipeline.
+
+## Browser bake
+
+Run `tools/scene/bake-lake` from this checkout after installing the project's locked dependencies. It verifies the inputs, renders day and blue hour in Cycles, exports the decimated meshes and optical atlas, encodes KTX2 and meshopt, samples the Blender display transform into LUTs, builds the site and captures the four first-paint stills from the production renderer. The poster capture uses the shared Playwright installation and starts a temporary server on port 3183. The script pins the Python tools and verifies the Khronos KTX tools download for Apple silicon. An existing compatible encoder can be selected with `TOKTX`.
+
+The site's only new package is `three`. Its bundled Basis Universal and meshoptimizer decoders run inside the lab worker. Their software licences are recorded beside the decoders. The camera's view-dependent reflection also uses the Frozen Lake environment listed above.

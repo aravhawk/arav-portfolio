@@ -18,6 +18,9 @@ parser.add_argument("--width", type=int, default=2880)
 parser.add_argument("--samples", type=int, default=48)
 parser.add_argument("--output", default=".tools/out/o1c/bake/day.png")
 parser.add_argument("--geometry", action="store_true", help="Export the light meshes and slab normal atlas instead of rendering the plate")
+parser.add_argument("--bake-geometry", action="store_true", help="Export the original rendered scene after both passes")
+parser.add_argument("--theme", choices=["day","night"],default="day")
+parser.add_argument("--portrait", action="store_true",help="Bake the tall background outside the composed desktop frame")
 args = parser.parse_args()
 out = Path(args.output).resolve()
 out.parent.mkdir(parents=True, exist_ok=True)
@@ -956,6 +959,17 @@ exec((Path(__file__).parent/"dayplate.py").read_text())
 exec((Path(__file__).parent/"submerged.py").read_text())
 exec((Path(__file__).parent/"freezing.py").read_text())
 exec((Path(__file__).parent/"shearwall.py").read_text())
+if args.theme=="night":
+    exec((Path(__file__).parent/"bluehour.py").read_text())
+if args.portrait:
+    cam.data.sensor_fit="HORIZONTAL"
+    cam.data.lens/=.85
+    scene.render.resolution_y=round(args.width*844/390)
+    maskfile.mute=True
+    for ob in [name,*faults]: ob.visible_camera=False
+    scene.render.filepath=str(out)
+    bpy.ops.render.render(write_still=True)
+    raise SystemExit(0)
 if args.geometry:
     exec((Path(__file__).parent/"geometry.py").read_text())
     raise SystemExit(0)
@@ -971,3 +985,6 @@ scene.render.filepath=str(out.parent/"ground.png")
 bpy.ops.render.render(write_still=True)
 maskfile.mute=False
 for ob in hidden: ob.visible_camera=True
+
+if args.bake_geometry:
+    exec((Path(__file__).parent/"geometry.py").read_text())

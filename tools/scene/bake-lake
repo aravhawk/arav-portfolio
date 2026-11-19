@@ -21,7 +21,27 @@ if [ -z "${TOKTX:-}" ] && ! command -v toktx >/dev/null; then
     export TOKTX="$tool/bin/toktx"
 fi
 "$venv/bin/python" tools/scene/lake/inputs.py
-"$venv/bin/python" tools/scene/lake/author.py --output "$temp/day.png"
-"$venv/bin/python" tools/scene/lake/author.py --geometry --output "$temp/day.png"
-"$venv/bin/python" tools/scene/lake/pack.py "$temp" public/scene/lake
+mkdir -p "$temp/night" "$temp/portrait"
+"$venv/bin/python" tools/scene/lake/author.py --bake-geometry --output "$temp/day.png"
+"$venv/bin/python" tools/scene/lake/author.py --theme night --width 1440 --samples 24 --output "$temp/night/night.png"
+for theme in day night; do
+    "$venv/bin/python" tools/scene/lake/author.py --portrait --theme "$theme" --width 624 --samples 16 --output "$temp/portrait/$theme.png"
+done
+"$venv/bin/python" tools/scene/lake/pack.py "$temp" public/scene/lake --portrait "$temp/portrait/day.png"
+"$venv/bin/python" tools/scene/lake/pack.py "$temp/night" public/scene/lake --theme night --shared "$temp" --portrait "$temp/portrait/night.png"
 node tools/scene/codecs.mjs
+# Stills use the production renderer. The temporary server is this command's
+# child and is stopped on success, failure or interruption.
+if lsof -tiTCP:3183 -sTCP:LISTEN >/dev/null; then
+    echo "Port 3183 is in use. Stop the existing lab server before rebuilding." >&2
+    exit 1
+fi
+pnpm build
+node node_modules/next/dist/bin/next start -p 3183 > "$temp/poster-server.log" 2>&1 &
+server_pid=$!
+trap 'kill -TERM "$server_pid" 2>/dev/null || true' EXIT
+for tick in $(seq 1 100); do
+    if curl -fsS http://localhost:3183/lab/hero -o /dev/null 2>/dev/null; then break; fi
+    sleep .1
+done
+NODE_PATH="${NODE_PATH:-$base/tools/node_modules}" node tools/scene/posters.cjs

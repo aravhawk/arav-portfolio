@@ -41,17 +41,25 @@ vec3 toShape(vec3 c){return log2(1.+1024.*max(c,vec3(0.)))/14.;}`;
 export const groundFragment = `#version 300 es
 precision highp float;
 in vec3 projected,world;
-uniform sampler2D atlas,baseMap;
+uniform sampler2D atlas,baseMap,extension;
+uniform int tall;
 uniform vec3 eye;
 out vec4 color;
 ${field}
 void main(){
   vec2 uv=.5+.5*projected.xy/projected.z;
   vec3 c=readField(atlas,baseMap,uv,vec2(0.,320.));
+  if(tall==1 && (uv.y<.006 || uv.y>.994)){
+    const float extent=.5*(390./844.)/(1.6*.85);
+    vec2 p=vec2((uv.x-.5)/.85+.5,.5+(uv.y-.5)*2.*extent);
+    float row=p.y<.5 ? .5*p.y/(.5-extent+.002) : .5+.5*(p.y-(.5+extent-.002))/(.5-extent+.002);
+    float blend=1.-smoothstep(-.005,.006,min(uv.y,1.-uv.y));
+    c=mix(c,texture(extension,vec2(p.x,row)).rgb,blend);
+  }
   // Cycles includes the low, sky-matched fog at the rest camera. Apply
   // only the optical-path change when the camera enters the basin.
   float path=clamp((world.z-32.)*.012,0.,1.)*max(-eye.z,0.)*.004;
-  color=vec4(mix(c,vec3(.59,.60,.605),path),1.);
+  color=vec4(mix(c,vec3(.59,.60,.605),path),0.);
 }`;
 
 export const iceFragment = `#version 300 es
@@ -86,19 +94,27 @@ void main(){
 export const bloomFragment = `#version 300 es
 precision highp float;
 in vec2 uv;
-uniform sampler2D source;
-uniform vec2 delta;
-uniform int extract;
+uniform sampler2D field,mat;
+uniform vec2 lens,restLens,aim;
+uniform vec3 eye;
+uniform vec4 crop;
+uniform float time;
 out vec4 color;
-vec3 readLight(vec2 p){
-  vec3 c=texture(source,p).rgb;
-  return c*smoothstep(.76,.85,max(c.r,max(c.g,c.b)));
+vec2 project(vec2 p,float depth){
+  vec2 original=((p*2.-1.-aim)*lens*(depth-eye.z)+eye.xy)/depth/restLens;
+  return .5+.5*vec2(original.x,-original.y);
 }
 void main(){
-  vec3 c=.30*readLight(uv);
-  c+=.23*(readLight(uv+delta)+readLight(uv-delta));
-  c+=.12*(readLight(uv+2.6*delta)+readLight(uv-2.6*delta));
-  color=vec4(c,1.);
+  vec2 bg=project(uv,600.);
+  float glow=texture(field,vec2(bg.x,(clamp(bg.y,0.,1.)*319.+.5)/448.)).a;
+  vec2 slab=(project(uv,17.)-crop.xy)/crop.zw;
+  if(all(greaterThan(slab,vec2(0.)))&&all(lessThan(slab,vec2(1.)))){
+    float rim=texture(field,vec2(slab.x,(slab.y*111.+328.5)/448.)).a;
+    vec2 n=textureLod(mat,slab,3.).rg*2.-1.;
+    float glint=pow(max(0.,dot(n,normalize(vec2(.81+.04*sin(time*.37),.49)))),18.);
+    glow+=rim*(1.+.25*glint);
+  }
+  color=vec4(vec3(glow),1.);
 }`;
 
 export const postFragment = `#version 300 es
@@ -108,15 +124,26 @@ in vec2 uv;
 uniform sampler2D scene,bloom;
 uniform sampler3D grade;
 uniform vec2 invResolution;
+uniform vec4 slabBounds;
 out vec4 color;
 void main(){
-  vec3 c=texture(scene,uv).rgb;
+  vec4 centre=texture(scene,uv);
+  vec3 c=centre.rgb;
   float y=dot(c,vec3(.213,.715,.072));
   vec2 slopes=vec2(dFdx(y),dFdy(y));
   float strength=max(abs(slopes.x),abs(slopes.y));
   if(strength>max(.07,y*.28)){
     vec2 normal=slopes/(abs(slopes.x)+abs(slopes.y)+.001);
     c=mix(c,(texture(scene,uv+.52*normal*invResolution).rgb+texture(scene,uv-.52*normal*invResolution).rgb)*.5,.42);
+  }
+  // Alpha identifies the opaque slab in the scene attachment. At its
+  // silhouette estimate pixel coverage from four subpixel neighbours. The
+  // untouched interior keeps its one-to-one frost and fracture detail.
+  if(all(greaterThan(uv,slabBounds.xy))&&all(lessThan(uv,slabBounds.zw))){
+    vec2 px=.72*invResolution;
+    vec4 neighbours=.25*(texture(scene,uv+px)+texture(scene,uv-px)+
+                         texture(scene,uv+vec2(px.x,-px.y))+texture(scene,uv+vec2(-px.x,px.y)));
+    c=mix(c,neighbours.rgb,smoothstep(.01,.13,abs(neighbours.a-centre.a))*.89);
   }
   c+=textureLod(bloom,uv,1.65).rgb*.0028;
   vec3 shaped=clamp(c,0.,1.);
