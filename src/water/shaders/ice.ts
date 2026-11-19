@@ -399,8 +399,11 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     } else {
       lead *= 1.0 - uIceC.y;
     }
-    // (Under the first frame's words no lead opens while a line of them stands.)
-    if (uNameG.w > 0.5 && uIceP.y > 0.0) lead *= mix(smoothstep(0.0, 0.07, wordsClear(u)), 1.0, smoothstep(0.57, 0.66, uIceA.z));
+    // (Under the first frame's words no lead opens while a line of them stands; and none runs on through the snow
+    // that lies before them, which is the lake's near shore to the eye: a lead comes down to that snow and ends
+    // there, as at a bank, until the eye has risen off it. A ribbon of dark water drawn through a snowfield was a
+    // stroke, not a lead.)
+    if (uNameG.w > 0.5 && uIceP.y > 0.0) lead *= mix(smoothstep(0.1, 0.2, wordsClear(u)), 1.0, smoothstep(0.74, 0.84, uIceA.z));
     f = smax(f, lead - cr.x, kS);
   }
   if (uNameG.w > 0.5 && uNameS > 0.0) {
