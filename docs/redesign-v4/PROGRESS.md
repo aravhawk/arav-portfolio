@@ -1624,3 +1624,31 @@ helpers): everything else to date.
 second pass (moonlit night, layered hours and air, tone curve,
 grain, the blue hour, shelves and wind-cut snow, cost paid back).
 Fable (this thread and its helpers): everything else to date.
+
+### A2 (one ice) reviewed: not integrated, sent back cost first (Nov 19)
+
+A2 (codex / gpt-6.2-astra / high) came back as one signed commit
+(`e444bdd`, in its own worktree) and called itself partial. My
+review of its frames and its cost table:
+
+- **Good**: the name, the lake and every station's ice now call one
+  material from one function, with a small atlas made at start; the
+  plates' body is clear with pale fracture lips and bubbles; the
+  black ice mirrors the low sun as a real glare; before dawn the
+  first two screens are 1.3 and 3.0 ms cheaper and the canyon 1.7 to
+  2.7 ms cheaper.
+- **Misses**: several stops are dearer than the ceiling A1b set
+  (the first screen by day +0.78 ms, Infiniview by day +0.5 to +1.5,
+  cc-switch by day +2.3 to +4.0, TensorPoW +0.4 to +2.2 in both
+  themes), and its own repeats disagree by up to 3.8 ms at one stop;
+  by day the glare leaves the name with less separation from the
+  lake; Infiniview's block still shows broad cyan bands; the columns
+  lose all relief before dawn; the plates' long edges look machined.
+
+Because it makes sections slower, **it is not integrated**. The
+branch is unchanged by it. It is sent back as **A2b** (running now,
+alone, same model and effort), which starts by applying A2's commit
+in its own checkout, makes the cost measurement repeatable, brings
+every stop to its ceiling or under, restores the name's contrast (4.5
+to 1 by day, 3 to 1 before dawn) with the glare kept, and then gives
+the ice the depth it lacks.
