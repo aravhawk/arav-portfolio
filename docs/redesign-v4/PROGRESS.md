@@ -1533,3 +1533,49 @@ text); they now say "a second assistant". The project's own public
 README, repository description and launch film use that name; the
 site links to the repository and embeds the film as before, and that
 is flagged here for Arav's decision.
+
+### Astra's first task (the light), reviewed and integrated; the second pass sent back (Nov 19, about 12:50 AM CT)
+
+- **A1** (GPT-6.2 Astra, high) came back as one signed commit and
+  called itself short of acceptance. My review: the night from the
+  statement to Upstream is now silver moonlight with neutral shadows
+  and a glint on the river where it was one cobalt wash; the day
+  reads as hours; one tone curve and grain; nothing clips; the whole
+  flight changed together. Integrated as `4a8e50a` (lint, typecheck,
+  315 tests, build). On the merged build: legibility 5,312 lines at
+  390 and 1440 in both themes with only the ending's small line
+  failing; titles 192 of 192 at four widths; words 0 faults.
+- **What it missed is sent back as A1b**, cost first: it made 20 of
+  26 stops dearer by up to 1.96 ms, and the light may add no frame
+  time anywhere; the blue hour at Open models and cc-switch is one
+  flat blue; the middle distance has no layers of air; from the
+  statement at night the far Infiniview screen shows as words hanging
+  on the horizon; Upstream and Kilo Bench by day are told apart by
+  subject, not hour; pale shelf edges read as lines; the wind ridges
+  tile. Running now, alone, on codex / gpt-6.2-astra / high.
+- **The ending's small line** failed legibility where it led the
+  headline over bright water (1.9 to 3.7 against 4.5). It now leads
+  by 0.15 of a screen where it led by 0.4, is set bolder, and the
+  delta's words stay with their bank a little longer; legibility over
+  the last stretch has 0 failures of 1,012 lines and the longest run
+  without a word is still 0.6 screens (`02141be`). The headline
+  itself is unchanged: Arav asked to keep "It's still early." and to
+  see a shortlist first.
+- **This thread, same stretch**: the blog's post title at the size
+  the index shows it and its date marked as the publication date
+  (`952a720`; the contrast test passes on both blog pages at 320,
+  390, 768 and 1440 in both themes); the nav's surface tokens renamed
+  after a clash with the inner pages' media shadow, and that shadow
+  brought closer (`7ef5cdd`).
+- **A correction from the plan's review, now a rule**: every pushed
+  commit builds, typechecks and renders on its own. Two earlier
+  pushed commits (`523b910`, `f011a57`) did not (a deletion rode in
+  ahead of its replacement; `e405bdc` completes them). Typecheck and
+  build are run on the exact tree before each push from here on.
+- **Models**: A1 and A1b on codex / gpt-6.2-astra at high effort. No
+  other helper has run since the direction change.
+
+**Who built what, so far**: Astra: the light's second half (the
+moonlit night, the layered hours, the tone curve, grain and
+vignette, the lee without an edge). Fable (this thread and its
+helpers): everything else to date.
