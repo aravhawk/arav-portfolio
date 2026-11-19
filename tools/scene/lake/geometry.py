@@ -145,5 +145,6 @@ normal_atlas=normal_atlas[tuple(nearest)]
 Image.fromarray(normal_atlas).save(folder/'optics.png')
 print('Light meshes',draws,flush=True)
 (folder/'mesh.json').write_text(json.dumps(dict(draws=draws, approach=approach_meta, half=[half_x,half_y],
+    lakeAxes=[[float(right[k]),float(up[k]),float(-backward[k]),float(eye[k])] for k in (0,1)],
     plane=[float(right[2]),float(up[2]),float(-backward[2]),float(eye.z)],
     crop=[int(x0),int(y0),int(x1),int(y1)],size=[W,H]),separators=(',',':')))

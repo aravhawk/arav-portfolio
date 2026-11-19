@@ -16,12 +16,14 @@ from PIL import Image
 parser = argparse.ArgumentParser()
 parser.add_argument("--width", type=int, default=2880)
 parser.add_argument("--samples", type=int, default=48)
-parser.add_argument("--output", default=".tools/out/o2b/bake/day.png")
+parser.add_argument("--output", default=".tools/out/o2c/bake/day.png")
 parser.add_argument("--geometry", action="store_true", help="Export the light meshes and slab normal atlas instead of rendering the plate")
 parser.add_argument("--bake-geometry", action="store_true", help="Export the original rendered scene after both passes")
 parser.add_argument("--theme", choices=["day","night"],default="day")
 parser.add_argument("--approach", action="store_true", help="Bake the travelling camera's second projection")
 parser.add_argument("--portrait", action="store_true",help="Bake the tall background outside the composed desktop frame")
+parser.add_argument("--lake-uv", action="store_true", help="Bake the near lake in its metric surface coordinates")
+parser.add_argument("--phone-study", choices=["row","stack"], help="Render the independent portrait blocking options")
 args = parser.parse_args()
 out = Path(args.output).resolve()
 out.parent.mkdir(parents=True, exist_ok=True)
@@ -971,6 +973,36 @@ def render_plate(path):
         from bluegrade import grade_plate
         grade_plate(path)
 
+if args.lake_uv:
+    # Orthographic rays preserve metres across the full bank. A grazing
+    # direction keeps the air trapped in dipping fracture faces visible.
+    theta = math.radians(28)
+    cam.data.type = "ORTHO"
+    cam.data.ortho_scale = 18
+    cam.data.sensor_fit = "HORIZONTAL"
+    target = Vector((-1, -5, 0))
+    cam.location = target + Vector((0, -math.cos(theta), math.sin(theta))) * 24
+    cam.rotation_euler = (target - cam.location).to_track_quat("-Z","Y").to_euler()
+    scene.render.resolution_y = args.width
+    scene.render.pixel_aspect_x = 18 / (16 * math.sin(theta))
+    scene.render.pixel_aspect_y = 1
+    maskfile.mute = True
+    for ob in [name,*faults]:
+        ob.visible_camera = False
+    render_plate(out)
+    raise SystemExit(0)
+if args.phone_study == "stack":
+    maskfile.file_slots[0].path="name-"
+    render_plate(out)
+    for ob in [name,*faults]:
+        ob.visible_camera = False
+    maskfile.mute = True
+    render_plate(out.parent/"ground.png")
+    raise SystemExit(0)
+if args.phone_study == "row":
+    exec((Path(__file__).parent/"phone_study.py").read_text())
+    render_plate(out)
+    raise SystemExit(0)
 if args.portrait:
     cam.data.sensor_fit="HORIZONTAL"
     cam.data.lens/=1.55

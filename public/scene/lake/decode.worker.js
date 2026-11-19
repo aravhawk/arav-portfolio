@@ -16,12 +16,26 @@ self.onmessage = async ({ data }) => {
       'body-day',
       'optics',
       'environment',
-      'base-' + theme,
+      null, // Native 4:4:4 radiance field at slot four.
       'portrait-' + theme,
       'approach-ground-' + theme,
       'approach-body-' + theme,
     ];
-    const resources = textures.map((name) => bytes(name + '.ktx2'));
+    const resources = textures.map((name) => name && bytes(name + '.ktx2'));
+    const photographs = [
+      [4, 'base-' + theme],
+      [8, 'lake-uv-' + theme],
+      [9, 'two-rows-' + theme],
+      [10, 'lake-detail'],
+      [11, 'lake-fractures'],
+    ].map(async ([index, name]) => {
+      const encoded = await bytes(name + '.avif');
+      const bitmap = await createImageBitmap(new Blob([encoded], { type: 'image/avif' }), {
+        colorSpaceConversion: 'none',
+        premultiplyAlpha: 'none',
+      });
+      self.postMessage({ kind: 'bitmap', index, bitmap }, [bitmap]);
+    });
     const [wasm, geometry, packedGrade] = await Promise.all([
       bytes('codecs/basis_transcoder.wasm.gz'),
       bytes('lake.meshopt.gz'),
@@ -65,6 +79,7 @@ self.onmessage = async ({ data }) => {
       ...draws.flatMap((d) => [d.vertices.buffer, d.indices.buffer]),
     ]);
     for (let index = 0; index < textures.length; index++) {
+      if (!textures[index]) continue;
       const file = new basis.KTX2File(new Uint8Array(await resources[index]));
       try {
         if (!file.isValid() || !file.startTranscoding())
@@ -92,6 +107,7 @@ self.onmessage = async ({ data }) => {
         file.delete();
       }
     }
+    await Promise.all(photographs);
     self.postMessage({
       kind: 'done',
       resources: performance.getEntriesByType('resource').map((r) => ({

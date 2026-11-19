@@ -2,7 +2,9 @@
 
 night = args.theme == "night"
 cam.location = (-5.85, -10.32, 0.68)
-cam.rotation_euler = (Vector((-0.37, 0, 0.59)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+cam.rotation_euler = (
+    (Vector((-0.37, 0, 0.59)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+)
 cam.rotation_euler.rotate_axis("Z", math.radians(-6))
 cam.data.angle = math.radians(40)
 for ridge, *_ in ranges:
@@ -18,7 +20,7 @@ for cliff in crags:
 # direction is used for the physical sun, the glitter and the fog glow.
 east = Vector((0.80, 0.98, 0.077)).normalized()
 sun.rotation_euler = (-east).to_track_quat("-Z", "Y").to_euler()
-sun.data.angle = math.radians(1.7)
+sun.data.angle = math.radians(3.8)
 sun.data.energy = 0.56 if night else 6.3
 sun.data.color = (0.45, 0.67, 1) if night else (1, 0.92, 0.78)
 reflection.inputs[1].default_value = (-east.x, -east.y, east.z)
@@ -45,10 +47,10 @@ def palette(tree, source, socket, stops):
 
 
 day_sky = [
-    (0, (19, 15, 10)),
-    (0.007, (16, 13, 9)),
-    (0.013, (4.8, 4.1, 3.2)),
-    (0.048, (2.9, 2.7, 2.4)),
+    (0, (8.1, 6.6, 4.9)),
+    (0.018, (6.6, 5.6, 4.5)),
+    (0.040, (4.0, 3.65, 3.1)),
+    (0.080, (2.6, 2.55, 2.38)),
     (0.15, (1.55, 1.58, 1.60)),
     (0.40, (0.46, 0.57, 0.70)),
     (0.78, (0.15, 0.23, 0.33)),
@@ -87,18 +89,25 @@ rendergrade.inputs["Saturation"].default_value = 0.69 if night else 0.86
 
 # Anisotropic scattering in the ground fog picks up the backlight.
 mist.inputs["Anisotropy"].default_value = 0.64
-mist.inputs["Color"].default_value = (0.41, 0.59, 0.81, 1) if night else (0.85, 0.87, 0.81, 1)
+mist.inputs["Color"].default_value = (
+    (0.41, 0.59, 0.81, 1) if night else (0.85, 0.87, 0.81, 1)
+)
 front.data.energy = 630 if night else 380
 rear.data.energy = 1100 if night else 2400
 rear.location = (4.7, 2.8, 1.25)
-rear.rotation_euler = (Vector((0, 0, 0.45)) - rear.location).to_track_quat("-Z", "Y").to_euler()
+rear.rotation_euler = (
+    (Vector((0, 0, 0.45)) - rear.location).to_track_quat("-Z", "Y").to_euler()
+)
 
 # Pale air sheets at the thin rim catch more horizon light than the
 # broad sawn faces. Retain the measured volume and fractures underneath.
 t = ice.node_tree
 facing = node(t, "ShaderNodeLayerWeight")
 angle_response = palette(
-    t, facing, "Facing", [(0, (0.08,) * 3), (0.52, (0.16,) * 3), (0.83, (0.62,) * 3), (1, (1,) * 3)]
+    t,
+    facing,
+    "Facing",
+    [(0, (0.08,) * 3), (0.52, (0.16,) * 3), (0.83, (0.62,) * 3), (1, (1,) * 3)],
 )
 scatter = node(t, "ShaderNodeMath")
 scatter.operation = "MULTIPLY_ADD"
@@ -106,7 +115,9 @@ wire(t, angle_response, 0, scatter, 0)
 scatter.inputs[1].default_value = 1.75 if night else 2.3
 scatter.inputs[2].default_value = 0.60 if night else 0.11
 through = node(
-    t, "ShaderNodeEmission", Color=(0.44, 0.69, 0.94, 1) if night else (0.37, 0.82, 0.76, 1)
+    t,
+    "ShaderNodeEmission",
+    Color=(0.44, 0.69, 0.94, 1) if night else (0.37, 0.82, 0.76, 1),
 )
 wire(t, scatter, 0, through, "Strength")
 result = node(t, "ShaderNodeAddShader")
@@ -152,7 +163,9 @@ xx, yy = np.meshgrid(bx, by)
 lateral = 0.89 * (xx + 5.6) - 0.45 * (yy + 9.8)
 forward = 0.45 * (xx + 5.6) + 0.89 * (yy + 9.8)
 scour = measured_snow("Snow008A", xx * 0.16, yy * 0.45)
-tongue = 3.9 - 0.85 * lateral + 0.41 * np.sin(xx * 1.16) + 0.63 * (scour - 0.5) - forward
+tongue = (
+    3.9 - 0.85 * lateral + 0.41 * np.sin(xx * 1.16) + 0.63 * (scour - 0.5) - forward
+)
 # A windbank also follows the western side of the tracking camera.
 # Its sunward edge stays open on the right, beside the reflected sun.
 for travel in np.linspace(0, 1, 11):
@@ -162,11 +175,17 @@ for travel in np.linspace(0, 1, 11):
     front_distance = np.sin(heading) * (xx - cx) + np.cos(heading) * (yy - cy)
     cross_distance = np.cos(heading) * (xx - cx) - np.sin(heading) * (yy - cy)
     leading = 3.65 + 0.45 * travel - 1.6 * cross_distance - front_distance
-    patch = np.minimum(front_distance + 0.4, leading) + 0.16 * np.sin(1.8 * yy) + 0.32 * (scour - 0.5)
+    patch = (
+        np.minimum(front_distance + 0.4, leading)
+        + 0.16 * np.sin(1.8 * yy)
+        + 0.32 * (scour - 0.5)
+    )
     tongue = np.maximum(tongue, patch)
 # Pressure cracks and the wind scour the bank back from the slab collars.
 # Keep an open lead to the east and a narrow apron around the load line.
-ice_edge = 0.28 + 0.035 * forward - lateral + 0.16 * np.sin(yy * 1.43) + 0.39 * (scour - 0.5)
+ice_edge = (
+    0.28 + 0.035 * forward - lateral + 0.16 * np.sin(yy * 1.43) + 0.39 * (scour - 0.5)
+)
 collars = (
     0.13 * xx
     - 1.45
@@ -180,45 +199,94 @@ tongue = np.minimum(tongue, np.minimum(2.4 * ice_edge, 1.7 * collars))
 # follow this corridor, leaving the eastern exposure and the collars bare.
 rest_eye = cam.location.copy()
 rest_rot = cam.rotation_euler.to_quaternion()
-close_eye = Vector((-2.35, -3.35, 0.51))
-close_rot = (Vector((1.5, 0.17, 0.12)) - close_eye).to_track_quat("-Z", "Y").to_euler()
+close_eye = Vector((-3.30, -5.05, 0.61))
+close_rot = (Vector((0.96, 0.17, 0.34)) - close_eye).to_track_quat("-Z", "Y").to_euler()
 close_rot.rotate_axis("Z", math.radians(-3))
 for step in np.linspace(0, 1, 17):
     eye = rest_eye.lerp(close_eye, step)
     rot = rest_rot.slerp(close_rot.to_quaternion(), step)
     lens = (1 - step) * math.tan(math.radians(20)) + step * math.tan(math.radians(27.5))
     outline = []
-    for u, v in [(-0.19, 0.74), (0.08, 0.74), (0.39, 0.76), (0.64, 0.76), (0.58, 1.8), (-0.19, 1.8)]:
+    for u, v in [
+        (-0.19, 0.74),
+        (0.08, 0.74),
+        (0.39, 0.76),
+        (0.64, 0.76),
+        (0.58, 1.8),
+        (-0.19, 1.8),
+    ]:
         ray = rot @ Vector(((2 * u - 1) * lens, (1 - 2 * v) * lens * 5 / 8, -1))
         hit = eye - ray * (eye.z / ray.z)
         outline.append(np.asarray(hit)[:2])
     coords = np.array(outline)
     winding = np.sign(
-        np.sum(coords[:, 0] * np.roll(coords[:, 1], -1) - coords[:, 1] * np.roll(coords[:, 0], -1))
+        np.sum(
+            coords[:, 0] * np.roll(coords[:, 1], -1)
+            - coords[:, 1] * np.roll(coords[:, 0], -1)
+        )
     )
     inside = np.full(xx.shape, 100.0)
     for a, b in zip(coords, np.roll(coords, -1, axis=0)):
         e = b - a
         inside = np.minimum(
-            inside, winding * (e[0] * (yy - a[1]) - e[1] * (xx - a[0])) / np.linalg.norm(e)
+            inside,
+            winding * (e[0] * (yy - a[1]) - e[1] * (xx - a[0])) / np.linalg.norm(e),
         )
-    tongue = np.maximum(tongue, 3 * inside + 0.34 * (scour - 0.5) + 0.12 * np.sin(2.3 * xx + yy))
+    tongue = np.maximum(
+        tongue, 3 * inside + 0.34 * (scour - 0.5) + 0.12 * np.sin(2.3 * xx + yy)
+    )
 near_cuts = (
-    0.13 * xx - 0.52 - yy - 2.35 * np.exp(-(((xx + 3.8) / 1.6) ** 2)) + 0.22 * np.sin(xx * 2.1)
+    0.13 * xx
+    - 0.52
+    - yy
+    - 2.35 * np.exp(-(((xx + 3.8) / 1.6) ** 2))
+    + 0.22 * np.sin(xx * 2.1)
 )
 tongue = np.minimum(tongue, 2.6 * near_cuts)
-height = np.clip(tongue * 0.105, -0.22, 0.061) + 0.052 * (scour - 0.49)
+# Smooth the overlapping deposition envelopes in metres before cutting the
+# bank. Smaller curls of wind scour and individual grains cross that contour.
+from scipy.ndimage import gaussian_filter
+
+tongue = gaussian_filter(tongue, (5.8, 5.8))
+flutes = measured_snow("Snow009A", xx * 0.38 + yy * 0.19, yy * 0.53 - xx * 0.12)
+tongue += 0.30 * np.sin(2.6 * yy + 1.1 * xx + 1.6 * np.sin(xx * 1.5))
+tongue += 0.14 * np.sin(6.3 * yy - 3.9 * xx) + 0.56 * (flutes - 0.5)
+lip = np.clip((tongue + 0.48) / 0.94, 0, 1)
+lip = lip * lip * (3 - 2 * lip)
+height = np.where(
+    tongue < -0.48, -0.015, 0.004 + lip * (0.051 + 0.042 * (scour - 0.49))
+)
 windpack = snow.copy()
-windpack.name = "Fine wind-deposited snow"
+windpack.name = "Feathered snow on the lead"
+st = windpack.node_tree
+surface_out = st.nodes.get("Material Output")
+old_surface = surface_out.inputs["Surface"].links[0].from_socket
 if not night:
-    st = windpack.node_tree
-    surface_out = st.nodes.get("Material Output")
-    old_surface = surface_out.inputs["Surface"].links[0].from_socket
     bounce = node(st, "ShaderNodeEmission", Color=(0.65, 0.68, 0.70, 1), Strength=0.49)
     bright = node(st, "ShaderNodeAddShader")
     st.links.new(old_surface, bright.inputs[0])
     wire(st, bounce, 0, bright, 1)
-    wire(st, bright, 0, surface_out, "Surface")
+    old_surface = bright.outputs[0]
+geom = node(st, "ShaderNodeNewGeometry")
+alt = node(st, "ShaderNodeSeparateXYZ")
+wire(st, geom, "Position", alt, 0)
+grains = node(st, "ShaderNodeTexNoise", Scale=79, Detail=2.0)
+wire(st, geom, "Position", grains, 0)
+dust_width = node(st, "ShaderNodeMath")
+dust_width.operation = "MULTIPLY_ADD"
+wire(st, grains, "Fac", dust_width, 0)
+dust_width.inputs[1].default_value = 0.025
+wire(st, alt, "Z", dust_width, 2)
+powder = node(st, "ShaderNodeMapRange")
+powder.interpolation_type = "SMOOTHERSTEP"
+powder.inputs["From Min"].default_value = 0.019
+powder.inputs["From Max"].default_value = 0.050
+wire(st, dust_width, 0, powder, 0)
+opacity = node(st, "ShaderNodeMixShader")
+wire(st, powder, 0, opacity, 0)
+wire(st, node(st, "ShaderNodeBsdfTransparent"), 0, opacity, 1)
+st.links.new(old_surface, opacity.inputs[2])
+wire(st, opacity, 0, surface_out, "Surface")
 bank = field("Sastrugi", bx, by, height, windpack)
 # Register the snow scan in metres so its tangent-space normal map
 # follows the wind ridges continuously across the new surface.
@@ -234,6 +302,10 @@ for nm in windpack.node_tree.nodes:
         nm.inputs["Strength"].default_value = 0.38
 suntarget.objects.link(bank)
 onlysnow.objects.link(bank)
+# Save the opening camera after Blender has evaluated its transform.
+bpy.context.view_layer.update()
+if args.phone_study == "stack":
+    exec((Path(__file__).parent / "portrait.py").read_text())
 # Project the actual solid towards the ice along the solar ray. Two blurred
 # footprints describe the penumbra and the displaced transmitted-light lobe.
 if not night:
@@ -257,13 +329,54 @@ if not night:
     for tri in np.rint(xy[triangles]).astype(int):
         draw.polygon(tuple(tri.ravel().tolist()), fill=255)
     evaluated.to_mesh_clear()
-    footprint = np.asarray(projected.filter(ImageFilter.GaussianBlur(2.2)), np.float32) / 255
-    diffuse = np.asarray(projected.filter(ImageFilter.GaussianBlur(7)), np.float32) / 255
-    focus = np.maximum(np.roll(diffuse, (4, 8), axis=(0, 1)) - footprint, 0)
+    # A finite source integrates over the silhouette. The refracted return
+    # comes from individual thicknesses and dies away well before the full
+    # geometric shadow. All distances in this field are metres.
+    Y, X = np.mgrid[: resolution[1], : resolution[0]] / 48
+    X += extent[0]
+    Y += extent[1]
+    reach = np.maximum(0, (0.13 * X - Y) / east.y)
+
+    def penumbra(radius):
+        return (
+            np.asarray(projected.filter(ImageFilter.GaussianBlur(radius)), np.float32)
+            / 255
+        )
+
+    footprint = penumbra(9) * np.exp(-reach / 6) + penumbra(27) * (
+        1 - np.exp(-reach / 6)
+    )
+    focus = np.zeros_like(X)
+    for lo, hi, islands in glyphs:
+        group = pos[np.isin(components, islands)]
+        centre = group[:, :2].mean(axis=0)
+        for quantile in (0.24, 0.72):
+            edge_x = np.quantile(group[:, 0], quantile)
+            local = group[np.abs(group[:, 0] - edge_x) < 0.07]
+            if not len(local):
+                continue
+            depth = np.ptp(local[:, 1])
+            length = 1.15 + 3.6 * depth
+            dx, dy = X - edge_x, Y - centre[1]
+            along = -(dx * east.x + dy * east.y)
+            across = dx * east.y - dy * east.x
+            bend = 0.19 * np.sin(along * 1.3 + edge_x) + 0.09 * np.sin(
+                along * 3.1 - edge_x
+            )
+            width = 0.12 + 0.34 * depth + 0.092 * np.maximum(0, along)
+            pool = np.exp(
+                -(((across - bend) / width) ** 2)
+                - ((along - length * 0.65) / length) ** 2 * 1.9
+            )
+            focus += pool * (0.33 + 0.24 * np.cos(edge_x * 2.7))
+    mottling = measured_snow("Snow009A", X * 0.32, Y * 0.37)
+    focus = np.minimum(0.76, focus) * (0.52 + 0.91 * mottling) * np.exp(-reach / 6)
     rgba = np.ones((resolution[1], resolution[0], 4), np.float32)
     rgba[:, :, 0] = footprint
     rgba[:, :, 1] = focus
-    rays = bpy.data.images.new("Solar footprint and refracted edges", *resolution, float_buffer=True)
+    rays = bpy.data.images.new(
+        "Solar footprint and refracted edges", *resolution, float_buffer=True
+    )
     rays.pixels.foreach_set(rgba.ravel())
     rays.update()
     mat = bpy.data.materials.new("Shadows in the lake skin")
@@ -282,17 +395,19 @@ if not night:
     wire(tr, image, 0, channels, 0)
     tint = node(tr, "ShaderNodeMixRGB")
     tint.inputs[1].default_value = (1, 1, 1, 1)
-    tint.inputs[2].default_value = (0.24, 0.33, 0.38, 1)
+    tint.inputs[2].default_value = (0.41, 0.48, 0.50, 1)
     wire(tr, channels, 0, tint, 0)
     transmit = node(tr, "ShaderNodeBsdfTransparent")
     wire(tr, tint, 0, transmit, 0)
-    beam = node(tr, "ShaderNodeEmission", Color=(0.16, 0.35, 0.28, 1))
+    beam = node(tr, "ShaderNodeEmission", Color=(0.24, 0.39, 0.33, 1))
     wire(tr, channels, 1, beam, 1)
     combine_rays = node(tr, "ShaderNodeAddShader")
     wire(tr, transmit, 0, combine_rays, 0)
     wire(tr, beam, 0, combine_rays, 1)
     wire(tr, combine_rays, 0, tr.nodes.get("Material Output"), "Surface")
-    shadows = sheet("Transmitted dawn on the lake", [-17, 9], [-16, 6], lambda x, y: 0.003, mat)
+    shadows = sheet(
+        "Transmitted dawn on the lake", [-17, 9], [-16, 6], lambda x, y: 0.003, mat
+    )
     shadows.visible_shadow = False
 
 # The broad cut carries a cool satin skin. Keep the grazing sidewalls on
@@ -311,6 +426,12 @@ wire(t, sawn, 0, surface_finish, 0)
 wire(t, result, 0, surface_finish, 1)
 wire(t, satin, 0, surface_finish, 2)
 wire(t, surface_finish, 0, iceout, "Surface")
+
+# Three connected, dipping fracture faces in the exposed eastern lead.
+# Their shared junctions lead into hairline splays.
+breakwall("East lead main fracture", -0.75, -8.1, 3.5, 7.0, 0.143, 0.64)
+breakwall("East lead splay", 0.89, -4.8, 2.5, 3.5, 0.071, 1.8)
+breakwall("East lead hairline", 2.2, -3.1, -0.45, 2.3, 0.037, 2.4)
 
 # Survey both viewing gates in the establishing camera's coordinate system.
 # The supplemental bake has overscan so the turn can start before reaching it.

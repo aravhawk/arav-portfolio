@@ -23,7 +23,7 @@ vec3 readApproach(vec3 primary,bool slab,float uncovered){
     vec2 baseUV=(clamp(uv*vec2(128.,64.),vec2(.5),vec2(127.5,63.5))+vec2(0.,448.))/512.;
     sampleColor=textureLod(baseMap,baseUV,0.).rgb+(sampleColor-.5)*.625;
     if(edge.y<.017)sampleColor=mix(sampleColor,tallField(uv,1.),1.-smoothstep(-.018,.017,edge.y));
-    weight*=smoothstep(-.35,-.27,edge.x);
+    weight*=smoothstep(-.015,.012,edge.x);
   }else{
     if(max(max(sampleColor.r,sampleColor.g),sampleColor.b)<.04)return primary;
     weight*=smoothstep(-.025,.003,min(edge.x,edge.y));
@@ -77,15 +77,43 @@ const field = `vec3 readField(sampler2D detail,sampler2D baseMap,vec2 p,vec2 ban
 }
 vec3 fromShape(vec3 c){return max(vec3(0.),(exp2(14.*c)-1.)/1024.);}
 vec3 toShape(vec3 c){return log2(1.+1024.*max(c,vec3(0.)))/14.;}`;
+// Both cameras share the same frozen surface, sampled in metres. The
+// bake supplies the diffuse field. Only the tiny facets facing the low
+// sun brighten as the viewing direction crosses the reflection.
+export const lakeSurface = `
+uniform sampler2D lakeUV,grain,fractures;
+uniform float daylight;
+vec3 nearSurface(vec2 metres,vec2 uvLake,vec3 direction){
+  vec4 baked=texture(lakeUV,uvLake);
+  float mask=clamp((baked.a*255.-64.)/191.,0.,1.);
+  vec3 detail=texture(grain,metres*vec2(.68,1.16)).rgb;
+  float crystal=texture(grain,metres*6.13).r;
+  float dust=mask+(detail.b-.5)*.15+(detail.r-.5)*.15+(crystal-.5)*.11;
+  float frost=smoothstep(.36,.64,dust);
+  vec3 stepColor=mix(vec3(.285,.245,.203),vec3(.315,.288,.275),daylight);
+  vec3 field=baked.rgb+frost*stepColor;
+  field+=((detail.r-.5)*.040+(crystal-.5)*.024+(detail.b-.5)*.010)*mix(.21,1.,frost);
+  vec2 joint=texture(fractures,uvLake).rg;
+  float side=joint.r*2.05-.55+(crystal-.5)*.09;
+  float lip=1.-smoothstep(.018,.085,abs(side));
+  float wall=smoothstep(.015,.19,side)*(1.-smoothstep(.49,.93,side));
+  float air=(.68*lip+wall*(.35+.40*detail.r))*joint.g*(1.-frost);
+  field+=air*mix(vec3(.10,.13,.14),vec3(.18,.21,.225),daylight);
+  vec3 delta=(normalize(direction)-normalize(vec3(.80,.98,-.077)))*vec3(1.,.5,.25);
+  float path=1.-smoothstep(.013,.099,length(delta));
+  return mix(field,vec3(.774,.767,.746),daylight*path*(1.-frost)*detail.g*.82);
+}`;
 export const groundFragment = `#version 300 es
 precision highp float;
 in vec3 projected,world;
 uniform sampler2D atlas,baseMap;
+${lakeSurface}
+uniform vec4 waterPlane,eastAxis,northAxis;
 uniform vec3 eye;
 out vec4 color;
 ${field}
 ${approach}
-void main(){
+vec3 surveyedGround(){
   vec2 uv=.5+.5*projected.xy/projected.z;
   vec3 c=readField(atlas,baseMap,uv,vec2(0.,320.));
   if(uv.y<.017 || uv.y>.983){
@@ -96,7 +124,35 @@ void main(){
   // only the optical-path change when the camera enters the basin.
   float path=clamp((world.z-32.)*.012,0.,1.)*max(-eye.z,0.)*.004;
   float uncovered=1.-smoothstep(-.025,.003,min(uv.x,1.-uv.x));
-  color=vec4(readApproach(mix(c,vec3(.59,.60,.605),path),false,uncovered),0.);
+  return readApproach(mix(c,vec3(.59,.60,.605),path),false,uncovered);
+}
+void main(){
+  // Evaluate the camera field across the whole fragment quad. Its mip
+  // derivatives stay continuous where the metric survey begins.
+  vec3 surveyed=surveyedGround();
+  // Intersect the viewing ray with the physical lake, including pixels
+  // uncovered between survey samples. Orthographic baking gives constant
+  // texels per metre on both the windbank and the exposed ice.
+  vec3 ray=world-eye;
+  float vertical=dot(waterPlane.xyz,ray);
+  if(vertical<-.0001){
+    float t=-dot(waterPlane,vec4(eye,1.))/vertical;
+    vec4 hit=vec4(eye+t*ray,1.);
+    vec2 metres=vec2(dot(eastAxis,hit),dot(northAxis,hit));
+    vec2 uvLake=(metres*vec2(1.,-1.)+vec2(10.,3.))/vec2(18.,16.);
+    vec2 edge=min(uvLake,1.-uvLake)*vec2(18.,16.);
+    float along=metres.y-.13*metres.x;
+    float distanceToEye=length(hit.xyz-eye);
+    float mixLake=(1.-smoothstep(-2.0,-.74,along))*(1.-smoothstep(4.8,7.1,distanceToEye))
+                  *smoothstep(.04,.54,min(edge.x,edge.y));
+    if(mixLake>0.){
+      vec3 direction=vec3(dot(eastAxis.xyz,ray),dot(northAxis.xyz,ray),vertical);
+      vec3 local=nearSurface(metres,uvLake,direction);
+      color=vec4(mix(surveyed,local,mixLake),0.);
+      return;
+    }
+  }
+  color=vec4(surveyed,0.);
 }`;
 
 export const iceFragment = `#version 300 es
@@ -149,10 +205,10 @@ vec2 project(vec2 p,float depth){
 }
 void main(){
   vec2 bg=project(uv,600.);
-  float glow=texture(field,vec2(bg.x,(clamp(bg.y,0.,1.)*319.+.5)/512.)).a;
+  float glow=(texture(field,vec2(bg.x,(clamp(bg.y,0.,1.)*319.+.5)/512.)).a-128./255.)*(255./127.);
   vec2 slab=(project(uv,11.)-crop.xy)/crop.zw;
   if(all(greaterThan(slab,vec2(0.)))&&all(lessThan(slab,vec2(1.)))){
-    float rim=texture(field,vec2(slab.x,(slab.y*111.+328.5)/512.)).a;
+    float rim=(texture(field,vec2(slab.x,(slab.y*111.+328.5)/512.)).a-128./255.)*(255./127.);
     vec2 n=textureLod(mat,slab,3.).rg*2.-1.;
     float glint=pow(max(0.,dot(n,normalize(vec2(.81+.04*sin(time*.37),.49)))),18.);
     glow+=rim*(1.+.25*glint);
@@ -168,6 +224,7 @@ uniform sampler2D scene,bloom;
 uniform sampler3D grade;
 uniform vec2 invResolution;
 uniform vec4 slabBounds;
+uniform float bloomGain;
 out vec4 color;
 void main(){
   vec4 centre=texture(scene,uv);
@@ -188,10 +245,12 @@ void main(){
                          texture(scene,uv+vec2(px.x,-px.y))+texture(scene,uv+vec2(-px.x,px.y)));
     c=mix(c,neighbours.rgb,smoothstep(.01,.13,abs(neighbours.a-centre.a))*.89);
   }
-  c+=textureLod(bloom,uv,1.65).rgb*.0028;
+  c+=textureLod(bloom,uv,1.65).rgb*bloomGain;
   vec3 shaped=clamp(c,0.,1.);
   float dither=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))-.5;
-  color=vec4(texture(grade,(shaped*31.+.5)/32.).rgb+dither/255.,1.);
+  float chromaNoise=fract(52.9829189*fract(dot(gl_FragCoord.yx,vec2(.06711056,.00583715))))-.5;
+  shaped+=vec3(dither+.32*chromaNoise,dither,dither-.32*chromaNoise)*.0038;
+  color=vec4(texture(grade,(shaped*31.+.5)/32.).rgb+chromaNoise*1.5/255.,1.);
 }`;
 
 export const driftVertex = `#version 300 es

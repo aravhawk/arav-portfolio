@@ -1,3 +1,4 @@
+import { portraitBloom, portraitGround, portraitIce, portraitMesh } from './portrait';
 import {
   bloomFragment,
   driftFragment,
@@ -12,6 +13,23 @@ import {
 export type DrawInfo = { indices: number; vertices: number; low: number[]; span: number[] };
 type Meta = {
   plane: number[];
+  lakeAxes: number[][];
+  phone: {
+    eye: number[];
+    axes: number[];
+    baseAxes: number[];
+    baseEye: number[];
+    offsets: number[][];
+    split: number;
+    farScale: number;
+    cuts: number[];
+    spacing: number[];
+    half: number;
+    shift: number;
+    guard: number;
+    groundPart: number;
+    slabTop: number;
+  };
   crop: number[];
   size: number[];
   half: number[];
@@ -34,14 +52,11 @@ type TextureMessage = {
 type Message =
   | MeshMessage
   | TextureMessage
+  | { kind: 'bitmap'; index: number; bitmap: ImageBitmap }
   | { kind: 'done'; resources: { name: string; start: number; end: number; bytes: number }[] }
   | { kind: 'error'; message: string };
 type Program = { id: WebGLProgram; u: Record<string, WebGLUniformLocation> };
 export type Pose = { x: number; y: number; z: number; t: number; progress: number };
-function verticalAim(pose: Pose, ratio: number) {
-  return pose.y * 0.19 + (ratio <= 1 ? 0.18 : 0);
-}
-
 export const rest: Pose = { x: 0, y: 0, z: 0, t: 0, progress: 0 };
 export const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 export const stages = ['refraction', 'bloom', 'ground', 'slab', 'drift', 'grade'] as const;
@@ -63,6 +78,7 @@ export class LakeGPU {
   private readonly textures: WebGLTexture[] = [];
   private lut!: WebGLTexture;
   private meta!: Meta;
+  private daylight = 1;
   private targets: Target[] = [];
   private empty: WebGLVertexArrayObject;
   assetMemory = 0;
@@ -86,6 +102,9 @@ export class LakeGPU {
   private async compile() {
     const gl = this.gl;
     const sources = {
+      portraitBloom: [fullVertex, portraitBloom],
+      portraitGround: [fullVertex, portraitGround],
+      portraitIce: [portraitMesh, portraitIce],
       ground: [meshVertex, groundFragment],
       ice: [meshVertex, iceFragment],
       bloom: [fullVertex, bloomFragment],
@@ -120,6 +139,7 @@ export class LakeGPU {
     performance.mark('lake:programs-ready');
   }
   async load(theme: string) {
+    this.daylight = theme === 'night' ? 0 : 1;
     const gl = this.gl;
     const etc = gl.getExtension('WEBGL_compressed_texture_etc');
     const s3 = gl.getExtension('WEBGL_compressed_texture_s3tc');
@@ -151,6 +171,29 @@ export class LakeGPU {
           .then(async () => {
             if (this.disposed) return;
             if (data.kind === 'mesh') this.uploadMesh(data);
+            if (data.kind === 'bitmap') {
+              const tex = gl.createTexture()!;
+              gl.bindTexture(gl.TEXTURE_2D, tex);
+              gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data.bitmap);
+              gl.generateMipmap(gl.TEXTURE_2D);
+              this.filter(gl.TEXTURE_2D, true);
+              if (data.index === 8 || data.index === 10 || data.index === 11) {
+                const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+                if (aniso)
+                  gl.texParameterf(
+                    gl.TEXTURE_2D,
+                    aniso.TEXTURE_MAX_ANISOTROPY_EXT,
+                    Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)),
+                  );
+              }
+              if (data.index === 10) {
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+              }
+              this.textures[data.index] = tex;
+              this.assetMemory += Math.ceil((data.bitmap.width * data.bitmap.height * 16) / 3);
+              data.bitmap.close();
+            }
             if (data.kind === 'texture') await this.uploadTexture(data);
             if (data.kind === 'done') {
               for (const r of data.resources)
@@ -305,41 +348,151 @@ export class LakeGPU {
     gl.bindVertexArray(draw.vao);
     gl.drawElements(gl.TRIANGLES, draw.info.indices, gl.UNSIGNED_SHORT, 0);
   }
+  private drift(
+    eye: number[],
+    lens: number[],
+    aim: number[],
+    rotation: number[],
+    plane: number[],
+    time: number,
+  ) {
+    const gl = this.gl;
+    gl.bindVertexArray(this.empty);
+    const drift = this.programs.drift;
+    gl.useProgram(drift.id);
+    gl.uniform1f(drift.u.time, time);
+    gl.uniform1f(drift.u.dpr, Math.min(2, devicePixelRatio));
+    gl.uniform3fv(drift.u.eye, eye);
+    gl.uniform4fv(drift.u.waterPlane, plane);
+    gl.uniform2fv(drift.u.lens, lens);
+    gl.uniform2fv(drift.u.aim, aim);
+    gl.uniform4fv(drift.u.rotation, rotation);
+    gl.depthMask(false);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.drawArrays(gl.POINTS, 0, 540);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+  }
+  private drawPortrait(travel: Pose, output: WebGLFramebuffer | null, last: number, showSlab: boolean) {
+    const gl = this.gl;
+    const [target, , bloom] = this.targets;
+    const p = this.meta.phone;
+    // Truck obliquely between the contact lines. The guard includes the
+    // complete path and pointer travel on narrow portrait devices.
+    const firstHalf =
+      (1 + 0.2 * travel.progress) *
+      Math.min(p.half, (p.half * p.guard * (target.w / target.h)) / (390 / 844));
+    const lens = [firstHalf, (firstHalf * target.h) / target.w];
+    const eye = [
+      travel.x + 0.32 * travel.progress,
+      travel.y - 0.18 * travel.progress,
+      travel.z + 0.95 * travel.progress,
+    ];
+    const gate = (program: Program) => {
+      const u = program.u;
+      gl.useProgram(program.id);
+      gl.uniformMatrix3fv(u.phoneAxes, false, p.axes);
+      gl.uniform3fv(u.sourceEye, p.eye);
+      gl.uniform3fv(u.eye, eye);
+      gl.uniform2fv(u.lens, lens);
+      gl.uniform2f(u.gateHalf, p.half * p.guard, (p.half * p.guard * 844) / 390);
+      gl.uniform1f(u.gateShift, p.shift);
+      gl.uniform1f(u.tilt, -0.12 * travel.progress);
+      gl.uniform1f(u.pan, -eye[0] / 6.3);
+      gl.uniform1f(u.groundPart, p.groundPart);
+      this.texture(u.plate, 0, this.textures[9]);
+    };
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target.fbo);
+    gl.viewport(0, 0, target.w, target.h);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    const ground = this.programs.portraitGround;
+    gate(ground);
+    gl.uniform1f(ground.u.daylight, this.daylight);
+    this.texture(ground.u.fractures, 3, this.textures[11]);
+    this.texture(ground.u.grain, 2, this.textures[10]);
+    this.texture(ground.u.lakeUV, 1, this.textures[8]);
+    gl.bindVertexArray(this.empty);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (last <= 3) return;
+    const ice = this.programs.portraitIce;
+    gate(ice);
+    const u = ice.u,
+      draw = this.draws[1];
+    gl.uniform3fv(u.low, draw.info.low);
+    gl.uniform3fv(u.span, draw.info.span);
+    gl.uniform1f(u.time, travel.t);
+    gl.uniform1f(u.splitX, p.split);
+    gl.uniform1f(u.farScale, p.farScale);
+    gl.uniform3fv(u.cuts, p.cuts);
+    gl.uniform4fv(u.spacing, p.spacing);
+    gl.uniform1f(u.slabTop, p.slabTop);
+    gl.uniformMatrix3fv(u.baseAxes, false, p.baseAxes);
+    gl.uniform3fv(u.baseEye, p.baseEye);
+    gl.uniform3fv(u.farOffset, p.offsets[0]);
+    gl.uniform3fv(u.nearOffset, p.offsets[1]);
+    gl.enable(gl.DEPTH_TEST);
+    gl.bindVertexArray(draw.vao);
+    if (showSlab) gl.drawElements(gl.TRIANGLES, draw.info.indices, gl.UNSIGNED_SHORT, 0);
+    if (last === 4) return;
+    this.drift(
+      eye,
+      lens,
+      [eye[0] / (6.3 * lens[0]), (-p.shift + 0.12 * travel.progress) / lens[1]],
+      [0, 0, 0, 1],
+      [p.axes[2], p.axes[5], p.axes[8], p.eye[2]],
+      travel.t,
+    );
+    gl.disable(gl.DEPTH_TEST);
+    gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.DEPTH_ATTACHMENT]);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, bloom.fbo);
+    gl.viewport(0, 0, bloom.w, bloom.h);
+    const glow = this.programs.portraitBloom;
+    gl.useProgram(glow.id);
+    this.texture(glow.u.field, 0, target.tex);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindTexture(gl.TEXTURE_2D, bloom.tex);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.viewport(0, 0, target.w, target.h);
+    if (last < 6) return;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, output);
+    gl.bindVertexArray(this.empty);
+    const post = this.programs.post;
+    gl.useProgram(post.id);
+    this.texture(post.u.scene, 0, target.tex);
+    this.texture(post.u.bloom, 1, bloom.tex);
+    this.texture(post.u.grade, 2, this.lut, true);
+    gl.uniform1f(post.u.bloomGain, 0.0028);
+    gl.uniform4f(post.u.slabBounds, 0, 0, 1, 1);
+    gl.uniform2f(post.u.invResolution, 1 / target.w, 1 / target.h);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
   draw(travel: Pose, output: WebGLFramebuffer | null = null, last = 6, showSlab = true) {
     const gl = this.gl,
       [scene, copy, a] = this.targets,
       { w, h } = scene;
     const ratio = w / h;
     const half = this.meta.half;
-    const phone = w <= h;
-    const s = travel.progress;
+    if (w <= h) return this.drawPortrait(travel, output, last, showSlab);
+    const s = 0.855 * travel.progress;
     const end = this.meta.approach;
-    const lensX = half[0] + s * (end.half[0] - half[0]);
+    const lensX = half[0] + s * (0.92 * end.half[0] - half[0]);
     const lens = [lensX, lensX / ratio];
-    // At the close gate the optical framing carries the portrait composition.
-    // Converge on its surveyed eye so the near snow stays inside the bake.
-    const portraitOffset = phone ? 1 - s : 0;
     const pose = {
       ...travel,
-      x: travel.x + s * end.eye[0] - 0.1 * portraitOffset,
-      y: travel.y + s * end.eye[1] + 0.04 * portraitOffset,
-      z: travel.z + s * end.eye[2] - 0.18 * portraitOffset,
+      progress: s,
+      x: travel.x + s * end.eye[0],
+      y: travel.y + s * end.eye[1],
+      z: travel.z + s * end.eye[2],
     };
-    const aim = [travel.x * 0.12, verticalAim(travel, ratio)];
-    // Interpolate the surveyed rotations, then roll the portrait camera
-    // about its own optical axis to carry the row upward in the tall gate.
+    const aim = [travel.x * 0.12, travel.y * 0.19];
     const [xq, yq, zq, wq] = end.rotation;
     const q = [s * xq, s * yq, s * zq, 1 + s * (wq - 1)];
     const length = Math.hypot(...q);
-    const angle = phone ? 0.035 : 0;
-    const c = Math.cos(angle),
-      sn = Math.sin(angle);
-    const rotation = [
-      (c * q[0] - sn * q[1]) / length,
-      (sn * q[0] + c * q[1]) / length,
-      (c * q[2] + sn * q[3]) / length,
-      (c * q[3] - sn * q[2]) / length,
-    ];
+    const rotation = q.map((v) => v / length);
     const bind = (t: Target) => {
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
       gl.viewport(0, 0, t.w, t.h);
@@ -351,6 +504,13 @@ export class LakeGPU {
       bind(target);
       if (target === scene) gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.useProgram(gp.id);
+      gl.uniform4fv(gp.u.waterPlane, this.meta.plane);
+      gl.uniform4fv(gp.u.eastAxis, this.meta.lakeAxes[0]);
+      gl.uniform4fv(gp.u.northAxis, this.meta.lakeAxes[1]);
+      gl.uniform1f(gp.u.daylight, this.daylight);
+      this.texture(gp.u.fractures, 2, this.textures[11]);
+      this.texture(gp.u.grain, 3, this.textures[10]);
+      this.texture(gp.u.lakeUV, 7, this.textures[8]);
       this.texture(gp.u.extension, 5, this.textures[5]);
       this.texture(gp.u.atlas, 0, this.textures[0]);
       this.texture(gp.u.baseMap, 1, this.textures[4]);
@@ -401,21 +561,7 @@ export class LakeGPU {
     this.texture(ice.u.secondView, 6, this.textures[7]);
     if (showSlab) this.mesh(ice, this.draws[1], pose, lens, rotation, aim);
     if (last === 4) return;
-    gl.bindVertexArray(this.empty);
-    const drift = this.programs.drift;
-    gl.useProgram(drift.id);
-    gl.uniform1f(drift.u.time, pose.t);
-    gl.uniform1f(drift.u.dpr, Math.min(2, devicePixelRatio));
-    gl.uniform3f(drift.u.eye, pose.x, pose.y, pose.z);
-    gl.uniform4fv(drift.u.waterPlane, this.meta.plane);
-    gl.uniform2fv(drift.u.lens, lens);
-    gl.uniform2fv(drift.u.aim, aim);
-    gl.uniform4fv(drift.u.rotation, rotation);
-    gl.depthMask(false);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.drawArrays(gl.POINTS, 0, 540);
-    gl.depthMask(true);
+    this.drift([pose.x, pose.y, pose.z], lens, aim, rotation, this.meta.plane, pose.t);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
     gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.DEPTH_ATTACHMENT]);
@@ -429,7 +575,8 @@ export class LakeGPU {
     this.texture(post.u.grade, 2, this.lut, true);
     // At rest the bake's crop bounds are exact. The travelling and
     // portrait cameras can expose sidewalls outside the first silhouette.
-    if (s > 0.02 || phone) gl.uniform4f(post.u.slabBounds, 0, 0, 1, 1);
+    gl.uniform1f(post.u.bloomGain, 0.0028);
+    if (s > 0.02) gl.uniform4f(post.u.slabBounds, 0, 0, 1, 1);
     else {
       const scaleX = half[0] / lens[0];
       const scaleY = half[1] / lens[1];
@@ -509,8 +656,8 @@ export class LakeGPU {
         main: med(cpu),
         cumulative: results,
         textureAndTargetBytes: memory,
-        draws: 6,
-        triangles: this.triangles,
+        draws: w <= h ? 5 : 6,
+        triangles: w <= h ? this.draws[1].info.indices / 3 + 3 : this.triangles,
         renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'unknown',
       };
     } finally {

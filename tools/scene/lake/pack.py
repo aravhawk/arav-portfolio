@@ -3,7 +3,6 @@ import argparse
 import gzip
 import json
 import os
-import shutil
 import subprocess
 from pathlib import Path
 import bpy
@@ -18,6 +17,8 @@ parser.add_argument("destination",type=Path)
 parser.add_argument("--theme",choices=("day","night"),default="day")
 parser.add_argument("--shared",type=Path,help="Day geometry and optics for a second lighting bake")
 parser.add_argument("--portrait",type=Path,help="Wide-angle portrait ground outside the desktop camera")
+parser.add_argument("--lake-only",action="store_true",help="Encode a revised metric surface")
+parser.add_argument("--phone-only",action="store_true",help="Encode a revised two-row portrait survey")
 args=parser.parse_args()
 src,dest=args.folder,args.destination
 dest.mkdir(exist_ok=True,parents=True)
@@ -46,15 +47,55 @@ def encode(rgb):
     # opponent axes so block compression cannot turn fog purple and green.
     coded=np.stack((.25*r+.5*g+.25*b,.5+4*(r-g),.5+4*(b-g)),axis=-1)
     return np.uint8(np.rint(np.clip(coded,0,1)*255))
-def ktx(name,pixels,quality,universal=False):
+def ktx(name,pixels,quality):
     pixels.save(src/(name+'.png'))
-    codec=["--encode","uastc","--uastc_quality","3","--uastc_rdo_l",("4.2" if theme=="night" or name.startswith("portrait") else "3.2"),"--zcmp","18"] if universal else ["--encode","etc1s","--qlevel",str(quality),"--clevel","4"]
-    if not universal and name!="environment":
+    codec=["--encode","etc1s","--qlevel",str(quality),"--clevel","4"]
+    if name!="environment":
         # Texture extent stays fixed. Rate-distortion selects fewer similar
         # block patterns in the scanned frost and fragment normals.
         codec+=["--endpoint_rdo_threshold","2.8","--selector_rdo_threshold","3"]
     subprocess.run([os.environ.get("TOKTX","toktx"),"--t2",*codec,"--genmipmap","--assign_oetf","linear","--assign_primaries","bt709",
                     str(dest/(name+".ktx2")),str(src/(name+'.png'))],check=True)
+def field_avif(name, signal, quality):
+    # Dither in the log radiance domain before quantization.
+    noise = np.random.default_rng(340).uniform(-.5,.5,signal.shape[:2]).astype(np.float32)
+    pixels = np.uint8(np.clip(np.rint(255*signal + noise[:,:,None]),0,255))
+    Image.fromarray(pixels).save(dest/(name+".avif"),quality=quality,speed=6,subsampling="4:4:4")
+if not args.phone_only:
+    # Both themes share the same metre grid. The log scale retains detail in
+    # black ice and snow in a single RGB sample, independent of either camera.
+    if theme == "day":
+        from surface_detail import bake_detail
+        bake_detail(dest)
+    from lake_field import encode_lake
+    encode_lake(Image.open(shared/("lake-uv-"+theme+".png")),Image.open(shared/"lake-uv-day.png"),
+                radiance,dest/("lake-uv-"+theme+".avif"),theme=="night")
+    if args.lake_only:
+        raise SystemExit(0)
+phone_folder = shared / ("phone-" + theme)
+phone = json.loads((phone_folder/"portrait.json").read_text())
+phone_clean = Image.open(phone_folder/"ground.png").convert("RGB")
+phone_layer = np.asarray(Image.open(phone_folder/(theme+".png")).convert("RGB"))
+phone_mask = np.asarray(Image.open(phone_folder/"name-0001.png").convert("L"))>127
+dist, nearest = distance_transform_edt(~phone_mask, return_indices=True)
+# Both themes address the same atlas region. The anti-aliased object
+# coverage in a separate lighting render can differ by a few pixels.
+bounds_mask=np.asarray(Image.open(shared/"phone-day"/"name-0001.png").convert("L"))>127
+y,x = np.where(bounds_mask)
+start = max(0,(y.min()-16)//4*4)
+stop = min(phone_clean.height,(y.max()+19)//4*4)
+slabs = phone_layer[tuple(nearest)][start:stop].copy()
+slabs[dist[start:stop]>14] = 0
+atlas = Image.new("RGB",(phone_clean.width,phone_clean.height+stop-start))
+atlas.paste(phone_clean)
+atlas.paste(Image.fromarray(slabs),(0,phone_clean.height))
+field_avif("two-rows-"+theme,np.log2(1+1024*radiance(atlas))/14,75)
+phone.update(slabTop=float(start/phone_clean.height), groundPart=float(phone_clean.height/atlas.height))
+meta["phone"] = phone
+if args.phone_only:
+    if theme == "day":
+        (dest/'mesh.json').write_text(json.dumps(meta,separators=(',',':')))
+    raise SystemExit(0)
 size=tuple(meta['size'])
 source=Image.open(src/(theme+'.png')).resize(size,Image.Resampling.LANCZOS)
 ground=Image.open(src/'ground.png')
@@ -125,7 +166,7 @@ table[1:]=table[1:]-table[:-1]
 (dest/('grade-'+theme+'.rgb.gz')).write_bytes(gzip.compress(table.T.tobytes(),mtime=0))
 if theme=='day':
     (dest/'lake.meshopt.gz').write_bytes(gzip.compress((src/'geometry.bin').read_bytes(),mtime=0))
-    shutil.copyfile(src/'mesh.json',dest/'mesh.json')
+    (dest/'mesh.json').write_text(json.dumps(meta,separators=(',',':')))
     # Render a small environment lookup from the CC0 panorama in eye space.
     hd=bpy.data.images.load(str(Path.home()/'.t3/portfolio-redesign-v4/assets-src/frozen_lake_2k.hdr'))
     buf=np.empty(hd.size[1]*hd.size[0]*4,np.float32);hd.pixels.foreach_get(buf)
@@ -181,15 +222,17 @@ ground_signal=np.log2(1+1024*radiance(clean))/14
 add_gate(ground_signal,0)
 body_signal=np.log2(1+1024*radiance(Image.fromarray(padded)))/14
 ktx('approach-body-'+theme,Image.fromarray(np.uint8(np.rint(255*body_signal.clip(0,1)))),85)
-ktx("base-"+theme,base_image,0,True)
+# Native 4:4:4 coding keeps smooth gradients and avoids block endpoints
+# on magnified sky. Preserve colour even in the zero-bloom parts of the atlas.
+rgba = np.asarray(base_image).copy()
+rgba[:,:,3] = 128 + np.rint(rgba[:,:,3] * (127 / 255)).astype(np.uint8)
+base_file = dest / ("base-" + theme + ".avif")
+Image.fromarray(rgba).save(base_file,quality=84,speed=6,subsampling="4:4:4")
 
 # A nearly uniform sky can expose the endpoint choices of a compressed
 # block after magnification. Decode the shipped low field before computing
 # the correction, including chroma and the hard change across the skyline.
-tool=Path(os.environ.get("TOKTX","toktx")).with_name("ktx")
-decoded=src/('decoded-base-'+theme+'.png')
-subprocess.run([str(tool),'extract','--transcode','rgba8',str(dest/('base-'+theme+'.ktx2')),str(decoded)],check=True)
-decoded_base=Image.open(decoded).convert('RGB')
+decoded_base=Image.open(base_file).convert("RGB")
 def correction(signal,column):
     low=np.asarray(decoded_base.crop((128*column,448,128*(column+1),512)),np.float32)/255
     size=(signal.shape[1],signal.shape[0])

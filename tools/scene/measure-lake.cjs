@@ -3,7 +3,7 @@
 const { chromium } = require('playwright');
 const fs = require('node:fs');
 const path = require('node:path');
-const out = process.env.LAKE_EVIDENCE || '.tools/out/o2b';
+const out = process.env.LAKE_EVIDENCE || '.tools/out/o2c';
 const modes = new Set(process.argv.slice(2));
 const theme = process.env.LAKE_THEME || 'light';
 const profile = process.env.LAKE_PROFILE || 'desktop';
@@ -75,12 +75,28 @@ const dump = (file, data) => save(file, JSON.stringify(data, null, 2));
       savePng(prefix + '-ground.png', await page.evaluate(() => window.__lakeProof.capture(false)));
       savePng(prefix + '-close.png', await page.evaluate(() => window.__lakeProof.frame(1, 0, 0)));
     }
+    if (modes.has('sweep')) {
+      const dir = path.join(out, 'sweep', prefix);
+      fs.mkdirSync(dir, { recursive: true });
+      await page.evaluate(() => window.__lakeProof.sample(true));
+      const positions = [];
+      for (let i = 0; i <= 20; i++) {
+        await page.evaluate((i) => window.scrollTo({ top: (i * innerHeight) / 10, behavior: 'instant' }), i);
+        await page.waitForTimeout(1450);
+        const screens = await page.evaluate(() => scrollY / innerHeight);
+        if (Math.abs(screens - i / 10) > 0.002) throw Error('Unexpected scroll position ' + screens);
+        positions.push(screens);
+        await page.screenshot({ path: path.join(dir, String(i).padStart(2, '0') + '.png') });
+      }
+      dump(prefix + '-positions.json', positions);
+      await page.evaluate(() => {
+        window.__lakeProof.sample(false);
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      });
+    }
     if (modes.has('motion')) {
       for (let i = 0; i < 8; i++) {
-        await page.evaluate(
-          (s) => window.scrollTo({ top: s * 2 * innerHeight, behavior: 'instant' }),
-          i / 7,
-        );
+        await page.evaluate((s) => window.scrollTo({ top: s * 2 * innerHeight, behavior: 'instant' }), i / 7);
         await page.waitForTimeout(830);
         await page.screenshot({ path: path.join(out, 'scroll-' + i + '.png') });
       }
@@ -127,10 +143,7 @@ const dump = (file, data) => save(file, JSON.stringify(data, null, 2));
             [3456, 2234],
             [5120, 2880],
           ]) {
-        const cost = await page.evaluate(
-          ([w, h]) => window.__lakeProof.measure(w, h, w === 3456),
-          [w, h],
-        );
+        const cost = await page.evaluate(([w, h]) => window.__lakeProof.measure(w, h, w === 3456), [w, h]);
         costs.push(cost);
         console.log(cost);
         dump(prefix + '-cost.json', costs);

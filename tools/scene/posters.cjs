@@ -6,7 +6,7 @@ const fs = require('node:fs'),
   path = require('node:path'),
   os = require('node:os');
 (async () => {
-  const temp = '.tools/out/o2b/bake/posters';
+  const temp = '.tools/out/o2c/bake/posters';
   fs.mkdirSync(temp, { recursive: true });
   const browser = await chromium.launch({
     headless: false,
@@ -29,12 +29,7 @@ const fs = require('node:fs'),
         const python = path.join(os.homedir(), '.t3/portfolio-redesign-v4/tools/bake-venv/bin/python');
         const result = spawnSync(
           python,
-          [
-            'tools/scene/still.py',
-            png,
-            'public/scene/lake/' + name + '.avif',
-            String(phone ? 860 : 2880),
-          ],
+          ['tools/scene/still.py', png, 'public/scene/lake/' + name + '.avif', String(phone ? 860 : 2880)],
           { stdio: 'inherit' },
         );
         if (result.status !== 0) throw Error('AVIF encode failed');
