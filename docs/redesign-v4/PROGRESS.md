@@ -1652,3 +1652,30 @@ in its own checkout, makes the cost measurement repeatable, brings
 every stop to its ceiling or under, restores the name's contrast (4.5
 to 1 by day, 3 to 1 before dawn) with the glare kept, and then gives
 the ice the depth it lacks.
+
+### A2b reviewed: cost paid back, the name's contrast not; third pass sent (Nov 19)
+
+A2b (codex / gpt-6.2-astra / high) applied A2 in its own checkout
+and worked on cost only. It called itself incomplete.
+
+- **Cost**: the first screen by day is 11.72 ms against a ceiling of
+  14.96, one screen in is 16.54 against 21.24; 32 of 38 cases are
+  under their ceilings and four inside the noise; two were over in
+  one sweep (Agent Bridge by day, 23.5 screens before dawn) and under
+  in a later window. It also showed that this machine's absolute
+  frame times drift by 2 to 3 ms between measuring windows on
+  unchanged shaders, so from here cost is judged by comparing two
+  builds alternately in one session. I accept its cost on that
+  evidence.
+- **The name**: its faces against the ground behind them measure
+  1.90 to 3.81 to 1 by day and 1.75 to 2.76 to 1 before dawn at every
+  width, against floors of 4.5 and 3. That is why none of the one-ice
+  work is integrated: the branch is unchanged by it. Whether the
+  pushed head already had lost some of the name's contrast to the
+  light passes is not yet measured; the third pass measures it first.
+- **Depth**: not started.
+
+Sent back as **A2c** (running now, alone, same model and effort): the
+name clear of the lake at the floors with the glare kept, then the
+block's, the columns' and the plates' depth, with cost judged by
+same-session comparison.
