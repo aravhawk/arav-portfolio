@@ -56,8 +56,15 @@ Apply `inAir` over the complete camera path after shading.
 
 Measure a change at the composed stops and between them, including the
 opening melt. At 1440 × 900 and DPR 2, the shared material's first pass
-took 15.80–16.01 ms at the daylight opening across three sessions. Its
-ceiling there is 14.96 ms.
+took 15.80–16.01 ms at the daylight opening across three sessions.
+The standing name already requests the field shader. Compiling its ice
+field for ground-level plates lets the driver omit the overhead lake
+and cut-letter paths. Inner-page lake shaders and the water simulation
+still select their own field from their uniforms.
+
+With that change the daylight opening measured 11.73–12.04 ms against
+a 14.96 ms ceiling. Its three-session spread was 0.313 ms. One screen
+in, the same sessions measured 16.48–16.53 ms against 21.24 ms.
 
 The plates' faces should reach 4.5:1 by day and 3:1 before dawn against
 the lake directly behind them, from rest through one screen of scroll.

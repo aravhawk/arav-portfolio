@@ -221,6 +221,15 @@ vec3 plateSd(vec2 q) {
  * il: the point in the sheet's own frame, for its surface.
  */
 float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
+  // iceParts requests FIELD only for the standing name. Inner-page lakes
+  // and the simulation use the same field with their runtime inputs.
+#ifdef F_FIELD
+  const bool standingPlates = true;
+  const bool groundView = true;
+#else
+  bool standingPlates = uNameG.w > 0.5;
+  bool groundView = uIceP.y > 0.0;
+#endif
   // The sheet's own frame: it rides with the name, and late in the melt
   // everything in it gathers toward the outlet.
   vec2 u = uIceB.xy + (w - uIceB.xy) * uIceB.z;
@@ -237,9 +246,9 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   float lsd = boxD;
   // (Seen from the ground most of the lake is far from the name: there the
   // box's distance is the whole answer and the raster is not read.)
-  bool nearName = uIceP.y <= 0.0 || boxD < 420.0;
+  bool nearName = !groundView || boxD < 420.0;
   float rowD = boxD;
-  if (uNameG.w > 0.5) {
+  if (standingPlates) {
     // The plates stand on the sheet: it opens from under each one's foot, and then under the rows.
     // (Asked of the place on the lake itself, not of the sheet's own frame: late in the melt the sheet gathers toward
     // the outlet, and the plates and the water they ride in do not gather with it.)
@@ -258,11 +267,11 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // together into one pool with an uneven, rounded edge. Nothing of their
   // outlines is left to notch the floes around them.
   // (Under a row itself the sheet is as whole as beside it: the water opens round the rows, not along their middle.)
-  float open = uNameG.w > 0.5 ? max(rowD, 0.0) : lsd;
-  if (uNameG.w > 0.5) {
+  float open = standingPlates ? max(rowD, 0.0) : lsd;
+  if (standingPlates) {
     // (The water under the rows is not ruled either: it has gone further here than there.)
     open += 26.0 * textureLod(uSnow, il / vec2(520.0, 300.0) + 0.23, 0.0).r;
-  } else if (uIceP.y > 0.0) {
+  } else if (groundView) {
     // Seen from the ground the letters are melt ponds, and a pond does not
     // spread evenly: it eats the ice quickly here and slowly there. So each
     // letter's pond widens at its own pace, the bridges of ice between two
@@ -276,7 +285,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     float pn = textureLod(uDetail, il / (cell * 0.9) + 0.17, 0.0).r - 0.5
              + 0.5 * (textureLod(uDetail, il / (cell * 0.31) + 0.58, 0.0).g - 0.5);
     float wide = uIceC.w;
-    if (uNameG.w > 0.5) {
+    if (standingPlates) {
       // (The pool the standing letters leave is not a ruled lozenge: the sheet has gone further in some places than others.)
       pn += 1.5 * (textureLod(uDetail, il / (cell * 2.3) + 0.71, 0.0).b - 0.5);
       wide *= 1.7;
@@ -284,12 +293,12 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     open = mix(lsd, poolSd(il) + pn * wide, uIceC.z);
   }
   float f = uIceA.x - open;
-  if (uNameG.w > 0.5) {
+  if (standingPlates) {
     // Round each plate the sheet goes at that plate's own moment: a hole it founders into, and room to ride in after.
     // (Its shore wanders: the ice has gone further here than there.)
     if (gFootOpen > -70.0) f = max(f, gFootOpen + (14.0 + 0.16 * max(gFootOpen, 0.0)) * textureLod(uSnow, il / vec2(260.0, 190.0) + 0.61, 0.0).g);
     // (The water that opens from the standing letters' feet stops short of the first frame's words while a line of them stands.)
-    if (uIceP.y > 0.0) f = min(f, mix((wordsClear(u) - 0.026) * 2600.0, 1e4, smoothstep(0.57, 0.66, uIceA.z)));
+    if (groundView) f = min(f, mix((wordsClear(u) - 0.026) * 2600.0, 1e4, smoothstep(0.57, 0.66, uIceA.z)));
   }
 
   // Pressure cracks: the walls of a few large, irregular cells. Early in the
@@ -301,14 +310,14 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // needs them. Then the cells are not looked for at all.)
   // (Seen from the ground the fractures are the whole of the break-up: the
   // plates the sheet becomes are the pieces between them, to the last one.)
-  bool cracks = uIceP.y <= 0.0 || !(uIceLean >= 2.0 && uIceA.y <= 0.0);
+  bool cracks = !groundView || !(uIceLean >= 2.0 && uIceA.y <= 0.0);
   if (cracks) {
   vec2 wob = textureLod(uSnow, il / (cellA * 5.0), 0.0).rg * cellA * 0.12;
   // (Seen from the ground the sheet breaks as lake ice does: the field the
   // cells are found in is bent, broadly and then finely, so each fracture
   // wanders and the plates between them are of very different sizes.)
   float jit = 0.72;
-  if (uIceP.y > 0.0) {
+  if (groundView) {
     vec2 q = il / cellA;
     wob += cellA * (0.5 * vec2(sin(q.y * 1.13 + 0.7) + 0.6 * sin(q.x * 0.71 + q.y * 0.4 + 2.1), sin(q.x * 0.93 + 1.9) + 0.6 * sin(q.y * 0.63 - q.x * 0.5 + 0.3))
          + 0.075 * vec2(sin(q.y * 5.3 + q.x * 2.1 + 1.0) + sin(q.y * 9.7 + 0.4) * 0.5, sin(q.x * 4.7 - q.y * 1.9 + 2.6) + sin(q.x * 11.3 + 1.7) * 0.5));
@@ -322,7 +331,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   vec2 pq = abs(il - uIceBox.xy) - uIceBox.zw;
   // (Where the name stands as plates there is no such plate: the sheet's fractures run where they will, under the
   // letters too, and only stay hairlines there until the plates have gone.)
-  bool nearPlate = uNameG.w < 0.5 && (uIceP.y <= 0.0 || max(pq.x, pq.y) < cellA * 2.6 + 40.0);
+  bool nearPlate = !standingPlates && (!groundView || max(pq.x, pq.y) < cellA * 2.6 + 40.0);
   float md = 64.0;
   vec2 mr = vec2(0.0), mg = vec2(0.0);
   float bd = 8.0;
@@ -388,7 +397,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     float un = clamp(0.5 + 0.8 * textureLod(uSnow, il / (cellA * 1.4) + 0.31, 0.0).b, 0.0, 1.0);
     float clearOf = smoothstep(8.0, 130.0, lsd);
     float lead = cellA * uIceA.y * (0.45 + 1.1 * un) * clearOf;
-    if (uIceP.y > 0.0) {
+    if (groundView) {
       // Seen from the ground the sheet goes as lake ice goes. The leads
       // along its fractures keep widening, so the pieces between them come
       // apart as angular plates of whatever size and shape the fractures
@@ -406,7 +415,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
       // round it and widen as the others do, so the opening the name leaves
       // has bays and points, and the ice beside it goes as plates.
       // (Not where the letters stand as blocks: their water leaves by one lead of its own, further on.)
-      if (uIceN.z > 0.0 && gIceBoxD < cellA && uNameG.w < 0.5) {
+      if (uIceN.z > 0.0 && gIceBoxD < cellA && !standingPlates) {
         vec2 q2 = nl - uIceBox.xy + textureLod(uSnow, il / vec2(900.0, 2000.0) + 0.37, 0.0).rg * 110.0;
         float sp = 1e4;
         for (int i = 0; i < 6; i++) {
@@ -428,10 +437,10 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     // that lies before them, which is the lake's near shore to the eye: a lead comes down to that snow and ends
     // there, as at a bank, until the eye has risen off it. A ribbon of dark water drawn through a snowfield was a
     // stroke, not a lead.)
-    if (uNameG.w > 0.5 && uIceP.y > 0.0) lead *= mix(smoothstep(0.1, 0.2, wordsClear(u)), 1.0, smoothstep(0.74, 0.84, uIceA.z));
+    if (standingPlates && groundView) lead *= mix(smoothstep(0.1, 0.2, wordsClear(u)), 1.0, smoothstep(0.74, 0.84, uIceA.z));
     f = smax(f, lead - cr.x, kS);
   }
-  if (uNameG.w > 0.5 && uNameS > 0.0) {
+  if (standingPlates && uNameS > 0.0) {
     // The water the letters stand in spreads from their own feet: a puddle to each, wider at one than at the next,
     // then one pool as they join. It goes furthest toward the eye, where the swept ice is thinnest, and along the
     // fractures it meets, so its shore has bays and points and runs out into the leads round it.
@@ -447,7 +456,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     }
     // And it leaves: one lead opens from behind the letters down the lake, its head running on ahead of the melt
     // until it reaches the outlet; then it widens, and the sheet either side of it goes as plates.
-    if (uNameL.x > 0.0 && uIceP.y > 0.0) {
+    if (uNameL.x > 0.0 && groundView) {
       vec2 ld = leadAt(u.y);
       float y0 = uNameB.x;
       float wide = uNameL.y * (0.62 + 0.38 * sin(ld.y * 29.0 + 1.0) * sin(ld.y * 11.0 + 0.3) + 0.3 * textureLod(uSnow, il / vec2(300.0, 900.0) + 0.77, 0.0).b);
@@ -456,7 +465,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
       if (wide > 0.0) f = smax(f, wide - abs(u.x - ld.x), 30.0);
     }
   }
-  if (uIceC.y > 0.0 && uIceP.y <= 0.0) {
+  if (uIceC.y > 0.0 && !groundView) {
     // What is left is floes: whole rounded islands, one to a cell of a
     // lattice laid out for this lake, each measured from its own middle.
     vec2 asp = vec2(1.0, uIceL.x);
@@ -499,7 +508,7 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     vec2 ws = uIceB.xy + (site + uIce.xy - uIceB.xy) / uIceB.z;
     float bank = min(-textureLod(uBedA, bedUv(ws), 0.0).r, uLake.y - ws.y) - uIceA.w * 1.6 - 8.0;
     // (A lake wider than the frame has no side to keep clear of.)
-    if (uIceP.y <= 0.0) bank = min(bank, min(ws.x, uIceW - ws.x) - 10.0);
+    if (!groundView) bank = min(bank, min(ws.x, uIceW - ws.x) - 10.0);
     float pool = poolSd(site) - uIceA.x - 0.8 * uIceC.w - 12.0;
     float room = cell * inr - 4.0;
     // No two are one size.
@@ -519,14 +528,14 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
     // Seen from the ground the sheet breaks as lake ice does, into angular
     // plates: each is its cell of the lattice with straight sides, drawn in
     // from them by as much as the round floe would have lost.
-    if (uIceP.y > 0.0) fl = max(cell * inr - R, cell * 0.035) - edge * cell + rim * 0.35;
-    f = smax(f, fl + step(R, 1.0) * 1e3, cell * (uIceP.y > 0.0 ? 0.02 : 0.07));
+    if (groundView) fl = max(cell * inr - R, cell * 0.035) - edge * cell + rim * 0.35;
+    f = smax(f, fl + step(R, 1.0) * 1e3, cell * (groundView ? 0.02 : 0.07));
   }
   f /= uIceB.z;
   // The bank, with a lead of open water along the north shore, and the
   // lake's south end, where the stream leaves.
   f = max(f, shore + gap + uIceC.x * (0.35 + 1.3 * along) * north);
-  if (uIceP.y > 0.0) {
+  if (groundView) {
     // Seen from the ground: the river draws the lake's water out, so the ice
     // goes first round the outlet, in a bay that widens with the melt and has
     // no ruled side. No plate is ever left cut square along the lake's end.
