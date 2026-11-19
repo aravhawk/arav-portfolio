@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/../.."
+base="$HOME/.t3/portfolio-redesign-v4"
+py="$base/tools/bake-venv/bin/python"
+mkdir -p "$base/assets-src"
+if [ ! -x "$py" ]; then
+    uv venv --python 3.11 "$base/tools/bake-venv"
+fi
+uv pip install --python "$py" bpy==4.5.3 fonttools==4.68.0 brotli==1.2.1 pillow==13.0.0 numpy==1.26.4
+fetch() {
+    file="$base/assets-src/${1##*/}"
+    if [ ! -f "$file" ]; then
+        curl --fail --location --retry 2 "$1" -o "$file.part"
+        mv "$file.part" "$file"
+    fi
+    echo "$2  $file" | shasum -a 256 -c -
+}
+fetch https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/frozen_lake_2k.hdr 0501bf3165ef51afbb428eabb483a7ff3ebbef712cd1c3f138ccfc4c0a92d33e
+fetch https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/snow_field_aerial/snow_field_aerial_height_2k.jpg 184353c091f4429ade216894bcf240fa5b129077c8974a8e8fe5b4b02c502549
+fetch https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/snow_field_aerial/snow_field_aerial_col_2k.jpg aa52efea36819ea5bdbefad370cbcd587952f622eb526218bcfa0c72c3fd047a
+exec "$py" tools/scene/day.py "$@"
