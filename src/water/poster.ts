@@ -23,6 +23,17 @@ function choose(B: [string, number, number][], dir: string) {
   const u = dir + '/' + id + '-' + t;
   d.dataset.poster = id;
   d.style.setProperty('--poster', "image-set(url('" + u + ".avif') type('image/avif'), url('" + u + ".webp') type('image/webp'))");
+  // (Ask for the still now, ahead of the stylesheet that shows it. A browser without AVIF skips a preload of that type.)
+  if (!document.querySelector('link[data-poster-preload]')) {
+    const l = document.createElement('link');
+    l.rel = 'preload';
+    l.as = 'image';
+    l.type = 'image/avif';
+    l.href = u + '.avif';
+    l.setAttribute('fetchpriority', 'high');
+    l.setAttribute('data-poster-preload', '');
+    document.head.appendChild(l);
+  }
 }
 
 const table = (): [string, number, number][] => posterBands().map((b) => [b.id, b.lo, b.hi]);
@@ -33,9 +44,9 @@ export function pickPoster() {
 }
 
 /**
- * The page's own first script, as text: it chooses the still before the first paint, and sees that the first
- * frame's words set even where the picture is slow to come or never comes (at once, where motion is reduced).
+ * The page's own first script, as text: it chooses the still before the first paint, and sets the first frame's
+ * words in that same paint. (What the page is for is read in its first frame, not after the picture's entrance.)
  */
-export function posterBoot(wordsByMs: number): string {
-  return `(function(){try{(${choose.toString()})(${JSON.stringify(table())},${JSON.stringify(DIR)})}catch(e){}var d=document.documentElement,w=function(){d.setAttribute('data-hero-words','')};try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)w();else setTimeout(w,${wordsByMs})}catch(e){w()}})()`;
+export function posterBoot(): string {
+  return `(function(){try{(${choose.toString()})(${JSON.stringify(table())},${JSON.stringify(DIR)})}catch(e){}document.documentElement.setAttribute('data-hero-words','')})()`;
 }

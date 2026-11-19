@@ -142,8 +142,8 @@ function Kind({ p, b }: { p: Project; b: Build }) {
   );
 }
 
-/** The first script of the page: the still for this window, and the latest the first frame's words set (ms after it runs). */
-const POSTER_BOOT = posterBoot(2600);
+/** The first script of the page: the still for this window, and the first frame's words, both in the first paint. */
+const POSTER_BOOT = posterBoot();
 
 /**
  * The ending's small line leads, as a station's eyebrow does: it stands alone at its place from this long before the
