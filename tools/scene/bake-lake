@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/../.."
+base="$HOME/.t3/portfolio-redesign-v4"
+venv="$base/tools/bake-venv"
+temp=".tools/out/o1c/bake"
+mkdir -p "$temp"
+if [ ! -x "$venv/bin/python" ]; then uv venv --python 3.11 "$venv"; fi
+uv pip install --python "$venv/bin/python" bpy==4.5.3 fonttools==4.68.0 scipy==1.17.1 numpy==1.26.4 pillow==13.0.0 brotli==1.2.1 skia-pathops==0.9.2 meshoptimizer==0.2.30a0 opencolorio==2.6.0
+if [ -z "${TOKTX:-}" ] && ! command -v toktx >/dev/null; then
+    tool="$base/tools/ktx-4.4.2"
+    if [ ! -x "$tool/bin/toktx" ]; then
+        mkdir -p "$tool"
+        curl -fsSL --retry 2 https://github.com/KhronosGroup/KTX-Software/releases/download/v4.4.2/KTX-Software-4.4.2-Darwin-arm64.pkg -o "$tool/download.pkg"
+        echo "500bd8f9d63358c3f3a0d83b724c8574436a72c37dc0e4bad90ec1ca38032c3c  $tool/download.pkg" | shasum -a 256 -c -
+        work=$(mktemp -d "$tool/extract.XXXXXX")
+        pkgutil --expand-full "$tool/download.pkg" "$work/packages"
+        cp -R "$work"/packages/*library.pkg/Payload/usr/local/lib "$tool/"
+        cp -R "$work"/packages/*tools.pkg/Payload/usr/local/bin "$tool/"
+    fi
+    export TOKTX="$tool/bin/toktx"
+fi
+"$venv/bin/python" tools/scene/lake/inputs.py
+"$venv/bin/python" tools/scene/lake/author.py --output "$temp/day.png"
+"$venv/bin/python" tools/scene/lake/author.py --geometry --output "$temp/day.png"
+"$venv/bin/python" tools/scene/lake/pack.py "$temp" public/scene/lake
+node tools/scene/codecs.mjs
