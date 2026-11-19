@@ -1679,3 +1679,43 @@ Sent back as **A2c** (running now, alone, same model and effort): the
 name clear of the lake at the floors with the glare kept, then the
 block's, the columns' and the plates' depth, with cost judged by
 same-session comparison.
+
+### One ice integrated after three passes; the station registry under way (Nov 19)
+
+- **A2c, the third one-ice pass** (codex / gpt-6.2-astra / high),
+  met its definition of done on the points that held the work back.
+  The name's faces against the lake now measure 8.20 to 9.98 to 1 by
+  day and 3.70 to 5.40 to 1 before dawn in all 40 checks (four
+  widths, both themes, the first frame to one screen in; floors 4.5
+  and 3), with the sun's glare kept on the far ice; Infiniview's
+  block and the columns have a dark core and a deeper fracture
+  plane; no stop is repeatably dearer than the second pass in
+  same-session comparison.
+- **Its measurement of the pushed head answered an open question**:
+  before this work the name passed at rest but fell to about 3 to 1
+  by day and 2.4 to 2.7 before dawn from half a screen into the
+  melt. That fault is closed by this integration.
+- **Integrated**: the seven commits of the three passes (ending
+  `05aa680`), each typechecked and built on its own before the push;
+  lint and 315 tests pass. On the merged build: 200 words, 0 console
+  errors; legibility 5,410 lines at 390 and 1440 in both themes, 0
+  failures; titles 192 of 192 at four widths; words 0 faults with
+  the longest run without copy at 0.6 screens.
+- **Kept honestly, from its own report**: the columns' centres
+  before dawn still read as smooth flutes; the broad face round
+  Infiniview's display is flatter than the references; long
+  stretches of the plates still look machine-cut; the melt at 1.4
+  screens still costs 21 to 22 ms (the frame budget task's).
+- **Running now, alone: A3, the station registry** (same model and
+  effort): a station becomes one typed definition from which the
+  timeline, the variants, the DOM blocks, the rail and the sound's
+  plan are derived, with the picture, the HTML and the cost
+  unchanged; it rewrites the maintainer pack's recipes and proves
+  them by adding and deleting a throwaway station on a scratch
+  branch.
+
+**Who built what, so far**: Astra: the light's second half and its
+second pass; the one shared ice (the plates' sawn faces, the lake's
+glare, the dark core and fractures of thick ice) and the cost it
+paid back on the first two screens and the canyon. Fable (this
+thread and its helpers): everything else to date.
