@@ -12,6 +12,21 @@
  * Needs: uIce, uIceA, uIceB, uIceC, uIceK, uIceL, uIceN, uIceW, uIceBox, uLake, uIceSdf, uDetail, uSnow, and
  * the bed (uBedA, bedUv) declared before this block.
  */
+export const CELL_HASH = `vec2 ih2(vec2 p) {
+  p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+  return fract(sin(p) * 43758.5453);
+}`;
+
+/** The snow bake stores exact crack-neighbour indices in its spare half-float channel. */
+export const CRACK_GRID = `
+const float CRACK_SUB = 16.0;
+const vec2 CRACK_ORIGIN = vec2(-12.0);
+vec2 cellOffset(int k) { return vec2(k % 3 - 1, k / 3 - 1); }
+vec2 crackSite(vec2 cell, vec2 offset) {
+  return offset + (0.5 - 0.5 * 0.94) + 0.94 * ih2(cell + offset);
+}
+`;
+
 export const ICE_FIELD = `
 uniform vec4 uIce;         // the name's raster in world px: x, y, w, h (w = 0: no ice left)
 uniform vec4 uIceA;        // x: how far the opening has grown px, y: lead width as a share of a floe, z: melt 0..1, w: gap at the bank px
@@ -54,10 +69,8 @@ float gFootOpen = -1e3;
 float gIceCr = 1e3;
 
 #ifndef NO_ICE_FIELD
-vec2 ih2(vec2 p) {
-  p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
-  return fract(sin(p) * 43758.5453);
-}
+${CELL_HASH}
+${CRACK_GRID}
 
 /**
  * A union of two stretches of open water whose meeting is a curve of radius
@@ -311,24 +324,36 @@ float iceF(vec2 w, float shore, out vec3 cr, out vec2 il) {
   // letters too, and only stay hairlines there until the plates have gone.)
   bool nearPlate = uNameG.w < 0.5 && (uIceP.y <= 0.0 || max(pq.x, pq.y) < cellA * 2.6 + 40.0);
   float md = 64.0;
-  vec2 mr = vec2(0.0);
-  vec2 mg = vec2(0.0);
-  for (int j = 0; j < 3; j++) {
-    for (int i = 0; i < 3; i++) {
-      vec2 g = vec2(float(i - 1), float(j - 1));
-      vec2 r = g + 0.5 - 0.5 * jit + jit * ih2(n + g) - fr;
-      // A cell whose middle would lie in or by the name's plate is not
-      // there: the plate has that ground.
-      if (nearPlate && plateSd(il + r * cellA).x < cellA * 0.12) r = vec2(40.0);
-      pts[j * 3 + i] = r;
-      float d = dot(r, r);
-      if (d < md) { md = d; mr = r; mg = g; }
-    }
-  }
+  vec2 mr = vec2(0.0), mg = vec2(0.0);
   float bd = 8.0;
-  for (int k = 0; k < 9; k++) {
-    vec2 dr = pts[k] - mr;
-    if (dot(dr, dr) > 1e-5) bd = min(bd, dot(0.5 * (mr + pts[k]), normalize(dr)));
+  ivec2 grid = ivec2(floor((x - CRACK_ORIGIN) * CRACK_SUB));
+  int pair = 0;
+  if (!nearPlate && jit == 0.94 && all(greaterThanEqual(grid, ivec2(0))) && all(lessThan(grid, textureSize(uSnow, 0))))
+    pair = int(texelFetch(uSnow, grid, 0).a);
+  if (pair > 0) {
+    // Across this entire subcell the same two sites define the nearest edge.
+    // Evaluate their true bisector at x, including the wandering of the cracks.
+    mg = cellOffset((pair - 1) / 9);
+    mr = crackSite(n, mg) - fr;
+    vec2 other = crackSite(n, cellOffset((pair - 1) % 9)) - fr;
+    bd = dot(0.5 * (mr + other), normalize(other - mr));
+  } else {
+    for (int j = 0; j < 3; j++) {
+      for (int i = 0; i < 3; i++) {
+        vec2 g = vec2(float(i - 1), float(j - 1));
+        vec2 r = g + 0.5 - 0.5 * jit + jit * ih2(n + g) - fr;
+        // A cell whose middle would lie in or by the name's plate is not
+        // there: the plate has that ground.
+        if (nearPlate && plateSd(il + r * cellA).x < cellA * 0.12) r = vec2(40.0);
+        pts[j * 3 + i] = r;
+        float d = dot(r, r);
+        if (d < md) { md = d; mr = r; mg = g; }
+      }
+    }
+    for (int k = 0; k < 9; k++) {
+      vec2 dr = pts[k] - mr;
+      if (dot(dr, dr) > 1e-5) bd = min(bd, dot(0.5 * (mr + pts[k]), normalize(dr)));
+    }
   }
   cr = vec3(bd * cellA, ih2(n + mg + 7.7).x, 0.0);
   // The name's plate is one more cell among them, and it is the name's own:

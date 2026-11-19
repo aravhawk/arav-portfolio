@@ -1128,6 +1128,10 @@ vec4 slabColor(vec3 hl, float face, float t, vec3 rd) {
 
 float bedShore;
 vec4 bedAt(vec2 w) {
+#ifdef SEA
+  // The painted map ends in open sea across its full width.
+  if (w.y >= ${(T2 + 9900 - 60).toFixed(1)}) { bedShore = 0.0; return vec4(-2000.0, -2000.0, 0.0, 0.0); }
+#endif
   // The lake's far shore. Past the world's sides the bed repeats its last
   // column, so the coast there would be a ruled line: it is bent into long
   // low headlands and bays, big enough to be seen from across the lake.
@@ -1778,7 +1782,7 @@ float lipBend(float x) {
 #define LIPW_K smoothstep(${(CONF_Y - 2300).toFixed(1)}, ${(CONF_Y - 1500).toFixed(1)}, uCamPos.y)
 float lipWest(float y) { return LIP_W + (24.0 * sin(y / 137.0 + 0.8) + 11.0 * sin(y / 53.0 + 2.6)) * LIPW_K; }
 /** How much of its height the snowfield (and the cliff under it) has at a place, for its west end. */
-float lipEase(vec2 q) { return mix(smoothstep(0.0, 460.0, q.x - lipWest(q.y)), 1.0, LIPW_K); }
+float lipEase(vec2 q) { if (LIPW_K >= 1.0) return 1.0; return mix(smoothstep(0.0, 460.0, q.x - lipWest(q.y)), 1.0, LIPW_K); }
 // How steeply the snowfield climbs toward its back where the eye's ray last came down on it.
 float gFieldG = 0.0;
 /**
@@ -1787,7 +1791,10 @@ float gFieldG = 0.0;
  * the last, to a crest far back; beyond the crest it comes down to the land.
  */
 float fieldTop(vec2 q) {
+  // The roll displaces the rear boundary by at most 130 units.
+  if (q.y > ${(LIP.back + 80 + 3 * LIP.backRamp + 130).toFixed(1)}) return 0.0;
   float behind = q.y - lipY(q.x);
+  if (behind <= 60.0 && q.y < ${(LIP.back + 80 - 130).toFixed(1)}) return LIP_H * lipEase(q);
   // (Its long rolls are written out: world.ts's fieldRoll, which the captions' points are measured by.)
   float roll = 0.5 + ${FIELD_ROLL.a.toFixed(2)} * sin(q.x / ${FIELD_ROLL.ax.toFixed(1)} + 1.3) * cos(q.y / ${FIELD_ROLL.ay.toFixed(1)} + 0.4) + ${FIELD_ROLL.bk.toFixed(2)} * sin((q.x + q.y) / ${FIELD_ROLL.b.toFixed(1)} + 2.1);
   float climb = smoothstep(60.0, 1250.0, behind);
@@ -1816,6 +1823,8 @@ float confLift(vec3 dir) {
   vec2 q = uCamPos.xy + dir.xy * ((uCamPos.z - LIP_H * 0.98) / -dir.z);
   // (A ray that is still short of the cliff when it has come down to the lip's height never reaches the field: most of the frame.)
   if (q.y < lipY(q.x) - 70.0) return 0.0;
+  vec2 high = uCamPos.xy + dir.xy * ((uCamPos.z - hA) / -dir.z);
+  if (max(q.x, high.x) < LIP_W - 35.0 || min(q.y, high.y) > ${(LIP.back + 80 + 3 * LIP.backRamp + 130).toFixed(1)}) return 0.0;
   for (int i = 1; i <= 6; i++) {
     float hB = LIP_H * (2.45 - 0.245 * float(i));
     q = uCamPos.xy + dir.xy * ((uCamPos.z - hB) / -dir.z);
@@ -1839,7 +1848,7 @@ float confLift(vec3 dir) {
   q = uCamPos.xy + dir.xy * ((uCamPos.z - h) / -dir.z);
   h = fieldTop(q);
   if (q.y < lipY(q.x) + lipBend(q.x) || q.x < lipWest(q.y)) return 0.0;
-  gFieldG = (fieldTop(q + vec2(0.0, 14.0)) - h) / 14.0;
+  if (uNight < 1.0) gFieldG = (fieldTop(q + vec2(0.0, 14.0)) - h) / 14.0;
   return h;
 }
 // Where the eye's ray meets the cliff, and the ray: set by whoever asks for the cliff's ice.
@@ -1911,6 +1920,10 @@ vec3 confCliff(vec3 col, vec3 dir, float landAt0) {
   if (den > -1e-4) return col;
   float t0 = dot(LIP_O - uCamPos.xy, LIP_N) / den;
   if (t0 <= 0.0) return col;
+  // The bend has a maximum displacement of 40 + 18 + 8 units.
+  float straightZ = uCamPos.z + dir.z * t0;
+  float zPad = abs(dir.z / (den * LIP_LEN)) * 66.0;
+  if (straightZ > LIP_H * 1.5 + zPad || straightZ < -FREEBOARD - zPad) return col;
   // The face is bent in plan: the ray is met where the bend stands at the place it reaches (found in two steps).
   float tc = t0;
   for (int i = 0; i < 2; i++) tc = t0 - lipBend(uCamPos.x + dir.x * tc) / LIP_LEN / den;
@@ -2210,6 +2223,7 @@ float poolNet(vec2 pb, float footL) {
  * lay over the water and, in a, how much of it.
  */
 vec4 poolRim(vec2 pw, float inside, float footL, vec3 sky) {
+  if (inside > 36.0 + max(footL, 0.3)) return vec4(0.0);
   vec4 g = textureLod(uGrain, pw / 420.0 + 0.2, lodFor(footL, 420.0, 256.0));
   float reach = 9.0 + 20.0 * g.g * g.g + 7.0 * g.b;
   float px = max(footL, 0.3);
@@ -2249,6 +2263,16 @@ vec3 gRockRd = vec3(0.0, 1.0, 0.0);
 float rockHit(vec3 ro, vec3 rd, out vec3 n) {
   float best = 1e9;
   n = vec3(0.0, 0.0, 1.0);
+  // Only a short interval around the waterline can contain any of the seven boulders.
+  if (abs(rd.z) > 1e-5) {
+    const float height = ${Math.ceil(Math.max(...ROCKS.map(r => Math.hypot(r.a, r.h) * 1.08)))}.0;
+    float centre = (-FREEBOARD - ro.z) / rd.z;
+    vec2 p = ro.xy + rd.xy * centre;
+    vec2 pad = abs(rd.xy / rd.z) * height;
+    if (centre + height / abs(rd.z) < 0.0 ||
+        any(lessThan(p + pad, vec2(${Math.floor(Math.min(...ROCKS.map(r => r.x)))}, ${Math.floor(Math.min(...ROCKS.map(r => r.y)))}) - height)) ||
+        any(greaterThan(p - pad, vec2(${Math.ceil(Math.max(...ROCKS.map(r => r.x)))}, ${Math.ceil(Math.max(...ROCKS.map(r => r.y)))}) + height))) return -1.0;
+  }
   for (int i = 0; i < ${ROCKS.length}; i++) {
     vec3 o = ro - vec3(RK[i].xy, -FREEBOARD);
     float b = dot(o, rd);
@@ -2477,7 +2501,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   vec4 gs = gb;
   vec3 bed = uBed * (1.0 + (gb.r - 0.5) * 0.03 + (gs.b - 0.42) * 0.17 + (gb.a - 0.4) * 0.12);
 #if defined(F_POOL)
-  if (poolK > 0.0) {
+  if (picK == 1.0) bed = sheetC;
+  else if (poolK > 0.0) {
     // Silt and stones; the picture's sheet with a hair of shade along its edge.
     bed = mix(bed, poolBed(pb, footL, L, deepP), poolK * 0.92);
     bed *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 7.0, sheetEdge(pb))) * step(0.0, sheetEdge(pb)) * uSheetOn;
@@ -2500,7 +2525,8 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
   // moving layers. Each layer is read at the level its pixel covers, so far
   // off the net eases to even light before it can shimmer.
   float cheapC = mix(shaft, min(df.a * 6.0, 4.0), net * clamp(uLight.z * 0.5, 0.0, 1.0));
-  if (uQuality > 0.5 && gL2 < 1.0) {
+  // The pool supplies its own daylight caustic over this entire pixel.
+  if (uQuality > 0.5 && gL2 < 1.0 && (poolK < 1.0 || uNight > 0.0)) {
     vec3 t = vec3(0.0);
     // (The curvature texture has no finer levels of its own: fade it by hand.
     // Where it has faded out, or the water is too deep for a net, it is not read.)
@@ -3077,16 +3103,34 @@ float seaAt(vec2 pw, float sd) {
   return uSea.x * step(${(DELTA.y - 250).toFixed(1)}, pw.y) * smoothstep(70.0, 310.0, -sd);
 }
 
-/** The sea's swell: four octaves, or the two broad ones when the governor has asked for its leanest frame. */
-float seaH(vec2 p) {
-  float a = 0.5, s = 0.0;
+/** Two finite differences of n2. Adjacent samples usually share the same four lattice values. */
+vec2 seaSlope(vec2 p, float stepSize) {
+  vec2 cell = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  vec4 h = vec4(hash21(cell), hash21(cell + vec2(1, 0)), hash21(cell + vec2(0, 1)), hash21(cell + vec2(1)));
+  vec2 col = mix(h.xy, h.zw, u.y);
+  vec2 row = mix(h.xz, h.yw, u.x);
+  float centre = mix(row.x, row.y, u.y);
+  vec2 next = f + stepSize;
+  vec2 v = fract(next);
+  v = v * v * (3.0 - 2.0 * v);
+  if (next.x >= 1.0) col = vec2(col.y, mix(hash21(cell + vec2(2, 0)), hash21(cell + vec2(2, 1)), u.y));
+  if (next.y >= 1.0) row = vec2(row.y, mix(hash21(cell + vec2(0, 2)), hash21(cell + vec2(1, 2)), u.x));
+  return centre - mix(vec2(col.x, row.x), vec2(col.y, row.y), v);
+}
+
+/** The swell's two differences, accumulated at the same four frequencies as its height. */
+vec2 seaRelief(vec2 p) {
+  float a = 0.5, stepSize = 0.11;
+  vec2 slope = vec2(0.0);
   for (int i = 0; i < 4; i++) {
     if (i >= 2 && gL2 >= 1.0) break;
-    s += a * n2(p) * (i >= 2 ? 1.0 - gL2 : 1.0);
+    slope += a * seaSlope(p, stepSize) * (i >= 2 ? 1.0 - gL2 : 1.0);
     p = p * 2.03 + 11.7;
+    stepSize *= 2.03;
     a *= 0.5;
   }
-  return s;
+  return slope;
 }
 /**
  * Drift ice: plates the river has carried out past the delta, fewer the
@@ -3259,16 +3303,12 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float tt = uTime * 0.32;
   vec2 qa = q * 1.7 + vec2(tt, 0.3 * tt);
   vec2 g = vec2(0.0);
-  if (broad > 0.0) {
-    float f0 = seaH(qa);
-    g = vec2(f0 - seaH(qa + vec2(0.11, 0.0)), f0 - seaH(qa + vec2(0.0, 0.11))) * broad;
-  }
+  if (broad > 0.0 && calm > 1e-7) g = seaRelief(qa) * broad;
   // (A lean frame lets the finest ripples go.)
   fine *= 1.0 - gL2;
-  if (fine > 0.0) {
+  if (fine > 0.0 && calm > 1e-7) {
     vec2 qb = q * 5.3 - vec2(0.2 * tt, tt);
-    float f1 = n2(qb);
-    g += 0.5 * fine * vec2(f1 - n2(qb + vec2(0.06, 0.0)), f1 - n2(qb + vec2(0.0, 0.06)));
+    g += 0.5 * fine * seaSlope(qb, 0.06);
   }
   g *= 1.25 * calm;
   // At rest the near water is not glass and not a flat tone: a long slow swell passes under it, too low to break
@@ -3278,8 +3318,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   float heave = 0.0;
   if (still > 0.0) {
     vec2 qs = q * 0.19 + vec2(0.011, 0.024) * uTime;
-    float s0 = n2(qs);
-    vec2 sw = vec2(s0 - n2(qs + vec2(0.3, 0.0)), s0 - n2(qs + vec2(0.0, 0.3)));
+    vec2 sw = seaSlope(qs, 0.3);
     g += sw * (0.06 * still * exp(-dist * dist / 700.0) * (1.0 - 0.7 * lee));
     // (The swell's faces turned to the eye hold a breath more of the sky and those turned away a breath less: long soft bands, moving.)
     heave = clamp(sw.y * 5.0 + sw.x * 1.5, -1.0, 1.0) * exp(-dist * dist / 1500.0) * (1.0 - 0.45 * lee) * still;

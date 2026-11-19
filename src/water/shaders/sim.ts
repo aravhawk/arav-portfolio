@@ -22,7 +22,7 @@
 export const WAVE_C2 = 0.34;
 export const WAVE_NU = 0.04;
 
-import { ICE_FIELD } from './ice';
+import { CELL_HASH, CRACK_GRID, ICE_FIELD } from './ice';
 
 const HEAD = `#version 300 es
 precision highp float;
@@ -427,8 +427,38 @@ void main() {
  */
 export const SNOW = `${HEAD}
 ${DETAIL_FIELD}
+${CELL_HASH}
+${CRACK_GRID}
+// A certificate for the whole subcell: both site distance and signed
+// distance to a bisector change by at most the displacement of the sample.
+// Ambiguous subcells retain the full analytic search in iceF.
+float crackPair() {
+  vec2 x = gl_FragCoord.xy / CRACK_SUB + CRACK_ORIGIN;
+  vec2 cell = floor(x), f = fract(x);
+  vec2 site[9];
+  float nearest = 8.0, second = 8.0;
+  int first = 0;
+  for (int k = 0; k < 9; k++) {
+    site[k] = crackSite(cell, cellOffset(k)) - f;
+    float d = length(site[k]);
+    if (d < nearest) { second = nearest; nearest = d; first = k; }
+    else second = min(second, d);
+  }
+  const float margin = 1.415 / CRACK_SUB + 0.0001;
+  if (second - nearest < margin) return 0.0;
+  float edge = 8.0, next = 8.0;
+  int neighbour = 0;
+  for (int k = 0; k < 9; k++) {
+    vec2 v = site[k] - site[first];
+    if (dot(v, v) <= 1e-5) continue;
+    float d = dot(0.5 * (site[k] + site[first]), normalize(v));
+    if (d < edge) { next = edge; edge = d; neighbour = k; }
+    else next = min(next, d);
+  }
+  return next - edge > margin ? float(1 + first * 9 + neighbour) : 0.0;
+}
 void main() {
-  o = vec4(field(vUv), field(vUv + vec2(0.37, 0.61)), field(vUv.yx + vec2(0.19, 0.83)), 1.0);
+  o = vec4(field(vUv), field(vUv + vec2(0.37, 0.61)), field(vUv.yx + vec2(0.19, 0.83)), crackPair());
 }`;
 
 /**
