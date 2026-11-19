@@ -1410,7 +1410,7 @@ vec3 faceIn(vec3 col, vec3 p, vec3 n, vec3 rd, float pic) {
   // (By day the day lights it through the ice, and it keeps its own blacks and whites. Before dawn it is a lamp: the
   // page as it is, alight, its ground bright enough that its dark words are read against it; a little brighter at its middle.)
   vec3 lamp = FACE_LAMP * (0.86 + 0.14 * smoothstep(0.0, 80.0, -wd));
-  vec3 lit = img * mix(S.amb * 1.05 + S.key * 0.2, lamp, uNight);
+  vec3 lit = img * mix(mix(S.amb * 1.05 + S.key * 0.2, S.amb * 2.1 + S.key * 0.035, uHour.z), lamp, uNight);
   // (Before dawn its image in the water is a low afterglow: the water under the words stays dark and calm.)
   if (gMirror > 0.5) lit *= mix(1.0, 0.22, uNight);
   // (The page lies a hand inside the ice: the pane's own thickness shades its rim, and a breath of the ice's blue lies over it.)
@@ -1560,7 +1560,7 @@ vec3 wallIce(vec3 p, vec3 n, vec3 rd, float t, float up, float topZ, float flat_
     float dF = dot(toF, toF);
     gIceLamp = FACE_LAMP * pow(textureLod(uSlabTex, vec2(0.5), 7.0).rgb, vec3(2.2)) * max(dot(n, toF) / sqrt(dF), 0.0) * 30000.0 / (dF + 30000.0) * smoothstep(0.0, 60.0, FACE_AT.x - p.x) * 1.6;
   }
-  vec3 col = iceGlacier(p, n, rd, t, vec2(along, p.z + FREEBOARD), mix(300.0, 60.0, up), 0.16 + 0.84 * up * up, 0.5 * smoothstep(0.25, 1.0, up), 1.0 - 0.9 * flat_, 1e3, 0.0);
+  vec3 col = iceGlacier(p, n, rd, t, vec2(along, p.z + FREEBOARD), mix(300.0, 60.0, up), 0.16 + 0.84 * up * up, mix(0.5 * smoothstep(0.25, 1.0, up), 2.6 * smoothstep(0.6, 0.84, up), uHour.z), 1.0 - 0.9 * flat_, 1e3, 0.0);
   gIceLamp = vec3(0.0);
   if (mir) return col;
   // The lip: one cornice of snow along the wall's top, its lower edge a slow clean line; icicles hang under it.
