@@ -12,7 +12,7 @@ import { INTERESTS, PROJECTS, type Project, type ProjectMedia } from '@/content/
 import { KIND } from '@/content/kinds';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
-import { MOVE, SECTIONS, SETTLE_AT } from '@/water/camera';
+import { MOVE, SETTLE_AT } from '@/water/camera';
 import { byId, timeline } from '@/water/registry';
 import { posterBoot } from '@/water/poster';
 import { streamAnchors } from '@/water/words';
@@ -39,11 +39,7 @@ export const viewport: Viewport = {
   ],
 };
 
-const INFINIVIEW = PROJECTS.find((p) => p.slug === 'infiniview')!;
 const BENCH_P = PROJECTS.find((p) => p.slug === 'kilo-bench')!;
-const BRIDGE_P = PROJECTS.find((p) => p.slug === 'agent-bridge')!;
-const SWITCH_P = PROJECTS.find((p) => p.slug === 'cc-switch')!;
-const TENSOR_P = PROJECTS.find((p) => p.slug === 'tensorpow')!;
 const RYDAR_P = PROJECTS.find((p) => p.slug === 'rydar')!;
 
 const INFINIVIEW_HOME: ProjectMedia = {
@@ -57,7 +53,7 @@ const INFINIVIEW_HOME: ProjectMedia = {
 // Where each section begins, in screens of scroll, and when its words show.
 /** His sentence begins as the camera comes down to the outlet: the bank it stands on is in the frame from there. The first frame's line stands until then, and the two never show together. */
 const SAY_FROM = 1.9;
-const VIEW = byId.infiniview.start;
+const VIEW = byId.say.end;
 
 const len = (screens: number, last = false) => ({ '--len': last ? screens : screens + 1 }) as React.CSSProperties;
 const at = (s: number) => ({ 'data-at': +s.toFixed(3) });
@@ -151,25 +147,12 @@ export default async function Home() {
   const repos = m.mergedPrs.byRepo.slice(0, TRIBS.length);
   const models = m.ollama.models.slice(0, COLS.xs.length);
   const colH = colHeights(models.map((x) => x.pulls));
-  const rydar = RYDAR_P.media[0];
+  const rydar = RYDAR_P?.media[0];
 
-  // Each station's steps, from its composed frame (see stillStops in camera.ts).
-  const view = build(byId.infiniview.stop);
-  // (A station that follows a long stretch of flight shows its eyebrow sooner, so no stretch of scroll is without a word.)
-  const up = build(byId.upstream.stop, { eyebrow: -1.3 });
-  const bench = build(byId.bench.stop);
-  const bridge = build(byId.bridge.stop);
-  const mods = build(byId.models.stop, { eyebrow: -1.3 });
-  // (The dam is come at round its end: its move, and so its title, begins a little later.)
-  const fork = build(byId.fork.stop, { eyebrow: -1.3, title: -0.45, line: -0.32, meta: -0.2 });
-  const tensor = build(byId.lattice.stop);
-  // (The canyon is this station from its mouth: its eyebrow stands through the bends, its block sets in the hall.)
-  const canyon = build(byId.canyon.stop, { eyebrow: byId.canyon.start + 0.05 - byId.canyon.stop, leave: 0.75 });
-  // (The delta's bank stays under its words a while after the eye has begun to leave for the sea: they stay with it.)
-  const delta = build(byId.delta.stop, { leave: 1.75 });
-  const blocks: Partial<Record<string, React.ReactNode>> = {
-    hero: (
-      <section className="fl-sec fl-hero" data-fl style={len(SECTIONS.hero)} aria-labelledby="name">
+  type RenderBlock = (section: typeof timeline[number], steps: Build, project: Project) => React.ReactNode;
+  const blocks: Partial<Record<string, RenderBlock>> = {
+    hero: (section) => (
+      <section className="fl-sec fl-hero" data-fl style={len(section.length)} aria-labelledby="name">
         <div className="fl-pin">
           {/* The first paint is the scene's own first frame, a still (see scripts/capture-poster.mjs); the live picture comes up over it. */}
           <div className="fl-lake" data-basin>
@@ -195,8 +178,8 @@ export default async function Home() {
         </div>
       </section>
     ),
-    say: (
-      <section className="fl-sec fl-say" data-fl style={len(SECTIONS.say)} aria-label="What I do">
+    say: (section) => (
+      <section className="fl-sec fl-say" data-fl style={len(section.length)} aria-label="What I do">
         <div className="fl-pin">
           <div className="fl-words fl-say-words" data-fl-from={SAY_FROM} data-fl-to={+(VIEW - 0.3).toFixed(3)}>
             <p className="say-text fl-say-text">
@@ -210,14 +193,14 @@ export default async function Home() {
         </div>
       </section>
     ),
-    infiniview: (
-      <section className="fl-sec fl-view" data-fl style={len(SECTIONS.infiniview)} aria-label="Infiniview">
+    infiniview: (section, view, p) => (
+      <section className="fl-sec fl-view" data-fl style={len(section.length)} aria-label="Infiniview">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words" {...view.block}>
-            <Kind p={INFINIVIEW} b={view} />
-            <Name p={INFINIVIEW} b={view} />
+            <Kind p={p} b={view} />
+            <Name p={p} b={view} />
             <p className="fl-line" {...view.line}>
-              {INFINIVIEW.line}
+              {p.line}
             </p>
           </div>
           {/* Without the canvas the product stands here as a plain image. */}
@@ -227,8 +210,8 @@ export default async function Home() {
         </div>
       </section>
     ),
-    upstream: (
-      <section className="fl-sec fl-up" data-fl style={len(SECTIONS.upstream)} aria-label="Open source">
+    upstream: (section, up) => (
+      <section className="fl-sec fl-up" data-fl style={len(section.length)} aria-label="Open source">
         <div className="fl-pin">
           <div className="fl-calls">
             {repos.map((r, i) => (
@@ -294,41 +277,41 @@ export default async function Home() {
         </div>
       </section>
     ),
-    bench: (
-      <section className="fl-sec fl-bench" data-fl style={len(SECTIONS.bench)} aria-label="Kilo Bench">
+    bench: (section, bench, p) => (
+      <section className="fl-sec fl-bench" data-fl style={len(section.length)} aria-label="Kilo Bench">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-bench-words" {...bench.block}>
-            <Kind p={BENCH_P} b={bench} />
-            <Name p={BENCH_P} b={bench} />
+            <Kind p={p} b={bench} />
+            <Name p={p} b={bench} />
             <p className="fl-line" {...bench.line}>
-              {BENCH_P.line}
+              {p.line}
             </p>
           </div>
           <div className="fl-still">
-            <Slab media={BENCH_P.media[0]} sizes="(max-width: 860px) 80vw, 40vw" />
+            <Slab media={p.media[0]} sizes="(max-width: 860px) 80vw, 40vw" />
           </div>
         </div>
       </section>
     ),
-    bridge: (
-      <section className="fl-sec fl-bridge" data-fl style={len(SECTIONS.bridge)} aria-label="Agent Bridge">
+    bridge: (section, bridge, p) => (
+      <section className="fl-sec fl-bridge" data-fl style={len(section.length)} aria-label="Agent Bridge">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-bridge-words" {...bridge.block}>
-            <Kind p={BRIDGE_P} b={bridge} />
-            <Name p={BRIDGE_P} b={bridge} />
+            <Kind p={p} b={bridge} />
+            <Name p={p} b={bridge} />
             <p className="fl-line" {...bridge.line}>
-              {BRIDGE_P.line}
+              {p.line}
             </p>
             {/* The launch film: one control here, the film itself at a size it can be read at. */}
             <div className="fl-film" {...bridge.act}>
-              <Film media={BRIDGE_P.media[0]} />
+              <Film media={p.media[0]} />
             </div>
           </div>
         </div>
       </section>
     ),
-    models: (
-      <section className="fl-sec fl-models" data-fl style={len(SECTIONS.models)} aria-label="Open models">
+    models: (section, mods) => (
+      <section className="fl-sec fl-models" data-fl style={len(section.length)} aria-label="Open models">
         <div className="fl-pin">
           <div className="fl-calls">
             {models.map((x, i) => (
@@ -371,14 +354,14 @@ export default async function Home() {
         </div>
       </section>
     ),
-    fork: (
-      <section className="fl-sec fl-forks" data-fl style={len(SECTIONS.fork)} aria-label="cc-switch">
+    fork: (section, fork, p) => (
+      <section className="fl-sec fl-forks" data-fl style={len(section.length)} aria-label="cc-switch">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-fork-words" {...fork.block}>
-            <Kind p={SWITCH_P} b={fork} />
-            <Name p={SWITCH_P} b={fork} />
+            <Kind p={p} b={fork} />
+            <Name p={p} b={fork} />
             <p className="fl-line" {...fork.line}>
-              {SWITCH_P.line}
+              {p.line}
             </p>
             <p className="fl-meta" {...fork.meta}>
               <LiveNumber
@@ -406,38 +389,38 @@ export default async function Home() {
         </div>
       </section>
     ),
-    lattice: (
-      <section className="fl-sec fl-tensor" data-fl style={len(SECTIONS.lattice)} aria-label="TensorPoW">
+    lattice: (section, tensor, p) => (
+      <section className="fl-sec fl-tensor" data-fl style={len(section.length)} aria-label="TensorPoW">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-tensor-words" {...tensor.block}>
-            <Kind p={TENSOR_P} b={tensor} />
-            <Name p={TENSOR_P} b={tensor} />
+            <Kind p={p} b={tensor} />
+            <Name p={p} b={tensor} />
             <p className="fl-line" {...tensor.line}>
-              {TENSOR_P.line}
+              {p.line}
             </p>
           </div>
           <div className="fl-still fl-pool" aria-hidden="true" />
         </div>
       </section>
     ),
-    canyon: (
-      <section className="fl-sec fl-rydar" data-fl style={len(SECTIONS.canyon)} aria-label="RydAR">
+    canyon: (section, canyon, p) => (
+      <section className="fl-sec fl-rydar" data-fl style={len(section.length)} aria-label="RydAR">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-view-words fl-rydar-words" {...canyon.block}>
-            <Kind p={RYDAR_P} b={canyon} />
-            <Name p={RYDAR_P} b={canyon} />
+            <Kind p={p} b={canyon} />
+            <Name p={p} b={canyon} />
             <p className="fl-line" {...canyon.line}>
-              {RYDAR_P.line}
+              {p.line}
             </p>
           </div>
           <div className="fl-still">
-            <Slab media={rydar} sizes="(max-width: 860px) 60vw, 30vw" />
+            <Slab media={p.media[0]} sizes="(max-width: 860px) 60vw, 30vw" />
           </div>
         </div>
       </section>
     ),
-    delta: (
-      <section className="fl-sec fl-delta" data-fl style={len(SECTIONS.delta)} aria-labelledby="into">
+    delta: (section, delta) => (
+      <section className="fl-sec fl-delta" data-fl style={len(section.length)} aria-labelledby="into">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-into-words" {...delta.block}>
             <p className="fl-eyebrow" id="into" {...delta.eyebrow}>
@@ -459,8 +442,8 @@ export default async function Home() {
         </div>
       </section>
     ),
-    sea: (
-      <section className="fl-sec fl-sea ending" data-fl style={len(SECTIONS.sea, true)} aria-label="Contact">
+    sea: (section) => (
+      <section className="fl-sec fl-sea ending" data-fl style={len(section.length, true)} aria-label="Contact">
         <div className="fl-pin">
           <div className="fl-words fl-end-words" data-fl-from={+(SETTLE_AT - END_LEAD).toFixed(3)} data-fl-to={1e6} data-fl-set={+(SETTLE_AT - 0.04).toFixed(3)}>
             <div className="fl-end-block">
@@ -491,16 +474,16 @@ export default async function Home() {
       <main id="main" className="fl">
         {/* The page's first script: it chooses the first paint's still for this window (see poster.ts). */}
         <script dangerouslySetInnerHTML={{ __html: POSTER_BOOT }} />
-        <FlightStage slab={INFINIVIEW_HOME.src} sheet={BENCH_P.media[0].kind === 'image' ? BENCH_P.media[0].src : ''} tribs={repos.map((r) => r.count).join(',')}
+        <FlightStage slab={INFINIVIEW_HOME.src} sheet={BENCH_P?.media[0].kind === 'image' ? BENCH_P.media[0].src : ''} tribs={repos.map((r) => r.count).join(',')}
           cols={colH.map((h) => h.toFixed(1)).join(',')}
-          face={rydar.kind === 'image' ? rydar.src : ''}
+          face={rydar?.kind === 'image' ? rydar.src : ''}
         />
 
         {timeline.map(section => {
           const block = blocks[section.id];
-          if (block) return <Fragment key={section.id}>{block}</Fragment>;
           const project = PROJECTS.find(entry => entry.slug === section.project);
-          const steps = build(section.stop);
+          const steps = build(section.stop, section.steps);
+          if (block) return <Fragment key={section.id}>{block(section, steps, project!)}</Fragment>;
           return (
             <section key={section.id} className="fl-sec fl-view" data-fl style={len(section.length)} aria-label={section.rail}>
               <div className="fl-pin">

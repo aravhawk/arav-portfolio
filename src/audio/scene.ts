@@ -1,3 +1,4 @@
+import { starts } from '@/water/registry';
 /**
  * From what the picture publishes to what the sound needs to know.
  *
@@ -11,7 +12,7 @@
  * picture shows and follows it when it moves.
  */
 
-import { type Basis, SETTLE_AT, groundUnder, projectPoint, sectionStarts } from '@/water/camera';
+import { type Basis, SETTLE_AT, groundUnder, projectPoint } from '@/water/camera';
 import { skyAt } from '@/water/sky';
 import { BASIN, BENDS, CANYON, CANYON_LINE, COLS, DAM, ISLAND, LATTICE, NAME, SHARDS, SLUICES } from '@/water/world';
 import { type Ground, type Reach, arms, groundAt, spills, tribs } from './plan';
@@ -173,7 +174,7 @@ const VS = [0.56, 0.7, 0.84, 0.97];
  */
 export function movementAt(home: boolean, s: number, melt: number, rest: boolean, risen = true): number {
   if (!home) return MOVE.page;
-  const [, say, , , , bridge, models, , , canyon, delta, sea] = sectionStarts();
+  const { say, bridge, models, canyon, delta, sea } = starts;
   if (rest) return risen ? MOVE.rest : MOVE.approach;
   if (s < say) return melt > 0.06 ? MOVE.melt : MOVE.ice;
   // (Each movement begins as the camera leaves for its first station, half a screen before the section's own start.)
@@ -430,7 +431,7 @@ export class SceneReader {
         if (heard(s) >= heard(bend)) bend = s;
       }
     }
-    const [, , , , , , , , , , , seaAt] = sectionStarts();
+    const { sea: seaAt } = starts;
     const hour = home ? skyAt(1, sig.day, 0, 0.62, 0.03) : null;
     const rise = home ? (sig.rise ?? sig.ray) : 0;
 

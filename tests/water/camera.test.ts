@@ -1,6 +1,7 @@
+import { composed, type SectionId } from '@/water/registry';
 import { writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { END_AT, HOLDS, MOVE, SETTLE_AT, type Basis, type V3, basisOf, flightKeys, groundUnder, poseAt, projectPoint, rayThrough, stillStops } from '@/water/camera';
+import { END_AT, HOLDS, MOVE, SETTLE_AT, type Basis, type V3, basisOf, flightKeys, groundUnder, poseAt, projectPoint, rayThrough } from '@/water/camera';
 import { COLS, DAM, DELTA, FACE, LATTICE, SHARDS, SHEET, SLAB, T2, boardSpan, lipY, sheetCols } from '@/water/world';
 
 /**
@@ -215,17 +216,16 @@ describe('the scroll never holds still', () => {
   });
 
   it('a station is composed where it was composed', () => {
-    const stops = stillStops();
     // The frames the fourth round did not recompose: where the eye stands at each stop on a wide screen.
-    const at: [number, V3][] = [
-      [2, [930, 8110, 300]],
-      [3, [1380, 9950, 330]],
-      [7, [2130, T2 + 3800, 640]],
-      [8, [500, T2 + 3800, 640]],
-      [10, [1100, T2 + 7450, 400]],
+    const at: [SectionId, V3][] = [
+      ['infiniview', [930, 8110, 300]],
+      ['upstream', [1380, 9950, 330]],
+      ['fork', [2130, T2 + 3800, 640]],
+      ['lattice', [500, T2 + 3800, 640]],
+      ['delta', [1100, T2 + 7450, 400]],
     ];
     for (const [i, pos] of at) {
-      const p = poseAt(flightKeys(1.6), stops[i]);
+      const p = poseAt(flightKeys(1.6), composed[i]);
       for (let k = 0; k < 3; k++) expect(p.pos[k], `stop ${i}`).toBeCloseTo(pos[k], 6);
     }
     expect(MOVE.before + MOVE.after).toBeGreaterThan(1);

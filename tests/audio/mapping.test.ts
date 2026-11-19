@@ -1,9 +1,10 @@
+import { starts, composed } from '@/water/registry';
 import { describe, expect, it } from 'vitest';
 import { DAWN, GATE, LAP, RIBBON, stationsNear } from '@/water/moments';
 import { ARRIVE_AT, BLOCK_EARS, BLOCK_MID, LIGHT, NAME_MELT, SHEET_BREAKS, SHIMMER_AT, W, WATER, arrivalOf, arrivalTime, bearingAt, blockSet, camN, climbTime, climbVoice, curtainAt, curtainsAt, gatherTime, gatherVoice, landings, lightPan, lineRun, lineTime, nameLetters, nameMelt, railVoice, ribbonHead, ribbonTime, sinkAt, sinkOrder, sinkVoice, unsmooth, chirpAt, chirpLen, crackVoice, dripVoice, dropVoice, gust, latticeAt, latticeTime, latticeVoice, mixOf, roomsOf, scrollN, seaAt, shardVoice, slapTime, surgeRing, swellAt, uiVoice, waterOf, windPanOf } from '@/audio/mapping';
 import { APPROACH, type Scene, SceneReader, type Seen, type SignalsLike, groundAt, heard, movementAt, seenAt, wetUnder } from '@/audio/scene';
 import { ARRIVAL, ARRIVAL_AT, CLIMB, GATHER, MOTIF, MOVE, PENTA } from '@/audio/theory';
-import { END_AT, MELT, SETTLE_AT, basisOf, dayAt, endLens, flightKeys, heroDesign, poseAt, sectionStarts, stillStops } from '@/water/camera';
+import { END_AT, MELT, SETTLE_AT, basisOf, dayAt, endLens, flightKeys, heroDesign, poseAt, stillStops } from '@/water/camera';
 import { CANYON, COLS, DELTA, LAKE, LATTICE, NAME, SHARDS, SLAB, SLUICES, STREAM, TARN } from '@/water/world';
 
 const UNSEEN: Seen = { k: 0, pan: 0, far: 0 };
@@ -826,7 +827,7 @@ describe('the scene is read from what the picture publishes', () => {
     const stops = stillStops();
     stops.forEach((s, i) => {
       const sc = new SceneReader().read(sig(s, 1000), 1000, env);
-      if (i === 5) expect(sc.tarn).toBeGreaterThan(0.6);
+      if (s === composed.bridge) expect(sc.tarn).toBeGreaterThan(0.6);
       else expect(sc.tarn, `station ${i}`).toBeLessThan(0.2);
     });
     // An upright screen holds the two shards against the sky over a foot of bank: little of the tarn lies under
@@ -835,17 +836,17 @@ describe('the scene is read from what the picture publishes', () => {
       const cam = basisOf(poseAt(flightKeys(0.46), stops[i]));
       return new SceneReader().read({ ...sig(stops[i], 1000), cam, aspect: 0.46, st: stationsNear(cam.pos) }, 1000, env);
     };
-    expect(tall(5).tarn).toBeGreaterThan(0.6);
+    expect(tall(stops.indexOf(composed.bridge)).tarn).toBeGreaterThan(0.6);
     stops.forEach((_, i) => {
-      if (i !== 5) expect(tall(i).tarn, `station ${i}, upright`).toBeLessThan(0.2);
+      if (stops[i] !== composed.bridge) expect(tall(i).tarn, `station ${i}, upright`).toBeLessThan(0.2);
     });
   });
 
   it('the walls close in only inside the canyon', () => {
-    const [, , , , , , , , , canyon] = sectionStarts();
+    const { canyon } = starts;
     const stops = stillStops();
     expect(new SceneReader().read(sig(canyon + 1.2, 1000), 1000, env).walls).toBeGreaterThan(0.7);
-    for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 10, 11]) expect(new SceneReader().read(sig(stops[i], 1000), 1000, env).walls, `station ${i}`).toBeLessThan(0.05);
+    for (const s of stops.filter(s => s !== composed.hero && s !== composed.canyon)) expect(new SceneReader().read(sig(s, 1000), 1000, env).walls, `station ${s}`).toBeLessThan(0.05);
   });
 
   it('speeds come from one frame to the next, and a jump is not speed', () => {
@@ -870,7 +871,7 @@ describe('the scene is read from what the picture publishes', () => {
     const r2 = new SceneReader();
     r2.read(sig(0.05, 1000), 1000, env);
     r2.read(sig(0.05, 1016.7), 1016.7, env);
-    const far = r2.read(sig(stillStops()[2], 1033.4), 1033.4, env);
+    const far = r2.read(sig(composed.infiniview, 1033.4), 1033.4, env);
     expect(far.jump).toBe(true);
     expect(far.meltRate).toBe(0);
     expect(mixOf(far, 0).cracks).toBe(0);
@@ -917,29 +918,28 @@ describe('the scene is read from what the picture publishes', () => {
   });
 
   it('a sound is placed where its cause is seen, and a cause out of frame is not heard', () => {
-    const stops = stillStops();
-    const cam = (i: number) => basisOf(poseAt(flightKeys(1.6), stops[i]));
+    const cam = (stop: number) => basisOf(poseAt(flightKeys(1.6), stop));
     // At the dam all three sluices are in frame, left to right.
-    const gates = SLUICES.map((line) => seenAt(cam(7), 1.6, line[0].x, line[0].y, 40));
+    const gates = SLUICES.map((line) => seenAt(cam(composed.fork), 1.6, line[0].x, line[0].y, 40));
     for (const g of gates) expect(g.k).toBeGreaterThan(0.9);
     expect(gates[0].pan).toBeLessThan(gates[1].pan);
     expect(gates[1].pan).toBeLessThan(gates[2].pan);
     // The dam is seen from downstream, looking back upstream. The columns stand far behind it: the picture has stopped
     // their drips by then (they are not near), so none is set, and their shallows are not heard.
-    expect(stationsNear(cam(7).pos)[0]).toBe(0);
-    expect(stationsNear(cam(6).pos)[0]).toBe(1);
+    expect(stationsNear(cam(composed.fork).pos)[0]).toBe(0);
+    expect(stationsNear(cam(composed.models).pos)[0]).toBe(1);
     // At their own station the columns, the lattice and both shards are in frame.
-    for (const x of COLS.xs) expect(seenAt(cam(6), 1.6, x, COLS.y, 0).k).toBeGreaterThan(0.9);
-    expect(seenAt(cam(8), 1.6, LATTICE.x, LATTICE.y, 0).k).toBeGreaterThan(0.9);
-    for (const sh of SHARDS) expect(seenAt(cam(5), 1.6, sh.x, sh.y, sh.h / 2).k).toBeGreaterThan(0.9);
+    for (const x of COLS.xs) expect(seenAt(cam(composed.models), 1.6, x, COLS.y, 0).k).toBeGreaterThan(0.9);
+    expect(seenAt(cam(composed.lattice), 1.6, LATTICE.x, LATTICE.y, 0).k).toBeGreaterThan(0.9);
+    for (const sh of SHARDS) expect(seenAt(cam(composed.bridge), 1.6, sh.x, sh.y, sh.h / 2).k).toBeGreaterThan(0.9);
     // The lattice is near from its own station. At the dam the eye stands over it looking back upstream: it is under the lens, out of frame, and not heard.
-    expect(seenAt(cam(8), 1.6, LATTICE.x, LATTICE.y, 0).far).toBeLessThan(1500);
-    expect(seenAt(cam(7), 1.6, LATTICE.x, LATTICE.y, 0).k).toBe(0);
+    expect(seenAt(cam(composed.lattice), 1.6, LATTICE.x, LATTICE.y, 0).far).toBeLessThan(1500);
+    expect(seenAt(cam(composed.fork), 1.6, LATTICE.x, LATTICE.y, 0).k).toBe(0);
     expect(seenAt(null, 1.6, 0, 0, 0).k).toBe(0);
   });
 
   it('the movements follow the flight in order', () => {
-    const [, say, , , , bridge, models, , , canyon, delta, sea] = sectionStarts();
+    const { say, bridge, models, canyon, delta, sea } = starts;
     expect(movementAt(true, 0, 0, false)).toBe(MOVE.ice);
     expect(movementAt(true, 1, 0.5, false)).toBe(MOVE.melt);
     expect(movementAt(true, say + 1, 1, false)).toBe(MOVE.river);
@@ -957,12 +957,11 @@ describe('the scene is read from what the picture publishes', () => {
   });
 
   it('at each station’s composed stop, what has a voice is what is in frame, on the side it is in frame', () => {
-    const stops = stillStops();
-    const at = (i: number, more: Partial<SignalsLike> = {}) => new SceneReader().read(sig(stops[i], 1000, more), 1000, env);
+    const at = (stop: number, more: Partial<SignalsLike> = {}) => new SceneReader().read(sig(stop, 1000, more), 1000, env);
     const gain = (sc: Scene, v: number) => waterOf(sc, 0)[v][GAIN];
 
     // 1 The statement: the river runs down the right of the frame. The cliff's falls, the block and everything later are a station or more away and silent.
-    const say = at(1);
+    const say = at(composed.say);
     expect(say.pan).toBeGreaterThan(0.5);
     expect(gain(say, W.stream)).toBeGreaterThan(0.1);
     expect(Math.max(...say.falls.map(heard))).toBe(0);
@@ -970,7 +969,7 @@ describe('the scene is read from what the picture publishes', () => {
     expect(gain(say, W.lap) + gain(say, W.thin) + gain(say, W.sluice) + gain(say, W.wall)).toBe(0);
 
     // 2 The basin: the block stands right of the middle with the basin's water round it. The far cliff is a few pixels at the horizon: its falls are all but silent.
-    const basin = at(2);
+    const basin = at(composed.infiniview);
     expect(basin.basin).toBeGreaterThan(0.8);
     expect(basin.slab.k).toBe(1);
     expect(basin.slab.pan).toBeGreaterThan(0.05);
@@ -980,7 +979,7 @@ describe('the scene is read from what the picture publishes', () => {
     for (let i = 0; i < 7; i++) expect(gain(basin, W.falls + i)).toBeLessThan(0.03);
 
     // 3 The confluence: all seven falls stand across the frame over the cliff, the broadest furthest right, each next one further left; the river below them runs off to the right.
-    const conf = at(3);
+    const conf = at(composed.upstream);
     expect(conf.falls).toHaveLength(7);
     conf.falls.forEach((f, i) => {
       expect(f.k, `fall ${i}`).toBe(1);
@@ -995,12 +994,12 @@ describe('the scene is read from what the picture publishes', () => {
     expect(conf.falls[6].size).toBeLessThan(0.3);
     expect(conf.pan).toBeGreaterThan(0.3);
     // (Published widths take over from the plan's.)
-    const live = at(3, { tribs: [10, 10, 10, 10, 10, 10, 168] });
+    const live = at(composed.upstream, { tribs: [10, 10, 10, 10, 10, 10, 168] });
     expect(live.falls[6].size).toBe(1);
     expect(live.falls[0].size).toBeLessThan(0.1);
 
     // 4 The rock pool: still water under the lens, and its one brook leaving from the far shore, near the middle of the frame. The tarn beyond is not yet the tarn.
-    const pool = at(4);
+    const pool = at(composed.bench);
     expect(pool.pool).toBeGreaterThan(0.8);
     expect(pool.spill.k).toBe(1);
     expect(Math.abs(pool.spill.pan)).toBeLessThan(0.3);
@@ -1009,14 +1008,14 @@ describe('the scene is read from what the picture publishes', () => {
     expect(pool.tarn).toBeLessThan(0.2);
 
     // 5 The tarn: both shards in frame, the further one left of the nearer, and next to no water sound.
-    const tarn = at(5);
+    const tarn = at(composed.bridge);
     expect(tarn.tarn).toBeGreaterThan(0.9);
     const shards = SHARDS.map((sh) => seenAt(tarn.cam, 1.6, sh.x, sh.y, sh.h / 2));
     for (const sh of shards) expect(sh.k).toBe(1);
     expect(waterOf(tarn, 0).reduce((s, v) => s + v[GAIN] * v[RATE], 0)).toBeLessThan(1);
 
     // 6 The columns: the shallows in the middle of the frame. The dam is in the distance with its back to the eye: the sluice's rush is on its far side and is not heard.
-    const cols = at(6);
+    const cols = at(composed.models);
     expect(cols.cols).toBe(1);
     expect(cols.shallows.k).toBe(1);
     expect(Math.abs(cols.shallows.pan)).toBeLessThan(0.3);
@@ -1025,7 +1024,7 @@ describe('the scene is read from what the picture publishes', () => {
     expect(gain(cols, W.sluice)).toBe(0);
 
     // 7 The dam, from downstream: the one running channel comes toward the eye near the middle of the frame; the two shut ones are dry beds and say nothing; the lattice is under the lens.
-    const dam = at(7);
+    const dam = at(composed.fork);
     expect(dam.dam).toBe(1);
     expect(dam.sluice.k).toBe(1);
     expect(Math.abs(dam.sluice.pan)).toBeLessThan(0.3);
@@ -1035,10 +1034,10 @@ describe('the scene is read from what the picture publishes', () => {
     for (const p of SLUICES[0].slice(1, 4)) expect(groundAt(p.x, p.y, 1, [1, 0, 0]).wet).toBe(1);
     expect(dam.lanes.k).toBe(0);
     // (With the middle gate open instead, the water is heard further right: the sluices run left to right in the picture.)
-    expect(at(7, { gate: [0, 1, 0] }).sluice.pan).toBeGreaterThan(dam.sluice.pan + 0.2);
+    expect(at(composed.fork, { gate: [0, 1, 0] }).sluice.pan).toBeGreaterThan(dam.sluice.pan + 0.2);
 
     // 8 The lattice: the whole of it in frame, the thread coming in from the right of it.
-    const lat = at(8);
+    const lat = at(composed.lattice);
     expect(lat.lattice).toBe(1);
     expect(lat.lanes.k).toBe(1);
     expect(lat.thread.k).toBe(1);
@@ -1047,13 +1046,13 @@ describe('the scene is read from what the picture publishes', () => {
     expect(waterOf(lat, 0)[W.thin][PAN]).toBeGreaterThan(lat.lanes.pan * 0.4);
 
     // 9 The canyon: closed in, fast water under the lens.
-    const can = at(9);
+    const can = at(composed.canyon);
     expect(can.walls).toBe(1);
     expect(gain(can, W.wall)).toBeGreaterThan(0.15);
     expect(mixOf(can, 0).rooms[1]).toBe(1);
 
     // 10 The delta: five channels, all in frame, all in the right half of it (the bank and the words are on the left), west to east.
-    const delta = at(10);
+    const delta = at(composed.delta);
     expect(delta.arms).toHaveLength(5);
     delta.arms.forEach((a, i) => {
       expect(a.k).toBeGreaterThan(0.5);
@@ -1063,13 +1062,13 @@ describe('the scene is read from what the picture publishes', () => {
     expect(delta.arms[4].pan).toBeGreaterThan(delta.arms[0].pan + 0.5);
 
     // 11 The sea: all sea, and nothing of the river's.
-    const sea = at(11);
+    const sea = at(composed.sea);
     expect(sea.sea).toBeGreaterThan(0.9);
     expect(gain(sea, W.sea)).toBeGreaterThan(0);
     for (const v of [W.falls, W.thin, W.lap, W.sluice, W.wall, W.arms]) expect(gain(sea, v)).toBe(0);
 
     // None of any of it is heard from the frozen lake; the name is in the middle of that frame.
-    const top = at(0);
+    const top = at(composed.hero);
     expect(Math.max(...top.falls.map(heard), heard(top.spill), ...top.arms.map(heard))).toBe(0);
     expect(waterOf(top, 0).reduce((s, v) => s + v[GAIN], 0)).toBe(0);
     expect(top.name.k).toBe(1);
@@ -1087,7 +1086,7 @@ describe('the scene is read from what the picture publishes', () => {
   });
 
   it('the camera’s bank and turn, the sky it sees, the wall it flies under, the run out to sea', () => {
-    const [, , , , , , , , , canyon, , sea] = sectionStarts();
+    const { canyon, sea } = starts;
     const top = new SceneReader().read(sig(0, 1000), 1000, env);
     expect(top.sky).toBeGreaterThan(0);
     expect(top.north).toBeGreaterThan(0.5);

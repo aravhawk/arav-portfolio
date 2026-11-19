@@ -1,4 +1,4 @@
-import { byId } from './registry';
+import { timeline } from './registry';
 /**
  * The results on the rock pool's bed, set as type.
  *
@@ -158,7 +158,8 @@ export async function boardReady(): Promise<void> {
  * @param devW the picture's width in device pixels
  */
 export function boardMask(aspect: number, devW: number): HTMLCanvasElement {
-  const pose = poseAt(flightKeys(aspect), byId.bench.stop);
+  const pool = timeline.find(section => section.subject?.pass === 'pool');
+  const pose = poseAt(flightKeys(aspect), pool?.stop ?? 0);
   const upright = aspect < 0.9;
   // (How many device pixels a world unit of the table's near edge takes in that frame, and half as much again.)
   const need = (1.6 * devW * (upright ? 0.92 : 0.56)) / boardSpan(sheetCols(aspect));

@@ -23,10 +23,9 @@ The pack is written as the build proceeds. Each file says at its top
 what is **as built** and what is **planned** (with the task that lands
 it). Do not trust a planned line as fact: check the code.
 
-- As built today: the timeline, the camera's moves, the words' steps,
+- As built today: the typed flight registry, the timeline, the camera's moves, the words' steps,
   the first paint, the light's hours, shared ice, solid UI surfaces, the tests.
-- Planned: a typed station registry (so a station is one definition,
-  not edits in six files), the motion
+- Planned: the motion
   tokens in one module, the performance gate with the owner's
   profile, and a proof run in which a fresh helper adds a throwaway
   section from this pack alone.

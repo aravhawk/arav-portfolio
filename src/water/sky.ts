@@ -1,4 +1,3 @@
-import { byId, composed } from './registry';
 /**
  * The flight's light, hour by hour.
  *
@@ -190,6 +189,10 @@ const MORNING: Key = {
   under: 1,
 };
 
+/** The calibrated heights and colours belong to hours along the whole journey.
+ * Stretch the clock when the flight length changes. */
+const hourPositions = [3.1, 5.6, 8.45, 11.15, 13.8, 16.6, 19.4, 22.15, 25.8, 28.3].map(hour => hour * (END_AT / 31.1));
+
 /**
  * The day, stop by stop (the light theme). The sun's bearing runs on round
  * from the first screen's: left of ahead at first light, abeam on the left
@@ -200,7 +203,7 @@ const MORNING: Key = {
  * @param elEnd how high the sun stands at the ending
  */
 function dayKeys(sunAz: number, ridge: number, elEnd: number): [number, Key][] {
-  const { say, infiniview: view, upstream: up, bench, bridge, models, fork, lattice, canyon, delta } = composed;
+  const [say, view, up, bench, bridge, models, fork, lattice, canyon, delta] = hourPositions;
   const end = sunAz - TAU;
   return [
     [0, MORNING],
@@ -492,7 +495,7 @@ const MOONLIGHT: V3 = [0.176, 0.185, 0.197];
  * ground.
  */
 function nightKeys(sunAz: number, elEnd: number): [number, Key][] {
-  const { say, infiniview: view, upstream: up, bench, bridge, models, fork, lattice, canyon, delta } = composed;
+  const [say, view, up, bench, bridge, models, fork, lattice, canyon, delta] = hourPositions;
   // Deep night over the lake: a low moon behind the name (the first screen's own), a broad faint aurora, every star.
   const lake: Key = {
     zen: [0.004, 0.011, 0.04],
@@ -689,7 +692,7 @@ function nightKeys(sunAz: number, elEnd: number): [number, Key][] {
  * eye arrives and has gone before the tarn.
  */
 function auroraAt(s: number): number {
-  const bench = byId.bench.stop;
+  const bench = hourPositions[3];
   return Math.max(1 - smooth(SECTIONS.hero, SECTIONS.hero + 0.6, s), smooth(bench - 1.6, bench - 0.5, s) * (1 - smooth(bench + 0.75, bench + 1.6, s)));
 }
 

@@ -1,4 +1,4 @@
-import { byId, subjects, customSubjects, WATER_LOW, type Box } from './registry';
+import { subjects, customSubjects, WATER_LOW, type Box } from './registry';
 export type { Box } from './registry';
 /**
  * Which parts of the flight's shading pass a frame needs.
@@ -26,25 +26,29 @@ import { CONF_Y, DELTA, LAKE, POOL, SLAB, TARN } from './world';
 export type Mode = 'day' | 'night' | 'any';
 
 /** One bit to a subject. The ground, the water, the sky and the ranges are in every variant. */
+const pass = (name: string) => subjects.find(subject => subject.pass === name);
+const slabSubject = pass('slab');
+const confluence = pass('confluence');
+const poolSubject = pass('pool');
 export const F = {
   /** the lake's sheet of ice */
   ICE: 1,
   /** the block with the product picture, its shade, its image and the white water at its foot */
-  SLAB: byId.infiniview.subject!.bit,
+  SLAB: slabSubject?.bit ?? 0,
   /** the confluence: the snowfield, the cliff and its falls, the trails in the river */
-  CONF: byId.upstream.subject!.bit,
+  CONF: confluence?.bit ?? 0,
   /** the rock pool: its bed and plates, its rim, its boulders */
-  POOL: byId.bench.subject!.bit,
+  POOL: poolSubject?.bit ?? 0,
   /** the tarn's two shards */
-  SHARDS: byId.bridge.subject!.bit,
+  SHARDS: pass('shards')?.bit ?? 0,
   /** the seracs */
-  COLS: byId.models.subject!.bit,
+  COLS: pass('columns')?.bit ?? 0,
   /** the dam and its sluices */
-  DAM: byId.fork.subject!.bit,
+  DAM: pass('dam')?.bit ?? 0,
   /** the lattice of cubes */
-  LAT: byId.lattice.subject!.bit,
+  LAT: pass('lattice')?.bit ?? 0,
   /** the canyon */
-  CANYON: byId.canyon.subject!.bit,
+  CANYON: pass('canyon')?.bit ?? 0,
   /** the delta's light, the open sea, the ending */
   SEA: 512,
   /** the name's letters standing on the sheet: the blocks, their shade, their image, what stands under the water, the pieces that come away (only with FIELD) */
@@ -325,10 +329,10 @@ export function frameTiles(cam: Basis, aspect: number, need: number, nameBox: Bo
   if (need & F.NAME) take(F.NAME, name ?? NONE);
   if (need & F.SLAB) {
     const s = slabInFrame(cam, aspect);
-    if (s.behind === 0) take(F.SLAB, join(s.box, boxRectCut(cam, aspect, byId.infiniview.subject!.boxes[0])));
+    if (s.behind === 0) take(F.SLAB, join(s.box, boxRectCut(cam, aspect, slabSubject!.boxes[0])));
   }
-  const conf = need & F.CONF && !confNearCam(cam) ? (boxRectCut(cam, aspect, byId.upstream.subject!.boxes[0]) ?? NONE) : null;
-  const pool = need & F.POOL && !poolNearCam(cam) ? (boxRectCut(cam, aspect, byId.bench.subject!.boxes[0]) ?? NONE) : null;
+  const conf = need & F.CONF && !confNearCam(cam) ? (boxRectCut(cam, aspect, confluence!.boxes[0]) ?? NONE) : null;
+  const pool = need & F.POOL && !poolNearCam(cam) ? (boxRectCut(cam, aspect, poolSubject!.boxes[0]) ?? NONE) : null;
   const both = join(conf, pool)!;
   // (Two small far subjects side by side are one piece: a variant and a draw for each sliver between them would cost more than it saved.)
   if (conf && pool && conf !== NONE && pool !== NONE && (both[2] - both[0]) * (both[3] - both[1]) < 0.06) take(F.CONF | F.POOL, both);
@@ -408,7 +412,7 @@ export function passNeeds(cam: Basis, aspect: number, ice: IceParts, slab: boole
     if (ice.field && ice.blocks) need |= F.NAME;
   }
   // The block (main: `slabNear`, the ground's `uSlabSize.x > 0.0 && length(uCamPos.xy - uSlabPos.xy) < 5200.0`).
-  if (slab) {
+  if (slab && slabSubject) {
     const s = slabInFrame(cam, aspect);
     const dist = Math.hypot(cx - SLAB.x, cy - SLAB.y);
     if (s.behind < 8) {
@@ -417,15 +421,15 @@ export function passNeeds(cam: Basis, aspect: number, ice: IceParts, slab: boole
       const reachOut = Math.hypot(SLAB.w * 0.5 + SLAB.thick, SLAB.thick, SLAB.h + SLAB.lift);
       if (onScreen && Math.hypot(dist, cam.pos[2]) < 2500 + reachOut) need |= F.SLAB;
       // Its shade, its light, its image and its white water: on the ground and water within four widths of it.
-      if (dist < 5200 && boxInView(cam, aspect, byId.infiniview.subject!.boxes[0][0], byId.infiniview.subject!.boxes[0][1])) need |= F.SLAB;
+      if (dist < 5200 && boxInView(cam, aspect, slabSubject!.boxes[0][0], slabSubject!.boxes[0][1])) need |= F.SLAB;
     }
   }
   // The confluence (`confNear`), and its trails in the river, which the water looks for by place.
   if (confNearCam(cam)) need |= F.CONF;
-  else if (boxInView(cam, aspect, byId.upstream.subject!.boxes[0][0], byId.upstream.subject!.boxes[0][1])) need |= F.CONF;
+  else if (confluence && boxInView(cam, aspect, confluence!.boxes[0][0], confluence!.boxes[0][1])) need |= F.CONF;
   // The rock pool (`poolNear`), and its water, looked for by place (the bed under a ray lies up to a few hundred units on).
   if (poolNearCam(cam)) need |= F.POOL;
-  else if (boxInView(cam, aspect, byId.bench.subject!.boxes[0][0], byId.bench.subject!.boxes[0][1])) need |= F.POOL;
+  else if (poolSubject && boxInView(cam, aspect, poolSubject!.boxes[0][0], poolSubject!.boxes[0][1])) need |= F.POOL;
   if (tarnNear(cam)) need |= F.SHARDS;
   // The last four stations (`uSt`).
   const st = stationsNear(cam.pos);
@@ -434,7 +438,13 @@ export function passNeeds(cam: Basis, aspect: number, ice: IceParts, slab: boole
   if (st[2] > 0) need |= F.LAT;
   if (st[3] > 0) need |= F.CANYON;
   for (const subject of customSubjects) {
-    if (subject.boxes.some(([lo, hi]) => boxInView(cam, aspect, lo, hi))) need |= subject.bit;
+    for (const [lo, hi] of subject.boxes) {
+      if (subject.reach !== undefined && Math.hypot(...lo.map((v, i) => Math.max(v - cam.pos[i], cam.pos[i] - hi[i], 0))) > subject.reach) continue;
+      if (boxInView(cam, aspect, lo, hi)) {
+        need |= subject.bit;
+        break;
+      }
+    }
   }
   if (seaNear(cam) > 0) need |= F.SEA;
   return need;

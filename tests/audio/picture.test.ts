@@ -14,7 +14,7 @@ import { LATTICE } from '@/water/world';
  * into line with it.
  */
 const read = (path: string) => readFileSync(fileURLToPath(new URL(`../../src/water/${path}`, import.meta.url)), 'utf8');
-const flightGlsl = read('shaders/flight.ts');
+const flightGlsl = [read('shaders/flight.ts'), read('shaders/river-stations.ts')].join('\n');
 const stationsGlsl = read('shaders/stations.ts');
 const flight = read('flight.ts');
 const f = (x: number) => (Number.isInteger(x) ? x.toFixed(1) : String(x));

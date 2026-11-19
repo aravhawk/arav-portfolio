@@ -1,75 +1,60 @@
 # Recipes
 
-Status: **today's recipe is by hand**, file by file, and is written
-out below so that nothing is missed. **Planned:** the station
-registry reduces "add a station" to one definition plus its object's
-shader; this file is rewritten when that lands, and proved by a fresh
-helper adding a throwaway station from this pack alone.
+Read the consistency checklist before editing a station.
 
-Before any recipe: read `consistency-checklist.md`. A change is not
-done until it passes that list.
+## Add a station
 
-## Add a station to the flight (today, by hand)
+Insert a definition in `FLIGHT` in `src/water/registry.ts`. The list runs upstream to downstream. This example fits between the lattice and the canyon. It raises a block of ice in the water already painted there.
 
-1. **Content.** Add the project to `src/content/projects.ts` (name,
-   one plain line, page copy, links, year) and its label to
-   `src/content/kinds.ts`. Follow `copy.md`. Count the home page's
-   words.
-2. **Timeline.** In `src/water/camera.ts` add its length to
-   `SECTIONS` in flight order and give it a `Move` for wide and for
-   upright screens: the point the eye turns about is where the words'
-   ground meets the subject, so the subject grows away from the
-   words. Add it to `flightKeys`. Run `tests/water/camera.test.ts`
-   (the eye never stops; every half screen changes).
-3. **Place.** In `src/water/world.ts` give its object and its water a
-   place on the river after its neighbour.
-4. **Object.** In `src/water/shaders/stations.ts` write its object
-   using the shared ice and the water that is there; call it from
-   `shaders/flight.ts`. One subject, lit by its hour, whole inside
-   the frame at every width. See `light-and-materials.md`.
-5. **Its piece of the frame.** In `src/water/variants.ts` register
-   its box of the world so its code runs only where it stands, and
-   its `#define` for the stretch's variant.
-6. **Its event.** One scroll-driven thing that happens to its object
-   (scrubbed both ways, a mechanism no neighbour uses), in
-   `src/water/moments.ts` with uniforms set in `src/water/flight.ts`.
-7. **Its hour.** It takes its light from its place on the timeline in
-   `src/water/sky.ts`; adjust the neighbouring keys only if the day
-   needs room.
-8. **Words.** In `src/app/page.tsx` add its section and block
-   (eyebrow, title, line, figure or action) with `build()`
-   thresholds; it takes the home page's one anchor and one scale from
-   `src/app/flight.css`. Add its tick to the rail.
-9. **Its page.** `src/app/work/[slug]` renders from the content; give
-   it a case layout in `src/components/work/` if it needs one, a
-   scene band and stills (`scripts/` capture tools), and a share
-   card (`scripts/capture-og.mjs`).
-10. **Sound.** `src/audio/plan.ts` reads the world's plan; run
-    `tests/audio/` and update only the copied numbers that the tests
-    name.
-11. **Check.** Everything in `consistency-checklist.md`.
+```ts
+{
+  id: 'sample', rail: 'Sample', kind: 'title', length: 0.45, offset: 0.22,
+  camera: ({ upright, stop }) => [{
+    s: stop,
+    pos: upright ? [1100, T2 + 4680, 380] : [1020, T2 + 4730, 280],
+    aim: [1320, T2 + 5500, 70], fov: upright ? 60 : 46,
+  }],
+  subject: {
+    bit: 4096, define: 'F_SAMPLE', reach: 1300,
+    boxes: [[[1240, T2 + 5260, 0], [1400, T2 + 5420, 140]]],
+    event: [0, 0.45],
+    shader: {
+      fn: 'sampleIce',
+      source: `vec3 sampleIce(vec3 col, vec3 ray, float progress) {
+        vec3 lo = vec3(1240.0, ${(T2 + 5260).toFixed(1)}, 0.0);
+        vec3 hi = lo + vec3(160.0, 160.0, 60.0 + 80.0 * progress);
+        vec3 a = (lo - uCamPos) / ray, b = (hi - uCamPos) / ray;
+        vec3 nearFace = min(a, b), farFace = max(a, b);
+        float t = max(max(nearFace.x, nearFace.y), nearFace.z);
+        float leave = min(min(farFace.x, farFace.y), farFace.z);
+        if (t <= 0.0 || leave < t) return col;
+        vec3 normal = t == nearFace.z ? vec3(0, 0, -sign(ray.z)) :
+          t == nearFace.x ? vec3(-sign(ray.x), 0, 0) : vec3(0, -sign(ray.y), 0);
+        vec3 hit = uCamPos + t * ray;
+        return inAir(iceGlacier(hit, normal, ray, t, hit.xy, leave-t, 1.0, 1.0, 0.0, 15.0, 0.31), ray, t);
+      }`,
+    },
+  },
+},
+```
 
-## Retire a station
+- Give a published project its existing `src/content/projects.ts` slug in `project`. The default title block uses its kind, linked name and line. A study without project copy displays the rail label. The two existing metric figures have custom server-rendered templates.
+- Measure length and stop offset in viewport heights. Author keys in increasing order inside the section. For a sustained move, return `holdKeys(move(pose, sx, sy, push, arc, rise), stop)` and allow room for its arrival and departure. Inspect the joins on wide and upright screens.
+- Choose one unused power-of-two feature bit below the sign bit. The bounds enclose every hit, reflection and shadow throughout the event. Set the reach to the distance where the geometry becomes invisible. The shader receives eased scroll progress in either scroll direction. Pass hit geometry to the shared ice.
+- To carve water, supply `paint(bed, tribs, gate)`. The render engine and the audio plan replay those operations. The hour follows the position in the flight. Live band cameras and project order follow the slug. Author any new content, page-specific UI, fallback stills and share art.
+- Run the camera and audio suites, the production build and the consistency checklist. Visit the new rail tick and its two neighbours.
 
-Remove it in the reverse order, keeping its definition in git history
-only (no dead code left behind): the block and tick, the event, the
-piece and variant, the object's GLSL, its place, its `Move` and
-length, its content entry or move the entry to the archive. Close the
-gap on the timeline by regenerating the stops, never by leaving an
-empty stretch. Run the whole checklist: its neighbours now meet each
-other.
+## Retire
 
-## Restore a station
+Remove the definition from the list and remove shader or geometry helpers used only by that definition. Recheck the new join and the water course. For the original eight, inspect specialty media, sound and case-page bindings as well. Archive published content separately when its URL must continue to resolve.
 
-Take its definition back from history as a whole, then treat it as a
-new station: it must use today's ice, light and tokens, not the ones
-it had.
+## Restore
 
-## Add a home section that is not a station (a statement, an interlude)
+Restore the definition, its geometry, shader and public content from history. Confirm its feature bit is still free and its world coordinates join the current neighbours. Run the add checks.
 
-A stretch of the flight with words and no object: a length in
-`SECTIONS`, keys that travel (never a hold), a block in `page.tsx`,
-and a calm ground under the words. No new shader code.
+## Add a home section without an object
+
+Register a definition with `kind: 'section'`, a rail label, a length, a stop offset and moving camera keys. The default block displays the label. Omit the subject. A custom statement or ending can select its own server-rendered words.
 
 ## Add an inner page
 

@@ -1,5 +1,6 @@
+import { composed } from '@/water/registry';
 import { describe, expect, it } from 'vitest';
-import { basisOf, flightKeys, poseAt, projectPoint, stillStops, type V3 } from '@/water/camera';
+import { basisOf, flightKeys, poseAt, projectPoint, type V3 } from '@/water/camera';
 import { type Cap, type Placed, NAV_CLEAR, isFan, layoutCaptions, layoutList, layoutStepped, streamAnchors } from '@/water/words';
 import { COLS, colApex, colHeights } from '@/water/world';
 
@@ -28,8 +29,8 @@ const REPOS = ['Kilo Code', 'OpenBridge', 'XcodeBenchmark', 'Investo', 'Tokscale
 const MODELS = ['qwen3.5-opus-4.6', 'llama4', 'gemma4', 'qwen3.6'];
 
 // The captions stand with their station's action: from a little before its composed frame to its leaving (see `build` in src/app/page.tsx).
-const UP = stillStops()[3];
-const MODELS_AT = stillStops()[6];
+const UP = composed.upstream;
+const MODELS_AT = composed.models;
 const SPAN: [number, number] = [-0.08, 0.95];
 
 type Rect = [number, number, number, number];

@@ -5,7 +5,8 @@
  * very same rules instead of a copy of them.
  */
 
-import { CANYON, COLS, DAM, LATTICE } from './world';
+import { proximity } from './registry';
+import { COLS } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -134,8 +135,11 @@ export const RIBBON = { at: (aspect: number) => (aspect < 0.8 ? 0.16 : 0.2), lea
 /** How much of each later station's subject is there to see from a camera position: the columns, the dam, the lattice, the canyon. */
 // (The dam is drawn out to 3300 units and let go by 4000: whole from the columns' frame, never a half-faded duplicate.)
 export function stationsNear(pos: ArrayLike<number>): [number, number, number, number] {
-  const near = (x: number, y: number, a: number, b: number) => 1 - smooth(a, b, Math.hypot(pos[0] - x, pos[1] - y));
-  return [near(1340, COLS.y, 1750, 2350), near(1300, DAM.y, 3300, 4000), near(LATTICE.x, LATTICE.y, 2300, 2900), near(1700, (CANYON.y0 + CANYON.y1) / 2, 3700, 4600)];
+  const lanes: [number, number, number, number] = [0, 0, 0, 0];
+  for (const { lane, x, y, from, to } of proximity) {
+    lanes[lane] = 1 - smooth(from, to, Math.hypot(pos[0] - x, pos[1] - y));
+  }
+  return lanes;
 }
 
 /**

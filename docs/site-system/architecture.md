@@ -14,7 +14,7 @@ of the same world.
 
 ## The scroll timeline
 
-- `src/water/camera.ts` owns it. `SECTIONS` gives each stretch its
+- `src/water/registry.ts` owns it. `SECTIONS` gives each stretch its
   length in screens (hero, say, the eight stations, delta, sea);
   `sectionStarts()` and `stillStops()` derive from it. Positions are
   always in **screens of scroll**, never pixels.
@@ -82,20 +82,11 @@ of the same world.
 - Copy comes from `src/content/projects.ts` (`src/content/kinds.ts`
   for the labels). Live numbers from `src/lib/metrics`.
 
-## What a station is made of today (and what is planned)
+## What a station is made of
 
-Today a station is spread over: a length in `SECTIONS` and a `Move`
-in `camera.ts`; a place in `world.ts`; GLSL in `shaders/stations.ts`
-with its call in `shaders/flight.ts`; its piece of the frame and its
-variant in `variants.ts`; an event in `moments.ts`; a block in
-`page.tsx`; an entry in `src/content/projects.ts`; the sound's
-reading of it in `src/audio/plan.ts`; an hour in `sky.ts`.
+`FLIGHT` in `src/water/registry.ts` orders every stretch, including the opening, statement, delta and sea. Each definition supplies its relative stop and camera keys. A project station can also supply a slug, a water painter, a box or boxes, a feature bit, shader source, an event range and band framing. The registry computes the timeline once. Camera interpolation, the rail, the DOM section order and project bands use it.
 
-**Planned (the station registry task):** one typed definition per
-station (`defineStation({...})`) that names all of the above, from
-which the timeline, the variants, the DOM block, the rail's tick, the
-sound's plan and the inner page's band are derived. Until that lands,
-`recipes.md` lists every file by hand.
+`world.ts` replays each registered painter against the bed or the audio recorder. Shared coordinates and the existing water painters live in `geography.ts`. Custom shaders receive colour, the world ray and scroll progress inside the projected bounds. The existing confluence/pool tile join, media textures and cross-pass reflections have specialized paths. Existing metric figures, film and switch controls have specialized markup in the home page.
 
 ## Inner pages
 

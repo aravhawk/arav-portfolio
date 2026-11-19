@@ -1,3 +1,4 @@
+import { BASIN_OBJECT, CONFLUENCE, ROCK_POOL, TARN_OBJECT } from './shaders/river-stations';
 import { paintLake, paintReach, paintBasin, paintConfluence, paintPool, paintTarn, paintShallows, paintDam, paintLattice, paintCanyon, paintDelta } from './geography';
 import type { BedPainter } from './bed';
 import { COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, CANYON_ICE } from './shaders/stations';
@@ -20,6 +21,7 @@ interface Definition {
   id: string; rail: string; length: number; offset: number;
   paint?: (bed: BedPainter, tribs: number[], gate: number) => void;
   subject?: Subject;
+  steps?: Partial<Record<'eyebrow' | 'title' | 'line' | 'meta' | 'act' | 'leave', number>>;
   project?: string; kind: 'section' | 'title' | 'figure';
   hold?: { name: string; before?: number; after?: number };
   bandLift?: number;
@@ -97,13 +99,16 @@ const SHARDS_BOX: Box = [
 
 export interface Subject {
   bit: number;
+  /** Furthest eye-to-box distance at which the object can contribute. */
+  reach?: number;
   define: string;
   boxes: readonly Box[];
   /** A named GLSL function. Custom objects receive (colour, world ray, scroll progress). */
   shader?: { source: string; fn: string };
   /** Existing objects whose rays also affect the ground, media or water pass. */
   pass?: 'slab' | 'confluence' | 'pool' | 'shards' | 'columns' | 'dam' | 'lattice' | 'canyon';
-  /** Offset in screens from the section start. */
+  proximity?: { lane: 0 | 1 | 2 | 3; x: number; y: number; from: number; to: number };
+  /** Event endpoints in screens from the section start. */
   event?: readonly [number, number];
 }
 const rad = (d: number) => d * Math.PI / 180;
@@ -277,7 +282,7 @@ export const FLIGHT = [
   },
   {
     id: 'infiniview', paint: paintBasin, rail: 'Infiniview', length: 2.6, offset: 1, kind: 'title',
-    subject: { bit: 2, define: 'F_SLAB', boxes: [SLAB_GROUND], pass: 'slab' },
+    subject: { bit: 2, define: 'F_SLAB', boxes: [SLAB_GROUND], pass: 'slab', shader: { source: BASIN_OBJECT, fn: 'slabHit' } },
     project: 'infiniview',
     hold: { name: 'Infiniview' },
     camera: ({ stop, end, upright, move, holdKeys }) => upright ? [
@@ -295,8 +300,9 @@ export const FLIGHT = [
     ],
   },
   {
+    steps: { eyebrow: -1.3 },
     id: 'upstream', paint: paintConfluence, rail: 'Open source', length: 2.8, offset: 1.25, kind: 'figure',
-    subject: { bit: 4, define: 'F_CONF', boxes: [CONF_RIVER_BOX], pass: 'confluence' },
+    subject: { bit: 4, define: 'F_CONF', boxes: [CONF_RIVER_BOX], pass: 'confluence', shader: { source: CONFLUENCE, fn: 'confLift' } },
     project: 'open-source',
     hold: { name: 'Upstream' },
     camera: ({ start, stop, aspect, upright, band, move, holdKeys }) => upright ? [
@@ -314,7 +320,7 @@ export const FLIGHT = [
   },
   {
     id: 'bench', paint: paintPool, rail: 'Kilo Bench', length: 2.6, offset: 1.15, kind: 'title',
-    subject: { bit: 8, define: 'F_POOL', boxes: [POOL_BOX], pass: 'pool' },
+    subject: { bit: 8, define: 'F_POOL', boxes: [POOL_BOX], pass: 'pool', shader: { source: ROCK_POOL, fn: 'rockHit' } },
     project: 'kilo-bench',
     hold: { name: 'Kilo Bench' },
     camera: ({ start, stop, aspect, upright, move, holdKeys }) => upright ? [
@@ -330,7 +336,7 @@ export const FLIGHT = [
   },
   {
     id: 'bridge', paint: paintTarn, rail: 'Agent Bridge', length: 2.8, offset: 1.2, kind: 'title',
-    subject: { bit: 16, define: 'F_SHARDS', boxes: [SHARDS_BOX], pass: 'shards' },
+    subject: { bit: 16, define: 'F_SHARDS', boxes: [SHARDS_BOX], pass: 'shards', shader: { source: TARN_OBJECT, fn: 'shardHit' } },
     project: 'agent-bridge',
     hold: { name: 'Agent Bridge' },
     camera: ({ start, stop, aspect, upright, band, move, holdKeys }) => upright ? [
@@ -346,8 +352,9 @@ export const FLIGHT = [
     ],
   },
   {
+    steps: { eyebrow: -1.3 },
     id: 'models', paint: paintShallows, rail: 'Open models', length: 2.8, offset: 1.2, kind: 'figure',
-    subject: { bit: 32, define: 'F_COLS', boxes: [COLS_BOX, COLS_DEEP], pass: 'columns', shader: { source: COLUMNS, fn: 'columns' } },
+    subject: { bit: 32, define: 'F_COLS', boxes: [COLS_BOX, COLS_DEEP], pass: 'columns', proximity: { lane: 0, x: 1340, y: COLS.y, from: 1750, to: 2350 }, shader: { source: COLUMNS, fn: 'columns' } },
     project: 'ollama',
     bandLift: 0.1,
     hold: { name: 'Open models' },
@@ -366,8 +373,9 @@ export const FLIGHT = [
     ],
   },
   {
+    steps: { eyebrow: -1.3, title: -0.45, line: -0.32, meta: -0.2 },
     id: 'fork', paint: paintDam, rail: 'cc-switch', length: 2.8, offset: 1.2, kind: 'title',
-    subject: { bit: 64, define: 'F_DAM', boxes: [DAM_BOX], pass: 'dam', shader: { source: [DAM_ICE, DAM_WATER].join('\n'), fn: 'dam' } },
+    subject: { bit: 64, define: 'F_DAM', boxes: [DAM_BOX], pass: 'dam', proximity: { lane: 1, x: 1300, y: DAM.y, from: 3300, to: 4000 }, shader: { source: [DAM_ICE, DAM_WATER].join('\n'), fn: 'dam' } },
     project: 'cc-switch',
     hold: { name: 'cc-switch', before: 0.45 },
     camera: ({ start, stop, end, upright, move, holdKeys }) => upright ? [
@@ -389,7 +397,7 @@ export const FLIGHT = [
   },
   {
     id: 'lattice', paint: paintLattice, rail: 'TensorPoW', length: 2.6, offset: 1.15, kind: 'title',
-    subject: { bit: 128, define: 'F_LAT', boxes: [LAT_BOX], pass: 'lattice', shader: { source: LATTICE_ICE, fn: 'lattice' } },
+    subject: { bit: 128, define: 'F_LAT', boxes: [LAT_BOX], pass: 'lattice', proximity: { lane: 2, x: LATTICE.x, y: LATTICE.y, from: 2300, to: 2900 }, shader: { source: LATTICE_ICE, fn: 'lattice' } },
     project: 'tensorpow',
     bandLift: 0.05,
     hold: { name: 'TensorPoW' },
@@ -404,8 +412,9 @@ export const FLIGHT = [
     ],
   },
   {
+    steps: { eyebrow: -2.15, leave: 0.75 },
     id: 'canyon', paint: paintCanyon, rail: 'RydAR', length: 3.6, offset: 2.2, kind: 'title',
-    subject: { bit: 256, define: 'F_CANYON', boxes: [CANYON_BOX], pass: 'canyon', shader: { source: CANYON_ICE, fn: 'canyon' } },
+    subject: { bit: 256, define: 'F_CANYON', boxes: [CANYON_BOX], pass: 'canyon', proximity: { lane: 3, x: 1700, y: (CANYON.y0 + CANYON.y1) / 2, from: 3700, to: 4600 }, shader: { source: CANYON_ICE, fn: 'canyon' } },
     project: 'rydar',
     hold: { name: 'RydAR', after: 0.6 },
     camera: ({ start, upright, g }) => upright ? [
@@ -417,6 +426,7 @@ export const FLIGHT = [
     ],
   },
   {
+    steps: { leave: 1.75 },
     id: 'delta', paint: paintDelta, rail: 'Interests', length: 2.6, offset: 1.1, kind: 'section',
     hold: { name: 'Interests' },
     camera: ({ ending }) => ending(false),
@@ -446,3 +456,5 @@ export const events = subjects.flatMap(subject => subject.event ? [{
   from: subject.start + subject.event[0],
   to: subject.start + subject.event[1],
 }] : []);
+export const proximity = subjects.flatMap(subject => subject.proximity ? [subject.proximity] : []);
+export const starts = Object.fromEntries(timeline.map(entry => [entry.id, entry.start])) as Record<SectionId, number>;

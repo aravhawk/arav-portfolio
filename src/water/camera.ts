@@ -423,7 +423,7 @@ function seaKeys(aspect: number, sunAz: number, start: number, g: number, sea: b
 export function dayAt(s: number): number {
   const h = SECTIONS.hero;
   const s9 = byId.delta.start;
-  const s8 = byId.canyon.start;
+  const s8 = 23.6 * (END_AT / 31.1);
   const keys: [number, number][] = [
     [0, 0],
     [h, 0],
