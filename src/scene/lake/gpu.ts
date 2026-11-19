@@ -10,7 +10,13 @@ import {
 } from './shaders';
 
 export type DrawInfo = { indices: number; vertices: number; low: number[]; span: number[] };
-type Meta = { plane: number[]; crop: number[]; size: number[]; half: number[] };
+type Meta = {
+  plane: number[];
+  crop: number[];
+  size: number[];
+  half: number[];
+  approach: { eye: number[]; rotation: number[]; half: number[] };
+};
 type MeshMessage = {
   kind: 'mesh';
   draws: { info: DrawInfo; vertices: Uint8Array<ArrayBuffer>; indices: Uint8Array<ArrayBuffer> }[];
@@ -31,17 +37,12 @@ type Message =
   | { kind: 'done'; resources: { name: string; start: number; end: number; bytes: number }[] }
   | { kind: 'error'; message: string };
 type Program = { id: WebGLProgram; u: Record<string, WebGLUniformLocation> };
-export type Pose = { x: number; y: number; z: number; t: number };
-// The portrait camera pushes the name into the upper middle of the gate.
-function horizontalLens(half: number, ratio: number) {
-  return half * (ratio <= 1 ? 0.81 * Math.min(1, ratio / 0.43) : Math.min(1, ratio / 1.2));
-}
-
+export type Pose = { x: number; y: number; z: number; t: number; progress: number };
 function verticalAim(pose: Pose, ratio: number) {
   return pose.y * 0.19 + (ratio <= 1 ? 0.18 : 0);
 }
 
-export const rest: Pose = { x: 0, y: 0, z: 0, t: 0 };
+export const rest: Pose = { x: 0, y: 0, z: 0, t: 0, progress: 0 };
 export const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 export const stages = ['refraction', 'bloom', 'ground', 'slab', 'drift', 'grade'] as const;
 type Target = {
@@ -105,11 +106,7 @@ export class LakeGPU {
       this.programs[name] = { id: program, u: {} };
     }
     for (const prog of Object.values(this.programs)) {
-      while (
-        parallel &&
-        !this.disposed &&
-        !gl.getProgramParameter(prog.id, parallel.COMPLETION_STATUS_KHR)
-      )
+      while (parallel && !this.disposed && !gl.getProgramParameter(prog.id, parallel.COMPLETION_STATUS_KHR))
         await nextFrame();
       if (this.disposed) return;
       if (!gl.getProgramParameter(prog.id, gl.LINK_STATUS))
@@ -168,7 +165,7 @@ export class LakeGPU {
           })
           .catch(reject);
       };
-      this.decoder.postMessage({ theme, rgb, rgba, portrait: true });
+      this.decoder.postMessage({ theme, rgb, rgba });
     });
     await Promise.all([this.compile(), load]);
     performance.mark('lake:uploaded');
@@ -290,7 +287,7 @@ export class LakeGPU {
     gl.bindTexture(volume ? gl.TEXTURE_3D : gl.TEXTURE_2D, tex);
     gl.uniform1i(u, unit);
   }
-  private mesh(program: Program, draw: Draw, pose: Pose, w: number, h: number) {
+  private mesh(program: Program, draw: Draw, pose: Pose, lens: number[], rotation: number[], aim: number[]) {
     const gl = this.gl,
       u = program.u,
       half = this.meta.half;
@@ -298,10 +295,13 @@ export class LakeGPU {
     gl.uniform3fv(u.span, draw.info.span);
     gl.uniform3f(u.eye, pose.x, pose.y, pose.z);
     gl.uniform2f(u.restLens, half[0], half[1]);
-    const ratio = w / h;
-    const lens = horizontalLens(half[0], ratio);
-    gl.uniform2f(u.lens, lens, (lens * h) / w);
-    gl.uniform2f(u.aim, pose.x * 0.12, verticalAim(pose, ratio));
+    gl.uniform2fv(u.lens, lens);
+    gl.uniform2fv(u.aim, aim);
+    gl.uniform4fv(u.rotation, rotation);
+    gl.uniform3fv(u.endEye, this.meta.approach.eye);
+    gl.uniform4fv(u.endRotation, this.meta.approach.rotation);
+    gl.uniform2fv(u.endLens, this.meta.approach.half);
+    gl.uniform1f(u.travel, pose.progress);
     gl.bindVertexArray(draw.vao);
     gl.drawElements(gl.TRIANGLES, draw.info.indices, gl.UNSIGNED_SHORT, 0);
   }
@@ -309,8 +309,37 @@ export class LakeGPU {
     const gl = this.gl,
       [scene, copy, a] = this.targets,
       { w, h } = scene;
-    const pose =
-      w <= h ? { x: travel.x - 0.28, y: travel.y + 0.1, z: travel.z + 0.55, t: travel.t } : travel;
+    const ratio = w / h;
+    const half = this.meta.half;
+    const phone = w <= h;
+    const s = travel.progress;
+    const end = this.meta.approach;
+    const lensX = half[0] + s * (end.half[0] - half[0]);
+    const lens = [lensX, lensX / ratio];
+    // At the close gate the optical framing carries the portrait composition.
+    // Converge on its surveyed eye so the near snow stays inside the bake.
+    const portraitOffset = phone ? 1 - s : 0;
+    const pose = {
+      ...travel,
+      x: travel.x + s * end.eye[0] - 0.1 * portraitOffset,
+      y: travel.y + s * end.eye[1] + 0.04 * portraitOffset,
+      z: travel.z + s * end.eye[2] - 0.18 * portraitOffset,
+    };
+    const aim = [travel.x * 0.12, verticalAim(travel, ratio)];
+    // Interpolate the surveyed rotations, then roll the portrait camera
+    // about its own optical axis to carry the row upward in the tall gate.
+    const [xq, yq, zq, wq] = end.rotation;
+    const q = [s * xq, s * yq, s * zq, 1 + s * (wq - 1)];
+    const length = Math.hypot(...q);
+    const angle = phone ? 0.035 : 0;
+    const c = Math.cos(angle),
+      sn = Math.sin(angle);
+    const rotation = [
+      (c * q[0] - sn * q[1]) / length,
+      (sn * q[0] + c * q[1]) / length,
+      (c * q[2] + sn * q[3]) / length,
+      (c * q[3] - sn * q[2]) / length,
+    ];
     const bind = (t: Target) => {
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
       gl.viewport(0, 0, t.w, t.h);
@@ -322,11 +351,11 @@ export class LakeGPU {
       bind(target);
       if (target === scene) gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.useProgram(gp.id);
-      gl.uniform1i(gp.u.tall, this.textures[5] ? 1 : 0);
-      this.texture(gp.u.extension, 5, this.textures[5] || this.textures[4]);
+      this.texture(gp.u.extension, 5, this.textures[5]);
       this.texture(gp.u.atlas, 0, this.textures[0]);
       this.texture(gp.u.baseMap, 1, this.textures[4]);
-      this.mesh(gp, this.draws[0], pose, w, h);
+      this.texture(gp.u.secondView, 6, this.textures[6]);
+      this.mesh(gp, this.draws[0], pose, lens, rotation, aim);
     };
     // Draw the same backdrop into the refraction pyramid before the main
     // scene. This keeps the full-size colour attachment resident on tile GPUs.
@@ -342,15 +371,14 @@ export class LakeGPU {
     this.texture(bloom.u.mat, 1, this.textures[2]);
     const [x, y, r, d] = this.meta.crop,
       [bw, bh] = this.meta.size;
-    const ratio = w / h,
-      half = this.meta.half;
-    const lens = horizontalLens(half[0], ratio);
     gl.uniform4f(bloom.u.crop, x / bw, y / bh, (r - x) / bw, (d - y) / bh);
-    gl.uniform2f(bloom.u.lens, lens, (lens * h) / w);
+    gl.uniform2fv(bloom.u.lens, lens);
     gl.uniform2fv(bloom.u.restLens, half);
     gl.uniform3f(bloom.u.eye, pose.x, pose.y, pose.z);
     gl.uniform1f(bloom.u.time, pose.t);
-    gl.uniform2f(bloom.u.aim, pose.x * 0.12, verticalAim(pose, ratio));
+    gl.uniform2fv(bloom.u.aim, aim);
+    gl.uniform4fv(bloom.u.rotation, rotation);
+    gl.uniform1f(bloom.u.travel, s);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindTexture(gl.TEXTURE_2D, a.tex);
     gl.generateMipmap(gl.TEXTURE_2D);
@@ -370,7 +398,8 @@ export class LakeGPU {
     gl.uniform4f(ice.u.crop, x / bw, y / bh, (r - x) / bw, (d - y) / bh);
     gl.uniform2f(ice.u.resolution, w, h);
     gl.uniform1f(ice.u.time, pose.t);
-    if (showSlab) this.mesh(ice, this.draws[1], pose, w, h);
+    this.texture(ice.u.secondView, 6, this.textures[7]);
+    if (showSlab) this.mesh(ice, this.draws[1], pose, lens, rotation, aim);
     if (last === 4) return;
     gl.bindVertexArray(this.empty);
     const drift = this.programs.drift;
@@ -379,8 +408,9 @@ export class LakeGPU {
     gl.uniform1f(drift.u.dpr, Math.min(2, devicePixelRatio));
     gl.uniform3f(drift.u.eye, pose.x, pose.y, pose.z);
     gl.uniform4fv(drift.u.waterPlane, this.meta.plane);
-    gl.uniform2f(drift.u.lens, lens, lens / ratio);
-    gl.uniform2f(drift.u.aim, pose.x * 0.12, verticalAim(pose, ratio));
+    gl.uniform2fv(drift.u.lens, lens);
+    gl.uniform2fv(drift.u.aim, aim);
+    gl.uniform4fv(drift.u.rotation, rotation);
     gl.depthMask(false);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -397,20 +427,20 @@ export class LakeGPU {
     this.texture(post.u.scene, 0, scene.tex);
     this.texture(post.u.bloom, 1, a.tex);
     this.texture(post.u.grade, 2, this.lut, true);
-    // Project a conservative box around the slab into this camera's gate.
-    const dist = 17,
-      zoom = dist / (dist - pose.z);
-    const sx = (half[0] / lens) * zoom,
-      sy = (half[1] / ((lens * h) / w)) * zoom;
-    const cx = 0.5 + pose.x * (0.06 - 0.5 / ((dist - pose.z) * lens));
-    const cy = 0.5 + verticalAim(pose, ratio) * 0.5 - (pose.y * 0.5) / (((dist - pose.z) * lens * h) / w);
-    gl.uniform4f(
-      post.u.slabBounds,
-      cx + (x / bw - 0.5) * sx - 0.02,
-      cy + (0.5 - d / bh) * sy - 0.02,
-      cx + (r / bw - 0.5) * sx + 0.02,
-      cy + (0.5 - y / bh) * sy + 0.02,
-    );
+    // At rest the bake's crop bounds are exact. The travelling and
+    // portrait cameras can expose sidewalls outside the first silhouette.
+    if (s > 0.02 || phone) gl.uniform4f(post.u.slabBounds, 0, 0, 1, 1);
+    else {
+      const scaleX = half[0] / lens[0];
+      const scaleY = half[1] / lens[1];
+      gl.uniform4f(
+        post.u.slabBounds,
+        0.5 + (x / bw - 0.5) * scaleX - 0.04,
+        0.5 + (0.5 - d / bh) * scaleY - 0.04,
+        0.5 + (r / bw - 0.5) * scaleX + 0.04,
+        0.5 + (0.5 - y / bh) * scaleY + 0.04,
+      );
+    }
     gl.uniform2f(post.u.invResolution, 1 / w, 1 / h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }

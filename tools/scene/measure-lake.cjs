@@ -3,7 +3,7 @@
 const { chromium } = require('playwright');
 const fs = require('node:fs');
 const path = require('node:path');
-const out = process.env.LAKE_EVIDENCE || '.tools/out/o2';
+const out = process.env.LAKE_EVIDENCE || '.tools/out/o2b';
 const modes = new Set(process.argv.slice(2));
 const theme = process.env.LAKE_THEME || 'light';
 const profile = process.env.LAKE_PROFILE || 'desktop';
@@ -73,7 +73,7 @@ const dump = (file, data) => save(file, JSON.stringify(data, null, 2));
       savePng(prefix + '-raw.png', await page.evaluate(() => window.__lakeProof.capture()));
       await page.screenshot({ path: path.join(out, prefix + '-words.png') });
       savePng(prefix + '-ground.png', await page.evaluate(() => window.__lakeProof.capture(false)));
-      if (!phone) savePng(prefix + '-close.png', await page.evaluate(() => window.__lakeProof.frame(1, 0, 0)));
+      savePng(prefix + '-close.png', await page.evaluate(() => window.__lakeProof.frame(1, 0, 0)));
     }
     if (modes.has('motion')) {
       for (let i = 0; i < 8; i++) {
@@ -136,6 +136,8 @@ const dump = (file, data) => save(file, JSON.stringify(data, null, 2));
         dump(prefix + '-cost.json', costs);
       }
       if (!phone) {
+        const mid = await page.evaluate(() => window.__lakeProof.measure(3456, 2234, false, 0.5));
+        dump(prefix + '-mid-cost.json', mid);
         const close = await page.evaluate(() => window.__lakeProof.measure(3456, 2234, false, 1));
         dump(prefix + '-close-cost.json', close);
       }

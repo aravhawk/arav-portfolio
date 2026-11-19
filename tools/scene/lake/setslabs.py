@@ -20,12 +20,12 @@ for l0,r0,island in ranges_x:
         glyphs[-1][0]=min(glyphs[-1][0],l0);glyphs[-1][1]=max(glyphs[-1][1],r0);glyphs[-1][2].append(island)
     else:glyphs.append([l0,r0,[island]])
 assert len(glyphs)==8,glyphs
-turn=np.deg2rad([-18,-21,-18,-16,-20,-18,-18,-17])
+turn=np.deg2rad([-3,0,-4,-2,-6,-15,-16,-16])
 toward=np.array([-.06,.039,.012,-.054,.036,-.029,.019,-.04])
 centers=np.array([(l+r)*.5 for l,r,ids in glyphs])
 def move(vertices,index):
     a=turn[index];cx=centers[index];dx=vertices[:,0]-cx;dy=1.38*vertices[:,1].copy()
-    vertices[:,0]=1.10*cx+dx*np.cos(a)-dy*np.sin(a)
+    vertices[:,0]=1.10*cx+.13*(index-3.5)+.25*max(0,index-4)+dx*np.cos(a)-dy*np.sin(a)
     vertices[:,1]=toward[index]+.13*cx+dx*np.sin(a)+dy*np.cos(a)
     return vertices
 for j,(l,r,ids) in enumerate(glyphs):

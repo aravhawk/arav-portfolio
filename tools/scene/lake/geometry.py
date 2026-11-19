@@ -61,8 +61,8 @@ for ob in objects:
     surfaces.append(BVHTree.FromPolygons(xyz,tri,all_triangles=True))
     ev.to_mesh_clear()
 # Extra rows supply geometry below a tall viewport and around the scroll move.
-xs=np.r_[np.linspace(-.4,0,9,endpoint=False),np.linspace(0,1,217),np.linspace(1.025,1.4,9)]
-ys=np.r_[np.linspace(-2,0,18,endpoint=False),np.linspace(0,1,167),np.linspace(1.025,3,26)]
+xs=np.r_[np.linspace(-1.3,0,16,endpoint=False),np.linspace(0,1,217),np.linspace(1.025,3.8,32)]
+ys=np.r_[np.linspace(-4.5,0,18,endpoint=False),np.linspace(0,1,167),np.linspace(1.025,5.5,26)]
 gp=[];gn=[]
 for v in ys:
     for u in xs:
@@ -100,6 +100,17 @@ M=np.asarray(name.matrix_world)
 wp=coords@M[:3,:3].T+M[:3,3]-np.asarray(eye)
 axes=np.stack([right,up,-backward],axis=1)
 store_mesh(wp@axes,norm@np.linalg.inv(M[:3,:3])@axes,tri)
+# Keep per-stroke geometry for matched, occlusion-aware evidence masks.
+# This archive is local to the bake and is never requested by the browser.
+from scipy.spatial import cKDTree
+raw=np.empty((len(name.data.vertices),3),np.float32)
+name.data.vertices.foreach_get("co",raw.ravel())
+glyph_id=np.zeros(len(raw),np.uint8)
+for j,(_,_,islands) in enumerate(glyphs):
+    glyph_id[np.isin(components,islands)]=j+1
+known=glyph_id>0
+nearest=cKDTree(raw[known]).query(coords)[1]
+np.savez_compressed(folder/'glyphs.npz',xyz=wp@axes,tri=tri.reshape(-1,3),glyph=glyph_id[known][nearest])
 ev.to_mesh_clear()
 
 (folder/"geometry.bin").write_bytes(b''.join(chunks))
@@ -133,6 +144,6 @@ nearest=distance_transform_edt(~valid,return_distances=False,return_indices=True
 normal_atlas=normal_atlas[tuple(nearest)]
 Image.fromarray(normal_atlas).save(folder/'optics.png')
 print('Light meshes',draws,flush=True)
-(folder/'mesh.json').write_text(json.dumps(dict(draws=draws, half=[half_x,half_y],
+(folder/'mesh.json').write_text(json.dumps(dict(draws=draws, approach=approach_meta, half=[half_x,half_y],
     plane=[float(right[2]),float(up[2]),float(-backward[2]),float(eye.z)],
     crop=[int(x0),int(y0),int(x1),int(y1)],size=[W,H]),separators=(',',':')))

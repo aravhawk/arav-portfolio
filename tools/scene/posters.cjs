@@ -6,7 +6,7 @@ const fs = require('node:fs'),
   path = require('node:path'),
   os = require('node:os');
 (async () => {
-  const temp = '.tools/out/o2/bake/posters';
+  const temp = '.tools/out/o2b/bake/posters';
   fs.mkdirSync(temp, { recursive: true });
   const browser = await chromium.launch({
     headless: false,

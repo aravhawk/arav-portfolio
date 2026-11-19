@@ -2,7 +2,12 @@ import { LakeGPU, nextFrame, rest, type Pose } from './gpu';
 
 export type LakeProof = {
   capture: (showSlab?: boolean) => string;
-  measure: (width: number, height: number, breakdown?: boolean, scroll?: number) => ReturnType<LakeGPU['measure']>;
+  measure: (
+    width: number,
+    height: number,
+    breakdown?: boolean,
+    scroll?: number,
+  ) => ReturnType<LakeGPU['measure']>;
   sample: (enabled: boolean) => { intervals: number[]; main: number[] };
   frame: (scroll: number, x: number, y: number) => string;
   state: () => { width: number; height: number; drawing: boolean; scale: number };
@@ -49,9 +54,10 @@ export async function mount(canvas: HTMLCanvasElement, theme: string, signal: Ab
     gpu.resize(Math.round(canvas.clientWidth * dpr), Math.round(canvas.clientHeight * dpr));
   };
   const update = (s: number, px: number, py: number, clock: number): Pose => ({
-    x: px * 0.14 - s * 0.22 + Math.sin(clock * 0.18) * 0.013,
-    y: py * 0.055 - s * 0.78 + Math.sin(clock * 0.22) * 0.009,
-    z: s * 4.15 + Math.sin(clock * 0.15) * 0.024,
+    x: px * 0.14 + Math.sin(clock * 0.18) * 0.013,
+    y: py * 0.055 + Math.sin(clock * 0.22) * 0.009,
+    progress: s,
+    z: Math.sin(clock * 0.15) * 0.024,
     t: clock,
   });
   const frame = (now: number) => {

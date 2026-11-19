@@ -17,7 +17,9 @@ self.onmessage = async ({ data }) => {
       'optics',
       'environment',
       'base-' + theme,
-      ...(data.portrait ? ['portrait-' + theme] : []),
+      'portrait-' + theme,
+      'approach-ground-' + theme,
+      'approach-body-' + theme,
     ];
     const resources = textures.map((name) => bytes(name + '.ktx2'));
     const [wasm, geometry, packedGrade] = await Promise.all([

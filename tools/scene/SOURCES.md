@@ -29,6 +29,8 @@ Poly Haven and ambientCG publish these assets under CC0. The existing TASA Orbit
 
 Run `tools/scene/bake-lake` from this checkout after installing the project's locked dependencies. It verifies the inputs, renders day and blue hour in Cycles, exports the decimated meshes and optical atlas, encodes KTX2 and meshopt, samples the Blender display transform into LUTs, builds the site and captures the four first-paint stills from the production renderer. The poster capture uses the shared Playwright installation and starts a temporary server on port 3184. The script pins the Python tools and verifies the Khronos KTX tools download for Apple silicon. An existing compatible encoder can be selected with `TOKTX`.
 
-The site's only new package is `three`. Its bundled Basis Universal and meshoptimizer decoders run inside the lab worker. Their software licences are recorded beside the decoders. The camera's view-dependent reflection also uses the Frozen Lake environment listed above.
+The lab worker uses the versioned Basis Universal and meshoptimizer decoders from `three`. Their software licences are recorded beside the decoders. The camera's view-dependent reflection also uses the Frozen Lake environment listed above.
 
 The O2 wind-scoured far bank uses the recorded Snow 008 A and 009 A displacement scans. The directional glints on the lake use Ice 003 as a bump map. The pressure collars reuse the authored rafted slabs.
+
+The O2b foreground snow tongue uses the Snow 008 A scan. The solar footprint comes from the projected outlines of the eight authored slabs. A second Cycles camera records the eastern faces and background at the end of the move in each lighting setup. Both cameras also render a wide portrait background. The foreground windpack carries the recorded Snow 02 normal map in metre-scaled UVs.

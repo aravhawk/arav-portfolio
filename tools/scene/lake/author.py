@@ -16,10 +16,11 @@ from PIL import Image
 parser = argparse.ArgumentParser()
 parser.add_argument("--width", type=int, default=2880)
 parser.add_argument("--samples", type=int, default=48)
-parser.add_argument("--output", default=".tools/out/o2/bake/day.png")
+parser.add_argument("--output", default=".tools/out/o2b/bake/day.png")
 parser.add_argument("--geometry", action="store_true", help="Export the light meshes and slab normal atlas instead of rendering the plate")
 parser.add_argument("--bake-geometry", action="store_true", help="Export the original rendered scene after both passes")
 parser.add_argument("--theme", choices=["day","night"],default="day")
+parser.add_argument("--approach", action="store_true", help="Bake the travelling camera's second projection")
 parser.add_argument("--portrait", action="store_true",help="Bake the tall background outside the composed desktop frame")
 args = parser.parse_args()
 out = Path(args.output).resolve()
@@ -962,14 +963,21 @@ exec((Path(__file__).parent/"shearwall.py").read_text())
 exec((Path(__file__).parent/"firstlight.py").read_text())
 if args.theme=="night":
     exec((Path(__file__).parent/"bluehour.py").read_text())
+exec((Path(__file__).parent/"monument.py").read_text())
+def render_plate(path):
+    scene.render.filepath=str(path)
+    bpy.ops.render.render(write_still=True)
+    if args.theme=="night":
+        from bluegrade import grade_plate
+        grade_plate(path)
+
 if args.portrait:
     cam.data.sensor_fit="HORIZONTAL"
-    cam.data.lens/=.99
+    cam.data.lens/=1.55
     scene.render.resolution_y=round(args.width*844/390)
     maskfile.mute=True
     for ob in [name,*faults]: ob.visible_camera=False
-    scene.render.filepath=str(out)
-    bpy.ops.render.render(write_still=True)
+    render_plate(out)
     raise SystemExit(0)
 if args.geometry:
     exec((Path(__file__).parent/"geometry.py").read_text())
@@ -983,8 +991,7 @@ if args.bake_geometry:
     scene.render.border_min_y=max(0,min(c.y for c in corners)-.015)
     scene.render.border_max_y=min(1,max(c.y for c in corners)+.015)
 maskfile.file_slots[0].path="name-"
-scene.render.filepath=str(out)
-bpy.ops.render.render(write_still=True)
+render_plate(out)
 # Matched clean plate for pixelwise contrast. Preserve secondary rays,
 # all snow and shards as well as the original camera and exposure.
 hidden=[name,*faults]
@@ -996,8 +1003,7 @@ scene.render.use_border=False
 if args.bake_geometry and args.width > 2880:
     scene.render.resolution_x=2880
     scene.render.resolution_y=1800
-scene.render.filepath=str(out.parent/"ground.png")
-bpy.ops.render.render(write_still=True)
+render_plate(out.parent/"ground.png")
 maskfile.mute=False
 for ob in hidden: ob.visible_camera=True
 
