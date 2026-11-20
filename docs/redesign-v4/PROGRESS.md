@@ -2009,3 +2009,42 @@ of GPU time at a 3456 by 2234 backing on the M4 (budget 5 ms).
 Largest remaining gap against the reference: depth inside the slabs
 at close range.
 
+### From one frame to a sequence (Nov 19 to 20)
+
+The new home page will be a sequence of composed scenes with
+transitions (the way the reference is built), not one continuous
+flight: the renderer projects a baked picture onto simple geometry,
+which is what makes it cheap and true to the offline render, and
+that holds for a composed scene with a modest camera move.
+
+An Astra pass (sent back once for stopping at seven studies) built
+the system on a second lab route, `/lab/flight`:
+
+- **Scenes are typed definitions** in one registry (`src/scene/`):
+  assets, camera move in both orientations, both themes, length,
+  transitions. One renderer, one context, one frame loop.
+- **Streaming.** Only the first scene loads at the start. The next
+  is fetched, decoded in a worker, uploaded and drawn once off
+  screen while the visitor is in the scene before it (ready 3.6 s
+  before its transition at a normal scroll). If the visitor outruns
+  it, the current scene keeps moving until the next is ready. A
+  scene left behind is released and reloads on the way back.
+- **The transition** is a whiteout of blown snow, driven by scroll
+  and reversible.
+- **The first station, Infiniview:** a pressure ridge of slab ice
+  across the river with a breach where water runs through.
+- **Measured (helper, Apple M4, 3456 by 2234 backing):** lake
+  4.1 ms, Infiniview 3.7 ms, the whiteout's dearest frame 4.5 ms of
+  GPU time. Infiniview ships 1.06 MB for both themes and both
+  compositions. No task over 50 ms in five cold traces of a full
+  scroll. Fable's Lighthouse on the merged build: 100 and 100,
+  LCP 0.24 s desktop and 0.90 s phone, CLS 0 and 0.004.
+
+Not met or not good yet: the hero ships 2.44 MB against 1.3 MB a
+scene; the Infiniview picture is below the hero (the ridge reads as
+a pile of grey planks more than as ice, the breach is a wide gap,
+the camera barely moves, and on a phone at night it is small and
+dark); Lighthouse's throttled phone still shows a 66 to 73 ms
+hydration task from the shared React chunk, with or without the
+renderer.
+
