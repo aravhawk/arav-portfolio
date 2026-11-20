@@ -1,3 +1,4 @@
+import opensourceAssets from './open-source-assets.json';
 import statementAssets from './statement-assets.json';
 import lakeAssets from './lake-assets.json';
 import ridgeAssets from './ridge-assets.json';
@@ -105,6 +106,7 @@ export const scenes: readonly (Lake | Plate)[] = [
     },
   },
   riverPlate('statement', statementAssets),
+  riverPlate('open-source', opensourceAssets),
 ];
 export const starts: number[] = [];
 let length = 0;
