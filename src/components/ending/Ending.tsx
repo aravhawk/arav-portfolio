@@ -82,6 +82,11 @@ export function Contact({ feed = false }: { feed?: boolean }) {
           LinkedIn <Arrow out />
         </a>
       </li>
+      <li>
+        <a className="end-link" href={CONTACT.resume} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
+          Resume <Arrow out />
+        </a>
+      </li>
       {feed ? (
         <li>
           <a className="end-link" href="/feed.xml">

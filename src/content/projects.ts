@@ -490,5 +490,8 @@ export const CONTACT = {
   github: 'https://github.com/aravhawk',
   x: 'https://x.com/aravhawk',
   linkedin: 'https://www.linkedin.com/in/aravjainml',
+  /** His resume, a published Google Doc. It opens in a new tab wherever it is linked. */
+  resume:
+    'https://docs.google.com/document/d/e/2PACX-1vT7uLdB1QHp5Y0d_9EVGACLrtohbDDEoBabVcEs-cG9ub0gMurhPtl726BkALgJDXOWpkToxqbQYh2e/pub',
   email: 'aravhawk@gmail.com',
 };
