@@ -6,8 +6,8 @@ export const alt = ogAlt('A project by Arav Jain', 'work');
 export const size = OG_SIZE;
 export const contentType = OG_TYPE;
 
-/** Each project's card stands on its own station of the home page; one without a station takes the delta. */
-const pictureFor = (slug: string): Picture => (slug in PICTURES && slug !== 'home' && slug !== 'blog' ? (slug as Picture) : 'work');
+/** Each project's card stands on its own station of the home page; one without a station is its words alone. */
+const pictureFor = (slug: string): Picture | undefined => (slug in PICTURES && slug !== 'home' && slug !== 'blog' && slug !== 'work' ? (slug as Picture) : undefined);
 
 export function generateStaticParams() {
   return PROJECTS.map((p) => ({ slug: p.slug }));

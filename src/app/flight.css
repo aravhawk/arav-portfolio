@@ -379,10 +379,14 @@ html[data-hero-words] .fl-hero-words .fl-intro {
 .fl-sec.fl-say {
   --early: 50svh;
 }
-/* His sentence stands on the bank, left of the river: five lines, each its own. */
+/* His sentence stands on the bank, left of the river: five lines, each its own, and under them the line that says why. */
 .fl-say-words {
   align-items: flex-end;
   padding-bottom: var(--fl-foot);
+}
+.fl-say-why {
+  margin-top: clamp(14px, 2.4vh, 26px);
+  max-width: 30ch;
 }
 .fl .fl-say-text {
   max-width: none;
@@ -676,6 +680,24 @@ html[data-picture] .flight-root > .fl-poster {
     text-underline-offset: 3px;
   }
 }
+/* Ask Around's beat: words alone, in the run from the pool to the tarn. On a wide frame the tarn's shore comes in
+   along the left margin before the run is over, so the block stands a little in from it, on the bank the eye is
+   flying over: the one ground that stays under it the whole time. An upright frame keeps the common margin. */
+@media (min-width: 721px) and (min-aspect-ratio: 9/10) {
+  html[data-flight='on'] .fl-beat-words {
+    padding-left: calc(var(--gutter) + 22vw);
+  }
+}
+/* cc-switch's line keeps to two lines, so its name stands where the bank is widest. */
+.fl-fork-words > .fl-line {
+  max-width: 38ch;
+}
+/* What a caption counts stands beside its name, in the same face: the figure is on the thing it counts. */
+.fl-call-n {
+  margin-left: 0.5em;
+  font-weight: 640;
+  font-variant-numeric: tabular-nums;
+}
 /* On a narrow screen a station with many captions sets them as one list over its words, in the streams' order: a name to a line, no ring, no leader. */
 .fl-call[data-loose] .fl-call-ring,
 .fl-call[data-loose] .fl-call-line {
@@ -707,7 +729,7 @@ html[data-picture] .flight-root > .fl-poster {
 .fl-calls-slot {
   display: none;
 }
-/* On a narrow frame a station with many captions (the seven repositories) sets them as one list, a name to a line,
+/* On a narrow frame a station with many captions (the repositories) sets them as one list, a name to a line,
    in the streams' own order. The list stands in the block itself, beside the count it itemises, on the same snow:
    the figure and what it counts at the left, the names in a column at the right. (The flight puts the names there:
    see callouts.ts.) */
@@ -729,7 +751,7 @@ html[data-picture] .flight-root > .fl-poster {
     grid-column: 2;
     grid-row: 1 / 3;
     align-self: end;
-    height: calc(7 * (var(--fl-cap) * 1.25 + 2px) + 6 * 5px);
+    height: calc(5 * (var(--fl-cap) * 1.25 + 2px) + 4 * 5px);
   }
 }
 /* (On the narrowest phones the longest name does not fit beside the count: the list stands under what it counts.) */
@@ -887,6 +909,25 @@ html[data-picture] .flight-root > .fl-poster {
 }
 
 /* ---------- the delta: what he is into ---------- */
+
+/* What he is recognised for: lines in the display face, one to a fact, at the size of a figure's unit. */
+.fl .fl-recog {
+  display: grid;
+  gap: clamp(6px, 1vh, 12px);
+  max-width: min(26ch, 86vw);
+  color: var(--ink);
+}
+.fl-recog-link {
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.16em;
+}
+.fl-recog .fl-count {
+  font: inherit;
+}
+.fl-block > .fl-into-line {
+  max-width: 34ch;
+}
 
 /* The block stands on the west bank, lower left; the channels keep the right. */
 .fl .fl-into-list {

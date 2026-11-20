@@ -19,7 +19,7 @@ export interface CameraContext {
 
 /** Times are screens relative to the section's start. Camera keys use absolute screens. */
 type Words =
-  | { kind: 'section'; layout?: 'opening' | 'statement' | 'interests' | 'ending' }
+  | { kind: 'section'; layout?: 'opening' | 'statement' | 'interests' | 'ending' | 'beat' }
   | { kind: 'figure'; layout: 'contributions' | 'downloads' }
   | { kind: 'title'; layout?: 'display' | 'table' | 'film' | 'switch' | 'pool' | 'wall' };
 
@@ -393,6 +393,16 @@ export const FLIGHT = [
       // The rock pool from low over its near bank: the plates right of the words, the far shore, the tarn and the ranges above.
       ...holdKeys(move(benchPose(aspect), 0.44, 0.8, 0.128, 3, 0), stop),
     ],
+  },
+  {
+    // A beat of words alone, in the run from the pool to the tarn (Ask Around: the world has no place for it yet).
+    // No subject, no paint and no camera key: the eye goes on between its neighbours' keys, over this much more scroll.
+    // (Its words stand on the bank the eye is flying over, and only while that bank's snow lies under them: they come once
+    // the pool's rim has passed and have left before the tarn's water reaches them.)
+    // (Measured with scripts/titles-test.mjs: that stretch is about half a screen at this pace. Its label leads, as a station's does.)
+    steps: { eyebrow: -0.75, title: -0.25, line: -0.17, leave: 0.25 },
+    id: 'around', rail: 'Ask Around', length: 1.3, offset: 0.45, kind: 'section', layout: 'beat',
+    camera: () => [],
   },
   {
     id: 'bridge', paint: paintTarn, rail: 'Agent Bridge', length: 2.8, offset: 1.2, kind: 'title', layout: 'film',

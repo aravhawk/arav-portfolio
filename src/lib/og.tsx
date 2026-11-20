@@ -20,7 +20,7 @@ export const OG_TYPE = 'image/png';
 export const PICTURES = {
   home: 'The name Arav Jain stands as letters of pale glacier ice on a frozen lake swept to dark clear ice, mirrored in it, with snow-covered ranges under a low morning sun beyond.',
   infiniview: 'A rough block of clear ice holding the Infiniview card stands in a pool of teal meltwater, waves breaking at its foot, on a snowfield under far ranges.',
-  'open-source': 'Seven meltwater streams of different widths fall over a cliff of ice into a teal river that winds away across a snowfield.',
+  'open-source': 'Meltwater streams of different widths fall over a cliff of ice into a teal river that winds away across a snowfield.',
   'kilo-bench': 'Benchmark results set as type on a dark slab on the bed of a clear rock pool, blocks of glacier ice standing in it, on a snowfield with a tarn beyond.',
   'agent-bridge': 'Two shards of pale ice stand in a still tarn, with a frozen lake and snow-covered ranges beyond.',
   ollama: 'Four pillars of clear glacier ice of different sizes stand in a pool of meltwater on a snowfield under far ranges.',
@@ -33,7 +33,7 @@ export const PICTURES = {
 export type Picture = keyof typeof PICTURES;
 
 /** A card's alt text: its words, then what is drawn. */
-export const ogAlt = (words: string, picture: Picture) => `${words.replace(/[.\s]+$/, '')}. ${PICTURES[picture]}`;
+export const ogAlt = (words: string, picture?: Picture) => `${words.replace(/[.\s]+$/, '')}.${picture ? ` ${PICTURES[picture]}` : ''}`;
 
 const INK = '#0a0c0e';
 const INK2 = '#262d31';
@@ -76,13 +76,14 @@ export interface OgCard {
   kicker: string;
   title: string;
   line?: string;
-  picture: Picture;
+  /** Without one the card is its words on the plain ground. */
+  picture?: Picture;
 }
 
 const full = { position: 'absolute' as const, left: 0, top: 0, width: 1200, height: 630 };
 
 export async function renderOg({ kicker, title, line, picture }: OgCard) {
-  const [data, pic] = await Promise.all([loadFonts(), loadPicture(picture)]);
+  const [data, pic] = await Promise.all([loadFonts(), picture ? loadPicture(picture) : null]);
   const tone: Tone = pic?.tone ?? 'light';
   const ink = tone === 'light' ? INK : PALE;
   const ink2 = tone === 'light' ? INK2 : PALE2;

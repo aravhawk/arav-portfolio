@@ -10,15 +10,15 @@ import { Film } from '@/components/flight/Film';
 import { ProfileSwitch } from '@/components/home/ProfileSwitch';
 import { FlightStage } from '@/components/FlightStage';
 import { LiveNumber } from '@/components/LiveNumber';
-import { PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
+import { PROJECTS, RECOGNITION, type Project, type ProjectMedia } from '@/content/projects';
 import { KIND } from '@/content/kinds';
-import { formatAsOf, getMetrics } from '@/lib/metrics';
+import { formatAsOf, formatCount, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
 import { MOVE, SETTLE_AT } from '@/water/camera';
 import { byId, timeline } from '@/water/registry';
 import { posterBoot } from '@/water/poster';
 import { streamAnchors } from '@/water/words';
-import { COLS, TRIBS, colHeights, colApex } from '@/water/world';
+import { COLS, FACE, SHARDS, SLAB, TRIBS, colHeights, colApex } from '@/water/world';
 import './home.css';
 import './flight.css';
 
@@ -43,6 +43,8 @@ export const viewport: Viewport = {
 
 const BENCH_P = PROJECTS.find((p) => p.slug === 'kilo-bench')!;
 const RYDAR_P = PROJECTS.find((p) => p.slug === 'rydar')!;
+/** The one project the world has no place for yet: it stands as words alone, in the run after Kilo Bench's pool. */
+const AROUND_P = PROJECTS.find((p) => p.slug === 'ask-around')!;
 
 const INFINIVIEW_HOME: ProjectMedia = {
   kind: 'image',
@@ -91,15 +93,13 @@ type Build = ReturnType<typeof build>;
 const STREAMS = streamAnchors();
 
 /**
- * The seven repositories, as each one's own page names it (its README's
+ * The repositories, as each one's own page names it (its README's
  * heading, or where it has none the repository's name as GitHub shows it):
  * read 18 November 2026.
  */
 const REPO_NAME: Record<string, string> = {
   'pingdotgg/t3code': 'T3 Code',
-  'AvinashDevineni/ThrasherAndChambersWebsite': 'Thrasher & Chambers Website',
   'junhoyeo/tokscale': 'Tokscale',
-  'Kanishksasi/Investo': 'Investo',
   'Kilo-Org/kilocode': 'Kilo Code',
   'devMEremenko/XcodeBenchmark': 'XcodeBenchmark',
   'fakerybakery/openbridge': 'OpenBridge',
@@ -140,8 +140,15 @@ const POSTER_BOOT = posterBoot();
  */
 const END_LEAD = 0.15;
 
-/** His sentence, set a line at a time through the reach. */
+/** His sentence, set a line at a time through the reach; then, once it stands whole, the line under it. */
 const SAY_AT = [SAY_FROM, 2.2, 2.5, 2.78, 3.02];
+const SAY_WHY_AT = 3.3;
+
+/** A day as a label says it: "Nov 16". */
+const day = (iso: string) => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' }).format(new Date(iso));
+
+/** The two shards of the tarn are the two ends of the bridge: each is named where it stands. */
+const PEERS = ['Grok Bot', 'OpenAI agent'];
 
 export default async function Home() {
   const m = await getMetrics();
@@ -149,6 +156,10 @@ export default async function Home() {
   const models = m.ollama.models.slice(0, COLS.xs.length);
   const colH = colHeights(models.map((x) => x.pulls));
   const rydar = RYDAR_P?.media[0];
+  // The widest stream, said in the words beside it: how many of the count are its own, and between which days they were merged.
+  const lead = repos[0];
+  const leadDays = lead ? m.mergedPrs.ledger.filter((e) => e.repo === lead.repo).map((e) => e.mergedAt).sort() : [];
+  const yearCount = m.contributions.byYear[RECOGNITION.year];
 
   type RenderBlock = (section: typeof timeline[number], steps: Build, project: Project) => React.ReactNode;
   const blocks: Record<NonNullable<(typeof timeline)[number]['layout']>, RenderBlock> = {
@@ -173,7 +184,7 @@ export default async function Home() {
               </span>
             </p>
             <p className="fl-line fl-intro" data-at={-1} data-fl-until={0.25}>
-              I co-founded Infiniflop Labs and build Infiniview: agents that attack your app to prove what breaks.
+              I co-founded Infiniflop Labs, where I build Infiniview.
             </p>
           </div>
         </div>
@@ -183,7 +194,7 @@ export default async function Home() {
       <section className="fl-sec fl-say" data-fl style={len(section.length)} aria-label="What I do">
         <div className="fl-pin">
           <div className="fl-words fl-say-words" data-fl-from={SAY_FROM} data-fl-to={+(VIEW - 0.3).toFixed(3)}>
-            <Statement times={SAY_AT} />
+            <Statement times={SAY_AT} why={SAY_WHY_AT} />
           </div>
         </div>
       </section>
@@ -191,6 +202,12 @@ export default async function Home() {
     display: (section, view, p) => (
       <section className="fl-sec fl-view" data-fl style={len(section.length)} aria-label="Infiniview">
         <div className="fl-pin">
+          {/* The block of ice carries the product's own site: it is named where it stands. */}
+          <div className="fl-calls">
+            <Callout at={[SLAB.x, SLAB.y, SLAB.lift + SLAB.h]} href={p.links[0].href} from={view.calls.from} to={view.calls.to} lift={46}>
+              {p.links[0].label}
+            </Callout>
+          </div>
           <div className="fl-words fl-block fl-view-words" {...view.block}>
             <Kind p={p} b={view} />
             <Name p={p} b={view} />
@@ -219,7 +236,7 @@ export default async function Home() {
                 to={up.calls.to}
                 lift={i % 2 ? 78 : 44}
               >
-                {REPO_NAME[r.repo] ?? r.repo.split('/')[1]}
+                {REPO_NAME[r.repo] ?? r.repo.split('/')[1]} <span className="fl-call-n">{r.count}</span>
               </Callout>
             ))}
           </div>
@@ -242,28 +259,17 @@ export default async function Home() {
               <span className="fl-line fl-unit" {...up.line}>
                 merged pull requests in other people&apos;s projects
               </span>
-              {/* Where a narrow frame sets the seven names, as a list beside the count (the flight puts them there). */}
+              {/* Where a narrow frame sets the names, as a list beside the count (the flight puts them there). */}
               <span className="fl-calls-slot" data-calls-slot aria-hidden="true" />
             </h2>
             <p className="fl-meta" {...up.meta}>
-              <LiveNumber
-                className="fl-count"
-                value={m.mergedPrs.total.value}
-                from={m.mergedPrs.total.snapshotValue}
-                source={m.mergedPrs.total.source}
-                asOf={formatAsOf(m.mergedPrs.total.asOf)}
-                what="merged pull requests in total"
-              />{' '}
-              in all.{' '}
-              <LiveNumber
-                className="fl-count"
-                value={m.contributions.total.value}
-                from={m.contributions.total.snapshotValue}
-                source={m.contributions.total.source}
-                asOf={formatAsOf(m.contributions.total.asOf)}
-                what={m.contributions.label}
-              />{' '}
-              contributions.
+              {m.mergedPrs.upstreamRepoCount} repositories.
+              {lead && leadDays.length ? (
+                <>
+                  {' '}
+                  {lead.count} in {REPO_NAME[lead.repo] ?? lead.repo.split('/')[1]}, {day(leadDays[0])} to {day(leadDays[leadDays.length - 1])}.
+                </>
+              ) : null}
             </p>
             <Link className="link fl-more" href="/work/open-source" {...up.act}>
               Upstream <Arrow />
@@ -291,6 +297,13 @@ export default async function Home() {
     film: (section, bridge, p) => (
       <section className="fl-sec fl-bridge" data-fl style={len(section.length)} aria-label="Agent Bridge">
         <div className="fl-pin">
+          <div className="fl-calls">
+            {SHARDS.map((sh, i) => (
+              <Callout key={PEERS[i]} at={[sh.x, sh.y, sh.h]} from={bridge.calls.from} to={bridge.calls.to} lift={i ? 34 : 52} side={i ? 1 : -1}>
+                {PEERS[i]}
+              </Callout>
+            ))}
+          </div>
           <div className="fl-words fl-block fl-view-words fl-bridge-words" {...bridge.block}>
             <Kind p={p} b={bridge} />
             <Name p={p} b={bridge} />
@@ -318,7 +331,7 @@ export default async function Home() {
                 to={mods.calls.to}
                 lift={i % 2 ? 40 : 64}
               >
-                {x.name}
+                {x.name} <span className="fl-call-n">{formatCount(x.pulls)}</span>
               </Callout>
             ))}
           </div>
@@ -339,7 +352,7 @@ export default async function Home() {
                 </span>
               </span>
               <span className="fl-line fl-unit" {...mods.line}>
-                pulls, four open models
+                pulls, {models.length} open models
               </span>
             </h2>
             <Link className="link fl-more" href="/work/ollama" {...mods.act}>
@@ -367,7 +380,16 @@ export default async function Home() {
                 asOf={formatAsOf(m.npm.allTime.asOf)}
                 what="npm downloads of cc-switch, all time"
               />{' '}
-              npm downloads.
+              npm downloads.{' '}
+              <LiveNumber
+                className="fl-count"
+                value={m.npm.lastMonth.value}
+                from={m.npm.lastMonth.snapshotValue}
+                source={m.npm.lastMonth.source}
+                asOf={formatAsOf(m.npm.lastMonth.asOf)}
+                what="npm downloads of cc-switch in the last 30 days"
+              />{' '}
+              in the last 30 days.
             </p>
             {/* One stream in, three channels out, the chosen one running: the switch is drawn as what it does. */}
             <div className="fl-fork" data-bed="feat:fork" data-active="0" {...fork.act}>
@@ -401,11 +423,20 @@ export default async function Home() {
     wall: (section, canyon, p) => (
       <section className="fl-sec fl-rydar" data-fl style={len(section.length)} aria-label="RydAR">
         <div className="fl-pin">
+          {/* The pane in the canyon's wall shows the project's own site: named where it stands. */}
+          <div className="fl-calls">
+            <Callout at={[FACE.x, FACE.y, FACE.z + FACE.h]} href={p.links[0].href} from={canyon.calls.from} to={canyon.calls.to} lift={40}>
+              {p.links[0].label}
+            </Callout>
+          </div>
           <div className="fl-words fl-block fl-view-words fl-rydar-words" {...canyon.block}>
             <Kind p={p} b={canyon} />
             <Name p={p} b={canyon} />
             <p className="fl-line" {...canyon.line}>
               {p.line}
+            </p>
+            <p className="fl-meta" {...canyon.meta}>
+              On the App Store since November 11, 2026.
             </p>
           </div>
           <div className="fl-still">
@@ -418,9 +449,38 @@ export default async function Home() {
       <section className="fl-sec fl-delta" data-fl style={len(section.length)} aria-labelledby="into">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-into-words" {...delta.block}>
-            <Interests timing={delta} />
+            <Interests
+              timing={delta}
+              read={day(m.contributions.total.asOf)}
+              year={
+                yearCount ? (
+                  <LiveNumber
+                    className="fl-count"
+                    value={yearCount}
+                    from={yearCount}
+                    source={m.contributions.total.source}
+                    asOf={formatAsOf(m.contributions.total.asOf)}
+                    what={`GitHub contributions in ${RECOGNITION.year}`}
+                  />
+                ) : null
+              }
+            />
           </div>
           <div className="fl-still fl-pool" aria-hidden="true" />
+        </div>
+      </section>
+    ),
+    // Ask Around: words alone, between the pool and the tarn. The picture is the flight's own run between the two.
+    beat: (section, beat) => (
+      <section className="fl-sec fl-view fl-beat" data-fl style={len(section.length)} aria-label={AROUND_P.name}>
+        <div className="fl-pin">
+          <div className="fl-words fl-block fl-view-words fl-beat-words" {...beat.block}>
+            <Kind p={AROUND_P} b={beat} />
+            <Name p={AROUND_P} b={beat} />
+            <p className="fl-line" {...beat.line}>
+              {AROUND_P.line}
+            </p>
+          </div>
         </div>
       </section>
     ),

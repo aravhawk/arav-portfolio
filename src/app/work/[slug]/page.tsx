@@ -25,7 +25,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 /**
  * A project's page: its own station from the home page's world, live, with
- * its name standing in it, then a page built from what the project is
+ * its name standing in it (a project the world has no place for yet opens
+ * on its name alone), then a page built from what the project is
  * (src/components/work/cases.tsx), then the way round the set, and the
  * next project's own station as the way on.
  */
@@ -38,7 +39,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
   return (
     <PageShell
-      scene={sceneOf(p.slug) ?? 'delta'}
+      scene={sceneOf(p.slug)}
       head={{
         // (The way back says where the page belongs. Nothing else stands over a project's name.)
         back: { href: '/work', label: 'Work' },
@@ -49,7 +50,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       }}
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
       next={{
-        scene: sceneOf(next.slug) ?? 'delta',
+        scene: sceneOf(next.slug),
         href: `/work/${next.slug}`,
         label: 'Next',
         title: next.name,

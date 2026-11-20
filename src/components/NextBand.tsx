@@ -27,7 +27,8 @@ export function NextBand({
   vt,
   aria,
 }: {
-  scene: SceneId;
+  /** The next page's scene. Without one the band is that page's words alone, on the snow. */
+  scene?: SceneId;
   href: string;
   /** The small word over the name: "Next", or the part of the site the band opens. */
   label: string;
@@ -43,14 +44,16 @@ export function NextBand({
     <img className={`next-pic next-${shape} next-${theme}`} src={`/media/scenes/${scene}-${shape}-${theme}.webp`} width={size.w} height={size.h} alt="" loading="lazy" decoding="async" />
   );
   return (
-    <nav className="next" aria-label={aria}>
+    <nav className={`next${scene ? '' : ' next-type'}`} aria-label={aria}>
       <Link className="next-link" href={href}>
-        <span className="next-view" data-fill aria-hidden="true">
-          {pic('band', 'light', WIDE)}
-          {pic('band', 'dark', WIDE)}
-          {pic('bandtall', 'light', TALL)}
-          {pic('bandtall', 'dark', TALL)}
-        </span>
+        {scene ? (
+          <span className="next-view" data-fill aria-hidden="true">
+            {pic('band', 'light', WIDE)}
+            {pic('band', 'dark', WIDE)}
+            {pic('bandtall', 'light', TALL)}
+            {pic('bandtall', 'dark', TALL)}
+          </span>
+        ) : null}
         <span className="next-words wrap">
           <span className="label next-label">
             {label} <Arrow />
@@ -89,6 +92,6 @@ export const WAY_TO_WORK: Way = {
   href: '/work',
   label: 'Work',
   title: 'Everything I have built',
-  line: 'Eight things I would point you to first, then the rest, one line each.',
+  line: 'Nine projects, in the order I would show them.',
   aria: 'Work',
 };

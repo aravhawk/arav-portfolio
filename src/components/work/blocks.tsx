@@ -68,7 +68,7 @@ export function Note({ title, children, className = '' }: { title: string; child
 
 /**
  * The foot of a project's page, on one line: the ways out (links, set as
- * links) and the way round the set (the eight projects by name, this one
+ * links) and the way round the set (the nine projects by name, this one
  * marked; each name travels into the title of the page it opens). The one
  * after this is offered as a place, in the band under this: see nextOf.
  */

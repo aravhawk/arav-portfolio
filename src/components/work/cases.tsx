@@ -7,6 +7,7 @@ import { formatAsOf, formatCount, type Metric, type SiteMetrics } from '@/lib/me
 import { SHEET_COLS, SHEET_SRC } from '@/water/world';
 import { HALF_SIZES, Note, Plate, Sec, Spec } from './blocks';
 import {
+  AROUND_RULES,
   BRIDGE_FLOW,
   BRIDGE_LIMITS,
   BRIDGE_MORE,
@@ -41,7 +42,7 @@ import {
 } from './case-data';
 
 /**
- * The eight project pages. No two share a skeleton: each is built from what
+ * The nine project pages. No two share a skeleton: each is built from what
  * the project is. A pipeline is drawn as a pipeline, a message flow as a
  * sequence diagram, a command line tool as a terminal session, a ledger as
  * a ledger. Numerals stand for a sequence only where there is none to draw
@@ -55,7 +56,7 @@ function Live({ metric, what }: { metric: Metric; what: string }) {
   return <LiveNumber value={metric.value} from={metric.snapshotValue} source={metric.source} asOf={formatAsOf(metric.asOf)} what={what} />;
 }
 
-/* ---------- 01 Infiniview: one run, drawn as the pipeline it is ---------- */
+/* ---------- Infiniview: one run, drawn as the pipeline it is ---------- */
 
 const RUN_SIZES = '(max-width: 859px) 94vw, (max-width: 1720px) 70vw, 1200px';
 
@@ -130,7 +131,7 @@ function Infiniview({ p }: { p: Project }) {
   );
 }
 
-/* ---------- 02 Upstream: the ledger ---------- */
+/* ---------- Upstream: the ledger ---------- */
 
 function Diff({ size }: { size: string }) {
   const [add = 0, del = 0] = (size.match(/\d+/g) ?? []).map(Number);
@@ -189,7 +190,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
           ))}
         </div>
       </Sec>
-      <Sec className="sec-changes" title="In T3 Code: eight of them, change by change" id="p-t3">
+      <Sec className="sec-changes" title="In T3 Code, change by change" id="p-t3">
         <ol className="changes">
           {T3_PRS.map((x) => (
             <li key={x.n} className="change" data-row>
@@ -198,11 +199,11 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
               </a>
               <div className="change-main">
                 <h3 className="change-title">{x.title}</h3>
-                <p className="body">{x.what}</p>
+                {x.what ? <p className="body">{x.what}</p> : null}
               </div>
               <p className="change-meta">
                 <span>{formatPostDate(x.merged, 'short')}</span>
-                <Diff size={x.size} />
+                {x.size ? <Diff size={x.size} /> : null}
               </p>
             </li>
           ))}
@@ -261,7 +262,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
   );
 }
 
-/* ---------- 03 Kilo Bench: the result, then the three things it does, each beside what it makes ---------- */
+/* ---------- Kilo Bench: the result, then the three things it does, each beside what it makes ---------- */
 
 function KiloBench({ p }: { p: Project }) {
   const [read, cover, judge] = p.how;
@@ -363,7 +364,7 @@ function KiloBench({ p }: { p: Project }) {
   );
 }
 
-/* ---------- 04 Agent Bridge: the film, then the message flow as a sequence diagram ---------- */
+/* ---------- Agent Bridge: the film, then the message flow as a sequence diagram ---------- */
 
 const peerName = (id: Peer) => BRIDGE_PEERS.find((x) => x.id === id)?.name ?? id;
 /** Which rows of the diagram each of the README's three rules speaks to. */
@@ -448,7 +449,7 @@ function AgentBridge({ p }: { p: Project }) {
   );
 }
 
-/* ---------- 05 Open models: the chart ---------- */
+/* ---------- Open models: the chart ---------- */
 
 function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
   const max = Math.max(...m.ollama.models.map((x) => x.pulls), 1);
@@ -527,7 +528,7 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
   );
 }
 
-/* ---------- 06 cc-switch: a terminal session, each command with what it does beside it ---------- */
+/* ---------- cc-switch: a terminal session, each command with what it does beside it ---------- */
 
 function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
   const [create, change, test] = p.how;
@@ -549,13 +550,13 @@ function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
               <span className="fig-value">
                 <Live metric={m.npm.allTime} what="npm downloads of cc-switch, all time" />
               </span>
-              <span className="fig-unit">npm downloads, all time</span>
+              <span className="fig-unit">npm downloads since February 1, 2026</span>
             </li>
             <li className="fig">
               <span className="fig-value">
-                <Live metric={m.npm.lastMonth} what="npm downloads of cc-switch in the last month" />
+                <Live metric={m.npm.lastMonth} what="npm downloads of cc-switch in the last 30 days" />
               </span>
-              <span className="fig-unit">in the last month</span>
+              <span className="fig-unit">in the last 30 days</span>
             </li>
           </ul>
           <Spec facts={p.facts.filter((f) => f.label !== 'Install')} />
@@ -648,7 +649,7 @@ export function SwitchInScene() {
   );
 }
 
-/* ---------- 07 TensorPoW: set as the paper it is becoming, in three figures ---------- */
+/* ---------- TensorPoW: set as the paper it is becoming, in three figures ---------- */
 
 function TensorPoW({ p }: { p: Project }) {
   const [tensors, blocks, node] = p.how;
@@ -775,7 +776,41 @@ function TensorPoW({ p }: { p: Project }) {
   );
 }
 
-/* ---------- 08 RydAR: the map, the phone, the two pages ---------- */
+/* ---------- Ask Around: the result, what it is, and the rules a request has to clear ---------- */
+
+function AskAround({ p }: { p: Project }) {
+  const [result, ...rest] = p.facts;
+  return (
+    <>
+      <Sec className="kb-open" label="What it is">
+        <p className="say">{result.value}</p>
+        <div className="kb-side">
+          <p className="sum sum-s">{p.summary}</p>
+          <Spec facts={rest} />
+        </div>
+      </Sec>
+      <Sec className="ab-limits" label="The rules">
+        <div>
+          <ul className="limits">
+            {AROUND_RULES.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+          <p className="cap">The rules, from the README.</p>
+        </div>
+        <div className="notes">
+          {p.how.map((h) => (
+            <Note key={h.title} title={h.title}>
+              {h.body}
+            </Note>
+          ))}
+        </div>
+      </Sec>
+    </>
+  );
+}
+
+/* ---------- RydAR: the map, the phone, the two pages ---------- */
 
 function RydAR({ p }: { p: Project }) {
   return (
@@ -833,6 +868,7 @@ const CASES: Record<string, (props: { p: Project; m: SiteMetrics }) => React.Rea
   'cc-switch': CcSwitch,
   tensorpow: TensorPoW,
   rydar: RydAR,
+  'ask-around': AskAround,
 };
 
 /** A project's page, under its scene. */

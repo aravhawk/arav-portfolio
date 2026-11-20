@@ -1,6 +1,7 @@
-import { projectsInFlight } from '@/water/registry';
 /**
- * Featured work. Every statement here is sourced in
+ * The work the site shows: nine projects, in the owner's order (his list of
+ * 20 November 2026; docs/site-system/copy.md keeps its limits). Every
+ * statement here is in that list or sourced in
  * docs/redesign-v4/content-sources.md. Live numbers are not stored here:
  * they come from src/lib/metrics at render time.
  */
@@ -45,7 +46,7 @@ const entries: Project[] = [
     n: '01',
     name: 'Infiniview',
     kicker: 'Infiniflop Labs',
-    line: 'Agents attack your app in a sandbox and hand you replayable proof.',
+    line: 'It connects to a GitHub repo, deploys the app in a sandbox, attacks it for real and returns replayable proof of what broke.',
     summary:
       'Infiniview connects to your GitHub, deploys your app in a sandbox, and runs real attacks against it. You get replayable proof of what broke. I co-founded Infiniflop Labs to build it, and the agent system behind it is the thing I work on most.',
     how: [
@@ -70,12 +71,11 @@ const entries: Project[] = [
       { label: 'Role', value: 'Co-founder, building the agent system' },
       { label: 'Status', value: 'Early access' },
       { label: 'Started', value: 'March 2026 as Docksmith, renamed that April' },
-      { label: 'Recognition', value: 'Daytona Startup Grid, April 2026' },
+      { label: 'Recognition', value: 'Accepted to the Daytona Startup Grid, April 9, 2026' },
     ],
     links: [
       { label: 'infiniview.dev', href: 'https://infiniview.dev' },
       { label: 'Docs', href: 'https://docs.infiniview.dev' },
-      { label: 'Infiniflop Labs', href: 'https://infiniflop.com' },
     ],
     media: [
       {
@@ -129,7 +129,7 @@ const entries: Project[] = [
     kicker: 'Open source',
     line: 'Merged pull requests in tools other developers run every day, T3 Code first.',
     summary:
-      'I fix things in the tools I use. The headline number counts merged pull requests in any repository I do not own, and it updates itself. The largest share is in T3 Code.',
+      'I fix things in the tools I use. The headline number counts merged pull requests in repositories I do not own, and it updates itself. The largest share is in T3 Code, merged between September 7 and November 16, 2026.',
     how: [
       {
         title: 'T3 Code',
@@ -141,7 +141,7 @@ const entries: Project[] = [
       },
       {
         title: 'Elsewhere',
-        body: 'A prompt border fix in Kilo Code, a benchmark result for XcodeBenchmark, a licence for openbridge, and site work for friends.',
+        body: 'A prompt border fix in Kilo Code, pull request 6458. One merged pull request each in XcodeBenchmark and openbridge.',
       },
     ],
     facts: [{ label: 'Counted', value: 'Merged pull requests in repositories I do not own' }],
@@ -155,13 +155,68 @@ const entries: Project[] = [
     media: [],
   },
   {
-    slug: 'kilo-bench',
+    slug: 'ollama',
     n: '03',
+    name: 'Open models',
+    kicker: 'Ollama',
+    line: 'Four open models packaged as GGUF builds, pulled by people who run them on their own machines.',
+    summary:
+      'I package open models as GGUF builds on Ollama so they run on your own machine. Four are public. The pull counts below are read from Ollama and refresh on their own.',
+    how: [
+      {
+        title: 'Package',
+        body: 'Each model is published as quantised GGUF builds that Ollama can pull and run with one command.',
+      },
+      {
+        title: 'Upload',
+        body: 'The llama4 build, in 109b and 400b sizes, was uploaded on April 11, 2025.',
+      },
+    ],
+    facts: [{ label: 'Run one', value: 'ollama run aravhawk/llama4' }],
+    links: [{ label: 'ollama.com/aravhawk', href: 'https://ollama.com/aravhawk' }],
+    media: [],
+  },
+  {
+    slug: 'cc-switch',
+    n: '04',
+    name: 'cc\u2011switch',
+    kicker: '',
+    line: 'One command switches Claude Code between Anthropic and open model providers.',
+    summary:
+      'cc-switch is a profile manager for Claude Code. Keep a profile for your Claude subscription, one for Kimi, one for a local Ollama model, one for work on Bedrock, and move between them without editing settings.json by hand.',
+    how: [
+      {
+        title: 'Create',
+        body: 'cc-switch --create kimi --template kimi makes a profile from a provider template. More than 40 providers are covered: Anthropic, open model labs, gateways, local servers and cloud platforms.',
+      },
+      {
+        title: 'Switch',
+        body: 'cc-switch work switches back. Creating a profile saves the one you were on, so nothing is lost.',
+      },
+      {
+        title: 'Test',
+        body: 'cc-switch --test sends one tiny request to check the endpoint, the key and the model.',
+      },
+    ],
+    facts: [
+      { label: 'Install', value: 'npm install -g @aravhawk/cc-switch' },
+      { label: 'Licence', value: 'MIT' },
+      { label: 'First published', value: 'February 2026' },
+    ],
+    links: [
+      { label: 'Source', href: 'https://github.com/aravhawk/cc-switch' },
+      { label: 'npm', href: 'https://www.npmjs.com/package/@aravhawk/cc-switch' },
+    ],
+    media: [],
+  },
+  {
+    slug: 'kilo-bench',
+    n: '05',
     name: 'Kilo Bench',
     kicker: 'DeveloperWeek 2026',
-    line: 'Model benchmarking in Kilo Code. A DeveloperWeek 2026 Hackathon prize winner.',
+    line: 'Model benchmarking inside Kilo Code. Winner of the “Kilo - For Devs, By Devs” prize at the DeveloperWeek 2026 Hackathon.',
     summary:
-      'Kilo Bench is a benchmarking feature built into Kilo Code. It reads your workspace, writes coding challenges that fit your actual codebase, runs the models you pick through them, and tells you which one works best for your code. It won the prize category “Kilo - For Devs, By Devs” at the DeveloperWeek 2026 Hackathon.',
+      'Kilo Bench is a benchmarking feature built into Kilo Code. It reads your workspace, writes coding challenges that fit your actual codebase, runs the models you pick through them, and tells you which one works best for your code. It won the “Kilo - For Devs, By Devs” prize at the DeveloperWeek 2026 Hackathon.',
     how: [
       {
         title: 'Read the workspace',
@@ -177,7 +232,7 @@ const entries: Project[] = [
       },
     ],
     facts: [
-      { label: 'Result', value: 'Winner, prize category “Kilo - For Devs, By Devs”' },
+      { label: 'Result', value: 'Winner of the “Kilo - For Devs, By Devs” prize' },
       { label: 'Built', value: 'February 2026' },
     ],
     links: [
@@ -209,148 +264,50 @@ const entries: Project[] = [
     ],
   },
   {
-    slug: 'agent-bridge',
-    n: '04',
-    name: 'Agent Bridge',
-    kicker: 'Apache 2.0',
-    line: 'An OpenAI Dot and a second assistant exchange messages and handoffs through one self-hosted inbox.',
+    slug: 'ask-around',
+    n: '06',
+    name: 'Ask Around',
+    kicker: 'Notify Weekend 01',
+    line: 'Governance for agents that ask people. Winner of Belweave’s Notify Weekend 01 on justship.dev.',
     summary:
-      'Agent Bridge connects an OpenAI Dot to a second AI assistant. It is a self hosted MCP inbox for one owner who wants the two to exchange messages, status updates and handoff requests in both directions without copying context between chats.',
+      'Ask Around is governance for agents that ask people before they act. Each question goes only to its owner, quorum and veto are enforced, and silence is never a yes. I built it at Notify Weekend 01, a 2-hour hackathon on justship.dev, and it was named the winner.',
     how: [
       {
-        title: 'Store, then wake',
-        body: 'The sender calls one tool. The bridge stores the message and an outbox job in one transaction, and the wake that follows carries only the message ID.',
+        title: 'Ask the owner',
+        body: 'Each question goes only to the person who owns it.',
       },
       {
-        title: 'Read as yourself',
-        body: 'Each assistant signs in with its own OAuth token and can send only to the other peer. The recipient reads the stored data through its own authenticated connection.',
+        title: 'Quorum and veto',
+        body: 'Approval takes an N-of-M quorum, and any deny vetoes.',
       },
       {
-        title: 'Acknowledge once',
-        body: 'An ACK means the recipient handled the data, not that a task is done. ACKs are terminal, which prevents loops.',
-      },
-      {
-        title: 'Optional delivery',
-        body: 'Queue and QStash delivery, private Vercel Blob transfer for large files, and batching for routine updates are available and off by default.',
+        title: 'No answer',
+        body: 'A request that times out is not approved.',
       },
     ],
     facts: [
-      { label: 'Licence', value: 'Apache 2.0' },
-      { label: 'Protocol', value: 'Model Context Protocol' },
-      { label: 'Launched', value: 'November 2026' },
+      { label: 'Result', value: 'Winner, Belweave’s Notify Weekend 01' },
+      { label: 'Event', value: 'A 2-hour hackathon on justship.dev, November 7, 2026' },
+      { label: 'Built with', value: 'Notify for delivery and Belweave Kai-4 for planning' },
     ],
     quote: {
-      text: 'Messages are data, never permission.',
-      source: 'Agent Bridge README',
+      text: 'A timeout is never approval.',
+      source: 'Ask Around README',
     },
     links: [
-      { label: 'Source', href: 'https://github.com/aravhawk/agent-bridge' },
-      { label: 'Launch post', href: 'https://x.com/aravhawk/status/2117458115134472437' },
+      { label: 'Source', href: 'https://github.com/aravhawk/ask-around' },
+      { label: 'Announcement', href: 'https://x.com/pkyanam/status/2120163766713430040' },
     ],
-    media: [
-      {
-        kind: 'video',
-        src: '/media/agent-bridge-demo.mp4',
-        poster: '/media/agent-bridge-poster.jpg',
-        alt: 'The Agent Bridge launch video: an OpenAI Dot and a second assistant exchanging a handoff through the bridge.',
-        w: 1280,
-        h: 720,
-      },
-    ],
-  },
-  {
-    slug: 'ollama',
-    n: '05',
-    name: 'Open models',
-    kicker: 'Ollama',
-    line: 'GGUF builds of open models, pulled by people running them locally.',
-    summary:
-      'I package open models as GGUF builds on Ollama so they run on your own machine. Four are public. The pull counts below are read from Ollama and refresh on their own.',
-    how: [
-      {
-        title: 'Package',
-        body: 'Each model is published as quantised GGUF builds that Ollama can pull and run with one command.',
-      },
-      {
-        title: 'Publish early',
-        body: 'The llama4 build, in 109b and 400b sizes, went up on April 11 2025.',
-      },
-    ],
-    facts: [{ label: 'Run one', value: 'ollama run aravhawk/llama4' }],
-    links: [{ label: 'ollama.com/aravhawk', href: 'https://ollama.com/aravhawk' }],
-    media: [],
-  },
-  {
-    slug: 'cc-switch',
-    n: '06',
-    name: 'cc\u2011switch',
-    kicker: '',
-    line: 'One command switches Claude Code between providers.',
-    summary:
-      'cc-switch is a profile manager for Claude Code. Keep a profile for your Claude subscription, one for Kimi, one for a local Ollama model, one for work on Bedrock, and move between them without editing settings.json by hand.',
-    how: [
-      {
-        title: 'Create',
-        body: 'cc-switch --create kimi --template kimi makes a profile from a provider template. More than 40 providers are covered: Anthropic, open model labs, gateways, local servers and cloud platforms.',
-      },
-      {
-        title: 'Switch',
-        body: 'cc-switch work switches back. Creating a profile saves the one you were on, so nothing is lost.',
-      },
-      {
-        title: 'Test',
-        body: 'cc-switch --test sends one tiny request to check the endpoint, the key and the model.',
-      },
-    ],
-    facts: [
-      { label: 'Install', value: 'npm install -g @aravhawk/cc-switch' },
-      { label: 'Licence', value: 'MIT' },
-      { label: 'First published', value: 'February 2026' },
-    ],
-    links: [
-      { label: 'Source', href: 'https://github.com/aravhawk/cc-switch' },
-      { label: 'npm', href: 'https://www.npmjs.com/package/@aravhawk/cc-switch' },
-    ],
-    media: [],
-  },
-  {
-    slug: 'tensorpow',
-    n: '07',
-    name: 'TensorPoW',
-    kicker: 'Research',
-    line: 'GPU native proof of work, becoming a research paper.',
-    summary:
-      'TensorPoW is the reference implementation of a GPU native proof of work protocol. It is built around deterministic INT8 tensor computation and a fruit and anchor block structure designed so different backends verify the same consensus. I am turning it into a full research paper.',
-    how: [
-      {
-        title: 'Deterministic tensors',
-        body: 'Challenges are INT8 tensor computations, so a CPU, an Apple GPU and a CUDA GPU must agree bit for bit.',
-      },
-      {
-        title: 'Fruit and anchor blocks',
-        body: 'Small fruit blocks carry work between anchor blocks, ordered by a BlockDAG with anchor difficulty adjustment and finality.',
-      },
-      {
-        title: 'A full node',
-        body: 'Python 3.12 with PyTorch for tensors, Cython on hot paths, BLAKE3 hashing, Ed25519 signatures, libp2p networking and RocksDB for state.',
-      },
-    ],
-    facts: [
-      { label: 'Idea and first code', value: 'October 2024' },
-      { label: 'Current version', value: 'June 2026' },
-      { label: 'Licence', value: 'Apache 2.0, historic MIT notice preserved' },
-    ],
-    links: [{ label: 'Source', href: 'https://github.com/aravhawk/TensorPoW' }],
     media: [],
   },
   {
     slug: 'rydar',
-    n: '08',
+    n: '07',
     name: 'RydAR',
     kicker: '',
-    line: 'An iPhone co-pilot for tight bends in Arkansas.',
+    line: 'An iPhone co-pilot that speaks curve advisories, and a public Arkansas curve map.',
     summary:
-      'RydAR is an iPhone co-pilot for tight bends in Arkansas, and a public map of those bends at rydar.org. I built it with collaborators.',
+      'RydAR is an iPhone co-pilot that speaks curve advisories on Arkansas roads, and a public map of those curves at rydar.org. It is live on the App Store as “RydAR: Safe Driving”. I built it with 2 collaborators.',
     how: [
       {
         title: 'Spoken advisories',
@@ -367,7 +324,9 @@ const entries: Project[] = [
     ],
     facts: [
       { label: 'Platform', value: 'iPhone' },
+      { label: 'App Store', value: '“RydAR: Safe Driving” v1.0.0, live since November 11, 2026' },
       { label: 'Coverage', value: 'Arkansas roads' },
+      { label: 'Team', value: 'Built with 2 collaborators' },
     ],
     links: [
       { label: 'rydar.org', href: 'https://rydar.org' },
@@ -415,110 +374,106 @@ const entries: Project[] = [
       },
     ],
   },
+  {
+    slug: 'agent-bridge',
+    n: '08',
+    name: 'Agent Bridge',
+    kicker: 'Apache 2.0',
+    line: 'A self-hosted MCP inbox for two-way handoffs between a Grok Bot and an OpenAI agent.',
+    summary:
+      'Agent Bridge is a self-hosted MCP inbox for one owner. A Grok Bot and an OpenAI agent exchange messages, status updates and handoff requests through it in both directions, so the owner does not copy context between chats.',
+    how: [
+      {
+        title: 'Store, then wake',
+        body: 'The sender calls one tool. The bridge stores the message and an outbox job in one transaction, and the wake that follows carries only the message ID.',
+      },
+      {
+        title: 'Read as yourself',
+        body: 'Each assistant signs in with its own OAuth token and can send only to the other peer. The recipient reads the stored data through its own authenticated connection.',
+      },
+      {
+        title: 'Acknowledge once',
+        body: 'An ACK means the recipient handled the data, not that a task is done. ACKs are terminal, which prevents loops.',
+      },
+      {
+        title: 'Optional delivery',
+        body: 'Queue and QStash delivery, private Vercel Blob transfer for large files, and batching for routine updates are available and off by default.',
+      },
+    ],
+    facts: [
+      { label: 'Licence', value: 'Apache 2.0' },
+      { label: 'Protocol', value: 'Model Context Protocol' },
+      { label: 'Launched', value: 'November 2026' },
+    ],
+    quote: {
+      text: 'Messages are data, never permission.',
+      source: 'Agent Bridge README',
+    },
+    links: [
+      { label: 'Source', href: 'https://github.com/aravhawk/agent-bridge' },
+      { label: 'Launch post', href: 'https://x.com/aravhawk/status/2117458115134472437' },
+    ],
+    media: [
+      {
+        kind: 'video',
+        src: '/media/agent-bridge-demo.mp4',
+        poster: '/media/agent-bridge-poster.jpg',
+        alt: 'The Agent Bridge launch video: a Grok Bot and an OpenAI agent exchanging a handoff through the bridge.',
+        w: 1280,
+        h: 720,
+      },
+    ],
+  },
+  {
+    slug: 'tensorpow',
+    n: '09',
+    name: 'TensorPoW',
+    kicker: 'Research',
+    line: 'A research implementation of GPU proof-of-work built on deterministic INT8 tensor computation.',
+    summary:
+      'TensorPoW is a research implementation of GPU proof-of-work. It is built on deterministic INT8 tensor computation and a fruit and anchor block structure designed so different backends verify the same consensus. I am turning it into a full research paper.',
+    how: [
+      {
+        title: 'Deterministic tensors',
+        body: 'Challenges are INT8 tensor computations, so a CPU, an Apple GPU and a CUDA GPU must agree bit for bit.',
+      },
+      {
+        title: 'Fruit and anchor blocks',
+        body: 'Small fruit blocks carry work between anchor blocks, ordered by a BlockDAG with anchor difficulty adjustment and finality.',
+      },
+      {
+        title: 'A full node',
+        body: 'Python 3.12 with PyTorch for tensors, Cython on hot paths, BLAKE3 hashing, Ed25519 signatures, libp2p networking and RocksDB for state.',
+      },
+    ],
+    facts: [
+      { label: 'Idea and first code', value: 'October 2024' },
+      { label: 'Current version', value: 'June 2026' },
+      { label: 'Licence', value: 'Apache 2.0, historic MIT notice preserved' },
+    ],
+    links: [{ label: 'Source', href: 'https://github.com/aravhawk/TensorPoW' }],
+    media: [],
+  },
 ];
 
-export const PROJECTS = projectsInFlight.map(slug => {
-  const project = entries.find(entry => entry.slug === slug);
-  if (!project) throw new Error(`Missing project content for ${slug}`);
-  return project;
-});
+/** The nine, in the owner's order: the order of /work, of every list, and of the way round the set. */
+export const PROJECTS: Project[] = entries;
 
 export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === slug);
 
-export interface More {
-  name: string;
-  line: string;
-  href: string;
-  /** Label for the main link when it is not source code. */
-  hrefLabel?: string;
-  tag: string;
-  note?: string;
-  also?: ProjectLink[];
-}
-
-/** Secondary work: one line each on /work. */
-export const MORE: More[] = [
-  {
-    name: 'Ask Around',
-    tag: 'Agents',
-    line: "Governance for agents that ask people: quorum, veto, and silence is never a yes. Won Belweave's Notify Weekend 01 hackathon.",
-    href: 'https://github.com/aravhawk/ask-around',
-    also: [{ label: 'Announcement', href: 'https://x.com/pkyanam/status/2120163766713430040' }],
-  },
-  {
-    name: 'ClarifAI',
-    tag: 'Hackathon',
-    line: 'AI assisted mediation for couples and roommates, built at United Hacks V6.',
-    href: 'https://github.com/aravhawk/ClarifAI',
-    also: [{ label: 'Devpost', href: 'https://devpost.com/software/clarifai-6pg03u' }],
-  },
-  {
-    name: 'fix-it-bot',
-    tag: 'Tooling',
-    line: 'A drop in React component that turns a bug report into an agent generated pull request through Kilo.',
-    href: 'https://github.com/aravhawk/fix-it-bot',
-  },
-  {
-    name: 'OxyDrop',
-    tag: 'Research prototype',
-    line: 'A phone camera check for a drop in blood oxygen from your own baseline.',
-    note: 'Not medical advice, not a medical device, validated on only 6 people.',
-    href: 'https://github.com/aravhawk/oxydrop',
-    also: [{ label: 'Demo', href: 'https://aravhawk.github.io/oxydrop/' }],
-  },
-  {
-    name: 'goFoundr',
-    tag: 'Agents',
-    line: 'An AI founder agent that validates an idea, generates an MVP and deploys it.',
-    href: 'https://github.com/2ALabz/goFoundr',
-  },
-  {
-    name: 'VEX robotics',
-    tag: 'Robotics',
-    line: 'Drivetrain, autonomous routines and PID autotune for two competition robots. Design Award, November 2025.',
-    href: 'https://github.com/aravhawk/99719T',
-    also: [{ label: '3400Z', href: 'https://github.com/aravhawk/3400Z' }],
-  },
-  {
-    name: 'Business Insider',
-    tag: 'Press',
-    line: '"I got agents running." A May 2026 story on coders who keep their laptops open in public.',
+/**
+ * What he is recognised for: lines, never cards. The year's contributions
+ * are read live (src/lib/metrics) and said with the date they were read.
+ */
+export const RECOGNITION = {
+  devday: 'Selected for OpenAI DevDay 2026',
+  press: {
+    text: 'In a Business Insider story on coders who keep their laptops open in public, May 2026',
     href: 'https://www.businessinsider.com/coders-keep-laptops-open-in-public-ai-agent-2026-5',
-    hrefLabel: 'Article',
   },
-];
-
-export interface ArchiveEntry {
-  name: string;
-  line: string;
-  href?: string;
-  group: 'Earlier' | 'Tools' | 'Small';
-  year: string;
-  also?: ProjectLink[];
-}
-
-const gh = (repo: string) => `https://github.com/aravhawk/${repo}`;
-
-/** Everything else, one line each. */
-export const ARCHIVE: ArchiveEntry[] = [
-  { name: 'lite-stats', line: 'A lighter Apple Silicon menu bar monitor, forked from exelban/stats.', href: gh('lite-stats'), group: 'Tools', year: '2026', also: [{ label: 'Upstream', href: 'https://github.com/exelban/stats' }] },
-  { name: 'envfetch', line: 'An environment variable vault unlocked with Touch ID.', href: gh('envfetch'), group: 'Tools', year: '2026' },
-  { name: 'claude-code-utils', line: 'The Claude Code plugins and config I use daily.', href: gh('claude-code-utils'), group: 'Tools', year: '2026' },
-  { name: 'passportphoto', line: 'A local studio for US passport photos.', href: gh('passportphoto'), group: 'Tools', year: '2026' },
-  { name: 'typing-game', line: 'A minimal typing game.', href: gh('typing-game'), group: 'Tools', year: '2026' },
-  { name: 'neuralbytes.net', line: 'The NeuralBytes site, 2023 to 2026.', href: gh('neuralbytes.net'), group: 'Earlier', year: '2023' },
-  { name: 'SumQuick', line: 'Local summarisation with Ollama and Streamlit.', href: gh('SumQuick'), group: 'Earlier', year: '2024' },
-  { name: 'ChatGPT-3.5-with-Vision', line: 'Image input for a text only chat model.', href: gh('ChatGPT-3.5-with-Vision'), group: 'Earlier', year: '2024' },
-  { name: 'IntergalacticPro', line: 'A space and rockets expert chatbot.', href: gh('IntergalacticPro'), group: 'Earlier', year: '2025' },
-  { name: 'Weather-Station-BMP280', line: 'A Raspberry Pi weather station that logs to a workbook.', href: gh('Weather-Station-BMP280'), group: 'Earlier', year: '2023' },
-  { name: 'Master Coders', line: 'Free coding lessons, 2020.', group: 'Earlier', year: '2020' },
-  { name: 'CryptoLab', line: 'A Swift Student Challenge 2025 entry on cryptography.', href: gh('CryptoLab.swiftpm'), group: 'Small', year: '2025' },
-  { name: 'teamastros', line: 'A team site.', href: gh('teamastros'), group: 'Small', year: '2026' },
-  { name: 'who-wants-to-be-a-billionaire', line: 'A quiz game.', href: gh('who-wants-to-be-a-billionaire'), group: 'Small', year: '2024' },
-  { name: 'escaperoom', line: 'A browser escape room.', href: gh('escaperoom'), group: 'Small', year: '2022' },
-  { name: 'workjet', line: 'Two early workspace launch pages.', href: gh('workjet-ms'), group: 'Small', year: '2022', also: [{ label: 'Google version', href: gh('workjet-google') }] },
-  { name: 'top10tipsforsurvival', line: 'My first repository.', href: gh('top10tipsforsurvival'), group: 'Small', year: '2021' },
-];
+  /** The year the contributions line counts. */
+  year: '2026',
+};
 
 export const INTERESTS = [
   'Agents and evals',

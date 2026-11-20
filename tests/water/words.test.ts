@@ -25,8 +25,9 @@ const FRAMES: [number, number][] = [
 // 12 px mono, tracked 0.01em: a little wider than the page sets it.
 const widthOf = (name: string) => Math.ceil(name.length * 7.7);
 const H = 17;
-const REPOS = ['Kilo Code', 'OpenBridge', 'XcodeBenchmark', 'Investo', 'Tokscale', 'Thrasher & Chambers Website', 'T3 Code'];
-const MODELS = ['qwen3.5-opus-4.6', 'llama4', 'gemma4', 'qwen3.6'];
+// (Each caption is a name and, beside it, what it counts.)
+const REPOS = ['T3 Code 9', 'Tokscale 3', 'XcodeBenchmark 1', 'OpenBridge 1', 'Kilo Code 1'];
+const MODELS = ['qwen3.5-opus-4.6 9,473', 'llama4 7,365', 'gemma4 1,288', 'qwen3.6 198'];
 
 // The captions stand with their station's action: from a little before its composed frame to its leaving (see `build` in src/app/page.tsx).
 const UP = composed.upstream;
@@ -77,8 +78,9 @@ function inView(points: V3[], names: string[], s: number, w: number, h: number, 
 }
 
 describe('captions never meet, across the scroll range', () => {
-  it('the seven repositories (wide frames: on their streams; narrow frames: one list)', () => {
-    const points = streamAnchors();
+  it('the five repositories (wide frames: on their streams; narrow frames: one list)', () => {
+    // (The first streams carry them, as on the page: one to a repository, in the order of their counts.)
+    const points = streamAnchors().slice(0, REPOS.length);
     let seen = 0;
     for (const [w, h] of FRAMES) {
       const wide = w / h >= 0.9;

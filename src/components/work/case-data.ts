@@ -15,7 +15,12 @@ export const INFINIVIEW_PASSES = [
 ];
 
 /** Merged in T3 Code: what each pull request changed, from its public description. */
-export const T3_PRS: { n: number; title: string; merged: string; size: string; what: string }[] = [
+export const T3_PRS: { n: number; title: string; merged: string; size?: string; what?: string }[] = [
+  {
+    n: 37703,
+    title: 'Open Forgejo and Gitea /pulls/ tab and commit links',
+    merged: '2026-11-16',
+  },
   {
     n: 33475,
     title: 'glab mr new links the new merge request to the thread',
@@ -131,7 +136,7 @@ export const MODEL_NOTES: Record<string, { what: string; facts: [string, string]
     run: 'ollama run aravhawk/qwen3.5-opus-4.6',
   },
   llama4: {
-    what: 'Meta Llama 4 Scout and Maverick, the mixture-of-experts models Meta released on April 5, 2025. This upload is dated six days later.',
+    what: 'Meta Llama 4 Scout and Maverick, Meta’s mixture-of-experts models. Uploaded on April 11, 2025.',
     facts: [
       ['Builds', 'Scout 109b, 65GB; Maverick 400b, 243GB (Q4_K_M)'],
       ['Context', '10M (Scout), 1M (Maverick)'],
@@ -237,6 +242,9 @@ export const TENSOR_GATES = [
   'Public genesis publication',
   'First fruit evidence',
 ];
+
+/** Ask Around: what a request has to clear before an agent may act (README). */
+export const AROUND_RULES = ['Each question goes only to its owner', 'An N-of-M quorum approves', 'Any deny vetoes', 'A timeout is never approval'];
 
 /** RydAR: the numbers on rydar.org and in its README, and the prompt it speaks. */
 export const RYDAR_CURVES = { value: '153,328', unit: 'curves mapped in Arkansas' };

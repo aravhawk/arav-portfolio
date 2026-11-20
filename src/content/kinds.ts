@@ -11,4 +11,5 @@ export const KIND: Record<string, string> = {
   'cc-switch': 'CLI',
   tensorpow: 'Protocol',
   rydar: 'iOS app',
+  'ask-around': 'Agent governance',
 };

@@ -54,7 +54,7 @@ const arg = (name, def) => {
 const base = arg('base', 'http://localhost:3140');
 const browsers = arg('browsers', 'chromium').split(',');
 const widths = arg('widths', '320,390,768,1024,1440,1920,2560').split(',').map(Number);
-const pages = arg('pages', '/,/work,/work/infiniview,/work/open-source,/work/kilo-bench,/work/agent-bridge,/work/ollama,/work/cc-switch,/work/tensorpow,/work/rydar,/blog,/blog/three-ai-agents-five-saas-products,/does-not-exist').split(',');
+const pages = arg('pages', '/,/work,/work/infiniview,/work/open-source,/work/kilo-bench,/work/ask-around,/work/agent-bridge,/work/ollama,/work/cc-switch,/work/tensorpow,/work/rydar,/blog,/blog/three-ai-agents-five-saas-products,/does-not-exist').split(',');
 const steps = Number(arg('steps', '40'));
 const out = arg('out', '');
 

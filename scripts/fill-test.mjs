@@ -53,7 +53,7 @@ const arg = (name, def) => {
 };
 const flag = (name) => process.argv.includes(`--${name}`);
 const base = arg('base', 'http://localhost:3154');
-const pages = arg('pages', '/work,/work/infiniview,/work/open-source,/work/kilo-bench,/work/agent-bridge,/work/ollama,/work/cc-switch,/work/tensorpow,/work/rydar,/blog,/blog/three-ai-agents-five-saas-products,/does-not-exist').split(',');
+const pages = arg('pages', '/work,/work/infiniview,/work/open-source,/work/kilo-bench,/work/ask-around,/work/agent-bridge,/work/ollama,/work/cc-switch,/work/tensorpow,/work/rydar,/blog,/blog/three-ai-agents-five-saas-products,/does-not-exist').split(',');
 const sizes = arg('sizes', '1440x900,1920x1080')
   .split(',')
   .map((s) => s.split('x').map(Number));

@@ -70,7 +70,8 @@ export async function PageShell({
   note,
   next,
 }: {
-  scene: SceneId;
+  /** The page's scene. A page without one (a project the world has no place for yet) opens on its words alone, on the page's own snow. */
+  scene?: SceneId;
   /** A shorter scene: a post is for reading. */
   short?: boolean;
   /** An index: the scene is a little lower and the list begins in the first screen. */
@@ -83,11 +84,19 @@ export async function PageShell({
 }) {
   const m = await getMetrics();
   return (
-    <div className="pg-ground" style={groundOf(`${scene}${head.title}`)}>
+    <div className="pg-ground" style={groundOf(`${scene ?? 'type'}${head.title}`)}>
       <main id="main" className="pg" data-scene="page">
-        <SceneBand scene={scene} short={short} index={index} {...stationData(m)}>
-          <BandWords head={head} />
-        </SceneBand>
+        {scene ? (
+          <SceneBand scene={scene} short={short} index={index} {...stationData(m)}>
+            <BandWords head={head} />
+          </SceneBand>
+        ) : (
+          <header className="band band-type">
+            <div className="band-words wrap">
+              <BandWords head={head} />
+            </div>
+          </header>
+        )}
         <div className={`pg-body${index ? ' pg-index' : ''}`}>{children}</div>
         {next ? <NextBand {...next} /> : null}
       </main>

@@ -142,6 +142,27 @@
   opacity: 1;
 }
 
+/* A page with no scene of its own yet opens on its words alone: the same block, lower left, on the page's snow. */
+.band-type {
+  height: clamp(360px, 52svh, 40rem);
+  overflow: visible;
+}
+.band-type .band-words {
+  padding-bottom: clamp(28px, 5svh, 56px);
+}
+.band-type .band-lead {
+  max-width: 34ch;
+}
+.band-type::after {
+  content: '';
+  position: absolute;
+  left: var(--gutter, 0);
+  right: var(--gutter, 0);
+  bottom: 0;
+  height: 1px;
+  background: var(--line);
+}
+
 /* The words stand lower left, over the near bank, as on the home page. */
 .band-words {
   position: absolute;
@@ -538,7 +559,7 @@
 }
 
 /* The foot of a project's page, on one line under one groove: the ways out at the left, set as links; the way
-   round the set at the right, the eight by name. */
+   round the set at the right, the nine by name. */
 .ways {
   display: flex;
   flex-wrap: wrap;
@@ -671,6 +692,18 @@
   /* (A share of the band's own height, as in the photograph.) */
   padding-bottom: clamp(46px, 5vw, 96px);
 }
+/* The way on to a page with no scene: its words alone, on the snow, under a line. */
+.next-type .next-link {
+  height: auto;
+  border-top: 1px solid var(--line);
+}
+.next-type .next-words {
+  position: static;
+  padding-top: clamp(40px, 6vw, 96px);
+}
+.next-type .next-line {
+  max-width: 34ch;
+}
 .next-label {
   display: inline-flex;
   align-items: center;
@@ -737,9 +770,9 @@
     padding-bottom: clamp(36px, 12vw, 56px);
   }
 }
-/* On the narrowest phones the block's top line ("Next") stands above the calm the picture was taken with:
-   the same soft veil of the ground's tone, from the foot. */
-@media (max-width: 360px) {
+/* On a phone a block with a long line stands taller than the calm its picture was taken with, and its top line
+   ("Next") would stand on the scene: the same soft veil of the ground's tone, from the foot. */
+@media (max-width: 719px) {
   .next-view::after {
     content: '';
     position: absolute;
@@ -2168,11 +2201,8 @@
   transition: transform var(--t-ui) var(--ease-out);
 }
 
-/* ---------- rows: the rest, one line each ---------- */
+/* ---------- a row, and what he is recognised for: lines ---------- */
 
-.rows {
-  display: grid;
-}
 .row {
   position: relative;
   display: grid;
@@ -2183,121 +2213,34 @@
   border-top: 1px solid var(--line-2);
   color: var(--ink);
 }
-.rows > :first-child {
-  border-top: 0;
-}
-/* (A row's kind and its year: the one place the small capitals carry a category.) */
 .row > .label {
   color: var(--ink-2);
 }
-.row-name {
-  min-width: 0;
-  font-family: var(--font-display);
-  font-size: clamp(1.375rem, 1.2vw + 0.85rem, 2.1rem);
-  font-weight: 700;
-  line-height: 1.04;
-  letter-spacing: -0.022em;
-  /* A repository's name breaks at its hyphens, never inside a word. */
-  overflow-wrap: normal;
+/* A project the world has no place for yet: its name and line alone, set from the pictures' own left edge. */
+.row.feat-row-type {
+  grid-template-columns: 2.6rem minmax(0, 1fr) 56px;
+  padding: clamp(22px, 2.6vw, 44px) 0;
 }
-.row-line {
-  max-width: 56ch;
-  font-size: clamp(1.0625rem, 0.3vw + 0.95rem, 1.1875rem);
-  line-height: 1.42;
-  color: var(--ink-2);
-}
-.row-line small {
-  display: block;
-  margin-top: 6px;
-  font-size: inherit;
-  font-weight: 560;
+.recog {
+  display: grid;
+  gap: clamp(10px, 1vw, 16px);
+  max-width: 62ch;
+  font-size: var(--pg-lead);
+  line-height: 1.32;
   color: var(--ink);
 }
-.row-links {
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0 18px;
-}
-.row-links .link {
+.recog .link {
   font-size: 1rem;
+  white-space: nowrap;
 }
-
-/* ---------- archive controls ---------- */
-
-.archive-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-4) var(--s-6);
-  margin-bottom: var(--s-5);
-}
-/* The field is a line to write on, not a capsule. */
-.search {
-  flex: 1 1 260px;
-  min-width: 0;
-  height: 56px;
-  padding: 0 2px;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: inset 0 -1.5px 0 var(--ink-3);
-  color: var(--ink);
-  font: inherit;
-  /* 16px or more, so phones do not zoom the page into the field. */
-  font-size: 1.125rem;
-  transition: box-shadow var(--t-fast) ease;
-}
-.search::placeholder {
-  color: var(--ink-3);
-}
-.search:focus-visible {
-  outline: none;
-  box-shadow: inset 0 -2.5px 0 var(--ink);
-}
-/* The kinds are words: the chosen one is underlined. */
-.chips {
-  display: inline-flex;
-  gap: 4px clamp(14px, 1.6vw, 26px);
-}
-.chip {
-  min-height: 48px;
-  padding: 0 2px;
-  font-size: 1.0625rem;
-  font-weight: 560;
-  color: var(--ink-3);
-  transition:
-    color var(--t-fast) ease,
-    transform var(--t-press) var(--ease-out);
-}
-.chip[aria-pressed='true'] {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 0.34em;
-}
-.chip:active {
-  transform: scale(0.97);
-}
-@media (hover: hover) and (pointer: fine) {
-  .chip:hover {
-    color: var(--ink);
-  }
-}
-.archive-count {
-  font-size: 0.9375rem;
+.recog .metric {
   font-variant-numeric: tabular-nums;
-  color: var(--ink-3);
+  font-weight: 600;
 }
 .empty {
   padding: var(--s-7) 0;
   font-size: var(--pg-lead);
   color: var(--ink-2);
-}
-.empty button {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  min-height: 44px;
 }
 .footnote {
   margin-top: var(--s-7);
@@ -2958,8 +2901,8 @@
   .row > .label:first-child {
     order: -1;
   }
-  .row-links {
-    justify-content: flex-start;
+  .row.feat-row-type {
+    grid-template-columns: minmax(0, 1fr) 48px;
   }
   .post-item {
     grid-template-columns: minmax(0, 1fr);
@@ -2979,9 +2922,6 @@
   }
   .post-nav a:last-child {
     text-align: left;
-  }
-  .chips {
-    flex-wrap: wrap;
   }
 }
 
