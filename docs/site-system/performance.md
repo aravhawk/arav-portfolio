@@ -105,7 +105,8 @@ head, `FeatStill` in the index, `nextPic` for the way on. Rules:
 - Do not add `<link rel="preload">` or react-dom's `preload()` for it.
   React carries both as hints in the data a `<Link>` prefetches, so
   every page that links to this one fetches its still at high priority
-  beside its own. Measured: +2 s of largest paint on the phone preset.
+  beside its own: two or three extra stills (60 to 90 kB) on each page,
+  seen in Lighthouse's network log.
 - The picture is chosen by the system's scheme. A reader who has set
   the other theme gets the full file as the band's ground from CSS
   (`stills.ts`, `.band-still` in `pages.css`).

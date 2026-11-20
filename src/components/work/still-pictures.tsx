@@ -81,7 +81,7 @@ export function BandStill({ scene, kind = 'page' }: { scene: string; kind?: Band
   // The picture is in the first bytes of the page's HTML with `fetchpriority="high"`, so the browser's scanner asks
   // for it before any style or script is read. There is deliberately no <link rel="preload"> and no react-dom
   // preload(): React carries either as a hint in the data a <Link> prefetches, so every page that links here
-  // fetched this still at high priority beside its own (measured: it cost a phone two seconds of largest paint).
+  // fetched this still at high priority beside its own (seen in the network log: two or three extra stills a page).
   return (
     <>
       <picture>
