@@ -30,6 +30,40 @@ for gate in ("wide", "tall"):
         name = f"{gate}-{theme}"
         im = Image.open(args.folder / f"{name}.png").convert("RGB")
         rgb = np.asarray(im, np.float32) / 255
+        if theme == "day":
+            # A graduated shadow lift across the near bank keeps the DOM's
+            # dark ink legible throughout the push. Preserve the lit snow
+            # and the distant sill. The adjustment becomes part of the bake.
+            height = rgb.shape[0]
+            row = np.linspace(0, 1, height, dtype=np.float32)
+            start = 0.57 if gate == "wide" else 0.60
+            weight = np.clip((row - start) / 0.13, 0, 1)
+            weight = (weight * weight * (3 - 2 * weight))[:, None]
+            light = rgb @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+            # Keep the open lead dark. Lift only the broad tonal field on
+            # the windward shore, retaining its scanned grain and fractures.
+            water = (
+                np.asarray(
+                    survey.getchannel("G").resize(im.size, Image.Resampling.BILINEAR),
+                    np.float32,
+                )
+                / 255
+            )
+            x = np.linspace(0, 1, im.width, dtype=np.float32)
+            shore = np.clip(((0.71 if gate == "wide" else 1.25) - x) / 0.29, 0, 1)
+            shore = shore * shore * (3 - 2 * shore)
+            broad = Image.fromarray(np.uint8(light * 255)).filter(
+                ImageFilter.GaussianBlur(im.width / 160)
+            )
+            shadow = np.maximum(0, 0.65 - np.asarray(broad, np.float32) / 255)
+            lift = (
+                (0.77 if gate == "wide" else 0.88)
+                * weight
+                * shore[None, :]
+                * (1 - water)
+                * shadow
+            )
+            rgb += lift[:, :, None]
         inverse.applyRGB(rgb)
         field = np.log2(1 + 1024 * np.maximum(0, rgb)) / 14
         dither = np.random.default_rng(339).uniform(-0.5, 0.5, field.shape[:2])

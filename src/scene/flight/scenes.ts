@@ -11,7 +11,7 @@ type Definition = {
   exit: number;
   assets: Record<string, number>;
   root: string;
-  words: 'lower-left';
+  words: 'lower-left' | 'lower-right';
 };
 type Lake = Definition & { kind: 'lake'; cameras: 'mesh.json'; themes: readonly Theme[] };
 export type Plate = Definition & {

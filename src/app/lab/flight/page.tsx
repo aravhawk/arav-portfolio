@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { LakeCanvas } from '../hero/LakeCanvas';
 import Link from 'next/link';
+import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { PROJECTS } from '@/content/projects';
 import { KIND } from '@/content/kinds';
@@ -30,6 +31,7 @@ export default function FlightLab() {
       #main[data-flight-lab] .fl-words:not([data-on]) {opacity:0;visibility:hidden}
       #main[data-flight-lab] .fl-view-words {position:absolute;justify-content:flex-end;align-items:flex-start;flex-direction:column;
         padding:0 var(--gutter) var(--fl-foot);inset:0}
+      #main[data-flight-lab] [data-placement='lower-right'] {align-items:flex-end;text-align:right}
       #main[data-flight-lab] .fl-view-words .fl-line {max-width:32ch}
     `}</style>
       <section
@@ -52,6 +54,7 @@ export default function FlightLab() {
             data-fl-from={-1}
             data-fl-to={1.9}
             data-copy="lake"
+            data-placement={scenes[0].words}
             data-hero
             data-on
           >
@@ -76,20 +79,23 @@ export default function FlightLab() {
                 key={scene.id}
                 className="fl-words fl-block fl-view-words"
                 data-copy={scene.id}
+                data-placement={scene.words}
                 aria-hidden="true"
                 inert
               >
                 <p className="fl-eyebrow" data-at="0" data-in>
                   {KIND[p.slug]}
                 </p>
-                <h2 className="display fl-view-name fl-rise" data-at="0" data-in>
-                  <span className="fl-rise-in">
-                    <Link className="beat-link" href={`/work/${p.slug}`}>
-                      {p.name}
-                      <Arrow />
-                    </Link>
-                  </span>
-                </h2>
+                <ViewTransition name={`title-${p.slug}`} share="title" default="none">
+                  <h2 className="display fl-view-name fl-rise" data-at="0" data-in>
+                    <span className="fl-rise-in">
+                      <Link className="beat-link" href={`/work/${p.slug}`}>
+                        {p.name}
+                        <Arrow />
+                      </Link>
+                    </span>
+                  </h2>
+                </ViewTransition>
                 <p className="fl-line" data-at="0" data-in>
                   {p.line}
                 </p>
