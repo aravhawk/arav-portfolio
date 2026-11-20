@@ -205,6 +205,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4em;
+  min-width: 44px;
   min-height: 44px;
   font-weight: 560;
   color: var(--ink);
@@ -493,7 +494,10 @@
 /* A number read live: the accent under it, and when it was read on hover or focus. */
 .in .live {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
   text-decoration: underline;
   text-decoration-color: var(--acc);
   text-decoration-thickness: max(2px, 0.045em);
@@ -1173,7 +1177,7 @@
 .in .pick-opt span {
   display: inline-flex;
   align-items: center;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 var(--s-4);
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
@@ -1857,8 +1861,10 @@
 }
 .in .footnote a {
   display: inline-block;
+  min-width: 44px;
   padding-block: 12px;
   margin-block: -12px;
+  text-align: center;
   color: var(--ink);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -2199,9 +2205,11 @@
 .in-foot-site a {
   display: inline-flex;
   align-items: center;
+  min-width: 44px;
   min-height: 44px;
 }
 @media (hover: hover) and (pointer: fine) {
+  .in .footnote a:hover,
   .in-foot-site a:hover,
   .in .in-copy:hover {
     color: var(--ink);
