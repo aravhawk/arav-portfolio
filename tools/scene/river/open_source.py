@@ -12,7 +12,7 @@ def shore(xs, y, axis, half):
     for i, (_, count) in enumerate(repositories):
         side = (-1)**i
         distance = side*(xs-axis)
-        along = -8 + 4.3*i - .72*distance + .36*np.sin(.7*distance)
+        along = -2 + 4.3*i + .72*distance + .36*np.sin(.7*distance)
         channel = np.abs(y-along)/1.23 - max(.36, count*.20)
         margin = np.minimum(margin, np.maximum(-distance, channel))
     return margin
