@@ -1,8 +1,0 @@
-#!/bin/sh
-set -eu
-cd "$(dirname "$0")/../.."
-venv="$HOME/.t3/portfolio-redesign-v4/tools/bake-venv"
-if [ ! -x "$venv/bin/python" ]; then uv venv --python 3.11 "$venv"; fi
-uv pip install --python "$venv/bin/python" bpy==4.5.3 fonttools==4.68.0 scipy==1.17.1 numpy==1.26.4 pillow==13.0.0 brotli==1.2.1 skia-pathops==0.9.2
-"$venv/bin/python" tools/scene/lake/inputs.py
-exec "$venv/bin/python" tools/scene/lake/author.py "$@"
