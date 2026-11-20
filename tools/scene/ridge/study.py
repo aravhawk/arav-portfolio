@@ -806,6 +806,9 @@ if not args.clay:
     steam.scale = (2.9, 2.7, 0.89)
     steam.data.materials.append(mistmat)
     layers["bank"].append(steam)
+    if args.reach == "ollama":
+        from ollama import place_steam
+        place_steam(steam, scene.collection)
 
     # A finite solar disc in the air above the far shore. Its physical angular
     # diameter survives the wide opening and remains behind the missing slab.

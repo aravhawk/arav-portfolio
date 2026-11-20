@@ -1,3 +1,4 @@
+import ollamaAssets from './ollama-assets.json';
 import agentbridgeAssets from './agent-bridge-assets.json';
 import kilobenchAssets from './kilo-bench-assets.json';
 import opensourceAssets from './open-source-assets.json';
@@ -111,6 +112,7 @@ export const scenes: readonly (Lake | Plate)[] = [
   riverPlate('open-source', opensourceAssets),
   riverPlate('kilo-bench', kilobenchAssets),
   riverPlate('agent-bridge', agentbridgeAssets),
+  riverPlate('ollama', ollamaAssets),
 ];
 export const starts: number[] = [];
 let length = 0;
