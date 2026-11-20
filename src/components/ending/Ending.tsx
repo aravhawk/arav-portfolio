@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/components/Link';
 import { useEffect, useRef, useState } from 'react';
 import { CONTACT } from '@/content/projects';
 import { haptic } from '@/lib/haptics';
@@ -103,7 +103,7 @@ export function Footer({ note }: Props) {
     <footer className="foot" aria-label="Contact">
       <div className="foot-row wrap">
         <div className="foot-brand">
-          <Link className="foot-mark" href="/" aria-label="Arav Jain, home">
+          <Link className="foot-mark" href="/" ahead="intent" aria-label="Arav Jain, home">
             Arav Jain
           </Link>
           {note ? <p className="foot-note">{note}</p> : null}

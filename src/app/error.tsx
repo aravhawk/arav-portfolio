@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/components/Link';
 import { useEffect } from 'react';
 import { Arrow } from '@/components/bits';
 import { Footer } from '@/components/ending/Ending';

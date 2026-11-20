@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { whenCalm } from '@/lib/calm';
 import { onFrame } from '@/lib/frame';
 import { primeHaptics } from '@/lib/haptics';
 import { emit, signals } from '@/lib/signals';
@@ -36,11 +37,14 @@ export function Runtime() {
       lenis = null;
     };
     const sync = () => (fine.matches && !reduced.matches ? void start() : stop());
-    sync();
+    // The home page is scrolled from its first frame and starts at once. An inner page's first screen does not
+    // need the library: it is fetched once the page has shown that screen and is idle.
+    const offCalm = window.location.pathname === '/' ? (sync(), () => {}) : whenCalm(sync);
     reduced.addEventListener('change', sync);
     fine.addEventListener('change', sync);
     return () => {
       cancelled = true;
+      offCalm();
       reduced.removeEventListener('change', sync);
       fine.removeEventListener('change', sync);
       stop();

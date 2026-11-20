@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { Link } from '@/components/Link';
 import { Arrow } from '@/components/bits';
 import { Footer } from '@/components/ending/Ending';
 import { SceneBand } from '@/components/SceneBand';

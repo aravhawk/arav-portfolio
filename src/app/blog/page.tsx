@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { Link } from '@/components/Link';
 import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { openingLines } from '@/components/blog/opening';

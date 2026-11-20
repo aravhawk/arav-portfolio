@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/components/Link';
 import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { VideoSlab } from '@/components/VideoSlab';

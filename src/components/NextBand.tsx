@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/components/Link';
 import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { nextPic } from '@/components/work/still-pictures';

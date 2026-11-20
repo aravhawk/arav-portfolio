@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/components/Link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useSyncExternalStore } from 'react';
 import { haptic, hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/lib/haptics';
@@ -99,7 +99,7 @@ export function Nav() {
   const pathname = usePathname();
   return (
     <header className="nav" data-chrome>
-      <Link href="/" className="nav-mark plate" aria-label="Arav Jain, home" onClick={() => haptic('selection')}>
+      <Link href="/" ahead="intent" className="nav-mark plate" aria-label="Arav Jain, home" onClick={() => haptic('selection')}>
         <span>Arav Jain</span>
       </Link>
       <nav className="nav-links plate" aria-label="Main">

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/components/Link';
 import { ViewTransition } from 'react';
 import { Footer } from '@/components/ending/Ending';
 import { NextBand } from '@/components/NextBand';

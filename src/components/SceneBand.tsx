@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { stillVars } from '@/components/work/stills';
+import { whenCalm } from '@/lib/calm';
 import type { SceneId } from '@/water/scene-band';
 
 interface Props {
@@ -67,34 +68,11 @@ export function SceneBand({ scene, short, full, index, tribs, cols, slab, sheet,
           if (process.env.NODE_ENV !== 'production') console.warn(err);
         });
     };
-    let idle = 0;
-    let painted: PerformanceObserver | null = null;
-    let giveUp = 0;
-    const atRest = () => {
-      idle = window.requestIdleCallback ? window.requestIdleCallback(start, { timeout: 500 }) : window.setTimeout(start, 40);
-    };
+    let offCalm = () => {};
     // The engine is some 180 kB of script. It is not asked for until the page has shown its first frame (the still
-    // and the words), so it never competes with them on a slow line; then at the next idle moment, as before.
+    // and the words) and is idle, so it never competes with them on a slow line (src/lib/calm.ts).
     const whenIdle = () => {
-      const shown = () => performance.getEntriesByName?.('first-contentful-paint').length > 0;
-      if (cancelled) return;
-      if (typeof PerformanceObserver !== 'function' || shown()) return atRest();
-      const go = () => {
-        painted?.disconnect();
-        painted = null;
-        window.clearTimeout(giveUp);
-        if (!cancelled) atRest();
-      };
-      try {
-        painted = new PerformanceObserver(() => {
-          if (shown()) go();
-        });
-        painted.observe({ type: 'paint', buffered: true });
-        // (A browser that never reports a paint, or a tab opened in the background: do not wait for ever.)
-        giveUp = window.setTimeout(go, 3000);
-      } catch {
-        atRest();
-      }
+      if (!cancelled) offCalm = whenCalm(start);
     };
     // (Near: within half a screen. A band at the head of a page a reader has just opened is on it.)
     const near =
@@ -113,10 +91,7 @@ export function SceneBand({ scene, short, full, index, tribs, cols, slab, sheet,
     return () => {
       cancelled = true;
       near?.disconnect();
-      painted?.disconnect();
-      window.clearTimeout(giveUp);
-      if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
-      else window.clearTimeout(idle);
+      offCalm();
       handle?.detach();
     };
   }, [scene, tribKey, colKey, slab, sheet, face]);
