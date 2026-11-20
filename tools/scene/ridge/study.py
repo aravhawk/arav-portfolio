@@ -364,6 +364,10 @@ def sawn(name, outline, thickness, center, angles, group, seed):
             if abs(center[0]) < 3.5
             else (0.19 if args.night else 0.34)
         )
+        if name == "Shaded cut":
+            factor *= .26
+        elif name == "Transmitted sunlight":
+            factor *= 2.2
         body.inputs[1].default_value *= factor
         body.inputs[2].default_value *= factor
         # Only the two exposed endgrain faces receive the east light directly.
@@ -729,7 +733,8 @@ if args.reach:
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "river"))
     from reach import landscape
-    landscape(args.reach, grid, snow, water, sawn)
+    frozen = surface("Snow-dusted sealed ice", (0.36, 0.47, 0.48), .42) if args.reach == "cc-switch" else surface("Clear black lake ice", (.026, .056, .062), .23)
+    landscape(args.reach, grid, snow, water, sawn, frozen)
 
 if not args.clay:
     # Snow ridges beyond the eastern wall recede into the same river mist.
@@ -747,7 +752,7 @@ if not args.clay:
         (0.36, 0.43, 0.50, 1) if args.night else (0.66, 0.70, 0.72, 1)
     )
     diffuse.inputs["Emission Strength"].default_value = 0.39 if args.night else 1.12
-    for j in range(3):
+    for j in range(0 if args.reach == "ending" else 3):
         yy = 48 + 13 * j
         rows = [[], [], []]
         for i in range(185):

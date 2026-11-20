@@ -1,3 +1,4 @@
+import ccswitchAssets from './cc-switch-assets.json';
 import ollamaAssets from './ollama-assets.json';
 import agentbridgeAssets from './agent-bridge-assets.json';
 import kilobenchAssets from './kilo-bench-assets.json';
@@ -113,6 +114,7 @@ export const scenes: readonly (Lake | Plate)[] = [
   riverPlate('kilo-bench', kilobenchAssets),
   riverPlate('agent-bridge', agentbridgeAssets),
   riverPlate('ollama', ollamaAssets),
+  riverPlate('cc-switch', ccswitchAssets),
 ];
 export const starts: number[] = [];
 let length = 0;
