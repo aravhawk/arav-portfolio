@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSyncExternalStore } from 'react';
 import { THEME_COLOR } from '@/lib/site';
+import { SoundToggle } from './SoundToggle';
 import './nav.css';
 
 type Theme = 'light' | 'dark';
@@ -35,7 +36,8 @@ const LINKS = [
 ];
 
 /**
- * The site's nav: the name, Work, Writing and the theme switch. On an inner
+ * The site's nav: the name, Work, Writing, the theme switch and, on the
+ * home page, the sound control. On an inner
  * page it is part of the page and scrolls with it. On the home page it
  * stands over the picture as two solid plates, with the number of the scene
  * the reader is in beside the name (the scene's canvas keeps it: see
@@ -60,6 +62,8 @@ export function Nav({ scenes }: { scenes: number }) {
             {l.label}
           </Link>
         ))}
+        {/* The place can be heard, if asked: only where the place is. */}
+        {home ? <SoundToggle /> : null}
         <button
           type="button"
           className="in-theme"

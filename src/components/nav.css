@@ -114,6 +114,56 @@
   transform: scale(0.97);
 }
 
+/* The sound control (home page only): a level. Four short marks at rest,
+   four standing bars when the place is heard. Opacity and transform only. */
+.in-sound {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+.in-sound-mark {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 14px;
+  opacity: 0.6;
+  transition:
+    transform 120ms var(--ease-out),
+    opacity 180ms var(--ease-out);
+}
+.in-sound-mark span {
+  width: 2px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--ink);
+  transform: scaleY(0.3);
+  transition: transform 180ms var(--ease-out);
+}
+.in-sound[aria-pressed='true'] .in-sound-mark {
+  opacity: 1;
+}
+.in-sound[aria-pressed='true'] span span:nth-child(1) {
+  transform: scaleY(0.5);
+}
+.in-sound[aria-pressed='true'] span span:nth-child(2) {
+  transform: scaleY(1);
+}
+.in-sound[aria-pressed='true'] span span:nth-child(3) {
+  transform: scaleY(0.72);
+}
+.in-sound[aria-pressed='true'] span span:nth-child(4) {
+  transform: scaleY(0.36);
+}
+/* (Pressed from the keyboard, the bars are simply at their new height.) */
+.in-sound:focus-visible :is(.in-sound-mark, .in-sound-mark span) {
+  transition: none;
+}
+.in-sound:active .in-sound-mark {
+  transform: scale(0.97);
+}
+
 /* ---------- over the home page's picture ---------- */
 
 .in-at {
@@ -167,12 +217,36 @@ html[data-flight] .in-nav-home .in-at::before {
 
 @media (max-width: 420px) {
   html[data-flight] .in-nav-home .in-at {
-    margin-left: 8px;
-    padding-left: 8px;
+    margin-left: 6px;
+    padding-left: 6px;
     letter-spacing: 0;
   }
+  /* (The name stays on the page's left edge: the plate gives up its own margin, not the name's place.) */
+  .in-nav-home .in-brand {
+    margin-left: -12px;
+    padding: 0 12px;
+  }
   .in-nav-home .nav-link {
-    padding: 0 9px;
+    padding: 0 6px;
+  }
+  /* Room for the sound control beside the switch: both stay 44 px to the touch. */
+  .in-nav-home .in-links {
+    gap: 2px;
+  }
+  .in-nav-home .in-theme {
+    width: 44px;
+  }
+}
+@media (max-width: 389px) {
+  html[data-flight] .in-nav-home .in-at {
+    margin-left: 5px;
+    padding-left: 5px;
+  }
+  .in-nav-home .in-links {
+    padding-left: 2px;
+  }
+  .in-nav-home .nav-link {
+    padding: 0 5px;
   }
 }
 
@@ -180,8 +254,16 @@ html[data-flight] .in-nav-home .in-at::before {
   .in-nav * {
     transition-property: opacity !important;
   }
-  .in-nav :is(.nav-link, .in-mark):active {
+  .in-nav :is(.nav-link, .in-mark):active,
+  .in-sound:active .in-sound-mark {
     transform: none;
+  }
+}
+@media (forced-colors: active) {
+  /* (A forced palette paints no backgrounds: the bars are drawn in the button's own text colour.) */
+  .in-sound-mark span {
+    forced-color-adjust: none;
+    background: ButtonText;
   }
 }
 @media print {
