@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { ArchiveEntry } from '@/content/projects';
-import { haptic } from '@/lib/haptics';
-import { Arrow } from '../bits';
+import { Arrow } from '@/components/inner/bits';
 
 const GROUPS = ['All', 'Tools', 'Earlier', 'Small'] as const;
 type Group = (typeof GROUPS)[number];
@@ -37,20 +36,18 @@ const rank = (name: string) => {
   return i < 0 ? ORDER.length : i;
 };
 
-/** The archive: every other thing, one line each, searchable. */
+/** The archive: every other thing, one line each, searchable. Without scripts it is the whole list. */
 export function ArchiveList({ entries }: { entries: ArchiveEntry[] }) {
   const [q, setQ] = useState('');
   const [group, setGroup] = useState<Group>('All');
 
+  const ordered = useMemo(() => [...entries].sort((a, b) => rank(a.name) - rank(b.name)), [entries]);
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const ordered = [...entries].sort((a, b) => rank(a.name) - rank(b.name));
     return ordered.filter(
-      (e) =>
-        (group === 'All' || e.group === group) &&
-        (!needle || `${e.name} ${e.line} ${e.year} ${e.group}`.toLowerCase().includes(needle)),
+      (e) => (group === 'All' || e.group === group) && (!needle || `${e.name} ${e.line} ${e.year} ${e.group}`.toLowerCase().includes(needle)),
     );
-  }, [entries, q, group]);
+  }, [ordered, q, group]);
 
   const clear = () => {
     setQ('');
@@ -72,40 +69,30 @@ export function ArchiveList({ entries }: { entries: ArchiveEntry[] }) {
         />
         <div className="chips" role="group" aria-label="Filter by kind">
           {GROUPS.map((g) => (
-            <button
-              key={g}
-              type="button"
-              className="chip"
-              aria-pressed={group === g}
-              onClick={() => {
-                if (g === group) return;
-                haptic('selection');
-                setGroup(g);
-              }}
-            >
+            <button key={g} type="button" className="chip" aria-pressed={group === g} onClick={() => setGroup(g)}>
               {g}
             </button>
           ))}
         </div>
+        <p className="archive-count" aria-live="polite">
+          {shown.length} of {entries.length}
+        </p>
       </div>
-      <p className="archive-count" aria-live="polite">
-        {shown.length} of {entries.length}
-      </p>
       {shown.length ? (
         <ul className="rows">
           {shown.map((e) => (
-            <li key={e.name} className="row" data-row>
+            <li key={e.name} className="line-row">
               <span className="label">{e.year}</span>
-              <span className="row-name">{e.name}</span>
-              <span className="row-line">{e.line}</span>
-              <span className="row-links">
+              <span className="line-name">{e.name}</span>
+              <span className="line-what">{e.line}</span>
+              <span className="line-links">
                 {e.href ? (
-                  <a className="link" href={e.href} target="_blank" rel="noopener noreferrer">
+                  <a className="tl" href={e.href} target="_blank" rel="noopener noreferrer">
                     Source <Arrow out />
                   </a>
                 ) : null}
                 {e.also?.map((l) => (
-                  <a key={l.href} className="link" href={l.href} target="_blank" rel="noopener noreferrer">
+                  <a key={l.href} className="tl" href={l.href} target="_blank" rel="noopener noreferrer">
                     {l.label} <Arrow out />
                   </a>
                 ))}

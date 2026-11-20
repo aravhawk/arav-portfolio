@@ -1,10 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ViewTransition } from 'react';
-import { Arrow } from '@/components/bits';
+import { Arrow } from '@/components/inner/bits';
 import { openingLines } from '@/components/blog/opening';
-import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
-import { PageShell } from '@/components/PageShell';
+import { InnerPage, WAY_TO_WORK, WAY_TO_WRITING } from '@/components/inner/Page';
 import { getAllPosts } from '@/lib/posts';
 import { formatPostDate } from '@/lib/dates';
 import { pageMeta } from '@/lib/meta';
@@ -20,12 +18,7 @@ export default function BlogPage() {
   const [lead, ...rest] = posts;
   const opening = lead ? openingLines(lead.content) : null;
   return (
-    <PageShell
-      scene="lake"
-      index
-      head={{ title: WAY_TO_WRITING.title, lead: WAY_TO_WRITING.line }}
-      next={WAY_TO_WORK}
-    >
+    <InnerPage head={{ title: WAY_TO_WRITING.title, lead: WAY_TO_WRITING.line }} next={WAY_TO_WORK}>
       <section className="sec wrap" aria-label="Posts">
         {lead ? (
           <>
@@ -36,22 +29,17 @@ export default function BlogPage() {
                 <span>{lead.readingTime}</span>
                 <span>{lead.frontmatter.tags.join(', ')}</span>
               </span>
-              <ViewTransition name={`post-${lead.slug}`} share="title" default="none">
-                <h2 className="post-title">{lead.frontmatter.title}</h2>
-              </ViewTransition>
+              <h2 className="post-title">{lead.frontmatter.title}</h2>
               <div className="post-about">
                 <p className="post-desc">{lead.frontmatter.description}</p>
                 {opening ? <p className="post-open">{opening}</p> : null}
                 <span className="post-go">
-                  Read it
-                  <span className="row-go" aria-hidden="true">
-                    <Arrow />
-                  </span>
+                  Read it <Arrow />
                 </span>
               </div>
             </Link>
             {rest.length ? (
-              <ul className="posts posts-more">
+              <ul className="posts">
                 {rest.map((post) => (
                   <li key={post.slug}>
                     <Link className="post-row post-item" href={`/blog/${post.slug}`}>
@@ -60,12 +48,10 @@ export default function BlogPage() {
                         <span>{post.readingTime}</span>
                       </span>
                       <div className="post-copy">
-                        <ViewTransition name={`post-${post.slug}`} share="title" default="none">
-                          <h2 className="post-title">{post.frontmatter.title}</h2>
-                        </ViewTransition>
+                        <h2 className="post-title">{post.frontmatter.title}</h2>
                         <p className="post-desc">{post.frontmatter.description}</p>
                       </div>
-                      <span className="row-go" aria-hidden="true">
+                      <span className="index-go" aria-hidden="true">
                         <Arrow />
                       </span>
                     </Link>
@@ -78,6 +64,6 @@ export default function BlogPage() {
           <p className="empty">Nothing published yet. The first post is on its way.</p>
         )}
       </section>
-    </PageShell>
+    </InnerPage>
   );
 }

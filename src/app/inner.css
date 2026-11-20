@@ -1,0 +1,2467 @@
+/* ==========================================================================
+   The inner pages: the work, a project, the writing, a post, a missing page.
+
+   One grid (twelve columns in a 76rem measure), one type scale (seven
+   sizes), one spacing scale (the --s-* steps in globals.css), hairlines for
+   structure and one accent, which means one thing: this number was read
+   live from its source. No scene, no shadow, no gradient, no motion on
+   scroll. Everything here is scoped to .in (the page) or .in-nav (its nav),
+   so nothing leaks onto the home page and nothing of the home page's is
+   needed here.
+   ========================================================================== */
+
+.in,
+.in-nav {
+  --max: 76rem;
+  --gut: clamp(20px, 5vw, 56px);
+  --col-gap: clamp(16px, 2vw, 24px);
+
+  /* The scale. */
+  --t-label: 0.75rem;
+  --t-small: 0.875rem;
+  --t-body: 1.0625rem;
+  --t-lead: clamp(1.1875rem, 0.5vw + 1.05rem, 1.375rem);
+  --t-h: clamp(1.5rem, 1.1vw + 1.15rem, 2rem);
+  --t-fig: clamp(2.5rem, 3.6vw + 1.2rem, 4.5rem);
+  --t-display: clamp(2.75rem, 5.6vw + 1rem, 6rem);
+
+  /* The accent: a number read live. */
+  --acc: #0c5567;
+
+  --t-quick: 160ms;
+  --t-layer: 200ms;
+}
+:root[data-theme='dark'] .in,
+:root[data-theme='dark'] .in-nav {
+  --acc: #86d3e4;
+}
+
+/* ---------- the frame ---------- */
+
+.in-nav,
+.in .wrap {
+  width: 100%;
+  max-width: calc(var(--max) + 2 * var(--gut));
+  margin-inline: auto;
+  padding-inline: max(var(--gut), env(safe-area-inset-left)) max(var(--gut), env(safe-area-inset-right));
+}
+.in {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - 72px);
+  color: var(--ink);
+  font-size: var(--t-body);
+  line-height: 1.55;
+}
+.in-main {
+  flex: 1 0 auto;
+}
+.in a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- the nav: the name, Work, Writing, the theme switch ---------- */
+
+.in-nav {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+  padding-top: env(safe-area-inset-top);
+}
+.in-mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.in-links {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  margin-right: -10px;
+}
+.in-nav .nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 12px;
+  font-size: var(--t-small);
+  font-weight: 560;
+  letter-spacing: 0;
+  color: var(--ink-3);
+  transition: none;
+}
+.in-nav .nav-link[aria-current='page'] {
+  color: var(--ink);
+}
+.in-nav .nav-link[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  height: 1px;
+  background: currentColor;
+}
+.in-nav .nav-link:active,
+.in-mark:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .in-nav .nav-link:hover {
+    color: var(--ink);
+  }
+}
+/* A real switch, so its state reads without a label. */
+.in-theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 44px;
+}
+.in-theme-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--ink-3);
+}
+.in-theme-knob {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform var(--t-layer) var(--ease-out);
+}
+:root[data-theme='dark'] .in-theme-knob {
+  transform: translate3d(16px, 0, 0);
+}
+.in-theme:active .in-theme-track {
+  transform: scale(0.97);
+}
+
+/* ---------- type ---------- */
+
+.in .label {
+  font-family: var(--font-text);
+  font-size: var(--t-label);
+  font-weight: 560;
+  line-height: 1.4;
+  letter-spacing: 0.07em;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.in .mono {
+  font-family: var(--font-mono);
+  font-size: 0.9375em;
+  letter-spacing: -0.01em;
+}
+.in .body {
+  font-size: var(--t-body);
+  line-height: 1.55;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.in .cap {
+  margin-top: var(--s-3);
+  font-size: var(--t-small);
+  line-height: 1.45;
+  color: var(--ink-3);
+  text-wrap: pretty;
+}
+.in h2,
+.in h3 {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+.in h3,
+.in :is(.act-title, .paper-h) {
+  font-size: var(--t-lead);
+  font-weight: 660;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+.in .arrow {
+  flex: none;
+  width: 0.85em;
+  height: 0.85em;
+}
+
+/* A text link: underlined, always. */
+.in .tl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-height: 44px;
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+  text-decoration-color: var(--ink-3);
+}
+.in .tl:active,
+.in .chip:active,
+.in .film-play:active,
+.in .in-copy:active,
+.in .back:active {
+  transform: scale(0.97);
+}
+.in .tl .arrow {
+  transition: transform var(--t-quick) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .in .tl:hover {
+    text-decoration-color: currentColor;
+  }
+  .in .tl:hover .arrow {
+    transform: translate3d(2px, 0, 0);
+  }
+}
+
+/* ---------- the head of a page ---------- */
+
+.in .head {
+  display: grid;
+  justify-items: start;
+  padding-top: clamp(40px, 8vh, 96px);
+  padding-bottom: var(--s-8);
+}
+.in .back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 44px;
+  margin-bottom: var(--s-4);
+  font-size: var(--t-label);
+  font-weight: 560;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+@media (hover: hover) and (pointer: fine) {
+  .in .back:hover {
+    color: var(--ink);
+  }
+}
+.in .head-label {
+  margin-bottom: var(--s-4);
+}
+.in .head-title {
+  max-width: 14ch;
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  font-weight: 740;
+  line-height: 0.96;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.in .head-title-long {
+  max-width: 22ch;
+  font-size: clamp(2.125rem, 3.2vw + 1rem, 4rem);
+  line-height: 1.02;
+  letter-spacing: -0.028em;
+}
+.in .head-lead {
+  max-width: 34ch;
+  margin-top: var(--s-5);
+  font-size: var(--t-h);
+  font-weight: 480;
+  line-height: 1.22;
+  letter-spacing: -0.018em;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.in .head-title-long + .head-lead {
+  max-width: 46ch;
+  font-size: var(--t-lead);
+  line-height: 1.4;
+  letter-spacing: -0.008em;
+}
+.in .head-meta {
+  margin-top: var(--s-5);
+}
+/* The header picture: a still of the project's station, the day or the night. */
+.in .head-still {
+  justify-self: stretch;
+  margin-top: var(--s-7);
+}
+.in .head-still img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-1);
+}
+.in .head-still picture {
+  display: block;
+}
+.in .still-alt {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='light'] .in .still-sys {
+    display: none;
+  }
+  :root[data-theme='light'] .in .still-alt-day {
+    display: block;
+  }
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme='dark'] .in .still-sys {
+    display: none;
+  }
+  :root[data-theme='dark'] .in .still-alt-night {
+    display: block;
+  }
+}
+
+/* A page that is its head alone: a missing page, an error. */
+.in-bare .in-main {
+  display: grid;
+  align-content: center;
+}
+.in-bare .head {
+  padding-block: var(--s-8);
+}
+.in-bare .head-lead {
+  font-size: var(--t-lead);
+  line-height: 1.4;
+}
+.in .ways-out {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-6);
+  margin-top: var(--s-5);
+}
+
+/* ---------- sections: twelve columns, a hairline over each ---------- */
+
+.in .sec {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: start;
+  margin-bottom: var(--s-9);
+}
+.in .sec::before {
+  content: '';
+  grid-column: 1 / -1;
+  height: 1px;
+  margin-bottom: var(--s-6);
+  background: var(--line);
+}
+.in .sec > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.in .sec-h {
+  margin-bottom: var(--s-6);
+  font-size: var(--t-h);
+  font-weight: 680;
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+}
+
+/* What it is, at reading scale. */
+.in .sum {
+  max-width: 30em;
+  font-size: var(--t-h);
+  font-weight: 500;
+  line-height: 1.24;
+  letter-spacing: -0.018em;
+  text-wrap: pretty;
+}
+.in .sum-s {
+  font-size: var(--t-lead);
+  font-weight: 460;
+  line-height: 1.4;
+  letter-spacing: -0.008em;
+  color: var(--ink-2);
+}
+/* The facts: a name and what it is. */
+.in .spec {
+  display: grid;
+  align-content: start;
+}
+.in .spec-row {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 9rem) minmax(0, 1fr);
+  column-gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .spec-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.in .spec dt {
+  font-size: var(--t-small);
+  color: var(--ink-3);
+}
+.in .spec dd {
+  font-size: var(--t-body);
+  font-weight: 520;
+  line-height: 1.4;
+}
+/* A point made in a paragraph that opens with its own name. */
+.in .notes {
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+}
+.in .note {
+  max-width: 34em;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.in .note strong {
+  font-weight: 640;
+  color: var(--ink);
+}
+/* Words taken from a source, with the source under them. */
+.in .said {
+  display: grid;
+  align-content: start;
+}
+.in .say {
+  max-width: 18em;
+  font-family: var(--font-display);
+  font-size: var(--t-h);
+  font-weight: 620;
+  line-height: 1.14;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+.in .say-s {
+  font-size: var(--t-lead);
+  font-weight: 540;
+  line-height: 1.32;
+  letter-spacing: -0.012em;
+}
+/* A short list of plain facts. */
+.in .limits {
+  display: grid;
+}
+.in .limits li {
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--line-2);
+  font-weight: 520;
+}
+.in .limits li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+/* A figure: a result, set large, and what it counts. */
+.in .figs {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr));
+  gap: var(--s-6) var(--col-gap);
+}
+.in .fig {
+  display: grid;
+  gap: var(--s-2);
+  align-content: start;
+}
+.in .fig-value {
+  font-family: var(--font-display);
+  font-size: var(--t-fig);
+  font-weight: 720;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.in .fig-unit {
+  max-width: 22em;
+  font-size: var(--t-small);
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+/* A number read live: the accent under it, and when it was read on hover or focus. */
+.in .live {
+  position: relative;
+  display: inline-block;
+  text-decoration: underline;
+  text-decoration-color: var(--acc);
+  text-decoration-thickness: max(2px, 0.045em);
+  text-underline-offset: 0.14em;
+}
+.in .live-tip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  padding: 6px 10px;
+  border-radius: var(--r-1);
+  background: var(--ink);
+  color: var(--land);
+  font-family: var(--font-text);
+  font-size: var(--t-small);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.95);
+  transform-origin: 0 100%;
+  transition:
+    opacity 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .in .live:hover .live-tip {
+    opacity: 1;
+    transform: none;
+    transition-duration: var(--t-layer);
+  }
+}
+/* (Reached by keyboard, it is simply there.) */
+.in .live:focus-visible .live-tip {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+/* ---------- pictures ---------- */
+
+.in .shot {
+  min-width: 0;
+}
+.in .shot-media {
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-1);
+  outline: 1px solid var(--line);
+  outline-offset: -1px;
+  background: var(--land-2);
+}
+.in .shot-film {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-3);
+}
+.in .film-play {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--ink);
+  font-size: var(--t-small);
+  font-weight: 580;
+}
+.in .shot-phone {
+  max-width: 300px;
+}
+.in .shot-phone .shot-media {
+  border-radius: 28px;
+}
+
+/* ---------- 01 Infiniview ---------- */
+
+.in :is(.iv-open, .up-open, .om-open, .cs-open, .ab-open, .kb-open, .kb-views, .cs-writes) > :is(.sum, .say, .said, .writes) {
+  grid-column: 1 / 8;
+}
+.in :is(.iv-open, .up-open, .om-open, .cs-open, .ab-open, .kb-open, .kb-views, .cs-writes) > :is(.spec, .notes, .cs-side, .kb-side, .views) {
+  grid-column: 9 / -1;
+}
+.in .run {
+  display: grid;
+}
+.in .run-stage {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: start;
+  padding: var(--s-7) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .run-stage:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.in .run-stage:last-child {
+  padding-bottom: 0;
+}
+.in .run-copy {
+  grid-column: 1 / 5;
+  position: sticky;
+  top: var(--s-5);
+  display: grid;
+  gap: var(--s-6);
+}
+.in .run-block {
+  display: grid;
+  gap: var(--s-2);
+}
+.in .run-show {
+  grid-column: 5 / -1;
+  display: grid;
+  gap: var(--s-6);
+  min-width: 0;
+}
+.in .run-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+}
+.in .run-pair .cap {
+  grid-column: 1 / -1;
+}
+/* The three passes, a row each. */
+.in .lane {
+  display: grid;
+  grid-template-columns: minmax(0, 10rem) minmax(16px, 1fr) auto;
+  align-items: baseline;
+  column-gap: var(--s-4);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .lane:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.in .lane-pass {
+  font-weight: 640;
+}
+.in .lane-what {
+  color: var(--ink-2);
+  text-align: right;
+}
+.in .lane-what strong {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* ---------- 02 Upstream ---------- */
+
+.in .change {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: baseline;
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .change:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.in .change-n {
+  grid-column: 1 / 3;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--t-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.in .change-main {
+  grid-column: 3 / 10;
+}
+.in .change-main .body {
+  max-width: 36em;
+  margin-top: var(--s-1);
+}
+.in .change-meta {
+  grid-column: 10 / -1;
+  display: grid;
+  justify-items: end;
+  gap: var(--s-1);
+  font-size: var(--t-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.in .diff {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.in .diff-n {
+  font-variant-numeric: tabular-nums;
+}
+.in .diff-cells {
+  display: inline-flex;
+  gap: 2px;
+}
+.in .diff-cells i {
+  width: 8px;
+  height: 8px;
+}
+.in .diff-add {
+  background: var(--ink);
+}
+.in .diff-del {
+  box-shadow: inset 0 0 0 1px var(--ink-3);
+}
+.in .bar-row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: center;
+  border-top: 1px solid var(--line-2);
+}
+.in .bar-row:first-child {
+  border-top: 0;
+}
+.in .bar-name {
+  grid-column: 1 / 5;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.in .bar-owner {
+  color: var(--ink-3);
+}
+.in .bar-repo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.in .bar-track {
+  grid-column: 5 / 12;
+  height: 1px;
+  background: var(--line);
+}
+/* The counts are read live, so the bars are in the accent. */
+.in .bar-fill {
+  display: block;
+  width: max(calc(var(--w) * 100%), 3px);
+  height: 5px;
+  margin-top: -2px;
+  background: var(--acc);
+}
+.in .bar-n {
+  grid-column: 12 / -1;
+  font-size: var(--t-small);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.in .table-scroll {
+  overflow-x: auto;
+}
+.in .ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-small);
+}
+.in .ledger th {
+  padding: 0 var(--s-3) var(--s-3) 0;
+  font-weight: inherit;
+  text-align: left;
+}
+.in .ledger td {
+  padding: var(--s-2) var(--s-3) var(--s-2) 0;
+  border-top: 1px solid var(--line-2);
+  vertical-align: baseline;
+  color: var(--ink-2);
+}
+.in .ledger tbody + tbody tr:first-child td {
+  border-top-color: var(--line);
+}
+.in .ledger td:first-child {
+  width: 25%;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--ink);
+}
+.in .ledger :is(td, th):last-child {
+  padding-right: 0;
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.in .ledger a {
+  display: inline-block;
+  padding-block: 6px;
+  color: var(--ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  .in :is(.ledger a, .bar-name, .change-n, .col-name, .build-title a, .strip-name, .toc a, .footnote a):hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+/* ---------- 03 Kilo Bench ---------- */
+
+.in :is(.kb-side, .cs-side, .phone-side) {
+  display: grid;
+  gap: var(--s-6);
+  min-width: 0;
+}
+/* The leaderboard's own rows, at the capture's pixels. On a narrow screen it scrolls sideways, so it stays legible. */
+.in .board-scroll {
+  overflow-x: auto;
+  border-radius: var(--r-1);
+  background: #121212;
+}
+.in .board .shot-media {
+  min-width: 720px;
+  outline: 0;
+  border-radius: 0;
+}
+.in .acts {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  row-gap: var(--s-7);
+  align-items: start;
+}
+.in .act {
+  display: grid;
+  gap: var(--s-6);
+  align-content: start;
+  min-width: 0;
+}
+.in .act:first-child {
+  grid-column: 1 / 5;
+}
+.in .act:last-child {
+  grid-column: 6 / -1;
+}
+.in .act-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5) var(--col-gap);
+}
+.in :is(.act-copy, .paper-cap) {
+  display: grid;
+  gap: var(--s-2);
+  align-content: start;
+}
+.in .act-shot {
+  max-width: 400px;
+}
+.in .matrix {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.in .matrix thead td {
+  width: 34%;
+}
+.in .matrix thead th {
+  padding-bottom: var(--s-3);
+  font-size: var(--t-small);
+  font-weight: 560;
+  text-align: center;
+  color: var(--ink-3);
+}
+.in .matrix tbody th {
+  padding: var(--s-3) var(--s-3) var(--s-3) 0;
+  font-weight: 600;
+  text-align: left;
+}
+.in .matrix tbody :is(th, td) {
+  border-top: 1px solid var(--line-2);
+}
+.in .matrix td {
+  text-align: center;
+  vertical-align: middle;
+}
+.in .mark {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.in .mark-judge {
+  background: var(--ink);
+}
+.in .mark-meter {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.in .matrix-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+}
+.in .matrix-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.in .views {
+  display: grid;
+  gap: var(--s-3);
+  align-content: start;
+}
+.in h2.views-h {
+  font-family: var(--font-text);
+  font-size: var(--t-small);
+  font-weight: 480;
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
+
+/* ---------- 04 Agent Bridge ---------- */
+
+.in .ab-film {
+  align-items: end;
+}
+.in .ab-film > .film {
+  grid-column: 1 / 9;
+}
+.in .ab-film > .said {
+  grid-column: 9 / -1;
+}
+.in .ab-limits > :first-child {
+  grid-column: 1 / 6;
+}
+.in .ab-limits > .notes {
+  grid-column: 7 / -1;
+}
+/* Three lifelines; time runs down the page. An arrow is a message, a box is
+   something the bridge does on its own. */
+.in .seq {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) minmax(0, 20rem);
+  row-gap: var(--s-5);
+  align-items: center;
+}
+.in .seq-head {
+  grid-row: 1;
+  justify-self: center;
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--r-1);
+  box-shadow: inset 0 0 0 1px var(--ink);
+  background: var(--land);
+  font-size: var(--t-small);
+  font-weight: 640;
+}
+.in .seq-at-sender {
+  grid-column: 1 / 3;
+}
+.in .seq-at-bridge {
+  grid-column: 3 / 5;
+}
+.in .seq-at-recipient {
+  grid-column: 5 / 7;
+}
+.in .seq-life {
+  grid-row: 2 / 8;
+  align-self: stretch;
+  justify-self: start;
+  width: 0;
+  margin-top: calc(-1 * var(--s-5));
+  border-left: 1px dashed var(--ink-3);
+}
+.in .seq-life-sender {
+  grid-column: 2;
+}
+.in .seq-life-bridge {
+  grid-column: 4;
+}
+.in .seq-life-recipient {
+  grid-column: 6;
+}
+.in .seq-steps {
+  display: contents;
+}
+.in .seq-msg {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  padding: 0 var(--s-3);
+  text-align: center;
+}
+.in :is(.seq-sender-bridge, .seq-bridge-sender) {
+  grid-column: 2 / 4;
+}
+.in :is(.seq-bridge-recipient, .seq-recipient-bridge) {
+  grid-column: 4 / 6;
+}
+.in .seq-bridge-bridge {
+  grid-column: 3 / 5;
+  justify-self: center;
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-1);
+  background: var(--land);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+/* Who speaks to whom is drawn by the arrow here, and said in words for a reader who cannot see it (and on a phone, where there are no lifelines). */
+.in .seq .seq-route {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.in .seq-title {
+  font-weight: 640;
+  line-height: 1.2;
+}
+.in .seq-line {
+  position: relative;
+  justify-self: stretch;
+  height: 1px;
+  margin: 2px calc(-1 * var(--s-3));
+  background: var(--ink);
+}
+.in .seq-line::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: 0;
+  border-left: 8px solid var(--ink);
+  border-top: 4.5px solid transparent;
+  border-bottom: 4.5px solid transparent;
+}
+.in :is(.seq-recipient-bridge, .seq-bridge-sender) .seq-line::after {
+  right: auto;
+  left: 0;
+  border-left: 0;
+  border-right: 8px solid var(--ink);
+}
+.in .seq-bridge-bridge .seq-line {
+  display: none;
+}
+.in .seq-note {
+  font-family: var(--font-text);
+  letter-spacing: 0;
+  font-size: var(--t-small);
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+.in .seq-aside {
+  grid-column: 7;
+  align-self: stretch;
+  display: grid;
+  align-content: center;
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--line);
+}
+
+/* ---------- 05 Open models ---------- */
+
+.in .sec-chart {
+  align-items: end;
+}
+.in .sec-chart > .chart-head {
+  grid-column: 1 / 6;
+}
+.in .sec-chart > .cols {
+  grid-column: 7 / -1;
+}
+.in .cols {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  gap: var(--col-gap);
+  height: clamp(220px, 34vh, 340px);
+}
+.in .col {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-width: 0;
+}
+/* A flat column, as tall as its pulls: read live, so in the accent. */
+.in .col-bar {
+  align-self: end;
+  height: max(4px, calc(var(--h) * (100% - 2.4rem)));
+  background: var(--acc);
+}
+.in .col-n {
+  position: absolute;
+  left: 0;
+  bottom: calc(max(4px, var(--h) * (100% - 2.4rem - 44px)) + 44px + 8px);
+  font-size: var(--t-small);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.in .col-name {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--t-small);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.in .builds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-8) calc(var(--col-gap) * 3);
+}
+.in .build {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: var(--s-4);
+  align-content: start;
+  min-width: 0;
+}
+.in .build-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--s-4);
+}
+.in .build-title a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-height: 44px;
+}
+.in .build-pulls {
+  font-size: var(--t-small);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.in .build .spec {
+  align-self: start;
+}
+/* A line to run, in a terminal's colours (the same in both themes). */
+.in .build-run {
+  display: block;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-1);
+  background: #0d1117;
+  color: #f0f4f7;
+  font-size: var(--t-small);
+  overflow-wrap: anywhere;
+}
+.in .term-p {
+  color: #8b98a5;
+}
+
+/* ---------- 06 cc-switch ---------- */
+
+/* The profile picker: three radio buttons, set as one control. */
+.in .pick {
+  display: inline-flex;
+  margin: var(--s-6) 0 0;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--ink-3);
+}
+.in .pick-opt {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+.in .pick-opt input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.in .pick-opt span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+.in .pick-opt input:checked + span {
+  background: var(--ink);
+  color: var(--land);
+}
+.in .pick-opt input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.in .pick-opt:active span {
+  transform: scale(0.97);
+}
+.in .figs-side {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.in .figs-side .fig-value {
+  font-size: var(--t-h);
+  letter-spacing: -0.025em;
+}
+/* One terminal, and beside every line of it what that line does. */
+.in .session {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+}
+.in .session::before {
+  content: '';
+  grid-column: 1 / 7;
+  grid-row: 1 / span calc(var(--n) + 1);
+  border-radius: var(--r-1);
+  background: #0d1117;
+}
+.in .session-bar {
+  grid-column: 1 / 7;
+  grid-row: 1;
+  z-index: 1;
+  padding: var(--s-3) var(--s-5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.in .term-title {
+  font-size: var(--t-label);
+  color: #9aa7b3;
+}
+.in .session-row {
+  display: contents;
+}
+.in .session-cmd {
+  grid-column: 1 / 7;
+  z-index: 1;
+  align-self: start;
+  margin: 0;
+  padding: var(--s-4) var(--s-5);
+  overflow-x: auto;
+  color: #f0f4f7;
+  font-size: var(--t-small);
+  line-height: 1.8;
+  white-space: pre;
+}
+.in .session-note {
+  grid-column: 8 / -1;
+  align-self: start;
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .session-row:first-of-type .session-note {
+  border-top: 0;
+}
+.in .write {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .write:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.in .write-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+  font-size: var(--t-small);
+  font-weight: 520;
+}
+.in .write-to {
+  position: relative;
+  flex: 0 0 28px;
+  height: 1px;
+  background: var(--ink);
+}
+.in .write-to::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  border-left: 7px solid var(--ink);
+  border-top: 4.5px solid transparent;
+  border-bottom: 4.5px solid transparent;
+}
+.in .write-what {
+  color: var(--ink-2);
+}
+/* 41 templates: a cell each, in their six groups. */
+.in .prov {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-7) var(--col-gap);
+}
+.in .prov-group {
+  display: grid;
+  gap: var(--s-2);
+  align-content: start;
+}
+.in .prov-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: var(--s-2);
+}
+.in .prov-cells i {
+  width: 12px;
+  height: 12px;
+  background: var(--ink);
+}
+.in .prov-n {
+  margin-left: 0.2em;
+  font-weight: 460;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.in .prov-group .body {
+  max-width: 30em;
+}
+.in .said-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6) calc(var(--col-gap) * 3);
+  margin-top: var(--s-8);
+}
+
+/* ---------- 07 TensorPoW ---------- */
+
+.in .tp-abs > .spec {
+  grid-column: 1 / 5;
+  grid-row: 2;
+}
+.in .tp-abs > .sum {
+  grid-column: 6 / -1;
+  grid-row: 2;
+}
+.in .tp-figs {
+  row-gap: var(--s-8);
+}
+.in .tp-figs > .paper-fig {
+  grid-column: span 6;
+}
+.in .tp-figs > .paper-fig-wide {
+  grid-column: 1 / -1;
+}
+.in .paper-fig {
+  display: grid;
+  gap: var(--s-5);
+  align-content: start;
+  min-width: 0;
+}
+.in .paper-fig-wide {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: center;
+}
+.in .paper-fig-wide > .dia-art {
+  grid-column: 1 / 8;
+}
+.in .paper-fig-wide > .paper-cap {
+  grid-column: 9 / -1;
+}
+.in .paper-cap .body {
+  max-width: 32em;
+}
+.in .dia-art {
+  min-width: 0;
+  padding: var(--s-5) 0;
+  border-block: 1px solid var(--line-2);
+}
+.in .dia-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-1);
+  box-shadow: inset 0 0 0 1px var(--ink);
+  font-family: var(--font-text);
+  font-size: var(--t-label);
+  font-weight: 560;
+  letter-spacing: 0;
+  text-align: center;
+}
+.in :is(.dia-node-in, .dia-node-out) {
+  background: var(--ink);
+  color: var(--land);
+}
+/* One challenge fans out to three backends and comes back as one answer. */
+.in .dia-tensor {
+  --gap: clamp(20px, 4vw, 56px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--gap);
+}
+.in .dia-fan {
+  position: relative;
+  display: grid;
+  gap: var(--s-2);
+}
+.in .dia-fan::before,
+.in .dia-fan::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  bottom: 20px;
+  width: 1px;
+  background: var(--ink-3);
+}
+.in .dia-fan::before {
+  left: calc(var(--gap) / -2);
+}
+.in .dia-fan::after {
+  right: calc(var(--gap) / -2);
+}
+.in .dia-node::before,
+.in .dia-node::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(var(--gap) / 2);
+  height: 1px;
+  background: var(--ink-3);
+}
+.in .dia-node::before {
+  right: 100%;
+}
+.in .dia-node::after {
+  left: 100%;
+}
+.in .dia-node-in::before,
+.in .dia-node-out::after {
+  display: none;
+}
+/* Anchor blocks, with fruit carried between them. */
+.in .dia-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: var(--s-3);
+}
+.in .dia-link {
+  display: inline-flex;
+  align-items: center;
+}
+.in :is(.dia-anchor, .dia-fruit) {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+.in .dia-anchor {
+  width: 24px;
+  height: 24px;
+  background: var(--ink);
+}
+.in .dia-fruit {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.in .dia-chain > .dia-link > * + *,
+.in .dia-chain > .dia-link + .dia-link > :first-child,
+.in .dia-chain > .dia-link + .dia-anchor {
+  margin-left: 10px;
+}
+.in .dia-chain > .dia-link > * + *::before,
+.in .dia-chain > .dia-link + .dia-link > :first-child::before,
+.in .dia-chain > .dia-link + .dia-anchor::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 10px;
+  height: 1px;
+  background: var(--ink-3);
+}
+.in .dia-key {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin-top: var(--s-2);
+  font-size: var(--t-small);
+  color: var(--ink-3);
+}
+.in .dia-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.in .dia-key i {
+  width: 12px;
+  height: 12px;
+}
+.in .dia-stack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
+  gap: var(--s-4) var(--col-gap);
+}
+.in .dia-part {
+  display: grid;
+  gap: 2px;
+}
+.in .dia-part-name {
+  font-weight: 640;
+}
+.in .dia-part-does {
+  font-size: var(--t-small);
+  color: var(--ink-3);
+}
+/* What is built, and beside it what is still to do. */
+.in .tp-pair > .tp-node {
+  grid-column: 1 / 8;
+}
+.in .tp-pair > .tp-status {
+  grid-column: 9 / -1;
+}
+.in .hold {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 9rem) minmax(0, 1fr);
+  column-gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .hold:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.in .hold-name {
+  font-family: var(--font-text);
+  font-size: var(--t-small);
+  font-weight: 420;
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
+.in .hold-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.36em;
+  font-weight: 520;
+}
+.in .hold-items li:not(:last-child)::after {
+  content: ',';
+}
+.in .hold-tools {
+  gap: var(--s-1) var(--s-5);
+  font-size: var(--t-small);
+}
+.in .hold-tools li:not(:last-child)::after {
+  content: none;
+}
+.in .hold-tools .term-p {
+  color: var(--ink-3);
+}
+.in .tp-status .lead {
+  margin-bottom: var(--s-4);
+  font-size: var(--t-body);
+  line-height: 1.55;
+  letter-spacing: 0;
+  font-weight: inherit;
+  color: var(--ink-2);
+}
+/* Four gates on the way to a live network, none of them passed. */
+.in .gate {
+  position: relative;
+  padding: 0 0 var(--s-5) 34px;
+  font-weight: 520;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+.in .gate::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: -4px;
+  left: 7px;
+  width: 1px;
+  background: var(--ink-3);
+}
+.in .gate-box {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 15px;
+  height: 15px;
+  background: var(--land);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.in .gate-end {
+  padding-bottom: 0;
+  color: var(--ink-3);
+}
+.in .gate-end::before {
+  display: none;
+}
+.in .gate-end .gate-box {
+  border-radius: 50%;
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--ink-3);
+}
+
+/* ---------- 08 RydAR ---------- */
+
+.in .ry-count {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: end;
+  margin-top: var(--s-6);
+}
+.in .ry-count > .fig {
+  grid-column: 1 / 8;
+}
+.in .ry-more {
+  grid-column: 9 / -1;
+}
+.in .ry-phone {
+  align-items: center;
+}
+.in .ry-phone > .shot-phone {
+  grid-column: 1 / 5;
+}
+.in .ry-phone > .phone-side {
+  grid-column: 6 / -1;
+}
+.in .ry-pages > .shot {
+  grid-column: span 6;
+}
+
+/* ---------- the foot of a project: the ways out, the way round the set ---------- */
+
+.in .ways {
+  row-gap: var(--s-5);
+}
+.in .outs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-6);
+}
+.in .strip-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-5);
+}
+.in .strip-name {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--t-small);
+  font-weight: 520;
+  color: var(--ink-3);
+}
+.in .strip-name[aria-current='page'] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+
+/* The way on: one link, set as a line of the index it leads to. */
+.in .way-on {
+  margin-bottom: var(--s-9);
+}
+.in .way-link {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: baseline;
+  padding: var(--s-6) 0;
+  border-block: 1px solid var(--ink);
+}
+.in .way-label {
+  grid-column: 1 / 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  color: var(--ink);
+}
+.in .way-title {
+  grid-column: 3 / 8;
+  font-family: var(--font-display);
+  font-size: var(--t-h);
+  font-weight: 680;
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+}
+.in .way-line {
+  grid-column: 8 / -1;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.in :is(.way-label, .index-go, .post-go) .arrow {
+  transition: transform var(--t-quick) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .in :is(.way-link, .index-row, .post-row):hover .arrow {
+    transform: translate3d(3px, 0, 0);
+  }
+}
+
+/* ---------- the work index ---------- */
+
+.in .index-row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: baseline;
+  padding: var(--s-5) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .index li:first-child .index-row {
+  border-top: 0;
+  padding-top: 0;
+}
+.in .index-n {
+  grid-column: 1 / 2;
+}
+.in .index-name {
+  grid-column: 2 / 6;
+  font-family: var(--font-display);
+  font-size: var(--t-h);
+  font-weight: 680;
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+}
+.in .index-line {
+  grid-column: 6 / 11;
+  display: grid;
+  gap: var(--s-1);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+/* (A live count: the accent's one use on this page.) */
+.in .index-line strong {
+  font-weight: 560;
+  color: var(--acc);
+  font-variant-numeric: tabular-nums;
+}
+.in .index-kind {
+  grid-column: 11 / 13;
+  justify-self: end;
+  text-align: right;
+}
+.in .index-go {
+  display: none;
+}
+
+/* The rest, one line each. */
+.in .line-row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: baseline;
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .line-row:first-child {
+  border-top: 0;
+}
+.in .line-row > .label {
+  grid-column: 1 / 3;
+}
+.in .line-name {
+  grid-column: 3 / 6;
+  font-weight: 640;
+  overflow-wrap: anywhere;
+}
+.in .line-what {
+  grid-column: 6 / 11;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.in .line-what small {
+  display: block;
+  font-size: var(--t-small);
+  color: var(--ink-3);
+}
+.in .line-links {
+  grid-column: 11 / 13;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 var(--s-4);
+  font-size: var(--t-small);
+}
+
+/* The archive's search. */
+.in .archive-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+  margin-bottom: var(--s-5);
+}
+.in .search {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+  height: 44px;
+  padding: 0 var(--s-4);
+  border: 0;
+  border-radius: var(--r-1);
+  box-shadow: inset 0 0 0 1px var(--ink-3);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+.in .search::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+.in .search:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.in .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+.in .chip {
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-pill);
+  font-size: var(--t-small);
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.in .chip[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--land);
+}
+@media (hover: hover) and (pointer: fine) {
+  .in .chip:not([aria-pressed='true']):hover {
+    box-shadow: inset 0 0 0 1px var(--ink-3);
+  }
+}
+.in .archive-count {
+  margin-left: auto;
+  font-size: var(--t-small);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.in .empty {
+  padding: var(--s-5) 0;
+  color: var(--ink-2);
+}
+.in .empty button {
+  min-height: 44px;
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.in .footnote {
+  max-width: 44em;
+  margin-top: var(--s-7);
+}
+.in .footnote a {
+  display: inline-block;
+  padding-block: 12px;
+  margin-block: -12px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- writing ---------- */
+
+/* With one post, the index is that post's cover. */
+.in .post-lead {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  row-gap: var(--s-5);
+  align-items: start;
+}
+.in .post-lead > .post-when {
+  grid-column: 1 / -1;
+}
+.in .post-when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-5);
+}
+.in .post-lead > .post-title {
+  grid-column: 1 / 8;
+  font-size: clamp(2.125rem, 3.2vw + 1rem, 4rem);
+  font-weight: 720;
+  line-height: 1.02;
+  letter-spacing: -0.028em;
+}
+.in .post-about {
+  grid-column: 8 / -1;
+  display: grid;
+  gap: var(--s-4);
+  justify-items: start;
+}
+.in .post-desc {
+  font-size: var(--t-lead);
+  font-weight: 500;
+  line-height: 1.36;
+  letter-spacing: -0.01em;
+}
+.in .post-open {
+  color: var(--ink-2);
+}
+.in .post-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 44px;
+  font-weight: 580;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+}
+.in .posts {
+  margin-top: var(--s-8);
+}
+.in .post-item {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
+  align-items: baseline;
+  padding: var(--s-5) 0;
+  border-top: 1px solid var(--line-2);
+}
+.in .post-item > .post-when {
+  grid-column: 1 / 4;
+}
+.in .post-copy {
+  grid-column: 4 / -1;
+  display: grid;
+  gap: var(--s-2);
+}
+.in .post-item .post-title {
+  font-size: var(--t-h);
+  font-weight: 680;
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+}
+.in .post-item .post-desc {
+  font-size: var(--t-body);
+  font-weight: inherit;
+  color: var(--ink-2);
+}
+
+.in .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+  font-size: var(--t-label);
+  font-weight: 560;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* A post: the text at a reading measure, its contents beside it. */
+.in .article {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 42rem);
+  column-gap: calc(var(--col-gap) * 3);
+  align-items: start;
+  margin-bottom: var(--s-9);
+}
+.in .article::before {
+  content: '';
+  grid-column: 1 / -1;
+  height: 1px;
+  margin-bottom: var(--s-7);
+  background: var(--line);
+}
+.in .article-rail {
+  position: sticky;
+  top: var(--s-5);
+  font-size: var(--t-small);
+}
+.in .article-main {
+  grid-column: 2;
+  min-width: 0;
+}
+.in .toc-fold {
+  display: none;
+}
+.in :is(.toc-h, .toc summary) {
+  font-size: var(--t-label);
+  font-weight: 560;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.in .toc ol {
+  display: grid;
+  margin-top: var(--s-2);
+}
+.in .toc a {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 0;
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+.in .prose {
+  font-size: 1.125rem;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+.in .prose > * + * {
+  margin-top: 1.15em;
+}
+.in .prose :is(h1, h2, h3, h4) {
+  font-family: var(--font-display);
+  color: var(--ink);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  scroll-margin-top: var(--s-5);
+}
+.in .prose :is(h1, h2) {
+  margin-top: 2em;
+  font-size: var(--t-h);
+  font-weight: 700;
+}
+.in .prose h3 {
+  margin-top: 1.8em;
+  font-size: var(--t-lead);
+  font-weight: 660;
+}
+.in .prose h4 {
+  margin-top: 1.6em;
+  font-size: 1.125rem;
+  font-weight: 660;
+}
+.in .prose :is(h2, h3, h4) + * {
+  margin-top: 0.7em;
+}
+.in .prose a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.in .prose :is(h2, h3, h4) a {
+  text-decoration: none;
+}
+.in .prose strong {
+  font-weight: 640;
+  color: var(--ink);
+}
+.in .prose :is(ul, ol) {
+  padding-left: 1.3em;
+}
+.in .prose ul {
+  list-style: disc;
+}
+.in .prose ol {
+  list-style: decimal;
+}
+.in .prose li + li {
+  margin-top: 0.45em;
+}
+.in .prose li::marker {
+  color: var(--ink-3);
+}
+.in .prose blockquote {
+  padding-left: 1.1em;
+  border-left: 1px solid var(--ink);
+  color: var(--ink);
+}
+.in .prose hr {
+  height: 1px;
+  margin-block: 2.4em;
+  border: 0;
+  background: var(--line);
+}
+.in .prose :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.12em 0.36em;
+  border-radius: 4px;
+  background: var(--line-2);
+  color: var(--ink);
+}
+.in .prose pre {
+  overflow-x: auto;
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-1);
+  background: #0d1117 !important;
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  line-height: 1.6;
+  tab-size: 2;
+}
+.in .prose pre code {
+  font-family: inherit;
+}
+.in .prose img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-1);
+}
+.in .prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875em;
+}
+.in .prose th {
+  padding: var(--s-2) var(--s-3) var(--s-2) 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  color: var(--ink);
+}
+.in .prose td {
+  padding: var(--s-2) var(--s-3) var(--s-2) 0;
+  border-bottom: 1px solid var(--line-2);
+}
+.in .post-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6);
+  margin-top: var(--s-8);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--line);
+}
+.in .post-nav a {
+  display: grid;
+  gap: var(--s-2);
+  min-height: 44px;
+}
+.in .post-nav a:last-child {
+  text-align: right;
+}
+.in .post-nav strong {
+  font-family: var(--font-display);
+  font-size: var(--t-lead);
+  font-weight: 660;
+  line-height: 1.2;
+}
+
+/* ---------- the footer ---------- */
+
+.in-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-7);
+  padding-block: var(--s-5) max(var(--s-6), env(safe-area-inset-bottom));
+  font-size: var(--t-small);
+}
+.in-foot::before {
+  content: '';
+  flex: 0 0 100%;
+  height: 1px;
+  margin-bottom: var(--s-3);
+  background: var(--line);
+}
+.in-foot-brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--s-4);
+}
+.in-foot-mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.in-foot-note {
+  color: var(--ink-3);
+}
+.in-foot-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s-5);
+}
+.in-foot-email {
+  display: inline-flex;
+  align-items: center;
+}
+.in .in-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--ink-3);
+}
+.in .in-foot-site {
+  display: flex;
+  gap: var(--s-5);
+}
+.in-foot-site a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .in-foot-site a:hover,
+  .in .in-copy:hover {
+    color: var(--ink);
+  }
+}
+
+/* ---------- a narrower screen: the twelve columns fold to one ---------- */
+
+@media (max-width: 900px) {
+  /* (Every placement above is a wide screen's: here each piece takes the whole row.) */
+  .in :is(.sec, .run-stage, .acts, .paper-fig-wide, .ry-count, .post-lead, .way-link, .session, .session-row, .seq-steps) > * {
+    grid-column: 1 / -1 !important;
+  }
+  .in .sec,
+  .in .run-stage,
+  .in .acts,
+  .in .ry-count,
+  .in .post-lead,
+  .in .paper-fig-wide {
+    row-gap: var(--s-6);
+  }
+  .in .sec {
+    margin-bottom: var(--s-8);
+  }
+  .in .tp-abs > :is(.spec, .sum) {
+    grid-row: auto;
+  }
+  .in .run-copy {
+    position: static;
+  }
+  .in .way-link {
+    row-gap: var(--s-2);
+  }
+  .in .session::before {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    display: none;
+  }
+  .in .session-bar,
+  .in .session-cmd {
+    background: #0d1117;
+  }
+  .in .session-bar {
+    border-radius: var(--r-1) var(--r-1) 0 0;
+  }
+  .in .session-cmd {
+    grid-row: auto !important;
+    border-radius: 0 0 var(--r-1) var(--r-1);
+  }
+  .in .session-row + .session-row .session-cmd {
+    border-radius: var(--r-1);
+  }
+  .in .session-note {
+    grid-row: auto !important;
+    border-top: 0;
+    padding: var(--s-3) 0 var(--s-6);
+  }
+  .in .change {
+    row-gap: var(--s-1);
+  }
+  .in .change > * {
+    grid-column: 1 / -1;
+  }
+  .in .change-meta {
+    display: flex;
+    gap: var(--s-4);
+    justify-items: start;
+  }
+  .in .index-row {
+    row-gap: var(--s-1);
+  }
+  .in .index-n {
+    grid-column: 1 / 3;
+    grid-row: 1;
+  }
+  .in .index-kind {
+    grid-column: 3 / -1;
+    grid-row: 1;
+  }
+  .in .index-name,
+  .in .index-line {
+    grid-column: 1 / -1;
+  }
+  .in .line-row {
+    row-gap: 2px;
+    padding: var(--s-3) 0;
+  }
+  .in .line-row > .label {
+    grid-column: 1 / -1;
+  }
+  .in .line-name,
+  .in .line-what {
+    grid-column: 1 / -1;
+  }
+  .in .line-links {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .in .archive-count {
+    margin-left: 0;
+  }
+  /* The post's contents fold above the text. */
+  .in .article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .in .article-rail {
+    position: static;
+    margin-bottom: var(--s-6);
+  }
+  .in .article-main {
+    grid-column: 1;
+  }
+  .in .toc-wide {
+    display: none;
+  }
+  .in .toc-fold {
+    display: block;
+  }
+  .in .toc summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .in .toc a {
+    min-height: 44px;
+  }
+  /* The sequence is read down one line: who speaks to whom, then what happens. */
+  .in .seq {
+    display: block;
+  }
+  .in :is(.seq-head, .seq-life, .seq-line) {
+    display: none;
+  }
+  .in .seq-steps {
+    display: grid;
+  }
+  .in .seq-msg,
+  .in .seq-bridge-bridge {
+    justify-items: start;
+    justify-self: stretch;
+    padding: var(--s-3) 0;
+    border-radius: 0;
+    border-top: 1px solid var(--line-2);
+    background: none;
+    box-shadow: none;
+    text-align: left;
+  }
+  .in .seq-msg:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .in .seq .seq-route {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+  .in .seq-aside {
+    margin-top: var(--s-4);
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .in .figs,
+  .in .builds,
+  .in .said-pair,
+  .in .act-pair,
+  .in .post-nav {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .in .prov {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .in .run-pair {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--s-5);
+  }
+  .in .ry-pages > .shot {
+    grid-column: 1 / -1;
+  }
+  .in .ry-pages {
+    row-gap: var(--s-5);
+  }
+  .in .bar-name {
+    grid-column: 1 / 8;
+  }
+  .in .bar-track {
+    grid-column: 8 / 12;
+  }
+  .in .bar-owner {
+    display: none;
+  }
+  .in .lane {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .in .lane-what {
+    text-align: left;
+  }
+  .in .dia-tensor {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--s-5);
+  }
+  .in .dia-fan::before,
+  .in .dia-fan::after,
+  .in .dia-node::before,
+  .in .dia-node::after {
+    display: none;
+  }
+  .in .post-nav a:last-child {
+    text-align: left;
+  }
+  .in .ledger td:first-child {
+    white-space: normal;
+  }
+  .in-foot {
+    display: grid;
+    gap: var(--s-2);
+  }
+}
+
+/* ---------- route changes, reduced motion, print ---------- */
+
+/* Arriving on an inner page is a short cross-fade: nothing travels. */
+:root:has(.in)::view-transition-old(.page) {
+  animation: in-out 120ms var(--ease-out) both;
+}
+:root:has(.in)::view-transition-new(.page) {
+  animation: in-in 150ms var(--ease-out) both;
+}
+@keyframes in-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes in-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .in *,
+  .in-nav * {
+    transition-property: opacity !important;
+  }
+  .in :is(.tl, .chip, .film-play, .in-copy, .back, .pick-opt span):active,
+  .in-nav :is(.nav-link, .in-mark):active {
+    transform: none;
+  }
+}
+
+@media print {
+  .in-nav,
+  .in .way-on,
+  .in .archive-tools,
+  .in .film-play {
+    display: none !important;
+  }
+}

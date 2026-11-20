@@ -9,8 +9,7 @@ import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import { getPostBySlug, getAllPostSlugs, getAdjacentPosts } from '@/lib/posts';
 import { postContents } from '@/components/blog/contents';
 import { mdxComponents } from '@/components/blog/MDXComponents';
-import { WAY_TO_WRITING } from '@/components/NextBand';
-import { PageShell } from '@/components/PageShell';
+import { InnerPage, WAY_TO_WRITING } from '@/components/inner/Page';
 import { formatPostDate } from '@/lib/dates';
 import { pageMeta } from '@/lib/meta';
 import { SITE_NAME, SITE_URL, abs } from '@/lib/site';
@@ -81,9 +80,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   };
 
   return (
-    <PageShell
-      scene="lake"
-      short
+    <InnerPage
       head={{
         back: { href: '/blog', label: 'Writing' },
         label: (
@@ -93,40 +90,35 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </>
         ),
         title: post.frontmatter.title,
-        vt: `post-${slug}`,
-        titleLong: true,
-      }}
-      next={WAY_TO_WRITING}
-    >
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
-      <article className="article wrap">
-        {/* The margin: when it was written, what it is filed under, and its own headings. It stays beside the
-            text while the post is read; on a narrow screen it is folded above the text. */}
-        <aside className="article-rail" aria-label="About this post">
-          <p className="rail-when">
-            <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date)}</time>
-            <span>{post.readingTime}</span>
-          </p>
+        long: true,
+        lead: post.frontmatter.description,
+        meta: (
           <ul className="tags" aria-label="Tags">
             {post.frontmatter.tags.map((tag) => (
               <li key={tag}>{tag}</li>
             ))}
           </ul>
-          {contents.length ? (
-            <>
-              <nav className="toc toc-wide" aria-label="Contents">
-                <p className="toc-h">Contents</p>
-                {contentsList}
-              </nav>
-              <details className="toc toc-fold">
-                <summary>Contents</summary>
-                {contentsList}
-              </details>
-            </>
-          ) : null}
-        </aside>
+        ),
+      }}
+      next={WAY_TO_WRITING}
+    >
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
+      <article className="article wrap">
+        {/* The text at a reading measure. Its own headings stand beside it on a wide screen and stay there while
+            the post is read; on a narrow one they are folded above the text. */}
+        {contents.length ? (
+          <aside className="article-rail" aria-label="About this post">
+            <nav className="toc toc-wide" aria-label="Contents">
+              <p className="toc-h">Contents</p>
+              {contentsList}
+            </nav>
+            <details className="toc toc-fold">
+              <summary>Contents</summary>
+              {contentsList}
+            </details>
+          </aside>
+        ) : null}
         <div className="article-main">
-          <p className="article-lead">{post.frontmatter.description}</p>
           <div className="prose">{content}</div>
           {prev || next ? (
             <nav className="post-nav" aria-label="More posts">
@@ -148,6 +140,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           ) : null}
         </div>
       </article>
-    </PageShell>
+    </InnerPage>
   );
 }

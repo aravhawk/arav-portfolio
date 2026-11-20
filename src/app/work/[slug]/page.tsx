@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { PageShell } from '@/components/PageShell';
+import { InnerPage } from '@/components/inner/Page';
+import { stillOf } from '@/components/inner/stills';
 import { Ways, nextOf } from '@/components/work/blocks';
-import { Case, SwitchInScene } from '@/components/work/cases';
-import { sceneOf } from '@/water/registry';
+import { Case, ProfilePick } from '@/components/work/cases';
 import { PROJECTS, projectBySlug } from '@/content/projects';
 import { pageMeta } from '@/lib/meta';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
@@ -24,10 +24,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 /**
- * A project's page: its own station from the home page's world, live, with
- * its name standing in it, then a page built from what the project is
- * (src/components/work/cases.tsx), then the way round the set, and the
- * next project's own station as the way on.
+ * A project's page: its name and its one line (over a still of its station
+ * where that scene is built, see inner/stills.ts), then a page built from
+ * what the project is (src/components/work/cases.tsx), then the ways out,
+ * the way round the set, and the next project.
  */
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -37,29 +37,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const next = nextOf(p);
 
   return (
-    <PageShell
-      scene={sceneOf(p.slug) ?? 'delta'}
+    <InnerPage
       head={{
-        // (The way back says where the page belongs. Nothing else stands over a project's name.)
         back: { href: '/work', label: 'Work' },
         title: p.name,
-        vt: `title-${p.slug}`,
         lead: p.line,
-        children: p.slug === 'cc-switch' ? <SwitchInScene /> : null,
+        still: stillOf(p.slug),
+        children: p.slug === 'cc-switch' ? <ProfilePick /> : null,
       }}
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
-      next={{
-        scene: sceneOf(next.slug) ?? 'delta',
-        href: `/work/${next.slug}`,
-        label: 'Next',
-        title: next.name,
-        line: next.line,
-        vt: `title-${next.slug}`,
-        aria: 'Next project',
-      }}
+      next={{ href: `/work/${next.slug}`, label: 'Next', title: next.name, line: next.line, aria: 'Next project' }}
     >
       <Case p={p} m={m} />
       <Ways current={p} />
-    </PageShell>
+    </InnerPage>
   );
 }

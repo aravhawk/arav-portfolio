@@ -17,9 +17,9 @@ export const abs = (path = '/') => `${SITE_URL}${path.startsWith('/') ? path : `
 /**
  * The browser's own chrome takes the colour of the top edge of the page it
  * shows (measured from the first frame at phone width): the home page opens
- * on sky, every other page on pale land.
+ * on sky, every other page is the land's own colour (--land in globals.css).
  */
 export const THEME_COLOR = {
   home: { light: '#a5c3db', dark: '#41406e' },
-  page: { light: '#e9edee', dark: '#1d2123' },
+  page: { light: '#e4e7e8', dark: '#15181b' },
 } as const;

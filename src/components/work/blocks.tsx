@@ -1,33 +1,14 @@
-import Image from 'next/image';
 import Link from 'next/link';
-import { ViewTransition } from 'react';
-import { Arrow } from '@/components/bits';
-import { VideoSlab } from '@/components/VideoSlab';
-import { PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
+import { Arrow } from '@/components/inner/bits';
+import { PROJECTS, type Project } from '@/content/projects';
 
 /**
  * The few pieces every project page shares. Each page is otherwise its own
- * composition (cases.tsx): these are only the picture, the section, the
- * quiet list of facts, the run-in note, and the foot (the ways out and the
- * way round the set). There are no eyebrows here: a section that needs a name gets a
+ * composition (cases.tsx): these are only the section, the quiet list of
+ * facts, the run-in note, and the foot (the ways out and the way round the
+ * set). There are no eyebrows here: a section that needs a name gets a
  * heading, and where a thing comes from is said in a sentence under it.
  */
-
-export const PLATE_SIZES = '(max-width: 1720px) 96vw, 1640px';
-export const HALF_SIZES = '(max-width: 859px) 94vw, (max-width: 1720px) 48vw, 820px';
-
-/** A piece of real media. A light capture is mounted, and dimmed on the dark theme. */
-export function Plate({ media, caption, sizes = PLATE_SIZES, priority = false, className = '' }: { media: ProjectMedia; caption?: React.ReactNode; sizes?: string; priority?: boolean; className?: string }) {
-  if (media.kind === 'video') return <VideoSlab media={media} />;
-  return (
-    <figure className={`plate${media.tone === 'light' ? ' plate-light' : ''} ${className}`}>
-      <div className="plate-frame" data-dry>
-        <Image className="plate-media" src={media.src} alt={media.alt} width={media.w} height={media.h} sizes={sizes} priority={priority} />
-      </div>
-      {caption ? <figcaption className="cap">{caption}</figcaption> : null}
-    </figure>
-  );
-}
 
 /** A section of a page. `title` is a real heading; most sections have none. */
 export function Sec({ children, className = '', title, id, label }: { children: React.ReactNode; className?: string; title?: string; id?: string; label?: string }) {
@@ -48,7 +29,7 @@ export function Spec({ facts, className = '' }: { facts: Project['facts']; class
   return (
     <dl className={`spec ${className}`}>
       {facts.map((f) => (
-        <div key={f.label} className="spec-row" data-row>
+        <div key={f.label} className="spec-row">
           <dt>{f.label}</dt>
           <dd className={/^(npm |ollama |cc-switch )/.test(f.value) ? 'mono' : undefined}>{f.value}</dd>
         </div>
@@ -67,19 +48,17 @@ export function Note({ title, children, className = '' }: { title: string; child
 }
 
 /**
- * The foot of a project's page, on one line: the ways out (links, set as
- * links) and the way round the set (the eight projects by name, this one
- * marked; each name travels into the title of the page it opens). The one
- * after this is offered as a place, in the band under this: see nextOf.
+ * The foot of a project's page: the ways out (links, set as links) and the
+ * way round the set (the eight projects by name, this one marked). The one
+ * after this is offered under it: see nextOf.
  */
 export function Ways({ current }: { current: Project }) {
-  const next = nextOf(current);
   return (
     <div className="sec wrap ways">
       <ul className="outs" aria-label="Links">
         {current.links.map((l) => (
           <li key={l.href}>
-            <a className="out" href={l.href} target="_blank" rel="noopener noreferrer">
+            <a className="tl" href={l.href} target="_blank" rel="noopener noreferrer">
               {l.label} <Arrow out />
             </a>
           </li>
@@ -97,13 +76,7 @@ export function Ways({ current }: { current: Project }) {
             ) : (
               <li key={p.slug}>
                 <Link className="strip-name" href={`/work/${p.slug}`}>
-                  {p.slug === next.slug ? (
-                    p.name
-                  ) : (
-                    <ViewTransition name={`title-${p.slug}`} share="title" default="none">
-                      <span>{p.name}</span>
-                    </ViewTransition>
-                  )}
+                  {p.name}
                 </Link>
               </li>
             ),

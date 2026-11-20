@@ -1,11 +1,12 @@
-import { Arrow } from '@/components/bits';
-import { ProfileSwitch } from '@/components/home/ProfileSwitch';
-import { LiveNumber } from '@/components/LiveNumber';
+import Image from 'next/image';
+import { preload } from 'react-dom';
+import { Arrow, HALF, Live as LiveValue, Shot, WIDE } from '@/components/inner/bits';
+import { Film } from '@/components/inner/Film';
+import { stillOf } from '@/components/inner/stills';
 import type { Project, ProjectMedia } from '@/content/projects';
 import { formatPostDate } from '@/lib/dates';
 import { formatAsOf, formatCount, type Metric, type SiteMetrics } from '@/lib/metrics';
-import { SHEET_COLS, SHEET_SRC } from '@/water/world';
-import { HALF_SIZES, Note, Plate, Sec, Spec } from './blocks';
+import { Note, Sec, Spec } from './blocks';
 import {
   BRIDGE_FLOW,
   BRIDGE_LIMITS,
@@ -52,12 +53,10 @@ import {
 const pic = (p: Project, name: string): ProjectMedia => p.media.find((x) => x.src === `/media/${name}`) ?? p.media[0];
 
 function Live({ metric, what }: { metric: Metric; what: string }) {
-  return <LiveNumber value={metric.value} from={metric.snapshotValue} source={metric.source} asOf={formatAsOf(metric.asOf)} what={what} />;
+  return <LiveValue value={metric.value} source={metric.source} asOf={formatAsOf(metric.asOf)} what={what} />;
 }
 
 /* ---------- 01 Infiniview: one run, drawn as the pipeline it is ---------- */
-
-const RUN_SIZES = '(max-width: 859px) 94vw, (max-width: 1720px) 70vw, 1200px';
 
 function Infiniview({ p }: { p: Project }) {
   const [trigger, sandbox, attack, proof] = p.how;
@@ -82,7 +81,7 @@ function Infiniview({ p }: { p: Project }) {
               </div>
             </div>
             <div className="run-show">
-              <Plate media={pic(p, 'infiniview-pipeline.webp')} sizes={RUN_SIZES} priority caption="The pipeline as infiniview.dev shows it. Its illustration uses sample data." />
+              <Shot media={pic(p, 'infiniview-pipeline.webp')} sizes={WIDE} first={!stillOf(p.slug)} caption="The pipeline as infiniview.dev shows it. Its illustration uses sample data." />
             </div>
           </li>
           <li className="run-stage">
@@ -93,7 +92,7 @@ function Infiniview({ p }: { p: Project }) {
               </div>
             </div>
             <div className="run-show">
-              <ul className="lanes" data-fill aria-label="The three passes">
+              <ul className="lanes" aria-label="The three passes">
                 {INFINIVIEW_PASSES.map((x) => (
                   <li key={x.pass} className="lane">
                     <span className="lane-pass">{x.pass}</span>
@@ -104,7 +103,7 @@ function Infiniview({ p }: { p: Project }) {
                   </li>
                 ))}
               </ul>
-              <Plate media={pic(p, 'infiniview-layers.webp')} sizes={RUN_SIZES} caption="Counts as published on infiniview.dev." />
+              <Shot media={pic(p, 'infiniview-layers.webp')} sizes={WIDE} caption="Counts as published on infiniview.dev." />
             </div>
           </li>
           <li className="run-stage">
@@ -115,11 +114,11 @@ function Infiniview({ p }: { p: Project }) {
               </div>
             </div>
             <div className="run-show">
-              <Plate media={pic(p, 'infiniview-attack-path.webp')} sizes={RUN_SIZES} caption="A finding on infiniview.dev with its attack path open." />
-              <Plate media={pic(p, 'infiniview-findings.webp')} sizes={RUN_SIZES} />
+              <Shot media={pic(p, 'infiniview-attack-path.webp')} sizes={WIDE} caption="A finding on infiniview.dev with its attack path open." />
+              <Shot media={pic(p, 'infiniview-findings.webp')} sizes={WIDE} />
               <div className="run-pair">
-                <Plate media={pic(p, 'infiniview-dash-findings.webp')} sizes={HALF_SIZES} />
-                <Plate media={pic(p, 'infiniview-dash-review.webp')} sizes={HALF_SIZES} />
+                <Shot media={pic(p, 'infiniview-dash-findings.webp')} sizes={HALF} />
+                <Shot media={pic(p, 'infiniview-dash-review.webp')} sizes={HALF} />
                 <p className="cap">The dashboard in the public demo at infiniview.dev/preview. Sample data.</p>
               </div>
             </div>
@@ -192,7 +191,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
       <Sec className="sec-changes" title="In T3 Code: eight of them, change by change" id="p-t3">
         <ol className="changes">
           {T3_PRS.map((x) => (
-            <li key={x.n} className="change" data-row>
+            <li key={x.n} className="change">
               <a className="change-n" href={`https://github.com/pingdotgg/t3code/pull/${x.n}`} target="_blank" rel="noopener noreferrer" aria-label={`Pull request ${x.n} in T3 Code`}>
                 #{x.n}
               </a>
@@ -209,7 +208,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
         </ol>
       </Sec>
       <Sec className="sec-bars sec-rest" title="The rest, by repository" id="p-repos">
-        <ol className="bars" data-fill>
+        <ol className="bars">
           {m.mergedPrs.byRepo.map((r) => {
             const [owner, name] = r.repo.split('/');
             return (
@@ -263,6 +262,9 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
 
 /* ---------- 03 Kilo Bench: the result, then the three things it does, each beside what it makes ---------- */
 
+/** The leaderboard's own rows, cut from the Devpost capture (public/media/kilo-bench-results-2324.webp) at its own pixels. */
+const BOARD = { src: '/media/kilo-bench-leaderboard.webp', w: 2264, h: 232 };
+
 function KiloBench({ p }: { p: Project }) {
   const [read, cover, judge] = p.how;
   const [result, ...rest] = p.facts;
@@ -276,11 +278,16 @@ function KiloBench({ p }: { p: Project }) {
         </div>
       </Sec>
       <Sec className="kb-board" label="Results">
-        <figure className="board">
-          <div className="board-rows" data-fill role="img" aria-label="The leaderboard of one run: anthropic/claude-sonnet-4.6 scored 7.6, anthropic/claude-opus-4.6 scored 7.4, openai/gpt-5.2-codex scored 6.3, each with its cost, time and tokens.">
-            {SHEET_COLS.map(([x, w]) => (
-              <span key={x} className="board-col" style={{ '--x': x, '--w': w, '--y': SHEET_SRC.y, '--h': SHEET_SRC.rows } as React.CSSProperties} />
-            ))}
+        <figure className="shot board">
+          <div className="board-scroll">
+            <Image
+              className="shot-media"
+              src={BOARD.src}
+              width={BOARD.w}
+              height={BOARD.h}
+              sizes="(max-width: 760px) 720px, (max-width: 1280px) 92vw, 1216px"
+              alt="The leaderboard of one run: anthropic/claude-sonnet-4.6 scored 7.6, anthropic/claude-opus-4.6 scored 7.4, openai/gpt-5.2-codex scored 6.3, each with its cost, time and tokens."
+            />
           </div>
           <figcaption className="cap">The leaderboard of one run inside Kilo Code, cut from the capture in the project’s Devpost gallery.</figcaption>
         </figure>
@@ -290,25 +297,25 @@ function KiloBench({ p }: { p: Project }) {
           {/* The first thing it does, with the screen it starts from. */}
           <div className="act">
             <div className="act-copy">
-              <h3 className="act-title">{read.title}</h3>
+              <h2 className="act-title">{read.title}</h2>
               <p className="body">{read.body}</p>
             </div>
-            <Plate media={pic(p, 'kilo-bench-start.webp')} sizes="(max-width: 859px) 94vw, 560px" className="act-plate" caption="The Bench tab’s first screen." />
+            <Shot media={pic(p, 'kilo-bench-start.webp')} sizes="(max-width: 760px) 92vw, 400px" className="act-shot" caption="The Bench tab’s first screen." />
           </div>
           {/* The other two are one table: every mode, against what a run is judged on. */}
           <div className="act">
             <div className="act-pair">
               <div className="act-copy">
-                <h3 className="act-title">{cover.title}</h3>
+                <h2 className="act-title">{cover.title}</h2>
                 <p className="body">{cover.body}</p>
               </div>
               <div className="act-copy">
-                <h3 className="act-title">{judge.title}</h3>
+                <h2 className="act-title">{judge.title}</h2>
                 <p className="body">{judge.body}</p>
               </div>
             </div>
             <div className="matrix-wrap">
-              <table className="matrix" data-fill>
+              <table className="matrix">
                 <thead>
                   <tr>
                     <td />
@@ -351,7 +358,7 @@ function KiloBench({ p }: { p: Project }) {
           <figcaption className="cap">{KILO_QUOTE.source}</figcaption>
         </figure>
         <div className="views">
-          <h3 className="views-h">The dashboard, in five views</h3>
+          <h2 className="views-h">The dashboard, in five views</h2>
           <ul className="limits">
             {KILO_VIEWS.map((v) => (
               <li key={v}>{v}</li>
@@ -373,15 +380,20 @@ const SEQ_NOTES = [
   { rows: '6 / 8', how: 2 },
 ];
 
+/** The film's first frame at the size it is shown (the JPEG in the content file is the home page's). */
+const FILM_POSTER = '/media/agent-bridge-poster.webp';
+
 function AgentBridge({ p }: { p: Project }) {
   const film = p.media.find((x) => x.kind === 'video');
+  // The film's first frame is the picture in this page's first screen.
+  if (film) preload(FILM_POSTER, { as: 'image', fetchPriority: 'high' });
   const optional = p.how[3];
   return (
     <>
       <Sec className="ab-film" label="The launch video">
         {film ? (
           <div className="film">
-            <Plate media={film} />
+            <Film src={film.src} poster={FILM_POSTER} alt={film.alt} w={film.w} h={film.h} />
             <p className="cap">The launch video. A dramatized example, not a screen recording.</p>
           </div>
         ) : null}
@@ -397,7 +409,7 @@ function AgentBridge({ p }: { p: Project }) {
         <Spec facts={p.facts} />
       </Sec>
       <Sec className="ab-seq" title="One message, start to finish" id="p-flow">
-        <div className="seq" data-fill>
+        <div className="seq">
           {BRIDGE_PEERS.map((x) => (
             <span key={x.id} className={`seq-head seq-at-${x.id}`} aria-hidden="true">
               {x.name}
@@ -465,7 +477,7 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
             </span>
           </p>
         </div>
-        <ol className="cols" data-fill style={{ '--n': m.ollama.models.length } as React.CSSProperties}>
+        <ol className="cols" style={{ '--n': m.ollama.models.length } as React.CSSProperties}>
           {m.ollama.models.map((x) => (
             <li key={x.name} className="col" style={{ '--h': x.pulls / max } as React.CSSProperties}>
               <span className="col-n">{formatCount(x.pulls)}</span>
@@ -505,14 +517,14 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
                 {note ? (
                   <dl className="spec">
                     {note.facts.map(([k, v]) => (
-                      <div key={k} className="spec-row" data-row>
+                      <div key={k} className="spec-row">
                         <dt>{k}</dt>
                         <dd>{v}</dd>
                       </div>
                     ))}
                   </dl>
                 ) : null}
-                <code className="mono build-run" data-fill>
+                <code className="mono build-run">
                   <span className="term-p" aria-hidden="true">
                     ${' '}
                   </span>
@@ -562,7 +574,7 @@ function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
         </div>
       </Sec>
       <Sec className="cs-session" label="In the terminal">
-        <div className="session" data-fill style={{ '--n': rows.length } as React.CSSProperties}>
+        <div className="session" style={{ '--n': rows.length } as React.CSSProperties}>
           <div className="session-bar" aria-hidden="true">
             <span className="term-title mono">cc-switch</span>
           </div>
@@ -587,7 +599,7 @@ function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
         </div>
       </Sec>
       <Sec className="cs-writes" title="What cc-switch work writes" id="p-writes">
-        <ol className="writes" data-fill>
+        <ol className="writes">
           {SWITCH_WRITES.map((w) => (
             <li key={w.to} className="write">
               <span className="write-path mono">
@@ -612,7 +624,7 @@ function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
         <ul className="prov">
           {SWITCH_GROUPS.map((g) => (
             <li key={g.name} className="prov-group">
-              <span className="prov-cells" data-fill aria-hidden="true">
+              <span className="prov-cells" aria-hidden="true">
                 {Array.from({ length: g.n }, (_, k) => (
                   <i key={k} />
                 ))}
@@ -639,12 +651,23 @@ function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
   );
 }
 
-/** The switch stands in the scene on the cc-switch page: it opens the dam's sluices, as on the home page. */
-export function SwitchInScene() {
+const PROFILES = ['claude', 'kimi', 'ollama'];
+
+/**
+ * cc-switch, as a thing you can do: pick a profile. Three radio buttons and
+ * nothing else, so it works with scripts off and ships no code.
+ */
+export function ProfilePick() {
   return (
-    <div className="band-fork" data-bed="feat:fork" data-active="0">
-      <ProfileSwitch />
-    </div>
+    <fieldset className="pick">
+      <legend className="sr-only">Active Claude Code profile</legend>
+      {PROFILES.map((name, i) => (
+        <label key={name} className="pick-opt">
+          <input type="radio" name="profile" value={name} defaultChecked={i === 0} />
+          <span>{name}</span>
+        </label>
+      ))}
+    </fieldset>
   );
 }
 
@@ -660,24 +683,24 @@ function TensorPoW({ p }: { p: Project }) {
       </Sec>
       <Sec className="tp-figs" label="How it fits together">
         <figure className="paper-fig paper-fig-wide">
-          <div className="dia-art dia-tensor" data-fill aria-hidden="true">
-            <span className="dia-node dia-node-in mono">INT8 tensor challenge</span>
+          <div className="dia-art dia-tensor" aria-hidden="true">
+            <span className="dia-node dia-node-in">INT8 tensor challenge</span>
             <span className="dia-fan">
               {TENSOR_BACKENDS.map((b) => (
-                <span key={b} className="dia-node mono">
+                <span key={b} className="dia-node">
                   {b}
                 </span>
               ))}
             </span>
-            <span className="dia-node dia-node-out mono">the same bits</span>
+            <span className="dia-node dia-node-out">the same bits</span>
           </div>
           <figcaption className="paper-cap">
-            <h3 className="paper-h">{tensors.title}</h3>
+            <h2 className="paper-h">{tensors.title}</h2>
             <p className="body">{tensors.body}</p>
           </figcaption>
         </figure>
         <figure className="paper-fig">
-          <div className="dia-art dia-chain" data-fill aria-hidden="true">
+          <div className="dia-art dia-chain" aria-hidden="true">
             {[3, 4, 2].map((n, i) => (
               <span key={i} className="dia-link">
                 <span className="dia-anchor" />
@@ -697,12 +720,12 @@ function TensorPoW({ p }: { p: Project }) {
             </span>
           </div>
           <figcaption className="paper-cap">
-            <h3 className="paper-h">{blocks.title}</h3>
+            <h2 className="paper-h">{blocks.title}</h2>
             <p className="body">{blocks.body}</p>
           </figcaption>
         </figure>
         <figure className="paper-fig">
-          <ul className="dia-art dia-stack" data-fill aria-hidden="true">
+          <ul className="dia-art dia-stack" aria-hidden="true">
             {TENSOR_STACK.map((x) => (
               <li key={x.name} className="dia-part">
                 <span className="dia-part-name">{x.name}</span>
@@ -711,7 +734,7 @@ function TensorPoW({ p }: { p: Project }) {
             ))}
           </ul>
           <figcaption className="paper-cap">
-            <h3 className="paper-h">{node.title}</h3>
+            <h2 className="paper-h">{node.title}</h2>
             <p className="body">{node.body}</p>
           </figcaption>
         </figure>
@@ -724,7 +747,7 @@ function TensorPoW({ p }: { p: Project }) {
           </h2>
           <ul className="holds">
             {TENSOR_NODE.map((x) => (
-              <li key={x.name} className="hold" data-row>
+              <li key={x.name} className="hold">
                 <h3 className="hold-name">{x.name}</h3>
                 <ul className="hold-items">
                   {x.items.map((it) => (
@@ -733,7 +756,7 @@ function TensorPoW({ p }: { p: Project }) {
                 </ul>
               </li>
             ))}
-            <li className="hold" data-row>
+            <li className="hold">
               <h3 className="hold-name">Operator tools</h3>
               <div>
                 <ul className="hold-items hold-tools mono">
@@ -757,7 +780,7 @@ function TensorPoW({ p }: { p: Project }) {
             Not a live network yet
           </h2>
           <p className="lead">Before mainnet, per the README:</p>
-          <ol className="gates" data-fill>
+          <ol className="gates">
             {TENSOR_GATES.map((g) => (
               <li key={g} className="gate">
                 <i className="gate-box" aria-hidden="true" />
@@ -781,7 +804,7 @@ function RydAR({ p }: { p: Project }) {
   return (
     <>
       <Sec className="ry-map" label="The map">
-        <Plate media={pic(p, 'rydar-map.webp')} priority />
+        <Shot media={pic(p, 'rydar-map.webp')} first />
         <div className="ry-count">
           <p className="fig">
             <span className="fig-value">{RYDAR_CURVES.value}</span>
@@ -798,7 +821,7 @@ function RydAR({ p }: { p: Project }) {
         </div>
       </Sec>
       <Sec className="ry-phone" label="On the phone">
-        <Plate media={pic(p, 'rydar-phone-map.webp')} sizes="(max-width: 859px) 70vw, 390px" className="plate-phone" />
+        <Shot media={pic(p, 'rydar-phone-map.webp')} sizes="(max-width: 760px) 70vw, 300px" className="shot-phone" />
         <div className="phone-side">
           <figure className="said">
             <blockquote className="say">“{RYDAR_QUOTE.text}”</blockquote>
@@ -816,8 +839,8 @@ function RydAR({ p }: { p: Project }) {
         </div>
       </Sec>
       <Sec className="ry-pages" label="rydar.org">
-        <Plate media={pic(p, 'rydar-app-page.webp')} sizes={HALF_SIZES} />
-        <Plate media={pic(p, 'rydar-how-page.webp')} sizes={HALF_SIZES} />
+        <Shot media={pic(p, 'rydar-app-page.webp')} sizes={HALF} />
+        <Shot media={pic(p, 'rydar-how-page.webp')} sizes={HALF} />
         <p className="cap">rydar.org: the iPhone app, and what goes into a curve warning.</p>
       </Sec>
     </>
@@ -850,7 +873,7 @@ export function Case({ p, m }: { p: Project; m: SiteMetrics }) {
           </Sec>
           {p.media.map((x) => (
             <Sec key={x.src} className="kb-board" label="Picture">
-              <Plate media={x} />
+              <Shot media={x} />
             </Sec>
           ))}
         </>

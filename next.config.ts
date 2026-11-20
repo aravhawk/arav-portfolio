@@ -9,6 +9,8 @@ import { REDIRECT_HOSTS, SITE_URL } from './src/lib/site';
 const nextConfig: NextConfig = {
   transpilePackages: ['next-mdx-remote'],
   agentRules: false,
+  // Pictures go out as AVIF where the browser takes it, WebP otherwise.
+  images: { formats: ['image/avif', 'image/webp'] },
   async redirects() {
     return [
       ...REDIRECT_HOSTS.map((host) => ({
