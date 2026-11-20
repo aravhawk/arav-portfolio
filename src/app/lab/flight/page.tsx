@@ -1,3 +1,4 @@
+import { EndingWords } from '@/components/flight/EndingWords';
 import { Interests } from '@/components/flight/Interests';
 import { Statement } from '@/components/flight/Statement';
 import type { Metadata } from 'next';
@@ -35,6 +36,9 @@ export default function FlightLab() {
       #main[data-flight-lab] .fl-words:not([data-on]) {opacity:0;visibility:hidden}
       #main[data-flight-lab] .fl-view-words {position:absolute;justify-content:flex-end;align-items:flex-start;flex-direction:column;
         padding:0 var(--gutter) var(--fl-foot);inset:0}
+      [data-flight-lab] .fl-end-words {
+        --end-ink: var(--ink); --end-ink-2: var(--ink); --end-on: var(--land);
+      }
       #main[data-flight-lab] [data-placement='lower-right'] {align-items:flex-end;text-align:right}
       #main[data-flight-lab] .fl-view-words .fl-line {max-width:32ch}
     `}</style>
@@ -87,6 +91,12 @@ export default function FlightLab() {
               <div key={scene.id} className="fl-words fl-block fl-into-words fl-view-words" data-copy={scene.id}
                 data-placement={scene.words} data-set aria-hidden="true" inert>
                 <Interests timing={{ eyebrow: visible, title: visible, line: visible, act: visible }} />
+              </div>
+            );
+            if (scene.id === 'ending') return (
+              <div key={scene.id} className="fl-words fl-end-words fl-view-words" data-copy={scene.id}
+                data-placement={scene.words} data-set aria-hidden="true" inert>
+                <EndingWords />
               </div>
             );
             const p = PROJECTS.find((project) => project.slug === scene.project)!;

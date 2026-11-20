@@ -1,3 +1,4 @@
+import endingAssets from './ending-assets.json';
 import interestsAssets from './interests-assets.json';
 import rydarAssets from './rydar-assets.json';
 import tensorpowAssets from './tensorpow-assets.json';
@@ -121,6 +122,7 @@ export const scenes: readonly (Lake | Plate)[] = [
   riverPlate('tensorpow', tensorpowAssets),
   riverPlate('rydar', rydarAssets),
   riverPlate('interests', interestsAssets),
+  riverPlate('ending', endingAssets),
 ];
 export const starts: number[] = [];
 let length = 0;
