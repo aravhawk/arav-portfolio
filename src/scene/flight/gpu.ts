@@ -3,6 +3,7 @@ import { mount } from '../lake/live';
 import { fullVertex } from '../lake/shaders';
 import { ridgeFragment, ridgeVertex } from './ridge';
 import { plateFragment } from './plate';
+import { see } from '../observe';
 import { flightLength, position, scenes, starts, type Gate, type Plate, type Theme } from './scenes';
 
 type Transfer =
@@ -212,6 +213,7 @@ class FlightGPU extends LakeGPU {
       }
     }
     this.cursor = this.settle(wanted, index);
+    see(index, index, 0, position(this.cursor).progress);
     return this.cursor;
   }
   private tell(show: number) {
@@ -239,6 +241,7 @@ class FlightGPU extends LakeGPU {
       for (let i = 0; i < scenes.length; i++) if (i !== jump.from && i !== jump.to) this.releaseScene(i);
       if (this.ready(jump.to)) jump.t = Math.min(1, jump.t + dt / 0.72);
       this.tell(jump.t < 0.08 ? jump.from : jump.t > 0.92 ? jump.to : -1);
+      see(jump.from, jump.to, jump.t, old.progress);
       if (jump.t >= 1) {
         this.cursor = jump.at;
         this.jump = null;
@@ -265,6 +268,7 @@ class FlightGPU extends LakeGPU {
     const now = position(this.cursor);
     for (let i = 0; i < scenes.length; i++) if (Math.abs(i - now.index) > 1) this.releaseScene(i);
     this.tell(now.mix > 0.08 && now.mix < 0.92 ? -1 : now.index + Number(now.mix >= 0.92));
+    see(now.index, Math.min(now.index + 1, scenes.length - 1), now.mix, now.progress);
     return this.cursor;
   }
   private plate(index: number, pose: Pose, blend: number, textures = this.resident.get(index)!.textures) {
