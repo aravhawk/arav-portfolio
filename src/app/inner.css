@@ -97,7 +97,6 @@
   font-weight: 560;
   letter-spacing: 0;
   color: var(--ink-3);
-  transition: none;
 }
 .in-nav .nav-link[aria-current='page'] {
   color: var(--ink);
@@ -147,6 +146,10 @@
 }
 :root[data-theme='dark'] .in-theme-knob {
   transform: translate3d(16px, 0, 0);
+}
+/* (Switched from the keyboard, the knob is simply at its new place.) */
+.in-theme:focus-visible .in-theme-knob {
+  transition: none;
 }
 .in-theme:active .in-theme-track {
   transform: scale(0.97);
@@ -213,6 +216,11 @@
   text-decoration-thickness: 1px;
   text-underline-offset: 5px;
   text-decoration-color: var(--ink-3);
+}
+/* Anything pressed answers at once: it gives a little, quickly. */
+.in :is(.tl, .chip, .film-play, .in-copy, .back, .pick-opt span),
+.in-nav :is(.nav-link, .in-mark, .in-theme-track) {
+  transition: transform 120ms var(--ease-out);
 }
 .in .tl:active,
 .in .chip:active,
@@ -1698,6 +1706,12 @@
 @media (hover: hover) and (pointer: fine) {
   .in :is(.way-link, .index-row, .post-row):hover .arrow {
     transform: translate3d(3px, 0, 0);
+  }
+  /* A row that is a link says so under the pointer: its name is underlined. */
+  .in :is(.way-link:hover .way-title, .index-row:hover .index-name, .post-row:hover .post-title) {
+    text-decoration: underline;
+    text-decoration-thickness: max(1px, 0.05em);
+    text-underline-offset: 0.16em;
   }
 }
 
