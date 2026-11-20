@@ -2048,3 +2048,24 @@ dark); Lighthouse's throttled phone still shows a 66 to 73 ms
 hydration task from the shared React chunk, with or without the
 renderer.
 
+The first station's picture was redone twice and is taken: a wall
+of standing slabs of lake ice across the river with one missing,
+fallen in front of the gap, the low sun in the gap and its path on
+the water; the camera pushes to the gap. It reads at thumbnail
+size, which the heaped ridge never did. What was learned: this
+pipeline makes a few large, simple, upright solids in a clear
+silhouette well, and heaps of small tilted pieces badly, so every
+remaining scene is one readable idea in the hero's camera grammar,
+blocked in grey and checked small before any material. Measured:
+Infiniview at most 5.0 ms of GPU time a frame at a 3456 by 2234
+backing (Apple M4), 1.16 MB shipped; Lighthouse on the merged build
+100 and 100 (LCP 0.24 s and 0.91 s). Known faults kept for the
+consistency pass: its night is greyer than the hero's blue hour,
+the fallen pieces are too cleanly sawn and streak in the close-up.
+
+Arav's effort rule (Nov 19, 7:58 PM CT): helpers run on medium
+effort from here; high only for final reviews or faults that stay
+unfixed. Remaining order: the stations, the home page onto the new
+renderer, the minimal UI pass, the inner pages' performance gate,
+sound, the pull request.
+
