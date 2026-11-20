@@ -2322,6 +2322,14 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   window.addEventListener('pointerdown', onDown, { passive: true });
   document.addEventListener('pointerleave', onLeave);
 
+  let canvasVisible = false;
+  const visibility = new IntersectionObserver((entries) => {
+    const entry = entries[entries.length - 1];
+    canvasVisible = entry.isIntersecting && entry.intersectionRatio > 0;
+    if (canvasVisible) engine.touch();
+  }, { threshold: Number.EPSILON });
+  visibility.observe(canvas);
+
   const off = onFrame((now) => {
     if (!built) return;
     const raw = window.scrollY / unit;
@@ -2465,7 +2473,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       cap[3] = 1 - (span[1] - pad) / viewH;
     }
     capK = span ? Math.min(1, capK + dtCap / (mqStill.matches ? 0.001 : 0.3)) : Math.max(0, capK - dtCap / (mqStill.matches ? 0.001 : 0.25));
-    engine.frame(now, cam, aspect, { melt, day: dayNow, hour: s, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle });
+    if (canvasVisible) engine.frame(now, cam, aspect, { melt, day: dayNow, hour: s, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle });
     // The live picture stands over its still once a frame of it is drawn; the entrance begins when the dissolve is done.
     if (!pictureUp && engine.drew) {
       pictureUp = true;
@@ -2495,6 +2503,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       off();
       ro.disconnect();
       forkWatch.disconnect();
+      visibility.disconnect();
       railEl?.removeEventListener('click', onRail);
       window.clearTimeout(boxTimer);
       heroTimers.forEach((t) => window.clearTimeout(t));

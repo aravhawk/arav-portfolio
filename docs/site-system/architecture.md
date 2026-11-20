@@ -107,3 +107,6 @@ Change log: 2026-11-18 first version (orchestrator).
 The velocity texture starts at zero. Until the first pointer impulse, advection
 and pressure projection preserve that value, so the engine skips those passes.
 A newly allocated simulation window starts with a fresh zero field.
+The shared clock stops in hidden tabs. An intersection observer also gates the
+flight's draw callback when the canvas has left the viewport, and marks the
+picture dirty on re-entry so reduced-motion readers get a fresh frame.
