@@ -1,3 +1,4 @@
+import tensorpowAssets from './tensorpow-assets.json';
 import ccswitchAssets from './cc-switch-assets.json';
 import ollamaAssets from './ollama-assets.json';
 import agentbridgeAssets from './agent-bridge-assets.json';
@@ -115,6 +116,7 @@ export const scenes: readonly (Lake | Plate)[] = [
   riverPlate('agent-bridge', agentbridgeAssets),
   riverPlate('ollama', ollamaAssets),
   riverPlate('cc-switch', ccswitchAssets),
+  riverPlate('tensorpow', tensorpowAssets),
 ];
 export const starts: number[] = [];
 let length = 0;
