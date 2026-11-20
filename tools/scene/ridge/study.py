@@ -128,7 +128,7 @@ else:
     ice, snow, fault = imported.materials
     scene.world = imported.worlds[0]
     sun, front, rear = imported.lights
-    light(sun, source * 10, (0, 0, 0))
+    sun_lamp = light(sun, source * 10, (0, 0, 0))
     front_lamp = light(front, (-2.8, -5, 3.5), (0, 0, 1.1))
     rear_lamp = light(rear, (0, 2.3, 2.5), (0, 0, 0.8))
     # Broad sky radiance on the snow tongue below the words.
@@ -139,7 +139,7 @@ else:
         fill.color = (0.38, 0.61, 1.0)
     fill.shape = "DISK"
     fill.size = 23
-    light(fill, (-6, -16, 13), (-6, -13, 0))
+    fill_lamp = light(fill, (-6, -16, 13), (-6, -13, 0))
     scene.view_settings.exposure = -0.45 if args.night else -0.14
     # Align the sky's brightest direction and the real source with the cut.
     for node in scene.world.node_tree.nodes:
@@ -889,12 +889,29 @@ if not args.clay:
             solids.objects.link(obj)
     for lamp in (front_lamp, rear_lamp):
         lamp.light_linking.receiver_collection = solids
+    if args.reach == "ending":
+        # At the open sea the uninterrupted water receives broad world
+        # radiance. A concentrated direct return reads as a bright column
+        # cut off by the straight shelf. Keep the sun and fills on the ice.
+        shore = bpy.data.collections.new("Shore and valley light receivers")
+        for obj in scene.objects:
+            if obj.type == "MESH" and obj.name not in ("Open lead", "Sea beyond the shelf"):
+                shore.objects.link(obj)
+        for lamp in (sun_lamp, fill_lamp):
+            lamp.light_linking.receiver_collection = shore
+        for name in ("Open lead", "Sea beyond the shelf"):
+            solids.objects.unlink(bpy.data.objects[name])
 
+
+if not args.clay and args.night:
+    from twilight import blue_hour
+
+    horizon = math.atan2(0.65 - args.height, 65 + args.distance)
+    blue_hour(scene.world, args.reach, horizon)
+elif not args.clay:
     # A finite solar disc in the air above the far shore. Its physical angular
     # diameter survives the wide opening and remains behind the missing slab.
-    glint = bpy.data.materials.new(
-        "Low sun in ice haze" if not args.night else "Blue-hour afterglow"
-    )
+    glint = bpy.data.materials.new("Low sun in ice haze")
     glint.use_nodes = True
     tr = glint.node_tree
     tr.nodes.remove(tr.nodes["Principled BSDF"])
@@ -906,29 +923,15 @@ if not args.clay:
     ramp = tr.nodes.new("ShaderNodeValToRGB")
     profile = ramp.color_ramp
     profile.elements.remove(profile.elements[1])
-    for i, (t, value) in enumerate(
-        (
-            [
-                (0, 1),
-                (0.051, 0.99),
-                (0.060, 0.14),
-                (0.095, 0.05),
-                (0.21, 0.009),
-                (0.42, 0),
-            ]
-            if not args.night
-            else [(0, 0.87), (0.065, 0.64), (0.18, 0.17), (0.34, 0.025), (0.5, 0)]
-        )
-    ):
+    stops = [(0, 1), (0.051, 0.99), (0.060, 0.14), (0.095, 0.05), (0.21, 0.009), (0.42, 0)]
+    for i, (t, value) in enumerate(stops):
         k = profile.elements.new(t) if i else profile.elements[0]
         k.color = (value, value, value, 1)
     profile.interpolation = "EASE"
     tr.links.new(radius.outputs["Value"], ramp.inputs[0])
     emit = tr.nodes.new("ShaderNodeEmission")
-    emit.inputs["Color"].default_value = (
-        (1, 0.89, 0.69, 1) if not args.night else (0.62, 0.80, 1, 1)
-    )
-    emit.inputs["Strength"].default_value = args.flux * (1 if not args.night else 0.30)
+    emit.inputs["Color"].default_value = (1, 0.89, 0.69, 1)
+    emit.inputs["Strength"].default_value = args.flux
     mix = tr.nodes.new("ShaderNodeMixShader")
     tr.links.new(ramp.outputs[0], mix.inputs[0])
     tr.links.new(tr.nodes.new("ShaderNodeBsdfTransparent").outputs[0], mix.inputs[1])
@@ -940,8 +943,6 @@ if not args.clay:
     )
     solar = bpy.context.object
     solar.name = "Sun beyond the far bank"
-    if args.night:
-        solar.scale = (2.8, 0.43, 1)
     solar.visible_shadow = False
     solar.data.materials.append(glint)
     layers["bank"].append(solar)
