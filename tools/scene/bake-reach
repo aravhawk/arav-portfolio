@@ -26,8 +26,8 @@ for theme in day night; do
             set -- "$@" --distance 66 --height 20 --aim 3.2 --target-z .5 --lens-angle 46
         fi
         if [ "$reach" = tensorpow ]; then
-            set -- "$@" --distance 36 --aim -2.5 --target-z .15
-            if [ "$gate" = tall ]; then set -- "$@" --distance 48 --aim 2 --target-z -2.4; fi
+            set -- "$@" --distance 36 --height 12 --aim -2.5 --target-z 1.65
+            if [ "$gate" = tall ]; then set -- "$@" --distance 48 --height 16 --aim 2 --target-z -2.4; fi
         fi
         if [ "$gate" = wide ]; then
             case "$reach" in
