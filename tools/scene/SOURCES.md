@@ -34,3 +34,22 @@ The lab worker uses the versioned Basis Universal and meshoptimizer decoders fro
 The O2 wind-scoured far bank uses the recorded Snow 008 A and 009 A displacement scans. The directional glints on the lake use Ice 003 as a bump map. The pressure collars reuse the authored rafted slabs.
 
 The O2b foreground snow tongue uses the Snow 008 A scan. The solar footprint comes from the projected outlines of the eight authored slabs. A second Cycles camera records the eastern faces and background at the end of the move in each lighting setup. Both cameras also render a wide portrait background. The foreground windpack carries the recorded Snow 02 normal map in metre-scaled UVs.
+
+## Infiniview ridge studies
+
+The offline Cycles study in `ridge/study.py` uses the following CC0 inputs from the same verified cache. The pressure ridge meshes, internal air lenses, spill, foam and distant shore are authored in the script.
+
+| Source | Use |
+| --- | --- |
+| [Frozen Lake](https://polyhaven.com/a/frozen_lake) | Indirect illumination and reflections in the slab faces |
+| [Wasteland Clouds Pure Sky](https://polyhaven.com/a/wasteland_clouds_puresky) | Low-contrast cloud detail in the dawn gradient |
+| [Ice 003](https://ambientcg.com/view?id=Ice003) and [Ice 004](https://ambientcg.com/view?id=Ice004) | Surface relief of the lake, chipped edges and partially healed air lenses |
+| [Snow 02](https://polyhaven.com/a/snow_02) | Windpack grain |
+
+The Baikal and pressure-ridge photographs were visual references only. Rebuild the full-size day study from the checkout root with the existing lake bake environment.
+
+```sh
+py="$HOME/.t3/portfolio-redesign-v4/tools/bake-venv/bin/python"
+"$py" tools/scene/lake/inputs.py
+"$py" tools/scene/ridge/study.py .tools/out/o3/studies/06-dawn.png --width 2880 --samples 64
+```
