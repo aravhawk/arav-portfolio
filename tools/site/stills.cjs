@@ -38,8 +38,10 @@ const LENGTH = 2.6; // a scene's push and the whiteout after it, in screens (src
       const page = await ctx.newPage();
       await page.goto(base + '/', { waitUntil: 'load' });
       await page.waitForFunction(() => window.__lakeProof);
+      const firstHeight = await page.locator('[data-scene]').first().evaluate((el) => el.offsetHeight);
+      const screen = firstHeight / LENGTH;
       const frame = async (s) => {
-        await page.evaluate((s) => scrollTo({ top: Math.round(innerHeight * s), behavior: 'instant' }), s);
+        await page.evaluate((top) => scrollTo({ top, behavior: 'instant' }), Math.ceil(screen * s));
         await page.waitForFunction((s) => Math.abs(window.__lakeProof.state().screens - s) < 0.004, s, { timeout: 60000 });
         const url = await page.evaluate((s) => window.__lakeProof.frame(s, 0, 0), s);
         return Buffer.from(url.split(',')[1], 'base64');

@@ -91,7 +91,7 @@ export const scenes: readonly (Lake | Plate)[] = [
         focus: projections.wide.focus,
         aimPerMetre: [-0.0017, 0.0048],
         sidestep: -0.014,
-        push: 23.0,
+        push: 19.2,
         aspect: 1.6,
       },
       tall: {

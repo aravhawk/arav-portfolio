@@ -607,7 +607,7 @@ def grid(name, rows, mat):
     ob = mesh(name, [v for row in rows for v in row], faces, mat, "bank")
     for f in ob.data.polygons:
         f.use_smooth = True
-    if mat == snow:
+    if mat == snow or name == "Scalloped snow shelf":
         verts = np.array(rows, dtype=np.float32).reshape(-1, 3)
         indices = np.empty(len(ob.data.loops), np.int32)
         ob.data.loops.foreach_get("vertex_index", indices)
@@ -755,7 +755,29 @@ if args.reach:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "river"))
     from reach import landscape
     frozen = surface("Snow-dusted sealed ice", (0.36, 0.47, 0.48), .42) if args.reach == "cc-switch" else surface("Clear black lake ice", (.026, .056, .062), .23)
-    landscape(args.reach, grid, snow, water, sawn, frozen)
+    bank = snow
+    if args.night:
+        # The near shelf faces away from the eastern glow. Attenuate the
+        # snow closure in metres, keeping its scan, the water and the ice
+        # subjects independent even where they overlap in projection.
+        bank = snow.copy()
+        tree = bank.node_tree
+        output = next(n for n in tree.nodes if n.type == "OUTPUT_MATERIAL" and n.is_active_output)
+        original = output.inputs["Surface"].links[0].from_socket
+        position = tree.nodes.new("ShaderNodeNewGeometry")
+        axes = tree.nodes.new("ShaderNodeSeparateXYZ")
+        tree.links.new(position.outputs["Position"], axes.inputs[0])
+        light = tree.nodes.new("ShaderNodeMapRange")
+        light.interpolation_type = "SMOOTHERSTEP"
+        light.inputs["From Min"].default_value = 7
+        light.inputs["From Max"].default_value = 36
+        light.inputs["To Min"].default_value = 0.105
+        tree.links.new(axes.outputs["Y"], light.inputs["Value"])
+        shade = tree.nodes.new("ShaderNodeMixShader")
+        tree.links.new(light.outputs[0], shade.inputs[0])
+        tree.links.new(original, shade.inputs[2])
+        tree.links.new(shade.outputs[0], output.inputs["Surface"])
+    landscape(args.reach, grid, bank, water, sawn, frozen)
 
 if not args.clay:
     # Snow ridges beyond the eastern wall recede into the same river mist.

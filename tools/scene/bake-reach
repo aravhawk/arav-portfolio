@@ -26,6 +26,14 @@ for theme in day night; do
             set -- "$@" --distance 36 --aim -2.5 --target-z .15
             if [ "$gate" = tall ]; then set -- "$@" --distance 48 --aim 2 --target-z -2.4; fi
         fi
+        if [ "$gate" = wide ]; then
+            case "$reach" in
+                statement) set -- "$@" --target-z -1.7 ;;
+                open-source) set -- "$@" --target-z 2.0 --aim -2.9 ;;
+            esac
+        elif [ "$reach" = open-source ]; then
+            set -- "$@" --target-z -2.4 --aim -.1
+        fi
         if [ "$theme" = night ]; then set -- "$@" --night; fi
         "$py" tools/scene/ridge/study.py "$out/$reach/$gate-$theme.png" --reach "$reach" --library "$out/$theme.blend" --samples 12 --roll 0 --sun-z 2.5 "$@"
     done
