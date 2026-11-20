@@ -1,3 +1,4 @@
+import { Interests } from '@/components/flight/Interests';
 import { Statement } from '@/components/flight/Statement';
 import type { Viewport } from 'next';
 import Link from 'next/link';
@@ -9,7 +10,7 @@ import { Film } from '@/components/flight/Film';
 import { ProfileSwitch } from '@/components/home/ProfileSwitch';
 import { FlightStage } from '@/components/FlightStage';
 import { LiveNumber } from '@/components/LiveNumber';
-import { INTERESTS, PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
+import { PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
 import { KIND } from '@/content/kinds';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
@@ -417,20 +418,7 @@ export default async function Home() {
       <section className="fl-sec fl-delta" data-fl style={len(section.length)} aria-labelledby="into">
         <div className="fl-pin">
           <div className="fl-words fl-block fl-into-words" {...delta.block}>
-            <p className="fl-eyebrow" id="into" {...delta.eyebrow}>
-              Interests
-            </p>
-            <ul className="into-list title fl-into-list" {...delta.title}>
-              {INTERESTS.map((x) => (
-                <li key={x}>{x}</li>
-              ))}
-            </ul>
-            <p className="fl-line fl-into-next" {...delta.line}>
-              Next: a company, a research paper, and code in tools you open daily.
-            </p>
-            <Link className="btn fl-into-btn" href="/work" {...delta.act}>
-              All work <Arrow />
-            </Link>
+            <Interests timing={delta} />
           </div>
           <div className="fl-still fl-pool" aria-hidden="true" />
         </div>

@@ -1,3 +1,4 @@
+import { Interests } from '@/components/flight/Interests';
 import { Statement } from '@/components/flight/Statement';
 import type { Metadata } from 'next';
 import { LakeCanvas } from '../hero/LakeCanvas';
@@ -15,6 +16,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   alternates: { canonical: '/lab/flight' },
 };
+
+const visible = { 'data-at': 0, 'data-in': true };
 
 export default function FlightLab() {
   return (
@@ -78,6 +81,12 @@ export default function FlightLab() {
               <div key={scene.id} className="fl-words fl-say-words fl-view-words" data-copy={scene.id}
                 data-placement={scene.words} aria-hidden="true" inert>
                 <Statement times={[0, 0, 0, 0, 0]} visible />
+              </div>
+            );
+            if (scene.id === 'interests') return (
+              <div key={scene.id} className="fl-words fl-block fl-into-words fl-view-words" data-copy={scene.id}
+                data-placement={scene.words} data-set aria-hidden="true" inert>
+                <Interests timing={{ eyebrow: visible, title: visible, line: visible, act: visible }} />
               </div>
             );
             const p = PROJECTS.find((project) => project.slug === scene.project)!;
