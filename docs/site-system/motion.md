@@ -54,7 +54,7 @@ the first screen stands where its still was taken.
 ## UI layers and controls (the owner's standing guidance, Nov 19, 2026)
 
 These apply wherever the site has the matching element (the nav, the
-rail's labels, the archive's filter, the post's contents, the film's
+rail's labels, the post's contents, the film's
 dialog, the profile switch, buttons and links). They do not change
 the hero, the river or any 3D work.
 
