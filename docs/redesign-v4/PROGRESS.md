@@ -2069,3 +2069,31 @@ unfixed. Remaining order: the stations, the home page onto the new
 renderer, the minimal UI pass, the inner pages' performance gate,
 sound, the pull request.
 
+### All twelve scenes, and the inner pages through most of the gate (Nov 19 to 20)
+
+- **Scenes.** Two more Astra passes on medium effort added the
+  other ten: the statement (the river as one dark line), Upstream
+  (seven channels, widths by merged pull requests), Kilo Bench
+  (three slabs, heights by score), Agent Bridge (a slab bridge),
+  Open models (four pools, areas by pulls), cc-switch (a fork, one
+  channel open), TensorPoW (a four by four grid, one block lit),
+  RydAR (one tight bend), the interests (a delta) and the ending
+  (open water, one slab standing and one not yet raised). All
+  twelve run on `/lab/flight`: Lighthouse 100 and 100, LCP 0.24 s
+  and 0.91 s, no task over 50 ms in a cold scroll, 11 MB of scenes
+  streamed one ahead. Over budget: Open models at 5.6 ms of GPU
+  time a frame (budget 5), one transition at 7.05 ms (budget 7),
+  the lake's 2.44 MB (budget 1.3 a scene).
+- **Inner pages** (a Fable helper on medium): rebuilt off the old
+  engine on one stylesheet, quiet and typographic; text and mono
+  faces subset. Lighthouse on the merged build (Fable's run):
+  `/work`, `/blog` and the post 100 on phone and desktop; project
+  pages 96 to 100 on a phone and 100 on a desktop; CLS 0; script
+  per page from about 370 KB to 165 KB. Not met yet: phone LCP of
+  2.5 to 2.9 s on the project pages that open with a picture
+  (limit 2.0 s), and a 65 to 80 ms task in the framework's own
+  startup under Lighthouse's phone throttle (limit 50 ms).
+
+Next: the home page moves onto the new renderer and the old engine
+is deleted.
+
