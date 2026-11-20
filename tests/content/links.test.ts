@@ -27,6 +27,17 @@ describe('project links', () => {
     }
   });
 
+  it('Infiniview links its site, its docs and the company, as at f993068', () => {
+    expect(projectBySlug('infiniview')?.links).toEqual([
+      { label: 'infiniview.dev', href: 'https://infiniview.dev' },
+      { label: 'Docs', href: 'https://docs.infiniview.dev' },
+      { label: 'Infiniflop Labs', href: 'https://infiniflop.com' },
+    ]);
+    // The company's address is on Infiniview's page and nowhere new.
+    const others = PROJECTS.filter((p) => p.slug !== 'infiniview').flatMap((p) => p.links);
+    expect(others.some((l) => /infiniflop\.com/.test(l.href))).toBe(false);
+  });
+
   it('RydAR ships without a store link: no public App Store address is known', () => {
     const rydar = projectBySlug('rydar');
     expect(rydar?.links).toEqual([

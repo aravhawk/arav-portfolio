@@ -46,13 +46,13 @@ keeps the order its world was built in.
 
 | Project | Limits |
 | --- | --- |
-| Infiniview | No user numbers. Daytona Startup Grid acceptance (Apr 9, 2026) without a dollar figure. Link infiniview.dev and docs.infiniview.dev, never the private repository. |
+| Infiniview | No user numbers. Daytona Startup Grid acceptance (Apr 9, 2026) without a dollar figure. Link infiniview.dev, docs.infiniview.dev and, on its own page only, infiniflop.com (label "Infiniflop Labs"). Never the private repository. |
 | Upstream | Counted live. XcodeBenchmark and openbridge are counted, not described. |
 | Open models | Pulls live. For llama4, the upload date only: no claim of being first. |
 | cc-switch | Downloads live, all time since Feb 1, 2026 and the last 30 days. |
 | Kilo Bench | "Winner of the 'Kilo - For Devs, By Devs' prize". Never "1st overall". |
 | Ask Around | "Winner" of Belweave's Notify Weekend 01 on justship.dev (Nov 7, 2026). No dollar figure. |
-| RydAR | On the App Store as "RydAR: Safe Driving" since Nov 11, 2026. 2 collaborators. No competition result, no seller's name. |
+| RydAR | On the App Store as "RydAR: Safe Driving" since Nov 11, 2026. 2 collaborators. No competition result, no seller's name. No store link until the owner gives its address. |
 | Agent Bridge | "Grok Bot" and "OpenAI agent" are the only product names for the two peers. No adoption numbers. Only the GitHub repository and the launch post are linked. |
 | TensorPoW | A research implementation. No speed claim. |
 

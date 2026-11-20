@@ -76,6 +76,7 @@ const entries: Project[] = [
     links: [
       { label: 'infiniview.dev', href: 'https://infiniview.dev' },
       { label: 'Docs', href: 'https://docs.infiniview.dev' },
+      { label: 'Infiniflop Labs', href: 'https://infiniflop.com' },
     ],
     media: [
       {
