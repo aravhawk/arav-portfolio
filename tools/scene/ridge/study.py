@@ -789,6 +789,9 @@ if not args.clay:
         [[(-250, 8, -0.21), (250, 8, -0.21)], [(-250, 290, -0.21), (250, 290, -0.21)]],
         snow,
     )
+    if args.reach == "ending":
+        from ending import fade_sea
+        fade_sea(bpy.data.objects)
     # Scattered eastern light raises the foothills to the fog's local value.
     diffuse = ranges.node_tree.nodes["Principled BSDF"]
     diffuse.inputs["Emission Color"].default_value = (
