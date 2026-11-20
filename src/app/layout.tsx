@@ -37,13 +37,22 @@ const accent = localFont({
   preload: false,
   fallback: ['Georgia', 'serif'],
 });
-/* The name in ice is drawn on a canvas from this face. A static instance
-   (weight 800) so the canvas and the DOM agree in every browser. */
+/* The name's face: a static instance (weight 800) of the display face.
+   Only the home page's heading is set in it, and that heading is clipped
+   to a pixel wherever the picture is drawn (it shows in print and in
+   forced colours). So it is not preloaded: preloaded from here it was
+   fetched at high priority by every page on the site, 31 kB that no inner
+   page sets a letter in. A browser now fetches it only where the heading
+   is really shown. (The name in the picture is cut from the display
+   face's own heaviest weight, not from this file: see buildName in
+   flight.ts. And a preload cannot be kept for one route: the font
+   manifest lists a preloaded file for all of them.) */
 const ice = localFont({
   src: '../fonts/TASAOrbiter-Ice.woff2',
   variable: '--f-ice',
   weight: '800',
   display: 'swap',
+  preload: false,
   fallback: ['system-ui', 'Arial', 'sans-serif'],
 });
 
