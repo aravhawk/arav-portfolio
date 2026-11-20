@@ -1998,3 +1998,14 @@ cracks near the end of the move are straight polygon lines; the sun
 is a hard disc. The home page still runs the old scene (phone 97,
 with 177 ms of blocking time).
 
+The fix pass that followed (O2c) is in: the surfaces the move
+reveals have their own bakes, so nothing stretches at any scroll
+position on either profile; the snow's margin is scalloped; the
+light through the slabs is soft; the sun is a soft source; and the
+phone has its own composition, the two words on two rows of slabs.
+Lighthouse on the merged build stays 100 and 100 for the lab route
+(LCP 0.24 s and 0.90 s). The dearest frame of the move costs 4.2 ms
+of GPU time at a 3456 by 2234 backing on the M4 (budget 5 ms).
+Largest remaining gap against the reference: depth inside the slabs
+at close range.
+
