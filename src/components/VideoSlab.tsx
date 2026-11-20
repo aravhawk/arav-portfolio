@@ -6,12 +6,17 @@ import { haptic } from '@/lib/haptics';
 
 /**
  * A video on a dry slab with one control of our own. It never plays on its
- * own, it is not fetched until asked for, and it stops when it leaves the
- * view.
+ * own, the film is not fetched until asked for, and it stops when it
+ * leaves the view. Its poster is not fetched either until the slab is
+ * within a screen of the viewport: a `poster` in the markup is fetched at
+ * once, wherever on the page the video stands, and beside the page's own
+ * first picture. The slab's box is reserved by the video's width and height
+ * until then, so nothing moves when the poster arrives.
  */
 export function VideoSlab({ media }: { media: ProjectMedia }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
+  const [near, setNear] = useState(false);
 
   useEffect(() => {
     const v = ref.current;
@@ -20,12 +25,22 @@ export function VideoSlab({ media }: { media: ProjectMedia }) {
       if (!e.some((x) => x.isIntersecting) && !v.paused) v.pause();
     });
     io.observe(v);
+    const close = new IntersectionObserver(
+      (e) => {
+        if (!e.some((x) => x.isIntersecting)) return;
+        setNear(true);
+        close.disconnect();
+      },
+      { rootMargin: '100% 0px' },
+    );
+    close.observe(v);
     const on = () => setPlaying(true);
     const off = () => setPlaying(false);
     v.addEventListener('play', on);
     v.addEventListener('pause', off);
     return () => {
       io.disconnect();
+      close.disconnect();
       v.removeEventListener('play', on);
       v.removeEventListener('pause', off);
     };
@@ -44,8 +59,8 @@ export function VideoSlab({ media }: { media: ProjectMedia }) {
       <video
         ref={ref}
         className="slab-media"
-        src={media.src}
-        poster={media.poster}
+        src={near ? media.src : undefined}
+        poster={near ? media.poster : undefined}
         width={media.w}
         height={media.h}
         muted
