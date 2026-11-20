@@ -51,5 +51,5 @@ The Baikal and pressure-ridge photographs were visual references only. Rebuild t
 ```sh
 py="$HOME/.t3/portfolio-redesign-v4/tools/bake-venv/bin/python"
 "$py" tools/scene/lake/inputs.py
-"$py" tools/scene/ridge/study.py .tools/out/o3/studies/06-dawn.png --width 2880 --samples 64
+"$py" tools/scene/ridge/study.py .tools/out/o3/studies/07-current.png --width 2880 --samples 48
 ```

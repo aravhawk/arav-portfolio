@@ -253,29 +253,62 @@ def grid(label, rows, mat):
         p.use_smooth = True
 
 
-grid(
-    "Ice bed",
-    [[(-150.0, y, 0.037), (150.0, y, 0.037)] for y in (-90.0, 120.0)],
-    bed if not args.clay else clay,
-)
+def channel_width(y):
+    return (
+        1.05
+        + 0.045 * max(0, -y)
+        + 0.17 * math.sin(y * 0.86)
+        + 0.055 * math.cos(y * 3.16)
+    )
+
+
+# The water runs beneath the broken shelf. Geometry terminates at the
+# bank on either side, leaving the centre open all the way to the sill.
+for side in (-1, 1):
+    shelf = []
+    for i in range(600):
+        y = -35 + i * 0.16
+        edge = channel(y) + side * channel_width(y)
+        row = [
+            (edge - side * 0.025, y, -0.04),
+            (edge, y, 0.048),
+            (edge + side * 0.082, y, 0.073),
+            (edge + side * 0.18, y, 0.047),
+            (side * 150, y, 0.037),
+        ]
+        shelf.append(row if side == 1 else row[::-1])
+    grid("Broken river pane", shelf, clay if args.clay else bed)
+
+
+def lip(x):
+    return 2.15 + 0.19 * math.sin(x * 6.1) + 0.11 * math.sin(x * 11.2)
+
+
+def wet_surface(x, y, u):
+    crest = 0.23 / (1 + math.exp(max(-40, min(40, -(y - lip(x)) * 11))))
+    downstream = max(0, lip(x) - y)
+    waves = (
+        0.013
+        * math.cos(16 * downstream + 2.9 * math.sin(x * 5.1 + y * 0.58))
+        * math.exp(-0.19 * downstream)
+    )
+    eddy = (
+        0.008
+        * math.sin(7 * y + 3 * math.sin(x * 3.3 + y * 0.71))
+        * math.cos(x * 8.1 - y * 0.98)
+    )
+    return -0.014 + crest + waves + eddy + 0.012 * (1 - u * u)
+
+
 rows = []
 for k in range(451):
     y = -29 + k * 0.095
-    spread = 1.05 + 0.045 * max(0, -y) + 0.17 * math.sin(y * 0.86)
+    spread = channel_width(y) + 0.07
     row = []
     for j in range(37):
         u = j / 18 - 1
         x = channel(y) + u * spread
-        z = 0.034 + 0.28 / (
-            1 + math.exp(max(-40, min(40, -(y - 2.15 - 0.09 * math.sin(x * 5)) * 14)))
-        )
-        z += (
-            0.004 * math.sin(y * 31 + math.sin(y * 1.9 + x * 14) + math.cos(x * 3.2))
-            + 0.018 * (1 - u**6)
-            + 0.007
-            * math.sin(y * 17 + u * u * 5 + math.sin(3 * u + y * 0.74))
-            * math.cos(2.9 * u + y * 0.4)
-        )
+        z = wet_surface(x, y, u)
         row.append((x, y, z))
     rows.append(row)
 grid("Spill over submerged sill", rows, water if not args.clay else clay)
@@ -336,8 +369,8 @@ tree.links.new(distance.outputs["Value"], ramp.inputs[0])
 clouds = tree.nodes.new("ShaderNodeTexEnvironment")
 clouds.image = bpy.data.images.load(str(cache / "wasteland_clouds_puresky_2k.hdr"))
 veil = tree.nodes.new("ShaderNodeMixRGB")
-veil.blend_type = "SOFT_LIGHT"
-veil.inputs[0].default_value = 0.25
+veil.blend_type = "MIX"
+veil.inputs[0].default_value = 0.055
 tree.links.new(ramp.outputs[0], veil.inputs[1])
 tree.links.new(clouds.outputs[0], veil.inputs[2])
 tree.links.new(veil.outputs[0], sky.inputs[0])
@@ -410,19 +443,26 @@ mist.data.materials.append(fog)
 # Only the narrow crest and the lower plunge carry air. The broken
 # trains have individual lengths and phase instead of parallel white bars.
 foam = material("Air at the sill", (0.75, 0.82, 0.81), 0.46, 0.23)
-for k in range(420):
-    x = 2.1 + veils.uniform(-0.94, 0.94)
-    y = 1.96 + veils.gauss(0, 0.048) + 0.09 * math.sin(x * 5)
-    z = 0.034 + 0.28 / (1 + math.exp(-(y - 2.15 - 0.09 * math.sin(x * 5)) * 14)) + 0.024
-    length = veils.uniform(0.018, 0.095)
-    w = veils.uniform(0.002, 0.011)
+for k in range(950):
+    x = channel(2) + veils.uniform(-0.96, 0.96)
+    y = lip(x) - abs(veils.gauss(0.16, 0.17)) - 0.035
+    length = veils.uniform(0.005, 0.065)
+    width = veils.uniform(0.002, 0.009)
+    ring = [
+        (x - width, y),
+        (x + 0.004, y - length),
+        (x + width, y),
+        (x, y + length * 0.4),
+    ]
     mesh(
-        "Air train",
+        "Entrained air",
         [
-            (x - w, y, z),
-            (x, y - length, z - 0.009),
-            (x + w, y, z),
-            (x, y + length * 0.65, z + 0.011),
+            (
+                a,
+                b,
+                wet_surface(a, b, (a - channel(b)) / (channel_width(b) + 0.07)) + 0.003,
+            )
+            for a, b in ring
         ],
         [(0, 1, 2, 3)],
         foam,
