@@ -16,6 +16,13 @@ Notes:
   fonts with `fonttools` (`varLib.instancer` and `subset`). The OFL allows
   modified versions, and none of the three families declares a Reserved
   Font Name, so the cuts keep the family names.
+- `src/fonts/TASAOrbiter-Latin.woff2` and `src/fonts/SplineSansMono-Latin.woff2`
+  are Latin cuts of the two variable fonts (K3, 2026-11-20), made with
+  `fonttools subset` by `scripts/font-cuts.sh`: the same outlines, metrics
+  and weight axis, fewer characters, and without the stylistic sets the
+  site never asks for. Pages load these. The whole fonts stay beside them
+  and are fetched only for a character a cut leaves out
+  (`src/app/globals.css`).
 - The static `.ttf` files exist because `next/og` cannot read woff2 or
   variable fonts; they are used only to draw the Open Graph cards.
 - Newsreader is an accent: it sets two sentences on the site. It is one

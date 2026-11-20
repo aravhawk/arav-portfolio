@@ -11,20 +11,30 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL, THEME_COLOR } from
 import './globals.css';
 
 /* Type: see docs/redesign-v4/typography.md and font-licenses.md.
-   All faces are SIL OFL 1.1 and self hosted from src/fonts. */
+   All faces are SIL OFL 1.1 and self hosted from src/fonts.
+
+   The display face and the mono are each two files. The one named here is
+   the Latin cut: every character the site sets today, with the whole
+   weight axis and the same metrics, about 37 kB each. The whole font
+   (`-VF`, 53 and 59 kB) is declared in globals.css as a second face with
+   a `unicode-range` of everything the cut leaves out, so a browser fetches
+   it only when a page really sets such a character (a name with a caron,
+   say), and the page is still set in the same face. `scripts/font-cuts.sh`
+   makes the cuts; `tests/content/fonts.test.ts` fails if the site's own
+   text uses a character outside them. */
 const orbiter = localFont({
-  src: '../fonts/TASAOrbiter-VF.woff2',
+  src: '../fonts/TASAOrbiter-Latin.woff2',
   variable: '--f-orbiter',
   weight: '400 800',
   display: 'swap',
   fallback: ['system-ui', 'Arial', 'sans-serif'],
 });
+/* (Preloaded: the first screen of every inner page sets its label or its way back in it.) */
 const mono = localFont({
-  src: '../fonts/SplineSansMono-VF.woff2',
+  src: '../fonts/SplineSansMono-Latin.woff2',
   variable: '--f-spline',
   weight: '300 700',
   display: 'swap',
-  preload: false,
   fallback: ['ui-monospace', 'Menlo', 'monospace'],
 });
 /* The serif is an accent: the two sentences in his own voice and nothing

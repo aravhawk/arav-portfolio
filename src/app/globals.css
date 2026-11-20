@@ -93,10 +93,30 @@
   color-scheme: dark;
 }
 
+/* The whole of each variable font, for the characters its Latin cut (layout.tsx) leaves out. Each stands first in
+   its stack, and its `unicode-range` is exactly what the cut does not hold: so it is fetched only by a page that
+   sets such a character, and used for nothing else. */
+@font-face {
+  font-family: 'Orbiter Wide';
+  src: url('../fonts/TASAOrbiter-VF.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02D9, U+02DB, U+02DD-0303, U+0305-0307, U+0309-0328, U+032A-1FFF, U+20C0-20FF, U+2150-218F, U+2400-259F, U+27C0-FAFF, U+FB07-FEFE, U+FF00-FFFC;
+}
+@font-face {
+  font-family: 'Spline Wide';
+  src: url('../fonts/SplineSansMono-VF.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02D9, U+02DB, U+02DD-0303, U+0305-0307, U+0309-0328, U+032A-1FFF, U+20C0-20FF, U+2150-218F, U+2400-259F, U+27C0-FAFF, U+FB07-FEFE, U+FF00-FFFC;
+}
+
 :root {
-  --f-display: var(--f-orbiter);
-  --f-text: var(--f-orbiter);
-  --f-mono: var(--f-spline);
+  --f-display: 'Orbiter Wide', var(--f-orbiter);
+  --f-text: 'Orbiter Wide', var(--f-orbiter);
+  --f-mono: 'Spline Wide', var(--f-spline);
   --font-accent: var(--f-accent), Georgia, 'Times New Roman', serif;
 }
 
