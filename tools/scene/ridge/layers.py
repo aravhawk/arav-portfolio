@@ -1,0 +1,210 @@
+"""Pack three independently exposed Cycles projections and register their cameras."""
+
+import argparse
+import json
+from pathlib import Path
+
+import bpy
+import numpy as np
+import PyOpenColorIO as ocio
+from PIL import Image, ImageOps
+from scipy.ndimage import distance_transform_edt
+
+parser = argparse.ArgumentParser()
+parser.add_argument("folder", type=Path)
+parser.add_argument("output", type=Path)
+parser.add_argument("--quality", type=int, default=68)
+args = parser.parse_args()
+config = ocio.Config.CreateFromFile(
+    bpy.utils.resource_path("LOCAL") + "/datafiles/colormanagement/config.ocio"
+)
+grade = ocio.DisplayViewTransform(src="Linear Rec.709", display="sRGB", view="AgX")
+grade.setDirection(ocio.TRANSFORM_DIR_INVERSE)
+inverse = config.getProcessor(grade).getDefaultCPUProcessor()
+cache = Path.home() / ".t3/portfolio-redesign-v4/assets-src"
+registry = {}
+layers = ("bank", "jaw", "near")
+
+
+def rounded(x):
+    return (x + 7) // 8 * 8
+
+
+def read(gate, theme, suffix=""):
+    with Image.open(args.folder / f"{gate}-{theme}{suffix}.png") as image:
+        return image.convert("RGBA")
+
+
+def layout(gate):
+    size = read(gate, "day", "-bank").size
+    w, h = size
+    crops = [(0, 0, w, h)]
+    for layer in layers[1:]:
+        boxes = [
+            read(gate, t, "-" + layer).getchannel("A").getbbox()
+            for t in ("day", "night")
+        ]
+        x, y, r, b = (
+            min(q[0] for q in boxes),
+            min(q[1] for q in boxes),
+            max(q[2] for q in boxes),
+            max(q[3] for q in boxes),
+        )
+        crops.append((max(0, x - 7), max(0, y - 7), min(w, r + 7), min(h, b + 7)))
+    slots = [(0, 0)]
+    x, y, row = 0, rounded(h) + 8, 0
+    for left, t, r, b in crops[1:]:
+        if x + r - left > w:
+            x, y, row = 0, y + row + 8, 0
+        slots.append((x, y))
+        row = max(row, rounded(b - t))
+        x += rounded(r - left) + 8
+    return size, crops, slots, (w, rounded(y + row))
+
+
+def broken_reflection(rgb, wet, projection):
+    # Resolve the highlights into capillary facets in metre coordinates.
+    # The beauty supplies their colour, extent and incident sunlight.
+    rows, cols = np.nonzero(np.asarray(wet) > 127)
+    h, w = rgb.shape[:2]
+    u, v = cols / w, rows / h
+    a, b, c = projection["ground"]
+    depth = 1 / np.maximum(0.01, a * u + b * v + c)
+    across = (u - projection["focus"][0]) * depth * 0.67
+    scan = (
+        np.asarray(
+            Image.open(cache / "snow_02_nor_gl_2k.jpg").getchannel("G"), np.float32
+        )
+        / 255
+    )
+    iy = ((depth * 1.13 + across * 0.19) % 1 * 2047).astype(int)
+    ix = ((across * 1.4 - depth * 0.05) % 1 * 2047).astype(int)
+    facets = np.clip((scan[iy, ix] - 0.44) * 7, 0, 1) ** 2
+    # The river bends right while the reflected sun follows its azimuth.
+    # Only the part of the ripples that crosses that path catches the sky.
+    downstream = np.maximum(0, v - projection["focus"][1])
+    axis = projection["focus"][0] + 0.22 * downstream
+    solar = np.exp(-(((u - axis) / (0.055 + 0.095 * downstream)) ** 2))
+    facets *= solar
+    tone = rgb[rows, cols]
+    reach = np.clip((v - projection["focus"][1] - 0.09) * 6.5, 0, 1)
+    base = np.array([0.125, 0.198, 0.211], np.float32)
+    rgb[rows, cols] = (
+        tone - np.maximum(0, tone - base) * (0.94 * reach * (1 - facets))[:, None]
+    )
+
+
+def pack(gate, theme, size, crops, slots, atlas):
+    w, h = size
+    photo = read(gate, theme).convert("RGB")
+    coverage = read(gate, theme, "-near").getchannel("A")
+    wet = read(gate, theme, "-water-0001").getchannel("R")
+    # Maximum safe advection at the fixed banks. Protect both shores and
+    # the overhanging ice from sampling a moving copy of the snow.
+    edge = distance_transform_edt(np.asarray(wet) > 127)
+    river = Image.fromarray(np.uint8(255 * np.clip(edge / (0.027 * max(w, h)), 0, 1)))
+    luminance = Image.new("L", atlas)
+    # Keep the slowly varying colour independent of silhouette coverage.
+    # A separate, full-resolution matte is shared between both lighting bakes.
+    survey = Image.new("RGB", atlas, (128, 128, 0))
+    for name, box, xy in zip(layers, crops, slots):
+        image = read(gate, theme, "-" + name).crop(box)
+        alpha = np.asarray(image.getchannel("A"), np.float32) / 255
+        rgb = np.asarray(image.convert("RGB"), np.float32) / 255
+        # Interior pixels visible from the opening camera keep its complete
+        # physical radiance, including sky refracted through thin cut edges.
+        if name != "bank":
+            visible = alpha > 0.985
+            if name == "jaw":
+                visible &= np.asarray(coverage.crop(box)) < 3
+            rgb[visible] = np.asarray(photo.crop(box), np.float32)[visible] / 255
+            # Supply real edge colour outside the cut before either texture is
+            # filtered. Transparent black would otherwise produce a cyan halo.
+            distance, nearest = distance_transform_edt(
+                alpha < 0.98, return_indices=True
+            )
+            fringe = (alpha < 0.98) & (distance < 32)
+            rgb[fringe] = rgb[nearest[0][fringe], nearest[1][fringe]]
+        if name == "bank":
+            broken_reflection(rgb, wet, registry[gate])
+        if name == "bank" and theme == "night":
+            # The blue-hour return from the bank faces away from the horizon.
+            # Darken the nearby snow down to the hero's lee-side exposure.
+            field = np.linspace(0, 1, h, dtype=np.float32)[:, None]
+            weight = np.clip((field - 0.48) / 0.28, 0, 1)
+            weight = weight * weight * (3 - 2 * weight)
+            water = np.asarray(wet, np.float32) / 255
+            rgb *= 1 - 0.57 * (weight * (1 - water))[:, :, None]
+        inverse.applyRGB(rgb)
+        field = np.log2(1 + 1024 * np.maximum(0, rgb)) / 14
+        green = field[:, :, 1]
+        y = 0.25 * field[:, :, 0] + 0.5 * green + 0.25 * field[:, :, 2]
+        high = np.uint8(np.clip(np.rint(255 * y), 0, 255))
+        luminance.paste(Image.fromarray(high), xy)
+        chroma = [
+            np.uint8(np.clip(np.rint(128 + 1320 * (field[:, :, k] - green)), 0, 255))
+            for k in (0, 2)
+        ]
+        third = river.crop(box) if name == "bank" else Image.new("L", image.size)
+        channels = Image.merge(
+            "RGB", (Image.fromarray(chroma[0]), Image.fromarray(chroma[1]), third)
+        )
+        survey.paste(channels, xy)
+    stem = args.output / f"{gate}-{theme}"
+    luminance.save(stem.with_suffix(".avif"), quality=args.quality, speed=6)
+    width = min(560 if gate == "wide" else 256, w)
+    survey = survey.resize(
+        (width, round(atlas[1] * width / w)), Image.Resampling.LANCZOS
+    )
+    # Four-code spacing on the opponent axes has a maximum error of
+    # 2/1320 in log radiance. Retain native coverage along the silhouettes.
+    channels = survey.split()
+    palette = [int(np.clip(128 + 4 * round((v - 128) / 4), 0, 255)) for v in range(256)]
+    survey = Image.merge("RGB", [ch.point(palette) for ch in channels])
+    survey.save(
+        stem.with_name(stem.name + "-survey.webp"), lossless=True, exact=True, method=5
+    )
+
+
+for gate in ("wide", "tall"):
+    size, crops, slots, atlas = layout(gate)
+    w, h = size
+    data = json.loads((args.folder / f"{gate}-day.json").read_text())
+    data["scale"] = [w / atlas[0], h / atlas[1]]
+    for name, box, xy in zip(layers[1:], crops[1:], slots[1:]):
+        left, t, r, b = box
+        data[name] = {
+            "plane": data[name],
+            "bounds": [left / w, t / h, r / w, b / h],
+            "offset": [(xy[0] - left) / atlas[0], (xy[1] - t) / atlas[1]],
+        }
+    matte = Image.new("L", (atlas[0], atlas[1] - h))
+    for name, box, xy in zip(layers[1:], crops[1:], slots[1:]):
+        alpha = read(gate, "day", "-" + name).getchannel("A").crop(box)
+        matte.paste(alpha, (xy[0], xy[1] - h))
+    matte.save(args.output / f"{gate}-silhouettes.webp", lossless=True, method=5)
+    registry[gate] = data
+    for theme in ("day", "night"):
+        pack(gate, theme, size, crops, slots, atlas)
+
+# Continuous, tileable detail from the same CC0 wind-scoured snow as the
+# bank. Two wind speeds advect it in the steam and in the spindrift.
+wind = ImageOps.autocontrast(
+    Image.open(cache / "snow_02_disp_2k.jpg")
+    .convert("L")
+    .resize((192, 192), Image.Resampling.LANCZOS)
+)
+wind.save(args.output / "wind.webp", quality=89, method=6)
+target = Path("src/scene/flight")
+(target / "ridge-projections.json").write_text(json.dumps(registry, indent=2) + "\n")
+(target / "ridge-assets.json").write_text(
+    json.dumps(
+        {
+            p.name: p.stat().st_size
+            for p in sorted(args.output.iterdir())
+            if p.is_file()
+        },
+        indent=2,
+    )
+    + "\n"
+)

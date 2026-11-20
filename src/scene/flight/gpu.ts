@@ -1,6 +1,7 @@
 import { LakeGPU, nextFrame, rest, type Pose } from '../lake/gpu';
 import { mount } from '../lake/live';
 import { fullVertex } from '../lake/shaders';
+import { ridgeFragment, ridgeVertex } from './ridge';
 import { plateFragment } from './plate';
 import { flightLength, position, scenes, starts, type Gate, type Plate, type Theme } from './scenes';
 
@@ -61,7 +62,7 @@ class FlightGPU extends LakeGPU {
     for (const r of this.resident.values()) if (!r.ready) r.worker.postMessage({ paused: document.hidden });
   };
   protected extraPrograms() {
-    return { plate: [fullVertex, plateFragment] };
+    return { plate: [fullVertex, plateFragment], ridge: [ridgeVertex, ridgeFragment] };
   }
   async load() {
     this.lakePending = true;
@@ -111,7 +112,9 @@ class FlightGPU extends LakeGPU {
     worker.onerror = (e) => entry.queue.push({ kind: 'error', message: e.message });
     const field = scene.fields[this.gate];
     performance.mark(scene.id + ':request');
-    worker.postMessage({ urls: field[this.theme].map((path) => scene.root + path) });
+    const files = [...field[this.theme]];
+    if (scene.layerFields) files.push(scene.layerFields.wind, scene.layerFields.silhouettes[this.gate]);
+    worker.postMessage({ urls: files.map((path) => scene.root + path) });
   }
   private releaseScene(index: number) {
     if (index === 0) {
@@ -161,10 +164,10 @@ class FlightGPU extends LakeGPU {
         const tex = gl.createTexture()!;
         r.textures[msg.slot] = tex;
         gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, msg.slot === 0 ? gl.R8 : gl.RGBA8, msg.width, msg.height);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, msg.slot === 1 ? gl.RGBA8 : gl.R8, msg.width, msg.height);
         this.filter(gl.TEXTURE_2D, false);
-        r.bytes += msg.width * msg.height * (msg.slot === 0 ? 1 : 4);
-        this.assetMemory += msg.width * msg.height * (msg.slot === 0 ? 1 : 4);
+        r.bytes += msg.width * msg.height * (msg.slot === 1 ? 4 : 1);
+        this.assetMemory += msg.width * msg.height * (msg.slot === 1 ? 4 : 1);
       } else if (msg.kind === 'strip') {
         gl.bindTexture(gl.TEXTURE_2D, r.textures[msg.slot]);
         gl.texSubImage2D(
@@ -172,7 +175,7 @@ class FlightGPU extends LakeGPU {
           0,
           0,
           msg.y,
-          msg.slot === 0 ? gl.RED : gl.RGBA,
+          msg.slot === 1 ? gl.RGBA : gl.RED,
           gl.UNSIGNED_BYTE,
           msg.strip,
         );
@@ -231,7 +234,8 @@ class FlightGPU extends LakeGPU {
     const scene = scenes[index] as Plate,
       cam = scene.cameras[this.gate];
     const ratio = this.canvas.width / this.canvas.height;
-    const program = this.programs.plate,
+    const projection = cam.projection;
+    const program = projection ? this.programs.ridge : this.programs.plate,
       u = program.u;
     gl.useProgram(program.id);
     gl.disable(gl.DEPTH_TEST);
@@ -243,9 +247,23 @@ class FlightGPU extends LakeGPU {
     gl.bindVertexArray(this.empty);
     this.texture(u.plate, 0, textures[0]);
     this.texture(u.survey, 1, textures[1]);
+    if (projection) {
+      gl.uniform3f(u.track, cam.aimPerMetre[0], cam.aimPerMetre[1], cam.sidestep);
+      this.texture(u.wind, 2, textures[2]);
+      this.texture(u.silhouettes, 3, textures[3]);
+      gl.uniform2fv(u.atlasScale, projection.scale);
+      gl.uniform3fv(u.floorPlane, projection.ground);
+      gl.uniform3fv(u.nearPlane, projection.near.plane);
+      gl.uniform3fv(u.jawPlane, projection.jaw.plane);
+      gl.uniform4fv(u.nearBounds, projection.near.bounds);
+      gl.uniform4fv(u.jawBounds, projection.jaw.bounds);
+      gl.uniform2fv(u.nearOffset, projection.near.offset);
+      gl.uniform2fv(u.jawOffset, projection.jaw.offset);
+    }
     gl.uniform2f(u.cover, 0.987 * Math.min(1, ratio / cam.aspect), 0.987 * Math.min(1, cam.aspect / ratio));
     gl.uniform2fv(u.focus, cam.focus);
-    gl.uniform2f(u.lean, pose.x * 0.025, pose.y * 0.026);
+    const lean = projection ? 0.22 : 0.025;
+    gl.uniform2f(u.lean, pose.x * lean, pose.y * lean * 1.04);
     gl.uniform1f(u.push, this.reduced ? 0 : pose.progress * cam.push);
     gl.uniform1f(u.time, pose.t);
     gl.uniform1f(u.transition, blend);
@@ -265,8 +283,8 @@ class FlightGPU extends LakeGPU {
       this.filter(gl.TEXTURE_2D, false);
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.tiny);
       gl.viewport(0, 0, 2, 2);
-      this.plate(1, rest, 1, [stub, stub]);
-      this.plate(1, rest, 0.5, [stub, stub]);
+      this.plate(1, rest, 1, [stub, stub, stub, stub]);
+      this.plate(1, rest, 0.5, [stub, stub, stub, stub]);
       gl.deleteTexture(stub);
       this.primed = true;
     }

@@ -1,9 +1,19 @@
 import lakeAssets from './lake-assets.json';
 import ridgeAssets from './ridge-assets.json';
+import projections from './ridge-projections.json';
 
 export type Gate = 'wide' | 'tall';
 export type Theme = 'day' | 'night';
-type Camera = { focus: [number, number]; push: number; aspect: number };
+type Projection = typeof projections.wide;
+type Camera = {
+  focus: number[];
+  /** Metres for surveyed planes, fractional travel for a single depth field. */
+  push: number;
+  aspect: number;
+} & (
+  | { projection?: undefined }
+  | { projection: Projection; aimPerMetre: [number, number]; sidestep: number }
+);
 type Definition = {
   id: string;
   screens: number;
@@ -17,6 +27,7 @@ type Lake = Definition & { kind: 'lake'; cameras: 'mesh.json'; themes: readonly 
 export type Plate = Definition & {
   kind: 'plate';
   project: string;
+  layerFields?: { wind: string; silhouettes: Record<Gate, string> };
   cameras: Record<Gate, Camera>;
   fields: Record<Gate, Record<Theme, readonly [string, string]>>;
 };
@@ -37,14 +48,32 @@ export const scenes: readonly (Lake | Plate)[] = [
     id: 'infiniview',
     kind: 'plate',
     project: 'infiniview',
+    layerFields: {
+      wind: 'wind.webp',
+      silhouettes: { wide: 'wide-silhouettes.webp', tall: 'tall-silhouettes.webp' },
+    },
     root: '/scene/ridge/',
     assets: ridgeAssets,
     words: 'lower-left',
     screens: 2,
     exit: 0.6,
     cameras: {
-      wide: { focus: [0.65, 0.54], push: 0.22, aspect: 1.6 },
-      tall: { focus: [0.51, 0.43], push: 0.17, aspect: 390 / 844 },
+      wide: {
+        projection: projections.wide,
+        focus: projections.wide.focus,
+        aimPerMetre: [0, 0.075],
+        sidestep: 0,
+        push: 3.15,
+        aspect: 1.6,
+      },
+      tall: {
+        projection: projections.tall,
+        focus: projections.tall.focus,
+        aimPerMetre: [-0.028, 0.095],
+        sidestep: -0.12,
+        push: 1.95,
+        aspect: 390 / 844,
+      },
     },
     fields: {
       wide: {

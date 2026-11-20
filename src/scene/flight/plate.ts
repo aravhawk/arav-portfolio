@@ -1,3 +1,18 @@
+export const whiteoutField = `float smoothNoise(vec2 p){
+  vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  vec4 h=fract(sin(dot(i,vec2(12.9898,78.233))+vec4(0.,12.9898,78.233,91.2228))*43758.54);
+  return mix(mix(h.x,h.y,f.x),mix(h.z,h.w,f.x),f.y);
+}
+vec4 whiteout(vec2 uv,float time,float transition,float night,out float reveal){
+    vec2 wind=vec2(uv.x+uv.y*.32-time*.045,uv.y);
+    float plume=.7*smoothNoise(wind*vec2(3.,16.))+.3*smoothNoise(wind*vec2(10.,69.));
+    float t=clamp(transition+(plume-.5)*.24*sin(transition*3.14159),0.,1.);
+    vec3 fog=mix(vec3(.674,.678,.682),vec3(.53,.545,.563),night)
+             +.018*(uv.y-.5)+.019*(plume-.5);
+    reveal=smoothstep(.52,1.,t);
+    return vec4(fog,smoothstep(0.,.48,t));
+}`;
+
 // The plate and water share the authored projection. Red stores inverse
 // distance, green isolates liquid and foam. Offsets taper at the ice foot.
 export const plateFragment = `#version 300 es
@@ -7,11 +22,7 @@ out vec4 color;
 uniform sampler2D plate,survey;
 uniform vec2 cover,focus,lean;
 uniform float push,time,transition,night,reduce;
-float smoothNoise(vec2 p){
-  vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
-  vec4 h=fract(sin(dot(i,vec2(12.9898,78.233))+vec4(0.,12.9898,78.233,91.2228))*43758.54);
-  return mix(mix(h.x,h.y,f.x),mix(h.z,h.w,f.x),f.y);
-}
+${whiteoutField}
 void main(){
   vec2 p=(vec2(uv.x,1.-uv.y)-.5)*cover+.5;
   float z=texture(survey,p).r;
@@ -29,13 +40,9 @@ void main(){
   vec2 mist=(p-focus)*vec2(10.,13.);
   c+=.005*(1.-reduce)*exp(-dot(mist,mist))*sin(13.*p.x+9.*p.y-time*.32);
   if(transition<1. && reduce<.5){
-    vec2 wind=vec2(uv.x+uv.y*.32-time*.045,uv.y);
-    float plume=.7*smoothNoise(wind*vec2(3.,16.))+.3*smoothNoise(wind*vec2(10.,69.));
-    float t=clamp(transition+(plume-.5)*.24*sin(transition*3.14159),0.,1.);
-    vec3 fog=mix(vec3(.674,.678,.682),vec3(.53,.545,.563),night)
-             +.018*(uv.y-.5)+.019*(plume-.5);
-    c=mix(fog,c,smoothstep(.52,1.,t));
-    color=vec4(c,smoothstep(0.,.48,t));return;
+    float reveal;
+    vec4 gust=whiteout(uv,time,transition,night,reveal);
+    color=vec4(mix(gust.rgb,c,reveal),gust.a);return;
   }
   color=vec4(c,transition);
 }`;

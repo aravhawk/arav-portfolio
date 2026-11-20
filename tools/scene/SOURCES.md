@@ -54,8 +54,10 @@ py="$HOME/.t3/portfolio-redesign-v4/tools/bake-venv/bin/python"
 "$py" tools/scene/ridge/study.py .tools/out/o3/studies/07-current.png --width 2880 --samples 48
 ```
 
-The flight's working Infiniview plates reuse the same CC0 inputs. Run
-`tools/scene/bake-ridge` to render wide and tall cameras at first light and
-blue hour, record inverse depth and liquid coverage, encode log-radiance
-AVIF and lossless survey textures, and regenerate the registry byte ledger.
-Each plate is decoded through the lake's own 32³ display LUT at runtime.
+The O3b bake at `8d366e8` recorded inverse depth and liquid coverage at the two camera gates. The station uses the lake’s 32³ display LUT.
+
+### O3c layer bake
+
+`tools/scene/bake-ridge` builds a day and a blue-hour material library from the final lake authoring pass. The ridge uses those exact slab, fracture, sun, sky and bounce-light datablocks. Separate deposits add frost to exposed plate faces. The snow uses the hero's metre-scale Snow 02 normal mapping. The wind field is derived from the [Poly Haven Snow 02 displacement scan](https://polyhaven.com/a/snow_02), and the bank relief uses the [ambientCG Snow 009 A displacement scan](https://ambientcg.com/view?id=Snow009A). Both are CC0.
+
+Cycles renders the complete view, the bank with both jaws hidden, and two isolated slab groups at each camera and light setting. The packed native luminance atlas, companion colour and river-coverage atlas, native silhouette matte shared across lighting states, and wind sample are served locally. The bake also regenerates the byte ledger and the projections for the two lips and the snow plane. Render evidence and the uncompressed projections are in `.tools/out/o3c/`.

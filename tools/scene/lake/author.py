@@ -24,6 +24,7 @@ parser.add_argument("--approach", action="store_true", help="Bake the travelling
 parser.add_argument("--portrait", action="store_true",help="Bake the tall background outside the composed desktop frame")
 parser.add_argument("--lake-uv", action="store_true", help="Bake the near lake in its metric surface coordinates")
 parser.add_argument("--phone-study", choices=["row","stack"], help="Render the independent portrait blocking options")
+parser.add_argument("--material-library", type=Path, help="Export the finished slab, snow, sky and lighting for another lake station")
 args = parser.parse_args()
 out = Path(args.output).resolve()
 out.parent.mkdir(parents=True, exist_ok=True)
@@ -966,6 +967,21 @@ exec((Path(__file__).parent/"firstlight.py").read_text())
 if args.theme=="night":
     exec((Path(__file__).parent/"bluehour.py").read_text())
 exec((Path(__file__).parent/"monument.py").read_text())
+if args.material_library:
+    # Export the finished graphs after the last day/blue-hour material pass.
+    lighting = [(sun.data, "Sun"), (front.data, "Front"), (rear.data, "Rear")]
+    library = [(ice, "Slab"), (snow, "Snow"), (fault, "Fracture"), *lighting]
+    for block, label in library:
+        block.name = label
+    scene.world.name = "Lake sky"
+    bpy.data.libraries.write(
+        str(args.material_library.resolve()),
+        {scene.world, *(block for block, _ in library)},
+        path_remap="ABSOLUTE",
+        fake_user=True,
+    )
+    raise SystemExit(0)
+
 def render_plate(path):
     scene.render.filepath=str(path)
     bpy.ops.render.render(write_still=True)
