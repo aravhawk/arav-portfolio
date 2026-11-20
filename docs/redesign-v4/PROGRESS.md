@@ -2097,3 +2097,56 @@ sound, the pull request.
 Next: the home page moves onto the new renderer and the old engine
 is deleted.
 
+### The home page is on the new renderer; the old engine is deleted (Nov 20)
+
+A Fable helper on medium effort rebuilt `/` on the scene system and
+removed the old engine:
+
+- **The page.** One fixed canvas behind twelve real sections in
+  document order, each holding its scene's words (200 visible
+  words, unchanged). Nothing is hidden from assistive technology
+  for being off screen; a focused link brings its scene. With
+  scripts, WebGL or motion off, each section shows its scene's
+  still and its words. The nav is the name, a small scene counter,
+  Work, Writing and the theme toggle.
+- **Deleted.** `src/water`, `src/audio`, the old flight DOM, the two
+  lab routes, 199 files and 12.5 MB in all, with `lenis`, `motion`,
+  `web-haptics` and `lucide-react`. Tests: 198 pass (the old
+  engine's and the old sound's tests went with them).
+- **Also.** A header still for all eight project pages (on a phone a
+  project page opens on its scene, with the title at the foot),
+  and share cards made from the new stills.
+- **The renderer gained** opening on the reader's own scene after a
+  reload or a theme switch, and one whiteout for a jump across
+  several scenes.
+
+Fable's Lighthouse on the merged production build:
+
+| Route | Phone | Desktop | Phone LCP | Phone blocking |
+| --- | --- | --- | --- | --- |
+| `/` | 100 | 100 | 0.90 s | 32 ms |
+| `/work` | 100 | 100 | 0.90 s | 7 ms |
+| `/work/infiniview` | 100 | 100 | 0.90 s | 10 ms |
+| `/work/rydar` | 100 | 100 | 0.90 s | 11 ms |
+| `/work/agent-bridge` | 100 | 100 | 0.90 s | 8 ms |
+| `/blog` | 100 | 100 | 0.90 s | 7 ms |
+| the post | 100 | 100 | 1.05 s | 10 ms |
+
+CLS is 0 on all of them; accessibility, best practices and SEO are
+100. Before the overhaul the same phone scores were 74, 54, 56, 85
+and 85, with about 370 KB of script a page; `/` now loads 185 KB of
+script before the scene and inner pages 161 to 164 KB. The helper's
+cold scroll of the whole home page: longest frame interval 18.8 ms
+on a 60 Hz display, no long task.
+
+Not met or not good yet: one 67 to 75 ms task under Lighthouse's
+phone throttle on every route (the framework's own chunk; limit
+50 ms); the scene order runs lake, Infiniview, statement, where the
+old page had the statement second; words on busy ground in a few
+frames (channels behind "22" in Upstream, the statement's first
+line across the far shore, the fallen slab beside Infiniview's
+title at the end of its push); Infiniview's night is grey beside
+the others' blue; cc-switch's three profiles are a plain row, no
+longer a control; a physical phone and a 120 Hz display are not
+measured; the maintainer pack still describes the old engine.
+
