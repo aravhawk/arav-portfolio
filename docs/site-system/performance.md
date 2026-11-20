@@ -81,3 +81,11 @@ first visit holds about eight frames for about 8 s in a scroll. These
 are open faults, not the standard.
 
 Change log: 2026-11-18 first version (orchestrator).
+
+For the quarter-screen survey on Metal, run `scripts/flight-frame-cost.mjs`
+with the production URL and an output directory. Each row times one complete
+engine callback at full shading with a drained queue and a hardware timer query.
+CPU time covers submission inside the engine. The query can include time
+waiting for submission. Use the repeated ice benchmark for small differences.
+Pass `--cold` to the scroll trace to insert a unique, unreachable discard in
+each fragment program and exercise first use.

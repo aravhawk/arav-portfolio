@@ -103,3 +103,7 @@ plan and copies a few of the picture's numbers;
 `tests/audio/picture.test.ts` fails when a copied number drifts.
 
 Change log: 2026-11-18 first version (orchestrator).
+
+The velocity texture starts at zero. Until the first pointer impulse, advection
+and pressure projection preserve that value, so the engine skips those passes.
+A newly allocated simulation window starts with a fresh zero field.

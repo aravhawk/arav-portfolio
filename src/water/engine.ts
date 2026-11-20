@@ -430,6 +430,7 @@ export class WaterEngine {
     this.wave = new Swap(gl, w, h, { ...this.f16(), filter: gl.NEAREST });
     this.waveOut = makeTarget(gl, w, h, o);
     this.vel = new Swap(gl, w, h, o);
+    this.velocityDisturbed = false;
     this.hasSimTop = false;
   }
 
@@ -547,6 +548,8 @@ export class WaterEngine {
     bindTex(gl, snowUnit, this.snow.tex, prog.u.uSnow);
   }
 
+  private velocityDisturbed = false;
+
   protected simulate(dt: number, top: number) {
     const gl = this.gl;
     const tier = TIERS[this.tier];
@@ -641,37 +644,42 @@ export class WaterEngine {
     bindTex(gl, 0, this.wave!.read.tex, g.u.uWave);
     drawTo(gl, this.waveOut);
 
-    // Pointer-driven velocity, kept divergence free.
-    const va = this.p.velAdvect;
-    gl.useProgram(va.prog);
-    common(va, 1);
-    bindTex(gl, 0, this.vel!.read.tex, va.u.uVel);
-    gl.uniform2f(va.u.uShift, 0, shift);
-    gl.uniform1f(va.u.uDt, dt);
-    gl.uniform1f(va.u.uFlowSpeed, FLOW_SPEED);
-    gl.uniform4fv(va.u.uPtr, seg);
-    gl.uniform3f(va.u.uPtrVel, moving ? p.vx : 0, moving ? p.vy : 0, moving ? 22 : 0);
-    drawTo(gl, this.vel!.write);
-    this.vel!.swap();
+    // Advection and projection preserve a zero field. Only the pointer
+    // injects velocity. Once disturbed, keep solving its full wake.
+    if (moving) this.velocityDisturbed = true;
+    if (this.velocityDisturbed) {
+      // Pointer-driven velocity, kept divergence free.
+      const va = this.p.velAdvect;
+      gl.useProgram(va.prog);
+      common(va, 1);
+      bindTex(gl, 0, this.vel!.read.tex, va.u.uVel);
+      gl.uniform2f(va.u.uShift, 0, shift);
+      gl.uniform1f(va.u.uDt, dt);
+      gl.uniform1f(va.u.uFlowSpeed, FLOW_SPEED);
+      gl.uniform4fv(va.u.uPtr, seg);
+      gl.uniform3f(va.u.uPtrVel, moving ? p.vx : 0, moving ? p.vy : 0, moving ? 22 : 0);
+      drawTo(gl, this.vel!.write);
+      this.vel!.swap();
 
-    const vd = this.p.velDiv;
-    gl.useProgram(vd.prog);
-    bindTex(gl, 0, this.vel!.read.tex, vd.u.uVel);
-    drawTo(gl, this.vel!.write);
-    this.vel!.swap();
-    const vp = this.p.velPressure;
-    gl.useProgram(vp.prog);
-    const rounds = this.jacobi();
-    for (let i = 0; i < rounds; i++) {
-      bindTex(gl, 0, this.vel!.read.tex, vp.u.uVel);
+      const vd = this.p.velDiv;
+      gl.useProgram(vd.prog);
+      bindTex(gl, 0, this.vel!.read.tex, vd.u.uVel);
+      drawTo(gl, this.vel!.write);
+      this.vel!.swap();
+      const vp = this.p.velPressure;
+      gl.useProgram(vp.prog);
+      const rounds = this.jacobi();
+      for (let i = 0; i < rounds; i++) {
+        bindTex(gl, 0, this.vel!.read.tex, vp.u.uVel);
+        drawTo(gl, this.vel!.write);
+        this.vel!.swap();
+      }
+      const vj = this.p.velProject;
+      gl.useProgram(vj.prog);
+      bindTex(gl, 0, this.vel!.read.tex, vj.u.uVel);
       drawTo(gl, this.vel!.write);
       this.vel!.swap();
     }
-    const vj = this.p.velProject;
-    gl.useProgram(vj.prog);
-    bindTex(gl, 0, this.vel!.read.tex, vj.u.uVel);
-    drawTo(gl, this.vel!.write);
-    this.vel!.swap();
 
     p.px = p.x;
     p.py = p.y;
