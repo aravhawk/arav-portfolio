@@ -1,7 +1,7 @@
 import { whiteoutField } from './plate';
 
 // A ray through the moving camera intersects a plane surveyed in the opening
-// camera. Each plane has its own fully baked view behind the neighbouring lip.
+// camera. Each plane has a fully baked view behind the objects that occlude it.
 export const ridgeVertex = `#version 300 es
 precision highp float;
 out vec2 uv,sky;
@@ -22,7 +22,7 @@ void main(){
   uv=vec2((gl_VertexID<<1)&2,gl_VertexID&2);
   gl_Position=vec4(uv*2.-1.,0.,1.);
   vec2 p=(vec2(uv.x,1.-uv.y)-.5)*cover+.5;
-  // Settle the aim toward the spill as the wall climbs out of the frame.
+  // Apply the authored aim and sideways motion over the move toward the gap.
   p+=push*track.xy;
   vec2 travel=(focus+vec2(track.z,0.)-p)*push+lean;
   floorRay=intersectPlane(p,travel,floorPlane);
@@ -67,8 +67,8 @@ void main(){
   }
   vec2 jaw=jawRay.xy/jawRay.z;
   vec2 close=nearRay.xy/nearRay.z;
-  vec4 ice=lip(close,nearBounds,nearOffset);
-  if(ice.a<.999)ice+=(1.-ice.a)*lip(jaw,jawBounds,jawOffset);
+  vec4 ice=nearRay.z>0.?lip(close,nearBounds,nearOffset):vec4(0.);
+  if(ice.a<.999 && jawRay.z>0.)ice+=(1.-ice.a)*lip(jaw,jawBounds,jawOffset);
   vec3 c=ice.rgb;
   if(ice.a<.999){
     vec2 ground=floorRay.w>0.?floorRay.xy/floorRay.z:sky;
@@ -80,7 +80,7 @@ void main(){
       // phase takes over before the first returns to its starting position.
       vec2 face=ground-focus;
       float nearFall=exp(-dot(face*vec2(6.,12.),face*vec2(6.,12.)));
-      vec2 travel=vec2(.009+.035*max(face.y,0.),.011+.024*nearFall)*atlasScale*info.b;
+      vec2 travel=vec2(.002+.009*max(face.y,0.),.007+.021*nearFall)*atlasScale*info.b;
       float a=fract(time*.79),b=fract(a+.5);
       float one=texture(plate,st-travel*(a-.5)).r;
       float two=texture(plate,st-travel*(b-.5)).r;
@@ -96,9 +96,9 @@ void main(){
       float vapour=drift(jaw*vec2(2.9,7.1)+vec2(-time*.066,time*.022));
       c+=steam*steam*(vapour-.32)*.061;
     }
-    float driftBand=max(0.,1.-abs(close.y-focus.y+.09)*15.);
+    float driftBand=max(0.,1.-abs(jaw.y-focus.y+.11)*15.);
     if(driftBand>0.){
-      float crystals=drift(close*vec2(2.5,16.)+vec2(-time*.13,time*.013));
+      float crystals=drift(jaw*vec2(2.5,16.)+vec2(-time*.13,time*.013));
       c+=driftBand*smoothstep(.6,.94,crystals)*.045;
     }
   }

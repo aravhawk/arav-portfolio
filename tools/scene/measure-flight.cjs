@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 const fs = require('node:fs');
 const path = require('node:path');
-const evidence = process.env.FLIGHT_EVIDENCE || '.tools/out/o3c';
+const evidence = process.env.FLIGHT_EVIDENCE || '.tools/out/o3d';
 const mode = process.argv[2],
   gate = process.argv[3] || 'wide',
   theme = process.argv[4] || 'light';

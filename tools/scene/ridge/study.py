@@ -1,4 +1,4 @@
-"""Pressure ridge in metres. Cycles beauty and independently visible projection layers."""
+"""Standing river ice in metres. Cycles beauty and independently visible projection layers."""
 
 import argparse
 import json
@@ -9,6 +9,7 @@ import zipfile
 
 import numpy as np
 from PIL import Image
+from scipy.ndimage import map_coordinates, zoom
 from pathlib import Path
 
 import bpy
@@ -25,15 +26,24 @@ parser.add_argument("--phone", action="store_true")
 parser.add_argument("--night", action="store_true")
 parser.add_argument("--clay", action="store_true")
 parser.add_argument("--layers", action="store_true")
-parser.add_argument("--slope", type=float, default=1.62)
-parser.add_argument("--distance", type=float, default=8.4)
-parser.add_argument("--aim", type=float, default=0.65)
-parser.add_argument("--height", type=float, default=1.55)
+parser.add_argument(
+    "--survey-only",
+    action="store_true",
+    help="Update camera planes without rendering the plates.",
+)
+parser.add_argument("--slope", type=float, default=0.52)
+parser.add_argument("--distance", type=float, default=38)
+parser.add_argument("--aim", type=float, default=-3.45)
+parser.add_argument("--height", type=float, default=2.52)
 parser.add_argument("--crest", type=float, default=1)
-parser.add_argument("--gap", type=float, default=0.57)
+parser.add_argument("--breakage", type=float, default=1)
 parser.add_argument("--roll", type=float, default=-2)
-parser.add_argument("--reach", type=float, default=0.55)
+parser.add_argument("--debris", type=float, default=1)
+parser.add_argument("--target-z", type=float, default=0.25)
 parser.add_argument("--push", type=float, default=0)
+
+parser.add_argument("--flux", type=float, default=16)
+parser.add_argument("--sun-z", type=float, default=3.19)
 parser.add_argument("--seed", type=int, default=529)
 args = parser.parse_args()
 out = args.output.resolve()
@@ -94,7 +104,7 @@ def light(data, location, target):
 clay = surface("Clay", (0.42, 0.42, 0.42), 0.8)
 snow = surface("Clay snow", (0.65, 0.65, 0.65), 0.8)
 ice = fault = clay
-source = Vector((-0.008, 1, 0.06)).normalized()
+source = Vector((0, 1, 0.005)).normalized()
 if args.clay:
     scene.world = bpy.data.worlds.new("Clay sky")
     scene.world.use_nodes = True
@@ -118,7 +128,14 @@ else:
     sun, front, rear = imported.lights
     light(sun, source * 10, (0, 0, 0))
     light(front, (-2.8, -5, 3.5), (0, 0, 1.1))
-    light(rear, (-0.1, 3.1, 2.5), (0, 0, 0.8))
+    light(rear, (0, 2.3, 2.5), (0, 0, 0.8))
+    # Broad sky radiance on the snow tongue below the words.
+    fill = bpy.data.lights.new("Sky returned by the snow", "AREA")
+    fill.energy = 2300 if args.night else 10700
+    fill.color = (0.58, 0.71, 1) if args.night else (0.88, 0.94, 1)
+    fill.shape = "DISK"
+    fill.size = 23
+    light(fill, (-6, -16, 13), (-6, -13, 0))
     scene.view_settings.exposure = -0.45 if args.night else -0.14
     # Align the sky's brightest direction and the real source with the cut.
     for node in scene.world.node_tree.nodes:
@@ -152,12 +169,12 @@ if not args.clay:
     axis = wt.nodes.new("ShaderNodeMath")
     axis.operation = "MULTIPLY_ADD"
     wt.links.new(split.outputs["Y"], axis.inputs[0])
-    axis.inputs[1].default_value = 0.47
+    axis.inputs[1].default_value = 0.045
     wt.links.new(split.outputs["X"], axis.inputs[2])
     wt.links.new(axis.outputs[0], axial.inputs[0])
     band = wt.nodes.new("ShaderNodeMapRange")
     band.inputs["From Min"].default_value = 0.055
-    band.inputs["From Max"].default_value = 0.71
+    band.inputs["From Max"].default_value = 1.04
     band.inputs["To Min"].default_value = 1
     band.inputs["To Max"].default_value = 0
     wt.links.new(axial.outputs[0], band.inputs[0])
@@ -181,7 +198,7 @@ if not args.clay:
     dark = wt.nodes.new("ShaderNodeBsdfDiffuse")
     dark.inputs["Color"].default_value = (0.009, 0.03, 0.036, 1)
     mix = wt.nodes.new("ShaderNodeMixShader")
-    mix.inputs[0].default_value = 0.24
+    mix.inputs[0].default_value = 0.40
     wt.links.new(dark.outputs[0], mix.inputs[1])
     wt.links.new(bs.outputs[0], mix.inputs[2])
     fleck = wt.nodes.new("ShaderNodeEmission")
@@ -195,252 +212,345 @@ if not args.clay:
     wt.links.new(radiance.outputs[0], wt.nodes["Material Output"].inputs["Surface"])
 
 
-# A separate deposit leaves the hero's entire optical material intact. Its
-# thickness dwindles from packed upper crust to scattered frost downslope.
-crust = bpy.data.materials.new("Wind-packed hoarfrost on the shear")
-crust.use_nodes = True
-ct = crust.node_tree
-shader = ct.nodes["Principled BSDF"]
-shader.inputs["Base Color"].default_value = (0.80, 0.88, 0.86, 1)
-shader.inputs["Roughness"].default_value = 0.78
-coords = ct.nodes.new("ShaderNodeTexCoord")
-z = ct.nodes.new("ShaderNodeSeparateXYZ")
-ct.links.new(coords.outputs["Generated"], z.inputs[0])
-grain = ct.nodes.new("ShaderNodeTexNoise")
-grain.inputs["Scale"].default_value = 6.3
-grain.inputs["Detail"].default_value = 5
-ct.links.new(coords.outputs["Object"], grain.inputs[0])
-density = ct.nodes.new("ShaderNodeMath")
-density.operation = "MULTIPLY_ADD"
-ct.links.new(grain.outputs[0], density.inputs[0])
-density.inputs[1].default_value = 1.23
-ct.links.new(z.outputs["Z"], density.inputs[2])
-patches = ct.nodes.new("ShaderNodeMapRange")
-patches.inputs["From Min"].default_value = 1.04
-patches.inputs["From Max"].default_value = 1.45
-ct.links.new(density.outputs[0], patches.inputs[0])
-grains = ct.nodes.new("ShaderNodeBump")
-grains.inputs["Distance"].default_value = 0.015
-ct.links.new(grain.outputs[0], grains.inputs["Height"])
-ct.links.new(grains.outputs[0], shader.inputs["Normal"])
-coating = ct.nodes.new("ShaderNodeMixShader")
-ct.links.new(patches.outputs[0], coating.inputs[0])
-ct.links.new(ct.nodes.new("ShaderNodeBsdfTransparent").outputs[0], coating.inputs[1])
-ct.links.new(shader.outputs[0], coating.inputs[2])
-ct.links.new(coating.outputs[0], ct.nodes["Material Output"].inputs[0])
+# All seven stations are sawn from the same sheet. The fifth station's
+# footprint is open and its three matching fragments lie downstream.
+heading = math.atan(args.slope)
+pitch = 3.46
+step = Vector((cos(heading), sin(heading), 0))
+normal = Vector((-sin(heading), cos(heading), 0))
 
 
 def wall(x):
-    return (
-        1.52 * x
-        + (args.slope - 1.52) * max(0, x - 1.45)
-        + 0.055 * x * x / (1 + abs(x) * 0.10)
+    return args.slope * x
+
+
+def ice_window(material, seed):
+    """A continuous scan window with an independently surveyed plane of air."""
+    local = np.random.default_rng(seed)
+    tree = material.node_tree
+    tex = next(n for n in tree.nodes if n.type == "TEX_IMAGE")
+    source_path = Path(tex.image.filepath)
+    # Meter-long striations run obliquely across the cut. Use separate,
+    # non-repeating regions of the CC0 ice and snow scans for their two scales.
+    cache = Path.home() / ".t3/portfolio-redesign-v4/assets-src"
+    cloud = (
+        np.asarray(Image.open(cache / source_path.name).convert("L"), np.float32) / 255
     )
+    frost = (
+        np.asarray(Image.open(cache / "snow_02_disp_2k.jpg").convert("L"), np.float32)
+        / 255
+    )
+    size = 1024
+    v, u = np.mgrid[0 : 1 : complex(size), 0 : 1 : complex(size)].astype(np.float32)
+    angle = local.uniform(-1.25, 1.25)
+    along = (u - 0.5) * cos(angle) + (v - 0.5) * sin(angle)
+    across = (v - 0.5) * cos(angle) - (u - 0.5) * sin(angle)
+    bend = zoom(local.uniform(-1, 1, (8, 8)).astype(np.float32), size / 8, order=3)
+
+    def window(source, x, y):
+        return map_coordinates(
+            source,
+            [y * (source.shape[0] - 1), x * (source.shape[1] - 1)],
+            order=1,
+            mode="reflect",
+        )
+
+    large = window(
+        cloud,
+        local.uniform(0.27, 0.73) + 0.40 * along + 0.08 * bend,
+        local.uniform(0.27, 0.73) + 0.33 * across,
+    )
+    sheet = window(
+        cloud,
+        local.uniform(0.25, 0.75) + 0.85 * along + 0.08 * bend,
+        0.5 + 0.16 * across + 0.09 * bend,
+    )
+    grain = window(frost, 0.5 + 0.76 * u - 0.19 * v, 0.58 - 0.18 * u + 0.60 * v)
+    strata = 0.5 + 0.5 * np.tanh(
+        6 * (across + 0.085 * bend - local.uniform(-0.18, 0.18))
+    )
+    field = np.clip(
+        0.11 + 0.52 * large + 0.22 * sheet + 0.38 * (grain - 0.36) + 0.16 * strata, 0, 1
+    )
+    image = bpy.data.images.new(
+        f"Unwrapped cut {seed}", width=size, height=size, alpha=False
+    )
+    image.colorspace_settings.name = "Non-Color"
+    pixels = np.ones((size, size, 4), np.float32)
+    pixels[:, :, :3] = (
+        np.clip(0.46 + 1.76 * (field[:, :, None] - 0.46), 0.04, 0.98) ** 2.2
+    )
+    image.pixels.foreach_set(pixels.ravel())
+    image.update()
+    tex.image = image
+    tex.extension = "EXTEND"
+    split = tree.nodes.new("ShaderNodeSeparateXYZ")
+    coord = tree.nodes.new("ShaderNodeTexCoord")
+    tree.links.new(coord.outputs["Generated"], split.inputs[0])
+    xy = tree.nodes.new("ShaderNodeCombineXYZ")
+    tree.links.new(split.outputs["X"], xy.inputs[0])
+    tree.links.new(split.outputs["Z"], xy.inputs[1])
+    tree.links.new(xy.outputs[0], tex.inputs[0])
+    satin = tree.nodes.get("Diffuse BSDF.001")
+    tint = tree.nodes.new("ShaderNodeValToRGB")
+    tint.color_ramp.elements[0].position = 0.065
+    tint.color_ramp.elements[0].color = (0.028, 0.081, 0.097, 1)
+    tint.color_ramp.elements[1].position = 0.49
+    tint.color_ramp.elements[1].color = (0.25, 0.38, 0.39, 1)
+    tree.links.new(tex.outputs["Color"], tint.inputs[0])
+    tree.links.new(tint.outputs[0], satin.inputs["Color"])
 
 
-def plate(x, y, size, height, thick, dip, cant, yaw, layer, small=False):
-    # A fractured sheet has large straight perimeter runs interrupted by shorter
-    # shear offsets. A second broken ring bevels only part of its damaged lip.
-    count = rng.randint(5, 8)
-    ring = []
-    for i in range(count):
-        a = (i + rng.uniform(-0.25, 0.25)) * math.tau / count
-        r = rng.uniform(0.84, 1.12)
-        ring.append((cos(a) * size * 0.5 * r, sin(a) * height * 0.5 * r))
-    # Short secondary breaks in the long shear edges. Their scale follows
-    # the physical thickness rather than the length of the whole plate.
-    chips = random.Random(41 + round(abs(x + y) * 530))
-    boundary = []
-    for i, (u, v) in enumerate(ring):
-        b, c = ring[(i + 1) % len(ring)]
-        for t in (0, 0.21, 0.47, 0.71, 0.88):
-            chip = 1 - chips.uniform(0, 0.075) if t else 1
-            boundary.append(
-                ((u * (1 - t) + b * t) * chip, (v * (1 - t) + c * t) * chip)
-            )
-    ring = boundary
-    count = len(ring)
-    verts = []
-    for band, depth in ((0.97, -0.5), (1, -0.31), (0.99, 0.44), (0.95, 0.52)):
-        for u, v in ring:
-            verts.append(
-                (
-                    u * band,
-                    thick
-                    * (depth + 0.17 * sin(2 * u + v) + 0.043 * sin(6 * u - 3 * v)),
-                    v * band,
-                )
-            )
-    faces = [tuple(range(count)), tuple(reversed(range(3 * count, 4 * count)))]
-    for k in range(3):
-        faces += [
+def sawn(name, outline, thickness, center, angles, group, seed):
+    local = random.Random(seed)
+    n = len(outline)
+    cx = sum(u for u, v in outline) / n
+    cz = sum(v for u, v in outline) / n
+    # Narrow shear steps chip the shoulder of the bevel. Keep the sawn
+    # front flat and concentrate broken geometry at the exposed rim.
+    chipped = []
+    for i, (x, z) in enumerate(outline):
+        xx, zz = outline[(i + 1) % n]
+        chipped.append((x, z))
+        if max(z, zz) > cz and abs(x - xx) > 0.22:
+            t = local.uniform(0.36, 0.74)
+            for a, chip in [(t - 0.06, 0.0), (t, 0.035), (t + 0.11, 0.013)]:
+                chipped.append((x + (xx - x) * a, z + (zz - z) * a - chip))
+    outline = chipped
+    n = len(outline)
+    rings = []
+    for depth, inset in [(-0.5, 0.975), (-0.45, 1), (0.41, 1), (0.5, 0.966)]:
+        rings.extend(
             (
-                k * count + i,
-                (k + 1) * count + i,
-                (k + 1) * count + (i + 1) % count,
-                k * count + (i + 1) % count,
+                cx + (x - cx) * inset,
+                thickness * depth
+                + (local.uniform(-0.028, 0.028) if abs(depth) < 0.5 else 0),
+                cz + (z - cz) * inset,
             )
-            for i in range(count)
-        ]
-    ob = mesh("Pressure plate", verts, faces, ice, layer)
-    ob.rotation_euler = (dip, cant, yaw)
-    rot = ob.rotation_euler.to_matrix()
-    low = min((rot @ v.co).z for v in ob.data.vertices)
-    ob.location = (
-        x,
-        y,
-        -low - height * rng.uniform(0.09, 0.18) + (0.23 if not small else 0.06),
-    )
+            for x, z in outline
+        )
+    faces = [tuple(range(n)), tuple(reversed(range(3 * n, 4 * n)))]
+    faces += [
+        (r * n + i, (r + 1) * n + i, (r + 1) * n + (i + 1) % n, r * n + (i + 1) % n)
+        for r in range(3)
+        for i in range(n)
+    ]
+    ob = mesh(name, rings, faces, ice, group)
+    ob.location = center
+    ob.rotation_euler = angles
     if args.clay:
         return
-    # Translucent sheets at two depths break up the broad face. Sweep thin
-    # tapered splays between successive shear steps rather than painting veins.
-    if not small and x < 6:
-        flaws = random.Random(807 + round(abs(x + y) * 201))
-        for j in range(9):
-            u = flaws.uniform(-0.26, 0.28) * size
-            v = flaws.uniform(-0.19, 0.19) * height
-            a = flaws.uniform(0.3, 2.9)
-            span = flaws.uniform(0.12, 0.35) * min(size, height)
-            vertices = []
-            for k in range(11):
-                t = k / 10
-                du, dv = cos(a) * span * t, sin(a) * span * t
-                shell = thick * (
-                    -0.49
-                    + 0.17 * sin(2 * (u + du) + v + dv)
-                    + 0.043 * sin(6 * (u + du) - 3 * (v + dv))
+    if name != "Heaved collar":
+        # Every full face occupies one unique, unwrapped window of the ice
+        # scan. Keep the lake's scattering, frost, absorption and light graph.
+        variant = ice.copy()
+        ob.data.materials[0] = variant
+        ice_window(variant, seed)
+        # Use a different position in the continuous volume for each cut.
+        # Object-space noise restarted at the local origin would stamp every
+        # neighbour with the same saw-face grain.
+        tree = variant.node_tree
+        world = tree.nodes.new("ShaderNodeNewGeometry")
+        for node in list(tree.nodes):
+            if node.type == "TEX_COORD":
+                for link in list(node.outputs["Object"].links):
+                    tree.links.new(world.outputs["Position"], link.to_socket)
+        # Ice in the unbroken wall is thicker than the glyphs. Turn down
+        # their rim return on thick faces and let light enter at the opening.
+        body = tree.nodes.get("Math.005")
+        factor = (
+            (0.45 if args.night else 0.74)
+            if abs(center[0]) < 3.5
+            else (0.19 if args.night else 0.34)
+        )
+        body.inputs[1].default_value *= factor
+        body.inputs[2].default_value *= factor
+        # Only the two exposed endgrain faces receive the east light directly.
+        signed = tree.nodes.new("ShaderNodeVectorMath")
+        signed.operation = "DOT_PRODUCT"
+        signed.inputs[1].default_value = step
+        tree.links.new(world.outputs["Position"], signed.inputs[0])
+        ab = tree.nodes.new("ShaderNodeMath")
+        ab.operation = "ABSOLUTE"
+        tree.links.new(signed.outputs["Value"], ab.inputs[0])
+        taper = tree.nodes.new("ShaderNodeMapRange")
+        taper.interpolation_type = "SMOOTHERSTEP"
+        taper.inputs["From Min"].default_value = 1.65
+        taper.inputs["From Max"].default_value = 2.40
+        taper.inputs["To Min"].default_value = 2.65 if args.night else 2.0
+        taper.inputs["To Max"].default_value = 0.76
+        tree.links.new(ab.outputs[0], taper.inputs[0])
+        through = tree.nodes.get("Emission").inputs["Strength"]
+        base = through.links[0].from_socket
+        lit = tree.nodes.new("ShaderNodeMath")
+        lit.operation = "MULTIPLY"
+        tree.links.new(base, lit.inputs[0])
+        tree.links.new(taper.outputs[0], lit.inputs[1])
+        tree.links.new(lit.outputs[0], through)
+        # The spatial variation of cloud should live inside the sawn face.
+        # A saw leaves a comparatively even, translucent satin outer skin.
+        satin = tree.nodes["Map Range.006"]
+        satin.inputs["From Min"].default_value = -0.94
+        satin.inputs["From Max"].default_value = -0.40
+        satin.inputs["To Min"].default_value = 0.53 if args.night else 0.66
+    ob.data.materials.append(snow)
+    for face in ob.data.polygons[2:]:
+        if (
+            ob.rotation_euler.to_matrix() @ face.normal
+        ).z > 0.78 and local.random() < 0.61:
+            face.material_index = 1
+    # A unique, connected fracture fan and smaller air lenses inside each cut.
+    span = max(x for x, z in outline) - min(x for x, z in outline)
+    rise = max(z for x, z in outline) - min(z for x, z in outline)
+    for k in range(1 if name == "Heaved collar" else 7):
+        u = cx + local.uniform(-0.20, 0.20) * span
+        z = (
+            max(v for u, v in outline) + min(v for u, v in outline)
+        ) * 0.5 + local.uniform(-0.18, 0.18) * rise
+        dx = span * local.uniform(0.086, 0.24)
+        dz = rise * local.uniform(0.025, 0.09)
+        tilt = local.uniform(-1.3, 1.3)
+        vertices = [(u, -thickness * 0.34, z)]
+        for i in range(9):
+            angle = i * math.tau / 9
+            a = dx * cos(angle) * local.uniform(0.79, 1.08)
+            b = dz * sin(angle)
+            vertices.append(
+                (
+                    u + a * cos(tilt) - b * sin(tilt),
+                    -thickness * (0.3 + local.uniform(-0.13, 0.13)),
+                    z + a * sin(tilt) + b * cos(tilt),
                 )
-                w = 0.004 + 0.017 * sin(t * math.pi)
-                vertices.extend(
+            )
+        lens = mesh(
+            "Sealed shear fan",
+            vertices,
+            [(0, i + 1, (i + 1) % 9 + 1) for i in range(9)],
+            fault,
+            group,
+        )
+        lens.parent = ob
+    if name == "Standing slab":
+        # Two long air sheets follow different dips, closing to hairlines
+        # inside the face. Their tapered ends stay inside the sawn perimeter.
+        for sign in (-1, 1):
+            dz = local.uniform(0.50, 0.87) * sign
+            x0 = local.uniform(-0.43, 0.06) * span
+            z0 = local.uniform(0.33, 0.63) * rise
+            verts = []
+            for k in range(25):
+                t = k / 24
+                x = x0 + t * span * 0.43
+                z = z0 + t * dz + 0.024 * sin(t * 5.7 + seed)
+                opening = sin(math.pi * t) * local.uniform(0.039, 0.076)
+                verts.extend(
                     [
-                        (u + du, shell, v + dv),
+                        (x, -thickness * 0.43, z),
                         (
-                            u + du + w,
-                            shell + 0.043 * sin(t * math.pi),
-                            v + dv + w * 0.21,
+                            x + 0.4 * opening,
+                            -thickness * 0.43 + opening,
+                            z + 0.32 * opening,
                         ),
                     ]
                 )
-                a += flaws.uniform(-0.092, 0.092)
-            crack = mesh(
-                "Air along a slipping face",
-                vertices,
-                [(k, k + 1, k + 3, k + 2) for k in range(0, 20, 2)],
+            ribbon = mesh(
+                "Air sheet meeting the sawn face",
+                verts,
+                [(k, k + 1, k + 3, k + 2) for k in range(0, 48, 2)],
                 fault,
-                layer,
-            )
-            crack.parent = ob
-    # Separate windward crusts leave the actual hero shader on the cut ice.
-    ob.data.materials.append(snow)
-    for pol in ob.data.polygons[2:]:
-        if (rot @ pol.normal).z > 0.58 and rng.random() < 0.79:
-            pol.material_index = 1
-    if small:
-        return
-    if x < 7:
-        powder = mesh("Adhering wind crust", verts, faces, crust, layer)
-        powder.parent = ob
-        powder.scale = (1.002, 1.023, 1.003)
-    for j in range(rng.randint(3, 7)):
-        u, v = rng.uniform(-0.19, 0.19) * size, rng.uniform(-0.13, 0.13) * height
-        du, dv = rng.uniform(0.035, 0.15) * size, rng.uniform(0.08, 0.19) * height
-        points = [
-            (u - du, 0, v - dv),
-            (u + du * 0.1, -thick * 0.24, v + dv),
-            (u + du, 0, v + dv * 0.54),
-            (u + 0.2 * du, thick * 0.22, v - dv * 0.38),
-        ]
-        lens = mesh("Submerged air shear", points, [(0, 1, 2, 3)], fault, layer)
-        lens.parent = ob
-
-
-# The two large broken faces occupy opposite lips of the same ridge. The
-# rest folds away downriver. The close western toe leaves the lower bank clear.
-g = args.gap
-plate(-g - 0.92, -0.80, 2.88, 3.85 * args.crest, 0.36, -0.57, -0.36, 0.65, "near")
-plate(g + 0.76, 1.52, 2.65, 2.21 * args.crest, 0.33, -0.35, -0.38, 0.92, "jaw")
-# Secondary faces overlap the loaded jaws, leaving the principal cuts exposed.
-plate(-g - 1.5, -1.46, 2.65, 2.75 * args.crest, 0.29, -0.78, 0.46, 0.32, "near")
-plate(g + 1.49, 2.46, 3.1, 2.21 * args.crest, 0.28, -0.62, -0.25, 0.74, "jaw")
-# Oblique fracture faces overlap at the near foot. A half-submerged plate
-# narrows the skylight behind the spill without damming the dark water.
-plate(-1.64, -2.43, 2.45, 2.18, 0.28, -0.54, 0.66, -0.69, "near")
-plate(-1.06, -1.64, 1.42, 1.38, 0.22, -0.40, -0.52, 0.66, "near")
-plate(-2.22, -3.45, 2.41, 2.48, 0.31, -0.66, -0.51, 0.88, "near")
-plate(g + 0.69, 2.48, 2.72, 2.33, 0.31, -0.51, -0.70, -0.31, "jaw")
-plate(1.40 - args.reach, 3.50, 1.60, 1.85, 0.24, -0.52, -0.61, 0.83, "jaw")
-for side in (-1, 1):
-    for j in range(31 if side > 0 else 4):
-        x = side * (g + 2.30 + j * 0.88)
-        y = wall(x) + rng.uniform(-0.42, 0.42)
-        group = "near" if side < 0 else ("jaw" if j < 2 else "bank")
-        plate(
-            x,
-            y,
-            rng.uniform(2.4, 4.25),
-            rng.uniform(1.45, 2.8) * args.crest,
-            rng.uniform(0.16, 0.38),
-            rng.uniform(-0.88, 0.78),
-            rng.uniform(-0.75, 0.75),
-            rng.uniform(0.16, 1.23),
-            group,
-        )
-        plate(
-            x + 0.22,
-            y + 0.82,
-            rng.uniform(1.4, 3),
-            rng.uniform(1.3, 2.4),
-            0.22,
-            rng.uniform(-0.75, 0.4),
-            rng.uniform(-0.71, 0.62),
-            rng.uniform(-1, 1),
-            group,
-        )
-        for j2 in range(3):
-            plate(
-                x + rng.uniform(-0.53, 0.53),
-                y - rng.uniform(0.50, 1.26),
-                rng.uniform(0.46, 1.42),
-                rng.uniform(0.27, 1.1),
-                rng.uniform(0.09, 0.2),
-                rng.uniform(-1.3, -0.50),
-                rng.uniform(-0.6, 0.6),
-                rng.uniform(-1, 1),
                 group,
-                True,
             )
+            ribbon.parent = ob
 
 
-# The toes contain small, overlapping chips packed into irregular pockets
-# of powder. Leave the open channel and the foreground snow tongue bare.
-for j in range(135):
-    side = rng.choice((-1, 1))
-    x = side * rng.uniform(0.64, 6.7)
-    y = wall(x) - rng.uniform(0.23, 1.46)
-    if abs(x - 0.14 + y * 0.17) < 0.55:
-        continue
-    size = 0.08 + 0.57 * rng.random() ** 2
-    plate(
-        x,
-        y,
-        size * 1.44,
-        size,
-        size * 0.29,
-        rng.uniform(-1.43, -0.37),
-        rng.uniform(-0.8, 0.8),
-        rng.uniform(-1.3, 1.3),
-        "near" if x < 0 else ("jaw" if x < 4.5 else "bank"),
-        True,
+for index, meters in zip((-4, -3, -2, -1, 1, 2), (3.44, 3.99, 3.36, 3.89, 3.62, 3.41)):
+    shape = random.Random(2027 + index)
+    w = (pitch - 0.035) / 2
+    h = meters * args.crest
+    top = [
+        (w, h - shape.uniform(0.19, 0.45)),
+        (w - shape.uniform(0.13, 0.41), h + shape.uniform(-0.09, 0.12)),
+    ]
+    heights = [shape.uniform(-0.24, 0.14) * args.breakage for _ in range(4)]
+    top += [(w * f, h + d) for f, d in zip((0.69, 0.21, -0.34, -0.79), heights)]
+    top += [(-w + 0.07, h - 0.11), (-w, h - 0.24)]
+    outline = [(-w, -0.26), (w - 0.04, -0.26), (w, 0.02)] + top
+    origin = step * (index * pitch) + normal * shape.uniform(-0.08, 0.08)
+    sawn(
+        "Standing slab",
+        outline,
+        shape.uniform(0.64, 0.79),
+        origin,
+        (
+            shape.uniform(-0.025, 0.025),
+            shape.uniform(-0.012, 0.012),
+            heading + shape.uniform(-0.018, 0.018),
+        ),
+        "jaw",
+        230 + index,
+    )
+    # Low wedge-shaped ice collars straddle the contact line in the snow.
+    for j in range(11):
+        s = shape.uniform(0.16, 0.61)
+        x = origin + step * shape.uniform(-w, w) - normal * shape.uniform(0.25, 0.74)
+        sawn(
+            "Heaved collar",
+            [
+                (-s, -0.14),
+                (s * 0.8, -0.11),
+                (s * 0.69, 0.10 + s * 0.26),
+                (-s * 0.53, 0.15 + s * 0.21),
+            ],
+            s * 0.48,
+            x,
+            (
+                shape.uniform(-0.5, 0.4),
+                shape.uniform(-0.2, 0.2),
+                heading + shape.uniform(-0.8, 0.8),
+            ),
+            "jaw",
+            index * 73 + j,
+        )
+
+# Three pieces reproduce the shared, asymmetrical shear lines of the absent slab.
+a = [(-1.68, -0.62), (-0.49, -0.38), (0.36, -0.57), (1.68, -0.24)]
+b = [(-1.68, 0.54), (-0.72, 0.69), (0.60, 0.37), (1.68, 0.75)]
+parts = [
+    [(-1.62, -1.7), (1.62, -1.71)] + a[::-1],
+    a + b[::-1],
+    b + [(1.64, 1.59), (0.37, 1.76), (-1.60, 1.56)],
+]
+for j, (outline, (xx, yy, zz, tip, turn)) in enumerate(
+    zip(
+        parts,
+        [
+            (-1.11, -1.59, 0.21, 1.04, 0.32),
+            (1.52, -3.45, 0.12, 1.41, -0.40),
+            (-0.98, -5.92, 0.19, 1.14, 0.44),
+        ],
+    )
+):
+    mid = (min(z for x, z in outline) + max(z for x, z in outline)) * 0.5
+    outline = [(x, z - mid) for x, z in outline]
+    sawn(
+        "Fallen third",
+        outline,
+        0.67,
+        (xx * args.debris, yy * args.debris, zz),
+        (tip, (-0.095, 0.14, -0.065)[j], heading + turn),
+        "near",
+        673 + j,
     )
 
 
 def stream(y):
-    return 0.10 - y * 0.12 + 0.39 * max(0, -y - 1.38) + 0.08 * sin(y * 1.6)
+    return 0.04 - y * 0.04 + 0.07 * max(0, -y - 4) + 0.25 * sin(y * 0.43)
 
 
 def width(y):
-    return 0.48 + 0.074 * max(0, -y) + 0.08 * cos(y * 2.5)
+    return max(0, min(1.55, (y + 16) * 0.32, (7 - y) * 0.5)) + 0.10 * exp(
+        -0.04 * y * y
+    ) * cos(y * 1.3)
 
 
 def spill(x, y):
@@ -488,7 +598,7 @@ def bed_height(x, y):
     shoulder = 0.31 * exp(-(((y - wall(x)) / 1.1) ** 2)) * min(1, abs(x) * 0.9)
     # A measured windpack catches the left bank and wraps the plate feet.
     wind = 0.14 * exp(-(((x + 1.6) / 1.5) ** 2)) * exp(-(((y + 3) / 2.5) ** 2))
-    apron = 0.48 * exp(-(((y + 3.65) / 1.32) ** 2)) * exp(-(((x + 1.3) / 1.85) ** 2))
+    apron = 0.17 * exp(-(((y + 3.65) / 1.32) ** 2)) * exp(-(((x + 1.3) / 1.85) ** 2))
     return 0.14 + scour + shoulder + wind + apron
 
 
@@ -504,17 +614,38 @@ with zipfile.ZipFile(cache / "Snow009A_2K-JPG.zip") as arc:
         / 255
     )
 
+# Wind strips powder along the lead, exposing consolidated blue-black ice.
+# The western snow tongue carries the station text over the whole flight.
+bank = snow.copy()
+if not args.clay:
+    tree = bank.node_tree
+    outmat = tree.nodes.get("Material Output")
+    original = outmat.inputs["Surface"].links[0].from_socket
+    sheet = tree.nodes.new("ShaderNodeBsdfPrincipled")
+    sheet.inputs["Base Color"].default_value = (0.027, 0.065, 0.073, 1)
+    sheet.inputs["Roughness"].default_value = 0.37
+    sheet.inputs["IOR"].default_value = 1.31
+    split = tree.nodes.new("ShaderNodeAttribute")
+    split.attribute_name = "Scour"
+    blend = tree.nodes.new("ShaderNodeMixShader")
+    normal_map = next(n for n in tree.nodes if n.type == "NORMAL_MAP")
+    tree.links.new(normal_map.outputs[0], sheet.inputs["Normal"])
+    tree.links.new(split.outputs["Fac"], blend.inputs[0])
+    tree.links.new(original, blend.inputs[1])
+    tree.links.new(sheet.outputs[0], blend.inputs[2])
+    tree.links.new(blend.outputs[0], outmat.inputs["Surface"])
+
 for side in (-1, 1):
     rows = []
-    for i in range(281):
-        y = -18 + i * 0.18
+    for i in range(345):
+        y = -48 + i * 0.24
         row = []
         for j in range(81):
-            off = j * 0.19
+            off = j * 0.35
             x = stream(y) + side * (width(y) + off)
             h = (
                 bed_height(x, y)
-                - 0.13 * exp(-off * 7)
+                - 0.13 * min(1, width(y) * 3) * exp(-off * 7)
                 + 0.097
                 * (
                     relief[
@@ -526,7 +657,31 @@ for side in (-1, 1):
             )
             row.append((x, y, h))
         rows.append(row if side > 0 else row[::-1])
-    grid("Settled snow", rows, snow)
+    shore = grid("Settled snow", rows, snow)
+    shore.data.materials[0] = bank
+    xyz = np.asarray(rows, np.float32).reshape(-1, 3)
+    xx, yy = xyz[:, :2].T
+    center = 0.04 - 0.04 * yy + 0.07 * np.maximum(0, -yy - 4) + 0.25 * np.sin(0.43 * yy)
+    distance = np.abs(xx - center)
+    edge_scan = relief[
+        ((yy * 0.073 + xx * 0.012) % 1 * 2047).astype(int),
+        ((xx * 0.048 - yy * 0.019) % 1 * 2047).astype(int),
+    ]
+    # The western bank lies in the lee of the standing wall. Keep its
+    # continuous mantle up to the liquid edge. Only the exposed eastern
+    # shelf sheds enough powder to show broad sheets of consolidated ice.
+    contour = (
+        0.24 + 0.40 * edge_scan
+        if side < 0
+        else 2.8 + 1.55 * np.sin(yy * 0.31) + 2.1 * edge_scan
+    )
+    # The black ice thins into discrete scoured patches at the downstream end.
+    apron = np.clip((yy + 20) / 5, 0, 1) * np.clip((7 - yy) / 3, 0, 1)
+    amount = (
+        np.clip((contour - distance) * 1.65 + 1.6 * (edge_scan - 0.5), 0, 1) * apron
+    )
+    attr = shore.data.attributes.new("Scour", "FLOAT", "POINT")
+    attr.data.foreach_set("value", np.asarray(amount, dtype=np.float32))
 rows = []
 for i in range(460):
     y = -18 + i * 0.052
@@ -579,9 +734,9 @@ if not args.clay:
     # Scattered eastern light raises the foothills to the fog's local value.
     diffuse = ranges.node_tree.nodes["Principled BSDF"]
     diffuse.inputs["Emission Color"].default_value = (
-        (0.26, 0.31, 0.34, 1) if args.night else (0.51, 0.55, 0.54, 1)
+        (0.36, 0.43, 0.50, 1) if args.night else (0.66, 0.70, 0.72, 1)
     )
-    diffuse.inputs["Emission Strength"].default_value = 0.36 if args.night else 0.82
+    diffuse.inputs["Emission Strength"].default_value = 0.39 if args.night else 1.12
     for j in range(3):
         yy = 48 + 13 * j
         rows = [[], [], []]
@@ -594,7 +749,7 @@ if not args.clay:
                 + 0.10 * cos(xx * 1.9)
             )
             rows[0].append((xx, yy - 4, -0.1))
-            rows[1].append((xx, yy, hill * (1 + 0.27 * j)))
+            rows[1].append((xx, yy, hill * (0.34 + 0.10 * j) - 0.28))
             rows[2].append((xx, yy + 3, -0.2))
         grid("Far moraine", rows, ranges)
     bpy.ops.mesh.primitive_cube_add(size=2, location=(5, 28, 3))
@@ -605,15 +760,14 @@ if not args.clay:
     tree = fog.node_tree
     tree.nodes.remove(tree.nodes["Principled BSDF"])
     medium = tree.nodes.new("ShaderNodeVolumeScatter")
-    medium.inputs["Density"].default_value = 0.019
+    medium.inputs["Density"].default_value = 0.008
     medium.inputs["Anisotropy"].default_value = 0.52
     medium.inputs["Color"].default_value = (0.69, 0.85, 0.91, 1)
     tree.links.new(medium.outputs[0], tree.nodes["Material Output"].inputs["Volume"])
     ob.data.materials.append(fog)
     layers["bank"].append(ob)
 
-    # A continuous bank of illuminated spray meets the cirrus behind the
-    # cleft. No sight line through the throat reaches the incidental horizon.
+    # Keep backlit spray low so the sun remains distinct above the spill.
     mistmat = bpy.data.materials.new("Suspended ice crystals at the breach")
     mistmat.use_nodes = True
     mt = mistmat.node_tree
@@ -634,21 +788,77 @@ if not args.clay:
     mt.links.new(profile.outputs[0], glow.inputs["Density"])
     mt.links.new(profile.outputs[0], glow.inputs["Emission Strength"])
     glow.inputs["Emission Color"].default_value = (
-        (13, 10.3, 7.2, 1) if not args.night else (5.1, 6.1, 7.2, 1)
+        (0.26, 0.24, 0.19, 1) if not args.night else (0.12, 0.18, 0.23, 1)
     )
     mt.links.new(glow.outputs[0], mt.nodes["Material Output"].inputs["Volume"])
     bpy.ops.mesh.primitive_cube_add(size=2, location=(0.1, 5.5, 1.18))
     steam = bpy.context.object
-    steam.scale = (2.6, 2.3, 1.95)
+    steam.scale = (2.9, 2.7, 0.89)
     steam.data.materials.append(mistmat)
     layers["bank"].append(steam)
+
+    # A finite solar disc in the air above the far shore. Its physical angular
+    # diameter survives the wide opening and remains behind the missing slab.
+    glint = bpy.data.materials.new(
+        "Low sun in ice haze" if not args.night else "Blue-hour afterglow"
+    )
+    glint.use_nodes = True
+    tr = glint.node_tree
+    tr.nodes.remove(tr.nodes["Principled BSDF"])
+    coords = tr.nodes.new("ShaderNodeTexCoord")
+    radius = tr.nodes.new("ShaderNodeVectorMath")
+    radius.operation = "DISTANCE"
+    radius.inputs[1].default_value = (0.5, 0.5, 0)
+    tr.links.new(coords.outputs["UV"], radius.inputs[0])
+    ramp = tr.nodes.new("ShaderNodeValToRGB")
+    profile = ramp.color_ramp
+    profile.elements.remove(profile.elements[1])
+    for i, (t, value) in enumerate(
+        (
+            [
+                (0, 1),
+                (0.051, 0.99),
+                (0.060, 0.14),
+                (0.095, 0.05),
+                (0.21, 0.009),
+                (0.42, 0),
+            ]
+            if not args.night
+            else [(0, 0.87), (0.065, 0.64), (0.18, 0.17), (0.34, 0.025), (0.5, 0)]
+        )
+    ):
+        k = profile.elements.new(t) if i else profile.elements[0]
+        k.color = (value, value, value, 1)
+    profile.interpolation = "EASE"
+    tr.links.new(radius.outputs["Value"], ramp.inputs[0])
+    emit = tr.nodes.new("ShaderNodeEmission")
+    emit.inputs["Color"].default_value = (
+        (1, 0.89, 0.69, 1) if not args.night else (0.62, 0.80, 1, 1)
+    )
+    emit.inputs["Strength"].default_value = args.flux * (1 if not args.night else 0.30)
+    mix = tr.nodes.new("ShaderNodeMixShader")
+    tr.links.new(ramp.outputs[0], mix.inputs[0])
+    tr.links.new(tr.nodes.new("ShaderNodeBsdfTransparent").outputs[0], mix.inputs[1])
+    tr.links.new(emit.outputs[0], mix.inputs[2])
+    tr.links.new(mix.outputs[0], tr.nodes["Material Output"].inputs[0])
+    # Carry the distant glow in the bank projection with the surrounding sky.
+    bpy.ops.mesh.primitive_plane_add(
+        size=14, location=(0, 71, args.sun_z), rotation=(math.pi / 2, 0, 0)
+    )
+    solar = bpy.context.object
+    solar.name = "Sun beyond the far bank"
+    if args.night:
+        solar.scale = (2.8, 0.43, 1)
+    solar.visible_shadow = False
+    solar.data.materials.append(glint)
+    layers["bank"].append(solar)
 
 bpy.ops.object.camera_add()
 cam = bpy.context.object
 scene.camera = cam
-cam.location = (0.06, -args.distance, args.height)
+cam.location = (0, -args.distance, args.height)
 cam.data.angle = math.radians(38)
-aim = Vector((args.aim, 0, 0.63 if not args.phone else 0.42))
+aim = Vector((args.aim, 0, args.target_z))
 cam.rotation_euler = (aim - cam.location).to_track_quat("-Z", "Y").to_euler()
 cam.rotation_euler.rotate_axis("Z", math.radians(args.roll))
 if args.push:
@@ -660,6 +870,38 @@ def render(path):
     scene.render.filepath = str(path)
     bpy.ops.render.render(write_still=True)
 
+
+if args.layers or args.survey_only:
+    # Fit reciprocal camera depth to image coordinates for each proxy plane.
+    def project(v):
+        q = world_to_camera_view(scene, cam, Vector(v))
+        return [float(q.x), 1 - float(q.y), float(q.z)]
+
+    def plane(points):
+        a = np.array([project(p) for p in points])
+        return np.linalg.lstsq(
+            np.column_stack((a[:, :2], np.ones(len(a)))), 1 / a[:, 2], rcond=None
+        )[0].tolist()
+
+    # The fallen slab rises out of the river. Fitting the visible break
+    # faces avoids stretching the upright edges down the ground plane.
+    debris = [
+        obj.matrix_world @ vertex.co
+        for obj in layers["near"]
+        if obj.parent is None
+        for vertex in obj.data.vertices
+    ]
+    focus = project((0, 0, 1.55))
+    meta = dict(
+        focus=focus[:2],
+        near=plane([v for v in debris if v.z > 0.05]),
+        jaw=plane([(0, -0.33, 0), (4, wall(4) - 0.33, 0), (0, -0.33, 4)]),
+        ground=plane([(0, 0, 0.11), (2, 0, 0.11), (0, -3, 0.11)]),
+    )
+    out.with_suffix(".json").write_text(json.dumps(meta, indent=2))
+
+if args.survey_only:
+    raise SystemExit(0)
 
 render(out)
 if args.layers:
@@ -686,23 +928,3 @@ if args.layers:
             ct.links.new(ct.nodes["Render Layers"].outputs["IndexMA"], aux.inputs[0])
         render(out.with_stem(out.stem + "-" + layer))
         scene.use_nodes = False
-
-    # Fit reciprocal camera depth to image coordinates for each proxy plane.
-    def project(v):
-        q = world_to_camera_view(scene, cam, Vector(v))
-        return [float(q.x), 1 - float(q.y), float(q.z)]
-
-    def plane(points):
-        a = np.array([project(p) for p in points])
-        return np.linalg.solve(
-            np.column_stack((a[:, :2], np.ones(3))), 1 / a[:, 2]
-        ).tolist()
-
-    focus = project((0.12, 0.20, 1.15))
-    meta = dict(
-        focus=focus[:2],
-        near=plane([(-1.5, -0.6, 0), (-2.8, -2.35, 0), (-1.5, -0.6, 3)]),
-        jaw=plane([(1.3, 1.85, 0), (3, 4.7, 0), (1.3, 1.85, 3)]),
-        ground=plane([(0, 0, 0.11), (2, 0, 0.11), (0, -3, 0.11)]),
-    )
-    out.with_suffix(".json").write_text(json.dumps(meta, indent=2))

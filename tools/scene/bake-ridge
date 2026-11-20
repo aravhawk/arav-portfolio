@@ -2,7 +2,7 @@
 set -eu
 cd "$(dirname "$0")/../.."
 py="$HOME/.t3/portfolio-redesign-v4/tools/bake-venv/bin/python"
-out=.tools/out/o3c/bake
+out=.tools/out/o3d/bake
 mkdir -p "$out" public/scene/ridge
 "$py" tools/scene/lake/inputs.py
 for theme in day night; do
@@ -10,12 +10,12 @@ for theme in day night; do
 done
 for gate in wide tall; do
     for theme in day night; do
-        set -- --slope 2.19 --crest 1.04 --gap .38 --layers --samples 24 --library "$out/$theme.blend"
-        if [ "$theme" = night ]; then set -- "$@" --night; fi
+        set -- --slope .80 --breakage 1.65 --sun-z 2.4 --flux 31 --layers --samples 24 --library "$out/$theme.blend"
+        if [ "$theme" = night ]; then set -- "$@" --night --flux 42; fi
         if [ "$gate" = wide ]; then
-            set -- "$@" --width 3456 --distance 9.7 --height 1.93 --aim 1.02 --roll -4
+            set -- "$@" --width 3456 --distance 38.5 --height 3.2 --aim -4.7 --roll -3
         else
-            set -- "$@" --width 1080 --distance 7.15 --height 2.11 --aim .085 --roll -3 --phone
+            set -- "$@" --width 1080 --distance 36 --height 3.05 --aim -.23 --roll -1 --target-z -.62 --phone
         fi
         "$py" tools/scene/ridge/study.py "$out/$gate-$theme.png" "$@" > "$out/$gate-$theme.log" 2>&1
     done

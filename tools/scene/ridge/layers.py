@@ -13,7 +13,7 @@ from scipy.ndimage import distance_transform_edt
 parser = argparse.ArgumentParser()
 parser.add_argument("folder", type=Path)
 parser.add_argument("output", type=Path)
-parser.add_argument("--quality", type=int, default=68)
+parser.add_argument("--quality", type=int, default=92)
 args = parser.parse_args()
 config = ocio.Config.CreateFromFile(
     bpy.utils.resource_path("LOCAL") + "/datafiles/colormanagement/config.ocio"
@@ -62,7 +62,7 @@ def layout(gate):
     return size, crops, slots, (w, rounded(y + row))
 
 
-def broken_reflection(rgb, wet, projection):
+def broken_reflection(rgb, wet, projection, night):
     # Resolve the highlights into capillary facets in metre coordinates.
     # The beauty supplies their colour, extent and incident sunlight.
     rows, cols = np.nonzero(np.asarray(wet) > 127)
@@ -77,21 +77,22 @@ def broken_reflection(rgb, wet, projection):
         )
         / 255
     )
-    iy = ((depth * 1.13 + across * 0.19) % 1 * 2047).astype(int)
-    ix = ((across * 1.4 - depth * 0.05) % 1 * 2047).astype(int)
-    facets = np.clip((scan[iy, ix] - 0.44) * 7, 0, 1) ** 2
-    # The river bends right while the reflected sun follows its azimuth.
-    # Only the part of the ripples that crosses that path catches the sky.
-    downstream = np.maximum(0, v - projection["focus"][1])
-    axis = projection["focus"][0] + 0.22 * downstream
-    solar = np.exp(-(((u - axis) / (0.055 + 0.095 * downstream)) ** 2))
-    facets *= solar
-    tone = rgb[rows, cols]
-    reach = np.clip((v - projection["focus"][1] - 0.09) * 6.5, 0, 1)
-    base = np.array([0.125, 0.198, 0.211], np.float32)
-    rgb[rows, cols] = (
-        tone - np.maximum(0, tone - base) * (0.94 * reach * (1 - facets))[:, None]
+    # One continuous region of the scan, viewed in perspective. Crossing
+    # facets catch the horizon only in the solid angle subtended by the gap.
+    iy = (np.clip(0.05 + (depth - 16) * 0.027 + across * 0.011, 0, 1) * 2047).astype(
+        int
     )
+    ix = (np.clip(0.43 + across * 0.19 - (depth - 30) * 0.008, 0, 1) * 2047).astype(int)
+    facets = np.clip((scan[iy, ix] - 0.45) * 7.0, 0, 1) ** 2
+    downstream = np.maximum(0, v - projection["focus"][1])
+    axis = projection["focus"][0] + 0.035 * downstream
+    solar = np.exp(-(((u - axis) / (0.019 + 0.095 * downstream)) ** 2))
+    tone = rgb[rows, cols]
+    base = np.array([0.10, 0.173, 0.185], np.float32)
+    broken = tone - np.maximum(0, tone - base) * (0.88 - 0.48 * facets * solar)[:, None]
+    glitter = np.clip((facets - 0.37) * 1.6, 0, 1) * solar
+    light = np.array([0.51, 0.59, 0.69] if night else [0.95, 0.93, 0.82], np.float32)
+    rgb[rows, cols] = broken + np.maximum(0, light - broken) * glitter[:, None]
 
 
 def pack(gate, theme, size, crops, slots, atlas):
@@ -126,15 +127,24 @@ def pack(gate, theme, size, crops, slots, atlas):
             fringe = (alpha < 0.98) & (distance < 32)
             rgb[fringe] = rgb[nearest[0][fringe], nearest[1][fringe]]
         if name == "bank":
-            broken_reflection(rgb, wet, registry[gate])
+            broken_reflection(rgb, wet, registry[gate], theme == "night")
         if name == "bank" and theme == "night":
-            # The blue-hour return from the bank faces away from the horizon.
-            # Darken the nearby snow down to the hero's lee-side exposure.
-            field = np.linspace(0, 1, h, dtype=np.float32)[:, None]
-            weight = np.clip((field - 0.48) / 0.28, 0, 1)
-            weight = weight * weight * (3 - 2 * weight)
+            # In blue hour the western snow tongue faces away from the light.
+            # Grade it by metres in the surveyed scene so its exposure holds
+            # when the closing camera reaches what was the opening midground.
+            gu, gv, bias = registry[gate]["ground"]
+            u = (np.arange(w, dtype=np.float32) + 0.5) / w
+            v = (np.arange(h, dtype=np.float32) + 0.5)[:, None] / h
+            inverse_depth = gu * u + gv * v + bias
+            weight = np.clip((inverse_depth - 1 / 53) / (1 / 34 - 1 / 53), 0, 1)
+            weight *= weight * (3 - 2 * weight)
             water = np.asarray(wet, np.float32) / 255
-            rgb *= 1 - 0.57 * (weight * (1 - water))[:, :, None]
+            rgb *= 1 - 0.61 * (weight * (1 - water))[:, :, None]
+        if theme == "night":
+            # Match the low-chroma eastern sky of the lake after the lee
+            # snow exposure. Retain its luminance and the bright inner rims.
+            value = rgb @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+            rgb = 0.53 * rgb + 0.47 * value[:, :, None]
         inverse.applyRGB(rgb)
         field = np.log2(1 + 1024 * np.maximum(0, rgb)) / 14
         green = field[:, :, 1]
