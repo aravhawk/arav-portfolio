@@ -1,5 +1,7 @@
 # The quality plan (Nov 18, 2026)
 
+> **A record of the earlier site (before the rebuild of Nov 19, 2026).** The engine, files and plans named here are gone or changed; the site as it is now is described in [`docs/site-system/`](../site-system/README.md).
+
 Written in answer to Arav's quality brief (t306u, t307u) and his
 addition about a maintainer pack (t309u). The goal: the best personal
 site there is. Zero AI slop, extreme physical fluidity, never killing

@@ -1,5 +1,7 @@
 # Performance: what went wrong in v3 and what v4 does about it
 
+> **A record of the earlier site (before the rebuild of Nov 19, 2026).** The engine, files and plans named here are gone or changed; the site as it is now is described in [`docs/site-system/`](../site-system/README.md).
+
 The owner's report on v3: "sometimes, even on my extremely powerful [...] machine, it'll actually start lagging for some reason and get the animations blurry and lower quality."
 
 This document finds the cause in v3's code, reproduces it with measurements, and turns it into rules for v4.

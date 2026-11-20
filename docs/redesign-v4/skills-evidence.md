@@ -1,5 +1,7 @@
 # Skills used, and what each one decided
 
+> **A record of the earlier site (before the rebuild of Nov 19, 2026).** The engine, files and plans named here are gone or changed; the site as it is now is described in [`docs/site-system/`](../site-system/README.md).
+
 All skills were read from `~/.claude/skills/<name>/` (symlinks to
 `~/.agents/skills/<name>/`). Nothing was installed or modified. Impeccable
 was not used.

@@ -1,5 +1,7 @@
 # Carry-over from v2 and v3
 
+> **A record of the earlier site (before the rebuild of Nov 19, 2026).** The engine, files and plans named here are gone or changed; the site as it is now is described in [`docs/site-system/`](../site-system/README.md).
+
 What v4 keeps, reworks or kills from the two earlier builds, section by section, followed by three dossiers: the v2 ending screen, the v3 project pages and archive, and spacing.
 
 ## Sources

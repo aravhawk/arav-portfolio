@@ -1,5 +1,7 @@
 # Font licences
 
+> **Partly out of date (Nov 19, 2026).** The licences stand, but `src/fonts/TASAOrbiter-Ice.woff2` was deleted with the earlier engine; the site as it is now is described in [`docs/site-system/`](../site-system/README.md).
+
 Every face shipped by the site is under the SIL Open Font License 1.1 and is
 self hosted from this repository. The licence texts are committed in
 `public/fonts/LICENSES/`.

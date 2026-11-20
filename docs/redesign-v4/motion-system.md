@@ -1,5 +1,7 @@
 # aravjain.dev v4: motion system
 
+> **A record of the earlier site (before the rebuild of Nov 19, 2026).** The engine, files and plans named here are gone or changed; the site as it is now is described in [`docs/site-system/`](../site-system/README.md).
+
 One clock: a single `requestAnimationFrame` loop (`src/lib/frame.ts`) drives
 smooth scroll, the water, the ending and every scroll-linked reveal, in that
 order. It stops while the tab is hidden.

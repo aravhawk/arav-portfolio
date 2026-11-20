@@ -1,5 +1,7 @@
 # aravjain.dev v4: concept
 
+> **A record of the earlier site (before the rebuild of Nov 19, 2026).** The engine, files and plans named here are gone or changed; the site as it is now is described in [`docs/site-system/`](../site-system/README.md).
+
 Three concepts were worked up against the references (Igloo, Lando Norris,
 Lusion, and the newer sites in `reference-study.md`) and against what the
 owner said about v2 and v3. One was prototyped before the others were
