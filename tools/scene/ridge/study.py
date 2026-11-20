@@ -33,6 +33,7 @@ parser.add_argument(
 )
 parser.add_argument("--slope", type=float, default=0.52)
 parser.add_argument("--distance", type=float, default=38)
+parser.add_argument("--lens-angle", type=float, default=38)
 parser.add_argument("--aim", type=float, default=-3.45)
 parser.add_argument("--height", type=float, default=2.52)
 parser.add_argument("--crest", type=float, default=1)
@@ -921,7 +922,7 @@ bpy.ops.object.camera_add()
 cam = bpy.context.object
 scene.camera = cam
 cam.location = (0, -args.distance, args.height)
-cam.data.angle = math.radians(38)
+cam.data.angle = math.radians(args.lens_angle)
 aim = Vector((args.aim, 0, args.target_z))
 cam.rotation_euler = (aim - cam.location).to_track_quat("-Z", "Y").to_euler()
 cam.rotation_euler.rotate_axis("Z", math.radians(args.roll))
