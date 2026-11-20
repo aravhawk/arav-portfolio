@@ -137,9 +137,11 @@ export function position(screens: number) {
   while (index + 1 < starts.length && screens >= starts[index + 1]) index++;
   const scene = scenes[index];
   const local = Math.max(0, screens - starts[index]);
+  // Compare on the flight timeline so the exact closing pose stays a single draw.
+  const end = starts[index] + scene.screens;
   return {
     index,
     progress: Math.min(1, local / scene.screens),
-    mix: index + 1 < scenes.length ? Math.min(1, Math.max(0, (local - scene.screens) / scene.exit)) : 0,
+    mix: index + 1 < scenes.length ? Math.min(1, Math.max(0, (screens - end) / scene.exit)) : 0,
   };
 }
