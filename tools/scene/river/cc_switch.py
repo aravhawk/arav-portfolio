@@ -12,13 +12,16 @@ def shore(xs, y, axis, half):
 
 
 def extras(grid, frozen):
-    # Two shelves end at the same vertex as the open branch. The thin
-    # snow shelf covers their edges as it does the exposed river.
+    # Sample the curved noses by angle so the first rows already turn
+    # across the flow. Each sheet freezes a little way up its own branch.
     for index in (1, 2):
         rows = []
-        for y in np.linspace(-5, 55, 160):
+        tip = -2.7 if index == 1 else -1.8
+        cap = [(tip + 2.1 * (1 - np.cos(a)), 1.42 * np.sin(a))
+               for a in np.linspace(0, np.pi / 2, 22)]
+        body = [(y, 1.42) for y in np.linspace(tip + 2.1, 55, 150)[1:]]
+        for y, width in cap + body:
             x = courses(y)[index]
-            width = min(1.42, (y + 5) * .16)
             rows.append([(x - width, y, .04), (x + width, y, .04)])
         grid("Sealed lead", rows, frozen)
 
