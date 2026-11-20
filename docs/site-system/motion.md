@@ -1,108 +1,114 @@
 # Motion
 
-Status: the tokens, the words' steps and the camera's moves are **as
-built**. The velocity signals, the camera's spring and one tokens
-module are **planned** (the motion system task).
+Two kinds of motion live on this site and they follow different
+rules: the picture's (the scene, driven by scroll and the pointer)
+and the interface's (words, controls, layers, route changes).
 
-## Principles
+## The picture
 
-1. **One clock.** The engine owns the page's only frame loop
-   (`src/water/flight.ts`). Scroll, camera, simulation, words and
-   sound are stepped from it. Do not start another
-   `requestAnimationFrame` loop or a timer that animates.
-2. **Scroll is a timeline.** Everything in the picture is a function
-   of scroll position in screens, scrubs both ways, and rests in an
-   exact pose. Nothing waits on a timer except the short transitions
-   of words between two finished states.
-3. **The eye never stops.** Every station is one authored camera move
-   (push, arc or rise). No hold in which two frames half a screen
-   apart are the same picture (`tests/water/camera.test.ts` asserts
-   it).
-4. **Motion starts from the thing that causes it.** A station's event
-   begins at its object; a press answers at the control; a page
-   transition begins at what was touched.
-5. **No trick twice in a row.** Each station's event is a different
-   mechanism. Do not reuse one reveal between every beat.
-6. **Crisp at rest.** No blur, ever; no resolution change.
+All of it is in `src/scene/lake/live.ts` (the loop) and
+`src/scene/flight/gpu.ts` (the stream and the whiteout). One
+`requestAnimationFrame` loop draws the canvas. It stops when the
+tab is hidden or the canvas is off screen.
 
-## Easing (tokens in `src/app/globals.css`)
+- **Scroll is the timeline.** Position is measured in screens of
+  scroll, where one screen is the first section's height divided by
+  its scene's length. Everything is a function of that position and
+  runs the same backwards.
+- **Scroll is smoothed twice** by an exponential ease (rate 6.49 a
+  second, each stage), so a wheel burst settles without a snap.
+- **The push.** Over a scene's two screens the camera closes on the
+  scene's `focus` by its `push` amount. Near pixels move more than
+  far ones, by the depth in the survey texture. This is the only
+  camera move a plate has. It is small on purpose: see
+  [scenes.md](scenes.md).
+- **The breath.** At rest the camera drifts on three slow sines
+  (periods of about 28 to 42 s), and open water shimmers where the
+  survey marks it. The picture is never frozen and nothing in it is
+  fast.
+- **The pointer** leans the camera a little, through a critically
+  damped spring (no overshoot, no bounce). Leaving the window
+  returns it to centre. Nothing flees the cursor.
+- **The whiteout.** For the 0.6 screens after a push, blown snow
+  closes over the outgoing scene and clears on the incoming one. It
+  follows scroll in both directions. The page's words are off from
+  8 to 92 percent of it.
+- **A jump.** A move across scenes that are not neighbours (a link,
+  a keyboard focus, the End key) is one whiteout of 0.72 s straight
+  to the target, not a flight through every scene between.
+- **Catching up.** The picture follows the smoothed scroll at 5.5
+  screens a second at most, and waits at the end of a push if the
+  next scene is not ready.
 
-| Token | Curve | Use |
-| --- | --- | --- |
-| `--ease-out` | `cubic-bezier(0.23, 1, 0.32, 1)` | anything arriving, and UI feedback |
-| `--ease-in-out` | `cubic-bezier(0.77, 0, 0.175, 1)` | anything moving on screen |
-| `--ease-in` | `cubic-bezier(0.55, 0, 0.9, 0.3)` | anything leaving (and make it faster than its arrival) |
+**Frame-rate independence is a rule.** Every step in the loop is
+integrated with the frame's own `dt` (the eases as `1 - e^(-rate ×
+dt)`, the spring in closed form, `dt` capped at 0.06 s), so 60 Hz
+and 120 Hz show the same motion. Never write `value += constant` a
+frame. Never start a second animation loop for the canvas.
 
-Never linear for UI, never a start from `scale(0)`, no bounce on a
-large surface.
+**Reduced motion**: the renderer does not mount. The page is its
+stills and its words.
 
-## Durations
+## Words on the home page
+
+A scene's words arrive and leave by opacity only: 240 ms in, 190 ms
+out, on `--ease-out` (`--hm-in` and `--hm-out` in
+`src/app/home.css`). No rise, no mask, no letter effects. Words
+reached by the keyboard are simply there, with no transition, and
+their scene follows. With reduced motion or scripts off they are
+plain text on a still.
+
+## Tokens
+
+In `src/app/globals.css`:
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--t-press` | 120 ms | press feedback (`:active`, scale 0.97), at pointer-down |
+| `--ease-out` | `cubic-bezier(0.23, 1, 0.32, 1)` | the one curve, in and out |
+| `--t-press` | 120 ms | press feedback |
 | `--t-fast` | 180 ms | hover, colour |
-| `--t-ui` | 260 ms | small UI |
-| `--fl-set`, `--fl-rise` (home) | 200 to 320 ms | a piece of a block of words setting through its mask |
-| `--t-theme` | 420 ms | the theme's turn |
-| `--t-reveal` | 760 ms | a page's first reveal, a page transition |
+| `--t-ui` | 260 ms | small interface moves |
+| `--t-theme` | 420 ms | the page's colours when the theme turns |
 
-Hover styles only under `@media (hover: hover) and (pointer: fine)`.
-`prefers-reduced-motion`: every step is shown at once, no entrance,
-the first screen stands where its still was taken.
+In `src/app/inner.css`: `--t-quick` 160 ms and `--t-layer` 200 ms.
+Route changes are a cross-fade of the page inside the shell, 120 ms
+out and 150 ms in (`::view-transition-*` in `globals.css`). Nothing
+travels between routes.
 
-## UI layers and controls (the owner's standing guidance, Nov 19, 2026)
+## Rules for controls and layers
 
-These apply wherever the site has the matching element (the nav, the
-rail's labels, the archive's filter, the post's contents, the film's
-dialog, the profile switch, buttons and links). They do not change
-the hero, the river or any 3D work.
+The owner's standing rules. They apply to the nav, the theme
+switch, the sound toggle, the film's dialog, the archive search,
+live-number tips, buttons and links.
 
-- **Origin-aware.** A dropdown, popover, menu, tooltip or overflow
-  layer scales from its trigger, never from its own centre
-  (`transform-origin` from the trigger's position, or the library's
-  variable where one is used).
-- **Short.** UI motion stays under 300 ms, about 200 ms for a small
-  layer. Ease-out for both enter and exit; the exit about a fifth
-  faster than the enter.
-- **Never from nothing.** No start from `scale(0)`: start at 0.93 to
-  0.95 with opacity. Press feedback is `scale(0.97)` on `:active`.
-- **Transform and opacity only**, and interruptible transitions in
-  place of keyframes.
-- **No motion on keyboard-initiated actions**, nor on chrome people
-  see constantly.
-- **Reduced motion** across the scroll journey and the ending: a
-  fade in place of any large movement.
-- `text-wrap: pretty` on body copy.
+- **A layer that opens scales from its trigger**, never from its
+  own centre and never from `scale(0)`: it starts at 0.93 to 0.95
+  with opacity. (The live-number tip starts at `scale(0.95)` from
+  its lower left corner; the film's dialog grows from where it was
+  pressed.)
+- **Short.** Under 300 ms; about 200 ms for a small layer.
+  Ease-out both ways, the exit about a fifth faster than the
+  entrance.
+- **Press** is `scale(0.97)` on `:active`.
+- **Transform and opacity only.** No animated layout, no blur, no
+  filter.
+- **Nothing animates for a keyboard action**, nor for chrome that
+  is always on screen. The theme knob does not slide when toggled
+  from the keyboard.
+- **Hover styles only under**
+  `@media (hover: hover) and (pointer: fine)`.
+- **Reduced motion** gets opacity alone
+  (`@media (prefers-reduced-motion: reduce)` blocks in each
+  stylesheet).
+- **Nothing fades up on scroll** on an inner page. Content is
+  there.
+- `text-wrap: pretty` on running text, `balance` on headings.
+- No jelly, no bounce, no particles, no parallax on DOM elements.
 
-## Springs (planned: one helper in the engine)
+## Sound is not motion
 
-For anything that follows the pointer or a drag: critically damped
-(damping ratio 1.0; 0.8 only for something small), response 0.3 to
-0.4 s, integrated per frame so the result does not depend on the
-frame rate. The camera follows smoothed scroll through the same
-spring.
+The sound steps on a 150 ms timer (`src/sound/index.ts`) and only
+sets ramps on audio parameters; it animates nothing. With reduced
+motion it still plays but does not swell on a whiteout.
 
-## Words
-
-A block of words builds in steps as its station composes, each piece
-at its own size through a mask, the eyebrow first (a title is never
-shown small). Steps are scroll thresholds (`data-at`); each step is a
-short transition that completes on its own and reverses when scrolled
-back. A block leaves as one, quickly. No word may ever be covered,
-and no two lines may intersect at any scroll position
-(`scripts/words-test.mjs`).
-
-## Transitions between sections
-
-Sections are joined by the flight itself: the camera travels, the
-light moves with scroll, the outgoing block leaves before the
-incoming eyebrow stands. There is no wipe, fade or scene cut between
-stations, and a new station must not add one.
-
-## Haptics
-
-Only as the direct consequence of a meaningful action; never on load,
-hover or continuous scroll; in the picture, only at discrete beats.
-
-Change log: 2026-11-18 first version (orchestrator).
+Change log: 2026-11-19 rewritten for the baked scenes (M1).

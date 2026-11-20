@@ -1,73 +1,87 @@
 # The consistency checklist
 
-Status: **as built** (the rule); the tooling for items 5 and 6 is
-being added.
+Run the lines that apply before a change is called done. Each is a
+command or a look. A line you could not run is said in your report,
+not skipped. Commands assume a production build on port 3189 and
+`pw="$HOME/.t3/portfolio-redesign-v4/tools/node_modules"`.
 
-Run this whole pass before any change is called done. Any mismatch is
-a FAIL. The page must be coherent at every commit: never one stretch
-in a new light, motion or material while its neighbours are in the
-old one.
+## Every change
 
-1. **Look at the whole page**, both themes, 1440 and 390: 24 evenly
-   spaced frames each, and every composed stop at 2x. Then the
-   transitions: for every pair of neighbouring sections, eight frames
-   across the join.
-2. **Motion**: every half screen of scroll changes the picture; the
-   eye never stops; easing and durations come from the tokens; no
-   mechanism is used by two neighbours; the words build in the one
-   way; reduced motion is whole.
-   UI layers and controls follow `motion.md` ("UI layers and
-   controls"): origin-aware layers, under 300 ms, ease-out with a
-   faster exit, no `scale(0)`, `scale(0.97)` on press, transform and
-   opacity only, nothing animated for a keyboard action or for
-   constant chrome, a fade under reduced motion, `text-wrap: pretty`
-   on body copy.
-3. **Light**: each station is told from its neighbours by light
-   alone; the light moves without a step; the night has form.
-4. **Materials**: all ice is the one ice; no glow or outline where
-   water meets ice; no glass anywhere in the DOM.
-5. **Frame pacing and input**: per-screen frame times within the
-   budget and even from section to section on the owner's display
-   (`performance.md`); the pointer's wake within a frame.
-6. **First visit**: no held frame while moving.
-7. **Words**: `scripts/legibility-test.mjs`, `scripts/words-test.mjs`,
-   `scripts/titles-test.mjs` pass at 390, 768, 1440 (and the wide
-   ones); nothing clipped or covered; 200 words or fewer on the home
-   page; copy follows `copy.md`.
-8. **Inner pages**: `scripts/overlap-test.mjs`, `scripts/fill-test.mjs`
-   on every page, **a blog post and the blog index included**, at
-   320, 390, 768 and 1440 in both themes. Lighthouse on the home
-   page, one project page and one blog post, at 1440 and at 390.
-   Every address (canonical, share image, feed, sitemap, robots,
-   structured data) on `https://arav.pro`.
-9. **Code**: `pnpm lint`, `pnpm exec tsc --noEmit`,
-   `pnpm exec vitest run`, `pnpm build`; no console errors; pages read
-   with scripts off.
-10. **Other browsers and states**: WebKit and Firefox, reduced motion,
-    no WebGL, forced colours, print.
+1. `pnpm lint` is clean.
+2. `pnpm build` is clean, **then** `pnpm exec tsc --noEmit`, in
+   that order (the build writes the route types the typecheck
+   reads).
+3. `pnpm exec vitest run` passes (14 files, 223 tests today).
+4. `git status --short` shows only files you meant to change, and
+   nothing staged that belongs to another change.
+   `git diff 9a487fb -- content/posts blog-editor` is empty.
+5. No console error on the pages you touched.
+6. `NODE_PATH="$pw" node docs/site-system/measure/words.cjs
+   http://localhost:3189`: 200 words on the home page, no dashes,
+   no banned names.
 
-## The critics' PASS criteria
+## A change to the home page or a scene
 
-Independent critics judge captures and motion runs of this site
-beside landonorris.com, igloo.inc and lusion.co, and return PASS or
-FAIL with reasons (no scores). A PASS needs all of:
+7. Scroll the whole page, top to bottom and back, wide (1440 by
+   900) and tall (390 by 844), in both themes. Nothing stretched,
+   popped, half loaded or empty. Then look at 24 evenly spaced
+   frames of each of the four as one sheet: the page reads as one
+   world.
+8. Every scene you touched, with its real words on, at the start
+   and at the end of its push, wide and tall, day and night: the
+   words stand on calm ground and can be read. At night look twice.
+9. The whiteout into and out of it, forward and back. A reload in
+   the middle of the page. A jump from the top to the end.
+10. Scripts off, and reduced motion: twelve sections, each its
+    still and its words, a readable page.
+11. Keyboard: Tab through every link; each is visible when focused
+    and its scene follows.
+12. The nav's counter reads `NN / 12` (or the new count).
+13. Sound on: no click on toggle, on a fast scroll or on a jump;
+    `pnpm exec vitest run tests/sound` passes.
+14. `docs/site-system/measure/first-load-js.sh
+    http://localhost:3189 /` says ok.
+15. GPU time and bytes for the scene are inside the budget
+    ([performance.md](performance.md)); the scroll trace shows no
+    task over 50 ms.
 
-1. No tell of a generic AI-made site anywhere (no glass panels, no
-   cursor-repel particles, no jelly, no template type, no slogans,
-   no captions that explain the design).
-2. Every half screen of scroll changes the picture; no two stations
-   share a mechanism; motion reads as one system.
-3. The name, the ice and the water read as photographed materials;
-   each station is told apart by light alone.
-4. The night theme is the equal of the day.
-5. Nothing covers or clips text at any width; what he does is in the
-   first paint.
-6. Hierarchy holds at real size; every sentence is specific to him
-   and his work.
-7. The frame-time and first-visit budgets hold on the owner's
-   display, with the per-screen table attached (measured, not judged
-   from stills).
-8. Beside the three references, the critic cannot name a fault that
-   makes this the lesser site.
+## A change to an inner page
 
-Change log: 2026-11-18 first version (orchestrator).
+16. The page at 1440, 390 and 320 wide, both themes: one `h1`, no
+    horizontal scroll, nothing clipped, targets 44 px, focus
+    visible.
+17. No scene, canvas or audio code reaches it:
+    `first-load-js.sh http://localhost:3189 <route>` says ok.
+18. Its picture, if it has one, is AVIF or WebP with width and
+    height; only the first screen's is eager.
+19. Its share card at `<route>/opengraph-image` (a project's is
+    `/work/<slug>/opengraph-image/card`): words clear of the
+    subject.
+20. Canonical, share image, feed and sitemap addresses are on
+    `https://arav.pro`.
+
+## The gate
+
+21. `docs/site-system/measure/lighthouse.sh http://localhost:3189
+    .tools/out/lh <routes you touched> /`: 95 or more on the phone,
+    100 on the desktop; accessibility, best practices and SEO 100;
+    LCP and CLS inside the limits. Compare with a run from before
+    your change.
+
+## The look
+
+22. Nothing in [scenes.md](scenes.md) under "What fails, by name".
+23. No glass, blur, gradient as decoration, shadow under words, or
+    panel behind words. No new type size, spacing step or easing.
+24. Motion follows [motion.md](motion.md): layers open from their
+    trigger, press is `scale(0.97)`, nothing animates for the
+    keyboard, nothing fades up on scroll.
+25. Copy follows [copy.md](copy.md).
+
+## Not checked by any tool here
+
+Say which of these you did by eye, or did not do: WebKit and
+Firefox; a real phone; a 120 Hz display; forced colours and print;
+contrast of words over the night picture; INP.
+
+Change log: 2026-11-19 rewritten for the baked scenes (M1).
