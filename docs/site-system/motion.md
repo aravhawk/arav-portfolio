@@ -89,7 +89,10 @@ A block of words builds in steps as its station composes, each piece
 at its own size through a mask, the eyebrow first (a title is never
 shown small). Steps are scroll thresholds (`data-at`); each step is a
 short transition that completes on its own and reverses when scrolled
-back. A block leaves as one, quickly. No word may ever be covered,
+back. A block leaves as one, quickly (a piece may leave a little before
+its block where the ground under it is lost first: `data-fl-until`, used
+by the first screen's sentence and by the delta's recognition lines,
+which the dawn's light reaches a tenth of a screen early on a phone). No word may ever be covered,
 and no two lines may intersect at any scroll position
 (`scripts/words-test.mjs`).
 

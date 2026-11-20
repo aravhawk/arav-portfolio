@@ -13,13 +13,14 @@ const inline = (x: string) => (/^[A-Z][a-z]/.test(x) ? x[0].toLowerCase() + x.sl
  * is into, and what comes next. `year` is the live count of the year's
  * contributions (already a readout), `read` the day it was read.
  */
-export function Interests({ timing: delta, year, read }: { timing: Timing; year?: React.ReactNode; read?: string }) {
+export function Interests({ timing: delta, year, read, recogUntil }: { timing: Timing; year?: React.ReactNode; read?: string; /** Where, in screens, the label and the recognition lines leave, when that is before the block does. */ recogUntil?: number }) {
+  const until = recogUntil == null ? {} : { 'data-fl-until': recogUntil };
   return (
     <>
-      <p className="fl-eyebrow" id="into" {...delta.eyebrow}>
+      <p className="fl-eyebrow" id="into" {...delta.eyebrow} {...until}>
         Recognition
       </p>
-      <ul className="fl-unit fl-recog" {...delta.title}>
+      <ul className="fl-unit fl-recog" {...delta.title} {...until}>
         <li>{RECOGNITION.devday}.</li>
         <li>
           In a{' '}

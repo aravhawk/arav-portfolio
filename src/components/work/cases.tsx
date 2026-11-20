@@ -291,7 +291,7 @@ function KiloBench({ p }: { p: Project }) {
           {/* The first thing it does, with the screen it starts from. */}
           <div className="act">
             <div className="act-copy">
-              <h3 className="act-title">{read.title}</h3>
+              <h2 className="act-title">{read.title}</h2>
               <p className="body">{read.body}</p>
             </div>
             <Plate media={pic(p, 'kilo-bench-start.webp')} sizes="(max-width: 859px) 94vw, 560px" className="act-plate" caption="The Bench tab’s first screen." />
@@ -300,11 +300,11 @@ function KiloBench({ p }: { p: Project }) {
           <div className="act">
             <div className="act-pair">
               <div className="act-copy">
-                <h3 className="act-title">{cover.title}</h3>
+                <h2 className="act-title">{cover.title}</h2>
                 <p className="body">{cover.body}</p>
               </div>
               <div className="act-copy">
-                <h3 className="act-title">{judge.title}</h3>
+                <h2 className="act-title">{judge.title}</h2>
                 <p className="body">{judge.body}</p>
               </div>
             </div>
@@ -673,7 +673,7 @@ function TensorPoW({ p }: { p: Project }) {
             <span className="dia-node dia-node-out mono">the same bits</span>
           </div>
           <figcaption className="paper-cap">
-            <h3 className="paper-h">{tensors.title}</h3>
+            <h2 className="paper-h">{tensors.title}</h2>
             <p className="body">{tensors.body}</p>
           </figcaption>
         </figure>
@@ -698,7 +698,7 @@ function TensorPoW({ p }: { p: Project }) {
             </span>
           </div>
           <figcaption className="paper-cap">
-            <h3 className="paper-h">{blocks.title}</h3>
+            <h2 className="paper-h">{blocks.title}</h2>
             <p className="body">{blocks.body}</p>
           </figcaption>
         </figure>
@@ -712,7 +712,7 @@ function TensorPoW({ p }: { p: Project }) {
             ))}
           </ul>
           <figcaption className="paper-cap">
-            <h3 className="paper-h">{node.title}</h3>
+            <h2 className="paper-h">{node.title}</h2>
             <p className="body">{node.body}</p>
           </figcaption>
         </figure>

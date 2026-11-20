@@ -139,6 +139,14 @@ const POSTER_BOOT = posterBoot();
  * is not a stretch without a word. The headline and the links set when the camera rests, as they always have.
  */
 const END_LEAD = 0.15;
+/**
+ * The delta's first lines (its label and what he is recognised for) leave this much, in screens, before the rest of
+ * the block. Through that last tenth the camera turns into the dawn, and on a phone at night the sun's road on the
+ * water reaches those lines while they still stand: the legibility test measured them at 4.4, then 3.3, against the
+ * 4.5 they need. The lines under them stand clear of it and stay to the block's own leaving, so the run to the
+ * ending is no longer without a word than it was (the ending's line cannot lead sooner: its ground is not there).
+ */
+const RECOG_EARLY = 0.1;
 
 /** His sentence, set a line at a time through the reach; then, once it stands whole, the line under it. */
 const SAY_AT = [SAY_FROM, 2.2, 2.5, 2.78, 3.02];
@@ -451,6 +459,7 @@ export default async function Home() {
           <div className="fl-words fl-block fl-into-words" {...delta.block}>
             <Interests
               timing={delta}
+              recogUntil={+(section.stop + (section.steps?.leave ?? STEPS.leave) - RECOG_EARLY).toFixed(3)}
               read={day(m.contributions.total.asOf)}
               year={
                 yearCount ? (
