@@ -75,9 +75,12 @@ html:not([data-scripted]) .sc-still {
   align-items: flex-start;
   padding: 104px max(var(--hm-gut), env(safe-area-inset-right)) var(--hm-foot) var(--hm-gut);
 }
-.sc-words[data-placement='lower-right'] {
-  align-items: flex-end;
-  text-align: right;
+/* Where a scene keeps its calm ground on the right, a wide frame sets the words there. (A tall frame has it on the left in every scene.) */
+@media (min-aspect-ratio: 1/1) {
+  .sc-words[data-placement='lower-right'] {
+    align-items: flex-end;
+    text-align: right;
+  }
 }
 
 /* ---------- flying ---------- */

@@ -42,12 +42,12 @@ export type Plate = Definition & {
   fields: Record<Gate, Record<Theme, readonly [string, string]>>;
 };
 
-function riverPlate(id: string, assets: Record<string, number>): Plate {
+function riverPlate(id: string, assets: Record<string, number>, words: Definition['words'] = 'lower-left'): Plate {
   const fields = (gate: Gate, theme: Theme) =>
     [`${gate}-${theme}.avif`, `${gate}-${theme}-survey.webp`] as const;
   return {
     id, project: id, kind: 'plate', root: `/scene/${id}/`, assets,
-    words: 'lower-left', screens: 2, exit: 0.6,
+    words, screens: 2, exit: 0.6,
     cameras: {
       wide: { focus: [0.59, 0.38], push: 0.19, aspect: 1.6 },
       tall: { focus: [0.54, 0.4], push: 0.13, aspect: 390 / 844 },
@@ -115,7 +115,8 @@ export const scenes: readonly (Lake | Plate)[] = [
   },
   riverPlate('statement', statementAssets),
   riverPlate('open-source', opensourceAssets),
-  riverPlate('kilo-bench', kilobenchAssets),
+  // The river runs out under the lower left here: the calm ground is on the right.
+  riverPlate('kilo-bench', kilobenchAssets, 'lower-right'),
   riverPlate('agent-bridge', agentbridgeAssets),
   riverPlate('ollama', ollamaAssets),
   riverPlate('cc-switch', ccswitchAssets),
