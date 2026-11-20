@@ -1,3 +1,4 @@
+import statementAssets from './statement-assets.json';
 import lakeAssets from './lake-assets.json';
 import ridgeAssets from './ridge-assets.json';
 import projections from './ridge-projections.json';
@@ -31,6 +32,23 @@ export type Plate = Definition & {
   cameras: Record<Gate, Camera>;
   fields: Record<Gate, Record<Theme, readonly [string, string]>>;
 };
+
+function riverPlate(id: string, assets: Record<string, number>): Plate {
+  const fields = (gate: Gate, theme: Theme) =>
+    [`${gate}-${theme}.avif`, `${gate}-${theme}-survey.webp`] as const;
+  return {
+    id, project: id, kind: 'plate', root: `/scene/${id}/`, assets,
+    words: 'lower-left', screens: 2, exit: 0.6,
+    cameras: {
+      wide: { focus: [0.59, 0.38], push: 0.19, aspect: 1.6 },
+      tall: { focus: [0.54, 0.4], push: 0.13, aspect: 390 / 844 },
+    },
+    fields: {
+      wide: { day: fields('wide', 'day'), night: fields('wide', 'night') },
+      tall: { day: fields('tall', 'day'), night: fields('tall', 'night') },
+    },
+  };
+}
 
 export const scenes: readonly (Lake | Plate)[] = [
   {
@@ -86,6 +104,7 @@ export const scenes: readonly (Lake | Plate)[] = [
       },
     },
   },
+  riverPlate('statement', statementAssets),
 ];
 export const starts: number[] = [];
 let length = 0;

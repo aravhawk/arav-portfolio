@@ -45,6 +45,7 @@ parser.add_argument("--push", type=float, default=0)
 parser.add_argument("--flux", type=float, default=16)
 parser.add_argument("--sun-z", type=float, default=3.19)
 parser.add_argument("--seed", type=int, default=529)
+parser.add_argument("--reach", help="Build a downstream river scene")
 args = parser.parse_args()
 out = args.output.resolve()
 out.parent.mkdir(parents=True, exist_ok=True)
@@ -463,84 +464,85 @@ def sawn(name, outline, thickness, center, angles, group, seed):
             ribbon.parent = ob
 
 
-for index, meters in zip((-4, -3, -2, -1, 1, 2), (3.44, 3.99, 3.36, 3.89, 3.62, 3.41)):
-    shape = random.Random(2027 + index)
-    w = (pitch - 0.035) / 2
-    h = meters * args.crest
-    top = [
-        (w, h - shape.uniform(0.19, 0.45)),
-        (w - shape.uniform(0.13, 0.41), h + shape.uniform(-0.09, 0.12)),
-    ]
-    heights = [shape.uniform(-0.24, 0.14) * args.breakage for _ in range(4)]
-    top += [(w * f, h + d) for f, d in zip((0.69, 0.21, -0.34, -0.79), heights)]
-    top += [(-w + 0.07, h - 0.11), (-w, h - 0.24)]
-    outline = [(-w, -0.26), (w - 0.04, -0.26), (w, 0.02)] + top
-    origin = step * (index * pitch) + normal * shape.uniform(-0.08, 0.08)
-    sawn(
-        "Standing slab",
-        outline,
-        shape.uniform(0.64, 0.79),
-        origin,
-        (
-            shape.uniform(-0.025, 0.025),
-            shape.uniform(-0.012, 0.012),
-            heading + shape.uniform(-0.018, 0.018),
-        ),
-        "jaw",
-        230 + index,
-    )
-    # Low wedge-shaped ice collars straddle the contact line in the snow.
-    for j in range(11):
-        s = shape.uniform(0.16, 0.61)
-        x = origin + step * shape.uniform(-w, w) - normal * shape.uniform(0.25, 0.74)
+if not args.reach:
+    for index, meters in zip((-4, -3, -2, -1, 1, 2), (3.44, 3.99, 3.36, 3.89, 3.62, 3.41)):
+        shape = random.Random(2027 + index)
+        w = (pitch - 0.035) / 2
+        h = meters * args.crest
+        top = [
+            (w, h - shape.uniform(0.19, 0.45)),
+            (w - shape.uniform(0.13, 0.41), h + shape.uniform(-0.09, 0.12)),
+        ]
+        heights = [shape.uniform(-0.24, 0.14) * args.breakage for _ in range(4)]
+        top += [(w * f, h + d) for f, d in zip((0.69, 0.21, -0.34, -0.79), heights)]
+        top += [(-w + 0.07, h - 0.11), (-w, h - 0.24)]
+        outline = [(-w, -0.26), (w - 0.04, -0.26), (w, 0.02)] + top
+        origin = step * (index * pitch) + normal * shape.uniform(-0.08, 0.08)
         sawn(
-            "Heaved collar",
-            [
-                (-s, -0.14),
-                (s * 0.8, -0.11),
-                (s * 0.69, 0.10 + s * 0.26),
-                (-s * 0.53, 0.15 + s * 0.21),
-            ],
-            s * 0.48,
-            x,
+            "Standing slab",
+            outline,
+            shape.uniform(0.64, 0.79),
+            origin,
             (
-                shape.uniform(-0.5, 0.4),
-                shape.uniform(-0.2, 0.2),
-                heading + shape.uniform(-0.8, 0.8),
+                shape.uniform(-0.025, 0.025),
+                shape.uniform(-0.012, 0.012),
+                heading + shape.uniform(-0.018, 0.018),
             ),
             "jaw",
-            index * 73 + j,
+            230 + index,
         )
+        # Low wedge-shaped ice collars straddle the contact line in the snow.
+        for j in range(11):
+            s = shape.uniform(0.16, 0.61)
+            x = origin + step * shape.uniform(-w, w) - normal * shape.uniform(0.25, 0.74)
+            sawn(
+                "Heaved collar",
+                [
+                    (-s, -0.14),
+                    (s * 0.8, -0.11),
+                    (s * 0.69, 0.10 + s * 0.26),
+                    (-s * 0.53, 0.15 + s * 0.21),
+                ],
+                s * 0.48,
+                x,
+                (
+                    shape.uniform(-0.5, 0.4),
+                    shape.uniform(-0.2, 0.2),
+                    heading + shape.uniform(-0.8, 0.8),
+                ),
+                "jaw",
+                index * 73 + j,
+            )
 
-# Three pieces reproduce the shared, asymmetrical shear lines of the absent slab.
-a = [(-1.68, -0.62), (-0.49, -0.38), (0.36, -0.57), (1.68, -0.24)]
-b = [(-1.68, 0.54), (-0.72, 0.69), (0.60, 0.37), (1.68, 0.75)]
-parts = [
-    [(-1.62, -1.7), (1.62, -1.71)] + a[::-1],
-    a + b[::-1],
-    b + [(1.64, 1.59), (0.37, 1.76), (-1.60, 1.56)],
-]
-for j, (outline, (xx, yy, zz, tip, turn)) in enumerate(
-    zip(
-        parts,
-        [
-            (-1.11, -1.59, 0.21, 1.04, 0.32),
-            (1.52, -3.45, 0.12, 1.41, -0.40),
-            (-0.98, -5.92, 0.19, 1.14, 0.44),
-        ],
-    )
-):
-    mid = (min(z for x, z in outline) + max(z for x, z in outline)) * 0.5
-    outline = [(x, z - mid) for x, z in outline]
-    sawn(
-        "Fallen third",
-        outline,
-        0.67,
-        (xx * args.debris, yy * args.debris, zz),
-        (tip, (-0.095, 0.14, -0.065)[j], heading + turn),
-        "near",
-        673 + j,
-    )
+    # Three pieces reproduce the shared, asymmetrical shear lines of the absent slab.
+    a = [(-1.68, -0.62), (-0.49, -0.38), (0.36, -0.57), (1.68, -0.24)]
+    b = [(-1.68, 0.54), (-0.72, 0.69), (0.60, 0.37), (1.68, 0.75)]
+    parts = [
+        [(-1.62, -1.7), (1.62, -1.71)] + a[::-1],
+        a + b[::-1],
+        b + [(1.64, 1.59), (0.37, 1.76), (-1.60, 1.56)],
+    ]
+    for j, (outline, (xx, yy, zz, tip, turn)) in enumerate(
+        zip(
+            parts,
+            [
+                (-1.11, -1.59, 0.21, 1.04, 0.32),
+                (1.52, -3.45, 0.12, 1.41, -0.40),
+                (-0.98, -5.92, 0.19, 1.14, 0.44),
+            ],
+        )
+    ):
+        mid = (min(z for x, z in outline) + max(z for x, z in outline)) * 0.5
+        outline = [(x, z - mid) for x, z in outline]
+        sawn(
+            "Fallen third",
+            outline,
+            0.67,
+            (xx * args.debris, yy * args.debris, zz),
+            (tip, (-0.095, 0.14, -0.065)[j], heading + turn),
+            "near",
+            673 + j,
+        )
 
 
 def stream(y):
@@ -602,126 +604,134 @@ def bed_height(x, y):
     return 0.14 + scour + shoulder + wind + apron
 
 
-cache = Path.home() / ".t3/portfolio-redesign-v4/assets-src"
-with zipfile.ZipFile(cache / "Snow009A_2K-JPG.zip") as arc:
-    relief = (
-        np.asarray(
-            Image.open(
-                io.BytesIO(arc.read("Snow009A_2K-JPG_Displacement.jpg"))
-            ).convert("L"),
-            np.float32,
-        )
-        / 255
-    )
-
-# Wind strips powder along the lead, exposing consolidated blue-black ice.
-# The western snow tongue carries the station text over the whole flight.
-bank = snow.copy()
-if not args.clay:
-    tree = bank.node_tree
-    outmat = tree.nodes.get("Material Output")
-    original = outmat.inputs["Surface"].links[0].from_socket
-    sheet = tree.nodes.new("ShaderNodeBsdfPrincipled")
-    sheet.inputs["Base Color"].default_value = (0.027, 0.065, 0.073, 1)
-    sheet.inputs["Roughness"].default_value = 0.37
-    sheet.inputs["IOR"].default_value = 1.31
-    split = tree.nodes.new("ShaderNodeAttribute")
-    split.attribute_name = "Scour"
-    blend = tree.nodes.new("ShaderNodeMixShader")
-    normal_map = next(n for n in tree.nodes if n.type == "NORMAL_MAP")
-    tree.links.new(normal_map.outputs[0], sheet.inputs["Normal"])
-    tree.links.new(split.outputs["Fac"], blend.inputs[0])
-    tree.links.new(original, blend.inputs[1])
-    tree.links.new(sheet.outputs[0], blend.inputs[2])
-    tree.links.new(blend.outputs[0], outmat.inputs["Surface"])
-
-for side in (-1, 1):
-    rows = []
-    for i in range(345):
-        y = -48 + i * 0.24
-        row = []
-        for j in range(81):
-            off = j * 0.35
-            x = stream(y) + side * (width(y) + off)
-            h = (
-                bed_height(x, y)
-                - 0.13 * min(1, width(y) * 3) * exp(-off * 7)
-                + 0.097
-                * (
-                    relief[
-                        int((y * 0.21 + x * 0.07) % 1 * 2047),
-                        int((x * 0.19 - y * 0.08) % 1 * 2047),
-                    ]
-                    - 0.5
-                )
+if not args.reach:
+    cache = Path.home() / ".t3/portfolio-redesign-v4/assets-src"
+    with zipfile.ZipFile(cache / "Snow009A_2K-JPG.zip") as arc:
+        relief = (
+            np.asarray(
+                Image.open(
+                    io.BytesIO(arc.read("Snow009A_2K-JPG_Displacement.jpg"))
+                ).convert("L"),
+                np.float32,
             )
-            row.append((x, y, h))
-        rows.append(row if side > 0 else row[::-1])
-    shore = grid("Settled snow", rows, snow)
-    shore.data.materials[0] = bank
-    xyz = np.asarray(rows, np.float32).reshape(-1, 3)
-    xx, yy = xyz[:, :2].T
-    center = 0.04 - 0.04 * yy + 0.07 * np.maximum(0, -yy - 4) + 0.25 * np.sin(0.43 * yy)
-    distance = np.abs(xx - center)
-    edge_scan = relief[
-        ((yy * 0.073 + xx * 0.012) % 1 * 2047).astype(int),
-        ((xx * 0.048 - yy * 0.019) % 1 * 2047).astype(int),
-    ]
-    # The western bank lies in the lee of the standing wall. Keep its
-    # continuous mantle up to the liquid edge. Only the exposed eastern
-    # shelf sheds enough powder to show broad sheets of consolidated ice.
-    contour = (
-        0.24 + 0.40 * edge_scan
-        if side < 0
-        else 2.8 + 1.55 * np.sin(yy * 0.31) + 2.1 * edge_scan
-    )
-    # The black ice thins into discrete scoured patches at the downstream end.
-    apron = np.clip((yy + 20) / 5, 0, 1) * np.clip((7 - yy) / 3, 0, 1)
-    amount = (
-        np.clip((contour - distance) * 1.65 + 1.6 * (edge_scan - 0.5), 0, 1) * apron
-    )
-    attr = shore.data.attributes.new("Scour", "FLOAT", "POINT")
-    attr.data.foreach_set("value", np.asarray(amount, dtype=np.float32))
-rows = []
-for i in range(460):
-    y = -18 + i * 0.052
-    rows.append(
-        [
-            (x, y, spill(x, y))
-            for x in [stream(y) + width(y) * u / 25 for u in range(-26, 27)]
-        ]
-    )
-grid("Watercourse", rows, water)
-for k in range(95):
-    x = rng.uniform(-0.32, 0.64)
-    y = rng.uniform(-0.40, 0.18)
-    length = rng.uniform(0.022, 0.21)
-    rows = []
-    for i in range(8):
-        f = i / 7
-        u = x + length * f
-        v = y + 0.026 * sin(f * 3 + 0.8 * x) + 0.04 * sin(11 * u - 5 * y)
-        w = 0.002 + 0.012 * sin(f * math.pi)
-        rows.append([(u, v + d, spill(u, v + d) + 0.007) for d in (-w, w)])
-    grid("Broken foam", rows, foam)
+            / 255
+        )
 
-# Thin, backlit river mist closes the distant sightline.
-if not args.clay:
-    # Broken trains entrain air over the lip and disappear into the lower pool.
-    foamwash = surface("Air inside the falling water", (0.16, 0.34, 0.34), 0.21)
-    foamwash.pass_index = 1
-    for k in range(55):
-        x = rng.gauss(0.07, 0.19)
-        start = rng.uniform(0.20, 0.64)
-        stop = rng.uniform(-0.12, 0.30)
+    # Wind strips powder along the lead, exposing consolidated blue-black ice.
+    # The western snow tongue carries the station text over the whole flight.
+    bank = snow.copy()
+    if not args.clay:
+        tree = bank.node_tree
+        outmat = tree.nodes.get("Material Output")
+        original = outmat.inputs["Surface"].links[0].from_socket
+        sheet = tree.nodes.new("ShaderNodeBsdfPrincipled")
+        sheet.inputs["Base Color"].default_value = (0.027, 0.065, 0.073, 1)
+        sheet.inputs["Roughness"].default_value = 0.37
+        sheet.inputs["IOR"].default_value = 1.31
+        split = tree.nodes.new("ShaderNodeAttribute")
+        split.attribute_name = "Scour"
+        blend = tree.nodes.new("ShaderNodeMixShader")
+        normal_map = next(n for n in tree.nodes if n.type == "NORMAL_MAP")
+        tree.links.new(normal_map.outputs[0], sheet.inputs["Normal"])
+        tree.links.new(split.outputs["Fac"], blend.inputs[0])
+        tree.links.new(original, blend.inputs[1])
+        tree.links.new(sheet.outputs[0], blend.inputs[2])
+        tree.links.new(blend.outputs[0], outmat.inputs["Surface"])
+
+    for side in (-1, 1):
         rows = []
-        for j in range(13):
-            t = j / 12
-            y = start + (stop - start) * t
-            u = x + 0.014 * sin(12 * y + 21 * x) + 0.009 * sin(t * 5 + x)
-            w = 0.001 + rng.uniform(0.001, 0.008) * sin(t * math.pi)
-            rows.append([(u + d, y, spill(u + d, y) + 0.006) for d in (-w, w)])
-        grid("Foam dragged through the lip", rows, foamwash)
+        for i in range(345):
+            y = -48 + i * 0.24
+            row = []
+            for j in range(81):
+                off = j * 0.35
+                x = stream(y) + side * (width(y) + off)
+                h = (
+                    bed_height(x, y)
+                    - 0.13 * min(1, width(y) * 3) * exp(-off * 7)
+                    + 0.097
+                    * (
+                        relief[
+                            int((y * 0.21 + x * 0.07) % 1 * 2047),
+                            int((x * 0.19 - y * 0.08) % 1 * 2047),
+                        ]
+                        - 0.5
+                    )
+                )
+                row.append((x, y, h))
+            rows.append(row if side > 0 else row[::-1])
+        shore = grid("Settled snow", rows, snow)
+        shore.data.materials[0] = bank
+        xyz = np.asarray(rows, np.float32).reshape(-1, 3)
+        xx, yy = xyz[:, :2].T
+        center = 0.04 - 0.04 * yy + 0.07 * np.maximum(0, -yy - 4) + 0.25 * np.sin(0.43 * yy)
+        distance = np.abs(xx - center)
+        edge_scan = relief[
+            ((yy * 0.073 + xx * 0.012) % 1 * 2047).astype(int),
+            ((xx * 0.048 - yy * 0.019) % 1 * 2047).astype(int),
+        ]
+        # The western bank lies in the lee of the standing wall. Keep its
+        # continuous mantle up to the liquid edge. Only the exposed eastern
+        # shelf sheds enough powder to show broad sheets of consolidated ice.
+        contour = (
+            0.24 + 0.40 * edge_scan
+            if side < 0
+            else 2.8 + 1.55 * np.sin(yy * 0.31) + 2.1 * edge_scan
+        )
+        # The black ice thins into discrete scoured patches at the downstream end.
+        apron = np.clip((yy + 20) / 5, 0, 1) * np.clip((7 - yy) / 3, 0, 1)
+        amount = (
+            np.clip((contour - distance) * 1.65 + 1.6 * (edge_scan - 0.5), 0, 1) * apron
+        )
+        attr = shore.data.attributes.new("Scour", "FLOAT", "POINT")
+        attr.data.foreach_set("value", np.asarray(amount, dtype=np.float32))
+    rows = []
+    for i in range(460):
+        y = -18 + i * 0.052
+        rows.append(
+            [
+                (x, y, spill(x, y))
+                for x in [stream(y) + width(y) * u / 25 for u in range(-26, 27)]
+            ]
+        )
+    grid("Watercourse", rows, water)
+    for k in range(95):
+        x = rng.uniform(-0.32, 0.64)
+        y = rng.uniform(-0.40, 0.18)
+        length = rng.uniform(0.022, 0.21)
+        rows = []
+        for i in range(8):
+            f = i / 7
+            u = x + length * f
+            v = y + 0.026 * sin(f * 3 + 0.8 * x) + 0.04 * sin(11 * u - 5 * y)
+            w = 0.002 + 0.012 * sin(f * math.pi)
+            rows.append([(u, v + d, spill(u, v + d) + 0.007) for d in (-w, w)])
+        grid("Broken foam", rows, foam)
+
+    # Thin, backlit river mist closes the distant sightline.
+    if not args.clay:
+        # Broken trains entrain air over the lip and disappear into the lower pool.
+        foamwash = surface("Air inside the falling water", (0.16, 0.34, 0.34), 0.21)
+        foamwash.pass_index = 1
+        for k in range(55):
+            x = rng.gauss(0.07, 0.19)
+            start = rng.uniform(0.20, 0.64)
+            stop = rng.uniform(-0.12, 0.30)
+            rows = []
+            for j in range(13):
+                t = j / 12
+                y = start + (stop - start) * t
+                u = x + 0.014 * sin(12 * y + 21 * x) + 0.009 * sin(t * 5 + x)
+                w = 0.001 + rng.uniform(0.001, 0.008) * sin(t * math.pi)
+                rows.append([(u + d, y, spill(u + d, y) + 0.006) for d in (-w, w)])
+            grid("Foam dragged through the lip", rows, foamwash)
+if args.reach:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "river"))
+    from reach import landscape
+    landscape(args.reach, grid, snow, water, sawn)
+
+if not args.clay:
     # Snow ridges beyond the eastern wall recede into the same river mist.
     ranges = surface("Glacial moraine", (0.38, 0.49, 0.50), 0.91)
     # Close the terrain underneath all far ridges. Wind-driven mist obscures
@@ -903,6 +913,25 @@ if args.layers or args.survey_only:
 if args.survey_only:
     raise SystemExit(0)
 
+if args.reach and not args.clay and not args.night:
+    scene.use_nodes = True
+    view = scene.view_layers[0]
+    view.use_pass_z = True
+    view.use_pass_material_index = True
+    tree = scene.node_tree
+    passes = tree.nodes["Render Layers"].outputs
+    inverse = tree.nodes.new("CompositorNodeMath")
+    inverse.operation = "DIVIDE"
+    inverse.inputs[0].default_value = 10
+    tree.links.new(passes["Depth"], inverse.inputs[1])
+    channels = tree.nodes.new("CompositorNodeCombRGBA")
+    tree.links.new(inverse.outputs[0], channels.inputs[0])
+    tree.links.new(passes["IndexMA"], channels.inputs[1])
+    aux = tree.nodes.new("CompositorNodeOutputFile")
+    aux.base_path = str(out.parent)
+    aux.file_slots[0].path = out.stem + "-survey-"
+    aux.file_slots[0].save_as_render = False
+    tree.links.new(channels.outputs[0], aux.inputs[0])
 render(out)
 if args.layers:
     # Unseen layers continue to cast shadows, refract and reflect in the

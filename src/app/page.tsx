@@ -1,3 +1,4 @@
+import { Statement } from '@/components/flight/Statement';
 import type { Viewport } from 'next';
 import Link from 'next/link';
 import { Fragment, ViewTransition } from 'react';
@@ -139,7 +140,6 @@ const POSTER_BOOT = posterBoot();
 const END_LEAD = 0.15;
 
 /** His sentence, set a line at a time through the reach. */
-const SAY_LINES = ['Agents that break', 'software before', 'attackers do.', 'Tools developers', 'run daily.'];
 const SAY_AT = [SAY_FROM, 2.2, 2.5, 2.78, 3.02];
 
 export default async function Home() {
@@ -182,13 +182,7 @@ export default async function Home() {
       <section className="fl-sec fl-say" data-fl style={len(section.length)} aria-label="What I do">
         <div className="fl-pin">
           <div className="fl-words fl-say-words" data-fl-from={SAY_FROM} data-fl-to={+(VIEW - 0.3).toFixed(3)}>
-            <p className="say-text fl-say-text">
-              {SAY_LINES.map((line, i) => (
-                <span key={line} className="fl-rise" {...at(SAY_AT[i])}>
-                  <span className="fl-rise-in">{line} </span>
-                </span>
-              ))}
-            </p>
+            <Statement times={SAY_AT} />
           </div>
         </div>
       </section>

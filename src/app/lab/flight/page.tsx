@@ -1,3 +1,4 @@
+import { Statement } from '@/components/flight/Statement';
 import type { Metadata } from 'next';
 import { LakeCanvas } from '../hero/LakeCanvas';
 import Link from 'next/link';
@@ -73,6 +74,12 @@ export default function FlightLab() {
           </div>
           {scenes.map((scene) => {
             if (scene.kind !== 'plate') return null;
+            if (scene.id === 'statement') return (
+              <div key={scene.id} className="fl-words fl-say-words fl-view-words" data-copy={scene.id}
+                data-placement={scene.words} aria-hidden="true" inert>
+                <Statement times={[0, 0, 0, 0, 0]} visible />
+              </div>
+            );
             const p = PROJECTS.find((project) => project.slug === scene.project)!;
             return (
               <div

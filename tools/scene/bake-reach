@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/../.."
+reach=${1:?reach name}
+out=.tools/out/o4/bake
+py="$HOME/.t3/portfolio-redesign-v4/tools/bake-venv/bin/python"
+mkdir -p "$out/$reach" "public/scene/$reach"
+"$py" tools/scene/lake/inputs.py
+for theme in day night; do
+    if [ ! -f "$out/$theme.blend" ]; then
+        "$py" tools/scene/lake/author.py --theme "$theme" --material-library "$out/$theme.blend" --output "$out/library.png"
+    fi
+    for gate in wide tall; do
+        set -- --width 3456 --distance 29 --height 4 --aim -1.2 --target-z 1.3
+        if [ "$gate" = tall ]; then set -- --phone --width 1080 --distance 38 --height 5.6 --aim 1 --target-z -1.0; fi
+        if [ "$reach" = open-source ] || [ "$reach" = ollama ]; then
+            set -- "$@" --height 10 --target-z 3.4
+            if [ "$gate" = tall ]; then set -- "$@" --height 13 --target-z 1; fi
+        fi
+        if [ "$theme" = night ]; then set -- "$@" --night; fi
+        "$py" tools/scene/ridge/study.py "$out/$reach/$gate-$theme.png" --reach "$reach" --library "$out/$theme.blend" --samples 12 --roll 0 --sun-z 2.5 "$@"
+    done
+done
+"$py" tools/scene/ridge/pack.py "$out/$reach" "public/scene/$reach" --ledger "src/scene/flight/$reach-assets.json"
