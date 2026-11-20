@@ -48,6 +48,8 @@ export const WAY_TO_WORK: Way = {
 };
 
 const STILL_SIZES = '(max-width: 1328px) 92vw, 1216px';
+/** Where a project's page opens on its scene's tall frame (the same width in inner.css). */
+const PHONE = '(max-width: 640px)';
 
 /** The head of a page: the way back, a label, the title, one line, and its picture if it has one. */
 export function PageHead({ head }: { head: Head }) {
@@ -68,15 +70,22 @@ export function PageHead({ head }: { head: Head }) {
         <div className="head-still">
           {/* The day on the light theme, the night on the dark. The theme is the system's unless the reader has
               switched it, so the picture that is fetched ahead is the system's; the other is fetched only by a
-              reader whose theme differs from their system (see .still-* in inner.css). */}
+              reader whose theme differs from their system (see .still-* in inner.css). On a phone it is the
+              scene's tall frame, behind the whole first screen. */}
           <picture className="still-sys">
+            <source media={`${PHONE} and (prefers-color-scheme: dark)`} srcSet={s.tallNight} />
+            <source media={PHONE} srcSet={s.tallDay} />
             <source media="(prefers-color-scheme: dark)" srcSet={stillSet(s.night, s.w)} sizes={STILL_SIZES} />
             <img src={s.day} srcSet={stillSet(s.day, s.w)} sizes={STILL_SIZES} width={s.w} height={s.h} alt={s.alt} fetchPriority="high" decoding="sync" />
           </picture>
-          {/* eslint-disable-next-line @next/next/no-img-element -- fixed files at the size shown */}
-          <img className="still-alt still-alt-day" src={s.day} srcSet={stillSet(s.day, s.w)} sizes={STILL_SIZES} width={s.w} height={s.h} alt={s.alt} loading="lazy" decoding="async" />
-          {/* eslint-disable-next-line @next/next/no-img-element -- fixed files at the size shown */}
-          <img className="still-alt still-alt-night" src={s.night} srcSet={stillSet(s.night, s.w)} sizes={STILL_SIZES} width={s.w} height={s.h} alt={s.alt} loading="lazy" decoding="async" />
+          <picture className="still-alt still-alt-day">
+            <source media={PHONE} srcSet={s.tallDay} />
+            <img src={s.day} srcSet={stillSet(s.day, s.w)} sizes={STILL_SIZES} width={s.w} height={s.h} alt={s.alt} loading="lazy" decoding="async" />
+          </picture>
+          <picture className="still-alt still-alt-night">
+            <source media={PHONE} srcSet={s.tallNight} />
+            <img src={s.night} srcSet={stillSet(s.night, s.w)} sizes={STILL_SIZES} width={s.w} height={s.h} alt={s.alt} loading="lazy" decoding="async" />
+          </picture>
         </div>
       ) : null}
     </header>

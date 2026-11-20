@@ -204,7 +204,7 @@
 .in .head-meta {
   margin-top: var(--s-5);
 }
-/* The header picture: a still of the project's station, the day or the night. */
+/* The header picture: a still of the project's scene, the day or the night. */
 .in .head-still {
   justify-self: stretch;
   margin-top: var(--s-7);
@@ -217,23 +217,62 @@
 .in .head-still picture {
   display: block;
 }
-.in .still-alt {
+.in .head-still .still-alt {
   display: none;
 }
 @media (prefers-color-scheme: dark) {
-  :root[data-theme='light'] .in .still-sys {
+  :root[data-theme='light'] .in .head-still .still-sys {
     display: none;
   }
-  :root[data-theme='light'] .in .still-alt-day {
+  :root[data-theme='light'] .in .head-still .still-alt-day {
     display: block;
   }
 }
 @media (prefers-color-scheme: light) {
-  :root[data-theme='dark'] .in .still-sys {
+  :root[data-theme='dark'] .in .head-still .still-sys {
     display: none;
   }
-  :root[data-theme='dark'] .in .still-alt-night {
+  :root[data-theme='dark'] .in .head-still .still-alt-night {
     display: block;
+  }
+}
+/* On a phone a project opens as its scene does on the home page: the tall
+   frame behind the whole first screen (the nav too), the title block on its
+   calm ground at the foot. */
+@media (max-width: 640px) {
+  .in .head-pic {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    min-height: calc(100svh - 72px - env(safe-area-inset-top));
+    padding-bottom: calc(var(--s-6) + env(safe-area-inset-bottom));
+  }
+  .in .head-pic .back {
+    margin-bottom: auto;
+  }
+  /* Over the picture the small words take the full ink. */
+  .in .head-pic :is(.head-label, .head-lead, .back) {
+    color: var(--ink);
+  }
+  .in .head-pic .head-still {
+    position: absolute;
+    top: calc(-72px - env(safe-area-inset-top));
+    left: 50%;
+    z-index: -1;
+    width: 100vw;
+    height: 100lvh;
+    margin: 0 0 0 -50vw;
+    background: var(--land);
+  }
+  .in .head-pic .head-still :is(picture, img) {
+    width: 100%;
+    height: 100%;
+  }
+  .in .head-pic .head-still img {
+    object-fit: cover;
+    border-radius: 0;
   }
 }
 
