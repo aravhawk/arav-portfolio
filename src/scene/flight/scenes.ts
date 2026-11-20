@@ -71,6 +71,7 @@ export const scenes: readonly (Lake | Plate)[] = [
     screens: 2,
     exit: 0.6,
   },
+  riverPlate('statement', statementAssets),
   {
     id: 'infiniview',
     kind: 'plate',
@@ -113,7 +114,6 @@ export const scenes: readonly (Lake | Plate)[] = [
       },
     },
   },
-  riverPlate('statement', statementAssets),
   riverPlate('open-source', opensourceAssets),
   // The river runs out under the lower left here: the calm ground is on the right.
   riverPlate('kilo-bench', kilobenchAssets, 'lower-right'),

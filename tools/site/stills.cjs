@@ -13,7 +13,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const sharp = require(require.resolve('sharp', { paths: [path.dirname(require.resolve('next/package.json'))] }));
 
-const SCENES = ['lake', 'infiniview', 'statement', 'open-source', 'kilo-bench', 'agent-bridge', 'ollama', 'cc-switch', 'tensorpow', 'rydar', 'interests', 'ending'];
+const SCENES = ['lake', 'statement', 'infiniview', 'open-source', 'kilo-bench', 'agent-bridge', 'ollama', 'cc-switch', 'tensorpow', 'rydar', 'interests', 'ending'];
 const PROJECTS = ['infiniview', 'open-source', 'kilo-bench', 'agent-bridge', 'ollama', 'cc-switch', 'tensorpow', 'rydar'];
 const OG = ['lake', ...PROJECTS, 'interests'];
 const LENGTH = 2.6; // a scene's push and the whiteout after it, in screens (src/scene/flight/scenes.ts)
@@ -21,6 +21,9 @@ const LENGTH = 2.6; // a scene's push and the whiteout after it, in screens (src
 (async () => {
   const base = process.argv[2];
   if (!base) throw Error('usage: node tools/site/stills.cjs <base url>');
+  // Optional scene IDs limit a single-scene rebake to its own derivatives.
+  const selected = process.argv.slice(3);
+  for (const id of selected) if (!SCENES.includes(id)) throw Error('unknown scene ' + id);
   for (const d of ['public/media/stills/scene', 'src/lib/og']) fs.mkdirSync(d, { recursive: true });
   const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
   for (const gate of ['wide', 'tall'])
@@ -42,6 +45,7 @@ const LENGTH = 2.6; // a scene's push and the whiteout after it, in screens (src
         return Buffer.from(url.split(',')[1], 'base64');
       };
       for (const [i, id] of SCENES.entries()) {
+        if (selected.length && !selected.includes(id)) continue;
         if (i > 0) {
           const first = sharp(await frame(i * LENGTH));
           const out = `public/media/stills/scene/${id}-${gate}-${light}.avif`;
