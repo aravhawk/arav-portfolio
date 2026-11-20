@@ -497,7 +497,7 @@ export const FLIGHT = [
   },
   {
     steps: { leave: 1.75 },
-    id: 'delta', paint: paintDelta, rail: 'Interests', length: 2.6, offset: 1.1, kind: 'section', layout: 'interests',
+    id: 'delta', paint: paintDelta, rail: 'Recognition', length: 2.6, offset: 1.1, kind: 'section', layout: 'interests',
     hold: { name: 'Interests' },
     camera: ({ ending }) => ending(false),
   },
