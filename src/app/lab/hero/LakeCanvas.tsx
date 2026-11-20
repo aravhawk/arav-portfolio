@@ -23,7 +23,7 @@ function firstPaint(signal: AbortSignal) {
   });
 }
 
-export function LakeCanvas() {
+export function LakeCanvas({ flight = false }: { flight?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current!;
@@ -40,7 +40,7 @@ export function LakeCanvas() {
     };
     const start = () => {
       cancel();
-      if (media.matches || closed) return;
+      if ((!flight && media.matches) || closed) return;
       controller = new AbortController();
       const { signal } = controller;
       raf = requestAnimationFrame(() => {
@@ -60,8 +60,14 @@ export function LakeCanvas() {
             if (signal.aborted) return;
             performance.mark('lake:import');
             try {
-              const { mount } = await import('@/scene/lake/live');
-              if (!signal.aborted) await mount(canvas, theme, signal);
+              if (flight) {
+                const { mountFlight } = await import('@/scene/flight/gpu');
+                if (!signal.aborted)
+                  await mountFlight(canvas, theme, signal, tall.matches ? 'tall' : 'wide', media.matches);
+              } else {
+                const { mount } = await import('@/scene/lake/live');
+                if (!signal.aborted) await mount(canvas, theme, signal);
+              }
             } catch (err) {
               if (!signal.aborted) console.error('Frozen lake initialization', err);
             }
@@ -89,7 +95,7 @@ export function LakeCanvas() {
       canvas.removeEventListener('webglcontextlost', lost);
       canvas.removeEventListener('webglcontextrestored', start);
     };
-  }, []);
+  }, [flight]);
   return (
     <canvas
       ref={ref}

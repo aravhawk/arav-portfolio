@@ -10,7 +10,7 @@ async function bytes(file) {
 self.onmessage = async ({ data }) => {
   try {
     const { theme, rgb, rgba } = data;
-    const metadata = await (await fetch('mesh.json')).json();
+    const metadata = await (await fetch(data.cameraFile || 'mesh.json')).json();
     const textures = [
       'ground-' + theme,
       'body-day',
@@ -21,6 +21,7 @@ self.onmessage = async ({ data }) => {
       'approach-ground-' + theme,
       'approach-body-' + theme,
     ];
+    if (data.gate === "tall") textures.fill(null);
     const resources = textures.map((name) => name && bytes(name + '.ktx2'));
     const photographs = [
       [4, 'base-' + theme],
@@ -28,7 +29,7 @@ self.onmessage = async ({ data }) => {
       [9, 'two-rows-' + theme],
       [10, 'lake-detail'],
       [11, 'lake-fractures'],
-    ].map(async ([index, name]) => {
+    ].filter(([index]) => data.gate === "tall" ? index !== 4 : data.gate === "wide" ? index !== 9 : true).map(async ([index, name]) => {
       const encoded = await bytes(name + '.avif');
       const bitmap = await createImageBitmap(new Blob([encoded], { type: 'image/avif' }), {
         colorSpaceConversion: 'none',

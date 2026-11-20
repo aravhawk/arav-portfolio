@@ -46,10 +46,16 @@ The offline Cycles study in `ridge/study.py` uses the following CC0 inputs from 
 | [Ice 003](https://ambientcg.com/view?id=Ice003) and [Ice 004](https://ambientcg.com/view?id=Ice004) | Surface relief of the lake, chipped edges and partially healed air lenses |
 | [Snow 02](https://polyhaven.com/a/snow_02) | Windpack grain |
 
-The Baikal and pressure-ridge photographs were visual references only. Rebuild the full-size day study from the checkout root with the existing lake bake environment.
+The Baikal and pressure-ridge photographs were visual references only. The original O3 day study is frozen in commit `28edb44`. Its authoring command, from that revision, was:
 
 ```sh
 py="$HOME/.t3/portfolio-redesign-v4/tools/bake-venv/bin/python"
 "$py" tools/scene/lake/inputs.py
 "$py" tools/scene/ridge/study.py .tools/out/o3/studies/07-current.png --width 2880 --samples 48
 ```
+
+The flight's working Infiniview plates reuse the same CC0 inputs. Run
+`tools/scene/bake-ridge` to render wide and tall cameras at first light and
+blue hour, record inverse depth and liquid coverage, encode log-radiance
+AVIF and lossless survey textures, and regenerate the registry byte ledger.
+Each plate is decoded through the lake's own 32³ display LUT at runtime.

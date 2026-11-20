@@ -24,8 +24,20 @@ function spring(value: number, speed: number, target: number, dt: number) {
     k = Math.exp(-8 * dt);
   return [target + (delta + q * dt) * k, (speed - 8 * q * dt) * k];
 }
-export async function mount(canvas: HTMLCanvasElement, theme: string, signal: AbortSignal) {
-  const gpu = new LakeGPU(canvas);
+type Sequence = LakeGPU & {
+  reduced: boolean;
+  advance(wanted: number, dt: number): number;
+  prepareMeasurement(s: number): Promise<void>;
+  stats(): { screens: number; bytes: number; ready: string[] };
+};
+export async function mount(
+  canvas: HTMLCanvasElement,
+  theme: string,
+  signal: AbortSignal,
+  sequence?: Sequence,
+  screens = 2,
+) {
+  const gpu = sequence ?? new LakeGPU(canvas);
   let raf = 0,
     visible = true,
     busy = false,
@@ -68,11 +80,15 @@ export async function mount(canvas: HTMLCanvasElement, theme: string, signal: Ab
       dt = Math.min(0.06, delta / 1000);
     prev = now;
     t += dt;
-    lead += (Math.min(1, Math.max(0, window.scrollY / (2 * innerHeight))) - lead) * ease(6.49, dt);
+    lead +=
+      (Math.min(sequence ? screens : 1, Math.max(0, window.scrollY / ((sequence ? 1 : 2) * innerHeight))) -
+        lead) *
+      ease(6.49, dt);
     scroll += (lead - scroll) * ease(6.49, dt);
     [x, vx] = spring(x, vx, tx, dt);
     [y, vy] = spring(y, vy, ty, dt);
-    pose = update(scroll, x, y, t);
+    pose = update(sequence ? sequence.advance(scroll, dt) : scroll, x, y, t);
+    if (sequence?.reduced) pose = { ...pose, x: 0, y: 0, z: 0, t: 0 };
     if (record && delta) {
       intervals.push(delta);
     }
@@ -142,12 +158,19 @@ export async function mount(canvas: HTMLCanvasElement, theme: string, signal: Ab
       }
       return { intervals, main: cpu };
     },
-    state: () => ({ width: canvas.width, height: canvas.height, drawing: !!raf, scale }),
+    state: () => ({
+      width: canvas.width,
+      height: canvas.height,
+      drawing: !!raf,
+      scale,
+      ...sequence?.stats(),
+    }),
     measure: async (w, h, details = false, progress = 0) => {
       pinned = true;
       busy = true;
       resume();
       try {
+        await sequence?.prepareMeasurement(progress);
         return await gpu.measure(w, h, details, update(progress, 0, 0, 0));
       } finally {
         busy = false;

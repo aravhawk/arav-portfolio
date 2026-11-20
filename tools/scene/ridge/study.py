@@ -15,6 +15,8 @@ parser.add_argument("output", type=Path)
 parser.add_argument("--width", type=int, default=960)
 parser.add_argument("--samples", type=int, default=16)
 parser.add_argument("--clay", action="store_true")
+parser.add_argument("--night", action="store_true")
+parser.add_argument("--survey", action="store_true")
 parser.add_argument("--phone", action="store_true")
 args = parser.parse_args()
 unpacked = tempfile.TemporaryDirectory()
@@ -87,13 +89,38 @@ def mesh(label, verts, faces, mat):
 
 
 clay = material("Clay", (0.36, 0.36, 0.36), 0.8)
-ice = material("Blue congelation ice", (0.65, 0.81, 0.83), 0.115, 0.94)
-scan(ice, "Ice004_2K-JPG_Color.jpg", 0.50, 0.009)
+ice = material("Blue congelation ice", (0.76, 0.85, 0.84), 0.225, 0.83)
+grain = scan(ice, "Ice004_2K-JPG_Color.jpg", 0.50, 0.009)
 snow = material("Wind packed grains", (0.77, 0.81, 0.81), 0.82)
 scan(snow, "snow_02_diff_2k.jpg", 0.36, 0.045)
+# Air entrained between freezing episodes clouds thick cuts while
+# narrow edges stay clear. Only wind-facing shoulders collect powder.
+it = ice.node_tree
+scatter = it.nodes.new("ShaderNodeVolumeScatter")
+scatter.inputs["Color"].default_value = (0.84, 0.94, 0.91, 1)
+density = it.nodes.new("ShaderNodeMath")
+density.operation = "MULTIPLY_ADD"
+it.links.new(grain.outputs[0], density.inputs[0])
+density.inputs[1].default_value = 3.4
+density.inputs[2].default_value = 1.55
+it.links.new(density.outputs[0], scatter.inputs["Density"])
+it.links.new(scatter.outputs[0], it.nodes.get("Material Output").inputs["Volume"])
+normal = it.nodes.new("ShaderNodeSeparateXYZ")
+it.links.new(it.nodes.new("ShaderNodeNewGeometry").outputs["Normal"], normal.inputs[0])
+powder = it.nodes.new("ShaderNodeMath")
+powder.operation = "MULTIPLY"
+it.links.new(normal.outputs["Z"], powder.inputs[0])
+it.links.new(grain.outputs[0], powder.inputs[1])
+frost = it.nodes.new("ShaderNodeBsdfDiffuse")
+frost.inputs["Color"].default_value = (0.77, 0.82, 0.81, 1)
+cover = it.nodes.new("ShaderNodeMixShader")
+it.links.new(powder.outputs[0], cover.inputs[0])
+it.links.new(it.nodes.get("Principled BSDF").outputs[0], cover.inputs[1])
+it.links.new(frost.outputs[0], cover.inputs[2])
+it.links.new(cover.outputs[0], it.nodes.get("Material Output").inputs[0])
 bed = material("Dark lake pane", (0.041, 0.051, 0.053), 0.335, 0.08)
 scan(bed, "Ice003_2K-JPG_Color.jpg", 0.23, 0.016)
-water = material("Open lead", (0.022, 0.038, 0.043), 0.175)
+water = material("Open lead", (0.014, 0.024, 0.027), 0.30)
 rime = material("Air along a shear", (0.68, 0.77, 0.78), 0.30, 0.79)
 scan(rime, "Ice003_2K-JPG_Color.jpg", 1.2, 0.018)
 
@@ -130,18 +157,18 @@ tr.links.new(settled.outputs[0], tr.nodes.get("Material Output").inputs[0])
 
 
 def plate(x, y, z, length, breadth, thick, dip):
-    count = rng.randint(6, 10)
+    count = rng.randint(8, 16)
     outline = []
     for i in range(count):
         a = (i + rng.uniform(-0.22, 0.22)) * math.tau / count
         outline.append(
             (
-                length * math.cos(a) * rng.uniform(0.82, 1),
-                breadth * math.sin(a) * rng.uniform(0.8, 1),
+                length * math.cos(a) * rng.uniform(0.66, 1.07),
+                breadth * math.sin(a) * rng.uniform(0.72, 1.08),
             )
         )
     verts = [
-        (u, v, h * thick * rng.uniform(0.8, 1.16))
+        (u, v, h * thick * rng.uniform(0.38, 1.46))
         for h in (-0.5, 0.5)
         for u, v in outline
     ]
@@ -153,14 +180,14 @@ def plate(x, y, z, length, breadth, thick, dip):
     obj.location = (x, y, z)
     obj.rotation_euler = (rng.uniform(-0.5, 0.5), dip, rng.uniform(-0.55, 0.55))
     bevel = obj.modifiers.new("Crumbled arris", "BEVEL")
-    bevel.width = min(0.025, thick * 0.09)
+    bevel.width = min(0.047, thick * 0.13)
     bevel.segments = 3
     tess = obj.modifiers.new("Resolve edge chips", "SUBSURF")
     tess.subdivision_type = "SIMPLE"
     tess.levels = tess.render_levels = 2
     chips = obj.modifiers.new("Irregular fracture lips", "DISPLACE")
     chips.texture = frost_texture
-    chips.strength = min(0.072, thick * 0.21)
+    chips.strength = min(0.15, thick * 0.38)
     obj.modifiers.new("Planar reflections", "WEIGHTED_NORMAL")
     if not args.clay:
         obj.data.materials.append(rime)
@@ -194,15 +221,15 @@ def plate(x, y, z, length, breadth, thick, dip):
 for side in (-1, 1):
     for k in range(57):
         d = k * 0.53
-        x = 2.1 + side * (1.55 + d)
-        y = 2.1 + 0.33 * d + 0.5 * math.sin(d * 0.7)
-        crest = 0.85 + 1.28 * math.exp(-d / 4) + 0.36 * math.sin(d * 0.88)
-        for layer in range(3):
+        x = 2.1 + side * (1.34 + d)
+        y = 2.1 + 0.49 * d + 0.5 * math.sin(d * 0.7)
+        crest = 1.42 + 1.28 * math.exp(-d / 4) + 0.36 * math.sin(d * 0.88)
+        for layer in range(4):
             length = rng.uniform(1.1, 2.7)
             plate(
                 x + side * 0.4 * length,
-                y + layer * 0.89,
-                rng.uniform(0.1, 0.5) + crest * layer * (0.65 if side == 1 else 0.4),
+                y + layer * 0.38,
+                rng.uniform(0.1, 0.5) + crest * layer * (0.37 if side == 1 else 0.35),
                 length,
                 rng.uniform(0.62, 1.7),
                 rng.uniform(0.15, 0.59),
@@ -224,7 +251,7 @@ for j in range(1150):
     side = veils.choice((-1, 1))
     d = veils.uniform(0.1, 16)
     x = 2.1 + side * (1.3 + d)
-    y = 0.06 + 0.33 * d + 0.5 * math.sin(d * 0.7) + veils.gauss(0, 0.58)
+    y = 0.06 + 0.49 * d + 0.5 * math.sin(d * 0.7) + veils.gauss(0, 0.58)
     size = 0.06 + veils.random() ** 3 * 0.27
     plate(
         x,
@@ -325,7 +352,7 @@ for side in (-1, 1):
                 + 0.05 * math.sin(y * 1.1 + x * 0.76)
             )
             h += 0.19 * math.exp(-(((x + 3) / 3.1) ** 2) - ((y + 10) / 6) ** 2)
-            h += 0.57 * math.exp(-(((y - 1.1 - abs(x - 2) * 0.31) / 1.25) ** 2))
+            h += 0.83 * math.exp(-(((y - 1.1 - abs(x - 2) * 0.31) / 1.25) ** 2))
             h += 0.095 * math.sin(y * 0.59 + x * 0.37) * math.sin(y * 0.96 - x * 0.45)
             h += 0.026 * math.sin(5 * x + math.sin(y * 1.6)) * math.cos(y * 3.4 + x)
             h += 0.023 * math.sin(
@@ -413,13 +440,13 @@ for k in range(3):
     grid("Distant ridge", rows, haze)
 bpy.ops.object.light_add(type="AREA", location=(2.1, 6, 4))
 lamp = bpy.context.object
-lamp.data.energy = 1050
+lamp.data.energy = 2200
 lamp.data.shape = "DISK"
 lamp.data.size = 3
 receivers = bpy.data.collections.new("Ice receiving light from the sill")
 scene.collection.children.link(receivers)
 for ob in list(scene.objects):
-    if ob.name.startswith(("Rafted sheet", "Dipping air lens", "Spill over")):
+    if ob.name.startswith(("Rafted sheet", "Dipping air lens")):
         receivers.objects.link(ob)
 lamp.light_linking.receiver_collection = receivers
 lamp.rotation_euler = (
@@ -443,39 +470,102 @@ mist.data.materials.append(fog)
 # Only the narrow crest and the lower plunge carry air. The broken
 # trains have individual lengths and phase instead of parallel white bars.
 foam = material("Air at the sill", (0.75, 0.82, 0.81), 0.46, 0.23)
-for k in range(950):
-    x = channel(2) + veils.uniform(-0.96, 0.96)
-    y = lip(x) - abs(veils.gauss(0.16, 0.17)) - 0.035
-    length = veils.uniform(0.005, 0.065)
-    width = veils.uniform(0.002, 0.009)
-    ring = [
-        (x - width, y),
-        (x + 0.004, y - length),
-        (x + width, y),
-        (x, y + length * 0.4),
-    ]
-    mesh(
-        "Entrained air",
-        [
-            (
-                a,
-                b,
-                wet_surface(a, b, (a - channel(b)) / (channel_width(b) + 0.07)) + 0.003,
+for band in range(13):
+    rows = []
+    for i in range(100):
+        x = channel(2) - 1 + 2 * i / 99
+        y = lip(x) - 0.19 - band * 0.013 + 0.034 * math.sin(x * 19 + band * 0.41)
+        spread = 0.008 * (0.65 + 0.55 * math.sin(x * 22 + band))
+        row = []
+        for b in (y - spread, y + spread):
+            row.append(
+                (
+                    x,
+                    b,
+                    wet_surface(x, b, (x - channel(b)) / (channel_width(b) + 0.07))
+                    + 0.003,
+                )
             )
-            for a, b in ring
-        ],
-        [(0, 1, 2, 3)],
-        foam,
-    )
+        rows.append(row)
+    grid("Scattered foam seam", rows, foam)
+# Steam lit from the back obliterates the sightline to the level far shore.
+bpy.ops.mesh.primitive_uv_sphere_add(location=(2.4, 9, 1.0))
+steam = bpy.context.object
+steam.scale = (4.2, 4.4, 3.7)
+mist_mat = fog.copy()
+steam.data.materials.append(mist_mat)
+mt = mist_mat.node_tree
+coords = mt.nodes.new("ShaderNodeTexCoord")
+radius = mt.nodes.new("ShaderNodeVectorMath")
+radius.operation = "DISTANCE"
+radius.inputs[1].default_value = (0.5, 0.5, 0.5)
+mt.links.new(coords.outputs["Generated"], radius.inputs[0])
+profile = mt.nodes.new("ShaderNodeMapRange")
+profile.inputs["From Max"].default_value = 0.5
+profile.inputs["To Min"].default_value = 0.95
+profile.inputs["To Max"].default_value = 0
+mt.links.new(radius.outputs["Value"], profile.inputs[0])
+medium = mt.nodes.new("ShaderNodeVolumePrincipled")
+mt.links.new(profile.outputs[0], medium.inputs["Density"])
+mt.links.new(profile.outputs[0], medium.inputs["Emission Strength"])
+medium.inputs["Emission Color"].default_value = (
+    (2.1, 1.94, 1.69, 1) if not args.night else (0.24, 0.34, 0.43, 1)
+)
+mt.links.new(medium.outputs[0], mt.nodes.get("Material Output").inputs["Volume"])
+bpy.ops.object.light_add(type="SUN")
+sun = bpy.context.object
+sun.rotation_euler = (-Vector((0.15, 1, 0.12))).to_track_quat("-Z", "Y").to_euler()
+sun.data.energy = 0.12 if args.night else 2.4
+sun.data.angle = 0.07
+sun.data.color = (0.63, 0.75, 1) if args.night else (1, 0.91, 0.76)
+if args.night:
+    tree.nodes.get("Background").inputs[1].default_value = 0.19
+    sky.inputs[1].default_value = 0.19
+    lamp.data.energy = 390
+    lamp.data.color = (0.57, 0.72, 0.89)
+    scene.view_settings.exposure = -0.8
+# Extinction inside the probe carries too much winter blue into shadows.
+probe_mix = tree.nodes.new("ShaderNodeHueSaturation")
+probe_mix.inputs["Saturation"].default_value = 0.47
+tree.links.new(env.outputs[0], probe_mix.inputs["Color"])
+tree.links.new(probe_mix.outputs[0], tree.nodes.get("Background").inputs[0])
 bpy.ops.object.camera_add(location=(-1.12, -18.6, 1.98))
 cam = bpy.context.object
 scene.camera = cam
-cam.data.lens = 46
+cam.data.lens = 34 if args.phone else 46
+if args.phone:
+    cam.location = (-0.55, -20, 2.8)
 cam.rotation_euler = (
-    (Vector((2.05 if args.phone else -0.2, 2, 1.16)) - cam.location)
+    (
+        Vector((2.00 if args.phone else -0.2, 2, 0.4 if args.phone else 1.16))
+        - cam.location
+    )
     .to_track_quat("-Z", "Y")
     .to_euler()
 )
+if args.survey:
+    # A camera-space survey supplies both inverse distance and the exact
+    # liquid coverage. Volumes and the embedded air are transparent to it.
+    scene.use_nodes = True
+    scene.view_layers[0].use_pass_z = True
+    scene.view_layers[0].use_pass_material_index = True
+    water.pass_index = 1
+    foam.pass_index = 1
+    ct = scene.node_tree
+    layers = ct.nodes.get("Render Layers")
+    dist = ct.nodes.new("CompositorNodeMath")
+    dist.operation = "DIVIDE"
+    dist.inputs[0].default_value = 10
+    ct.links.new(layers.outputs["Depth"], dist.inputs[1])
+    rgb = ct.nodes.new("CompositorNodeCombRGBA")
+    ct.links.new(dist.outputs[0], rgb.inputs["R"])
+    ct.links.new(layers.outputs["IndexMA"], rgb.inputs["G"])
+    aux = ct.nodes.new("CompositorNodeOutputFile")
+    aux.base_path = str(args.output.resolve().parent)
+    aux.file_slots[0].path = args.output.stem + "-survey-"
+    aux.format.color_mode = "RGB"
+    aux.file_slots[0].save_as_render = False
+    ct.links.new(rgb.outputs[0], aux.inputs[0])
 args.output.parent.mkdir(parents=True, exist_ok=True)
 scene.render.filepath = str(args.output.resolve())
 bpy.ops.render.render(write_still=True)

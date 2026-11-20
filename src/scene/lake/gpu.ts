@@ -71,16 +71,16 @@ type Draw = { vao: WebGLVertexArrayObject; info: DrawInfo };
 
 export class LakeGPU {
   readonly gl: WebGL2RenderingContext;
-  readonly decoder: Worker;
-  private readonly programs: Record<string, Program> = {};
+  decoder?: Worker;
+  protected readonly programs: Record<string, Program> = {};
   private readonly buffers: WebGLBuffer[] = [];
   private readonly draws: Draw[] = [];
   private readonly textures: WebGLTexture[] = [];
-  private lut!: WebGLTexture;
+  protected lut!: WebGLTexture;
   private meta!: Meta;
   private daylight = 1;
-  private targets: Target[] = [];
-  private empty: WebGLVertexArrayObject;
+  protected targets: Target[] = [];
+  protected empty: WebGLVertexArrayObject;
   assetMemory = 0;
   targetMemory = 0;
   disposed = false;
@@ -97,11 +97,14 @@ export class LakeGPU {
       throw Error('A floating-point WebGL2 target is required');
     this.gl = gl;
     this.empty = gl.createVertexArray()!;
-    this.decoder = new Worker('/scene/lake/decode.worker.js');
+  }
+  protected extraPrograms(): Record<string, string[]> {
+    return {};
   }
   private async compile() {
     const gl = this.gl;
     const sources = {
+      ...this.extraPrograms(),
       portraitBloom: [fullVertex, portraitBloom],
       portraitGround: [fullVertex, portraitGround],
       portraitIce: [portraitMesh, portraitIce],
@@ -138,7 +141,9 @@ export class LakeGPU {
     }
     performance.mark('lake:programs-ready');
   }
-  async load(theme: string) {
+  async load(theme: string, gate?: string, root = '/scene/lake/', cameraFile = 'mesh.json') {
+    const decoder = new Worker(root + 'decode.worker.js');
+    this.decoder = decoder;
     this.daylight = theme === 'night' ? 0 : 1;
     const gl = this.gl;
     const etc = gl.getExtension('WEBGL_compressed_texture_etc');
@@ -161,8 +166,8 @@ export class LakeGPU {
     const load = new Promise<void>((resolve, reject) => {
       let uploads = Promise.resolve();
       this.cancelLoad = () => reject(Error('Lake disposed'));
-      this.decoder.onerror = (e) => reject(Error(e.message));
-      this.decoder.onmessage = ({ data }: { data: Message }) => {
+      decoder.onerror = (e) => reject(Error(e.message));
+      decoder.onmessage = ({ data }: { data: Message }) => {
         if (data.kind === 'error') {
           reject(Error(data.message));
           return;
@@ -202,15 +207,15 @@ export class LakeGPU {
                   end: Math.max(0, r.end - performance.timeOrigin),
                   detail: r.bytes,
                 });
-              this.decoder.terminate();
+              this.decoder?.terminate();
               resolve();
             }
           })
           .catch(reject);
       };
-      this.decoder.postMessage({ theme, rgb, rgba });
+      decoder.postMessage({ theme, rgb, rgba, gate, cameraFile });
     });
-    await Promise.all([this.compile(), load]);
+    await Promise.all([this.programs.post ? Promise.resolve() : this.compile(), load]);
     performance.mark('lake:uploaded');
   }
   private uploadMesh(data: MeshMessage) {
@@ -234,6 +239,7 @@ export class LakeGPU {
       gl.vertexAttribPointer(1, 2, gl.UNSIGNED_BYTE, true, 8, 6);
       this.draws.push({ vao, info: d.info });
     }
+    if (this.lut) gl.deleteTexture(this.lut);
     this.lut = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_3D, this.lut);
     gl.texImage3D(
@@ -252,7 +258,7 @@ export class LakeGPU {
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
     this.assetMemory += data.grade.byteLength;
   }
-  private filter(target: number, mips: boolean) {
+  protected filter(target: number, mips: boolean) {
     const gl = this.gl;
     gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, mips ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
     gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -324,7 +330,7 @@ export class LakeGPU {
       this.target(Math.max(4, w >> 5), Math.max(4, h >> 5), true, false, true),
     ];
   }
-  private texture(u: WebGLUniformLocation, unit: number, tex: WebGLTexture, volume = false) {
+  protected texture(u: WebGLUniformLocation, unit: number, tex: WebGLTexture, volume = false) {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0 + unit);
     gl.bindTexture(volume ? gl.TEXTURE_3D : gl.TEXTURE_2D, tex);
@@ -591,8 +597,49 @@ export class LakeGPU {
     gl.uniform2f(post.u.invResolution, 1 / w, 1 / h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
+  /** Finish any composition in the shared log-radiance attachment. */
+  protected finishComposition(output: WebGLFramebuffer | null) {
+    const gl = this.gl,
+      [scene, , bloom] = this.targets;
+    gl.disable(gl.BLEND);
+    gl.disable(gl.DEPTH_TEST);
+    gl.bindVertexArray(this.empty);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, bloom.fbo);
+    gl.viewport(0, 0, bloom.w, bloom.h);
+    const glow = this.programs.portraitBloom;
+    gl.useProgram(glow.id);
+    this.texture(glow.u.field, 0, scene.tex);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindTexture(gl.TEXTURE_2D, bloom.tex);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    const post = this.programs.post;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, output);
+    gl.viewport(0, 0, scene.w, scene.h);
+    gl.useProgram(post.id);
+    this.texture(post.u.scene, 0, scene.tex);
+    this.texture(post.u.bloom, 1, bloom.tex);
+    this.texture(post.u.grade, 2, this.lut, true);
+    gl.uniform4f(post.u.slabBounds, 2, 2, 2, 2);
+    gl.uniform2f(post.u.invResolution, 1 / scene.w, 1 / scene.h);
+    gl.uniform1f(post.u.bloomGain, 0.0028);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+  protected releaseLake() {
+    const g = this.gl;
+    this.textures.splice(0).forEach((t) => g.deleteTexture(t));
+    this.buffers.splice(0).forEach((b) => g.deleteBuffer(b));
+    this.draws.splice(0).forEach((d) => g.deleteVertexArray(d.vao));
+  }
   get triangles() {
-    return this.draws.reduce((n, d) => n + d.info.indices / 3, 0) + this.draws[0].info.indices / 3 + 2;
+    return (
+      this.draws.reduce((n, d) => n + d.info.indices / 3, 0) + (this.draws[0]?.info.indices ?? 0) / 3 + 2
+    );
+  }
+  protected drawCounts(portrait: boolean, _pose: Pose) {
+    return {
+      draws: portrait ? 5 : 6,
+      triangles: portrait ? (this.draws[1]?.info.indices ?? 0) / 3 + 3 : this.triangles,
+    };
   }
   async measure(w: number, h: number, breakdown: boolean, pose: Pose = rest) {
     const gl = this.gl;
@@ -656,8 +703,9 @@ export class LakeGPU {
         main: med(cpu),
         cumulative: results,
         textureAndTargetBytes: memory,
-        draws: w <= h ? 5 : 6,
-        triangles: w <= h ? this.draws[1].info.indices / 3 + 3 : this.triangles,
+        textureBytes: memory - w * h * 2,
+        depthBytes: w * h * 2,
+        ...this.drawCounts(w <= h, pose),
         renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'unknown',
       };
     } finally {
@@ -668,7 +716,7 @@ export class LakeGPU {
   dispose() {
     this.disposed = true;
     this.cancelLoad?.();
-    this.decoder.terminate();
+    this.decoder?.terminate();
     const g = this.gl;
     this.targets.forEach((t) => this.release(t));
     this.textures.forEach((t) => g.deleteTexture(t));

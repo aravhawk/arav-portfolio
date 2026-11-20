@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/../.."
+py="$HOME/.t3/portfolio-redesign-v4/tools/bake-venv/bin/python"
+out=.tools/out/o3b/studies
+mkdir -p "$out" public/scene/ridge
+"$py" tools/scene/lake/inputs.py
+for gate in wide tall; do
+  case "$gate" in wide) set -- --width 3456 ;; tall) set -- --width 1080 --phone ;; esac
+  for lighting in day night; do
+    case "$lighting" in day) light=--survey ;; night) light=--night ;; esac
+    "$py" tools/scene/ridge/study.py "$out/$gate-$lighting.png" "$@" "$light" --samples 32 > "$out/$gate-$lighting.log" 2>&1
+  done
+done
+"$py" tools/scene/ridge/pack.py "$out" public/scene/ridge
