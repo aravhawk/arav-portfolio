@@ -2,7 +2,7 @@ import numpy as np
 
 
 def shore(xs, y, axis, half):
-    return np.abs(xs-.20*y)-2.1*half
+    return np.abs(xs+.36*y)-2.1*half
 
 
 def subject(sawn):
