@@ -25,18 +25,33 @@ describe('content/metrics.snapshot.json', () => {
     expect(Object.keys(committed.contributions.byYear)).toEqual(
       expect.arrayContaining(['2021', '2022', '2023', '2024', '2025', '2026']),
     );
-    expect(committed.mergedPrs.ledger.length).toBeGreaterThanOrEqual(21);
+    expect(committed.mergedPrs.ledger.length).toBeGreaterThanOrEqual(15);
     for (const section of [committed.ollama, committed.npm, committed.contributions, committed.mergedPrs]) {
       expect(Number.isFinite(Date.parse(section.retrievedAt))).toBe(true);
       expect(section.source).toMatch(/^https:\/\//);
     }
   });
 
-  it('has no PR from an excluded owner in the ledger', () => {
+  it('has no PR from an excluded owner or an excluded repository in the ledger', () => {
     assertSnapshot(committed);
     for (const entry of committed.mergedPrs.ledger) {
       expect(isExcludedRepo(entry.repo, METRICS_CONFIG.excludedOwners)).toBe(false);
     }
+    expect(committed.mergedPrs.excludedOwners).toEqual([...METRICS_CONFIG.excludedOwners]);
+    expect(committed.mergedPrs.query).toContain('-repo:AvinashDevineni/ThrasherAndChambersWebsite');
+    expect(committed.mergedPrs.query).toContain('-repo:Kanishksasi/Investo');
+  });
+
+  it('counts the five repositories of the definitive list', () => {
+    assertSnapshot(committed);
+    const repos = new Map<string, number>();
+    for (const entry of committed.mergedPrs.ledger) repos.set(entry.repo, (repos.get(entry.repo) ?? 0) + 1);
+    expect([...repos.keys()].sort()).toEqual(
+      ['Kilo-Org/kilocode', 'devMEremenko/XcodeBenchmark', 'fakerybakery/openbridge', 'junhoyeo/tokscale', 'pingdotgg/t3code'].sort(),
+    );
+    expect(repos.get('pingdotgg/t3code')).toBeGreaterThanOrEqual(9);
+    expect(repos.get('junhoyeo/tokscale')).toBeGreaterThanOrEqual(3);
+    expect(committed.mergedPrs.upstream).toBeGreaterThanOrEqual(15);
   });
 });
 

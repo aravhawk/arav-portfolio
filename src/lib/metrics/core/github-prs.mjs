@@ -8,8 +8,12 @@ const API_REPO_PREFIX = 'https://api.github.com/repos/';
 
 /**
  * Build the GitHub search query. With `excludedOwners` it is the headline
- * query (merged PRs in repos whose owner is not excluded); without it, the
- * query for every public merged PR.
+ * query (merged PRs in repos that are not excluded); without it, the query
+ * for every public merged PR.
+ *
+ * An entry of `excludedOwners` is an owner ("acme": every repository of
+ * theirs, `-user:acme`) or one repository ("acme/site": that one only,
+ * `-repo:acme/site`).
  *
  * `is:public` never changes the unauthenticated result (that search only
  * sees public repositories) and keeps private ones out if a token is set.
@@ -24,7 +28,7 @@ export function buildPrSearchQuery({ author, excludedOwners = [] }) {
     const key = owner.trim().toLowerCase();
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    parts.push(`-user:${owner.trim()}`);
+    parts.push(`${key.includes('/') ? '-repo' : '-user'}:${owner.trim()}`);
   }
   return parts.join(' ');
 }
@@ -69,11 +73,15 @@ function isRecord(value) {
 
 /**
  * @param {string} repo "owner/name"
- * @param {readonly string[]} excludedOwners
+ * @param {readonly string[]} excludedOwners Owners, and single repositories as "owner/name".
  */
 export function isExcludedRepo(repo, excludedOwners) {
-  const owner = repo.split('/')[0].toLowerCase();
-  return excludedOwners.some((excluded) => excluded.trim().toLowerCase() === owner);
+  const full = repo.toLowerCase();
+  const owner = full.split('/')[0];
+  return excludedOwners.some((excluded) => {
+    const key = excluded.trim().toLowerCase();
+    return key.includes('/') ? key === full : key === owner;
+  });
 }
 
 /**

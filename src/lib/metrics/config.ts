@@ -27,6 +27,17 @@ export const EXCLUDED_OWNERS: readonly string[] = [
 ];
 
 /**
+ * Single repositories ("owner/name") that do not count either, whoever owns
+ * them: work the owner has asked to leave out. They travel with the owners
+ * above as one list (the search query gets a `-repo:` term for each), so the
+ * query, the ledger filter and the snapshot still share one rule.
+ */
+export const EXCLUDED_REPOS: readonly string[] = [
+  'AvinashDevineni/ThrasherAndChambersWebsite',
+  'Kanishksasi/Investo',
+];
+
+/**
  * When true, a PR only counts if somebody else merged it. That needs one
  * extra API lookup per new PR, so it stays off unless the owner asks for it.
  */
@@ -68,6 +79,7 @@ export const MAX_LEDGER_PAGES = 2;
 
 export type MetricsConfig = {
   contributionsWindow: 'lifetime' | 'last12months';
+  /** Owners, then single repositories as "owner/name". */
   excludedOwners: readonly string[];
   requireMergedByOther: boolean;
   npmPackages: ReadonlyArray<{ name: string; firstPublished: string }>;
@@ -84,7 +96,7 @@ export type MetricsConfig = {
 /** Everything above, bundled for the pure modules in ./core. */
 export const METRICS_CONFIG: MetricsConfig = {
   contributionsWindow: CONTRIBUTIONS_WINDOW,
-  excludedOwners: EXCLUDED_OWNERS,
+  excludedOwners: [...EXCLUDED_OWNERS, ...EXCLUDED_REPOS],
   requireMergedByOther: REQUIRE_MERGED_BY_OTHER,
   npmPackages: NPM_PACKAGES,
   npmProfileUrl: NPM_PROFILE_URL,

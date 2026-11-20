@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { EXCLUDED_OWNERS, GITHUB_USER } from '@/lib/metrics/config';
+import { EXCLUDED_OWNERS, EXCLUDED_REPOS, GITHUB_USER, METRICS_CONFIG } from '@/lib/metrics/config';
 import {
   buildPrSearchQuery,
   countByRepo,
   countMergedByOther,
   filterLedger,
+  isExcludedRepo,
   mergeLedgers,
   parsePrSearchResponse,
   prSearchApiUrl,
@@ -23,6 +24,13 @@ describe('buildPrSearchQuery', () => {
     );
   });
 
+  it('adds a -repo: term for each excluded repository, after the owners', () => {
+    expect(EXCLUDED_REPOS).toEqual(['AvinashDevineni/ThrasherAndChambersWebsite', 'Kanishksasi/Investo']);
+    expect(buildPrSearchQuery({ author: GITHUB_USER, excludedOwners: METRICS_CONFIG.excludedOwners })).toBe(
+      'is:pr is:merged is:public author:aravhawk -user:aravhawk -user:infiniflop -user:2ALabz -user:nextup-inspired -user:navkarcaterers -repo:AvinashDevineni/ThrasherAndChambersWebsite -repo:Kanishksasi/Investo',
+    );
+  });
+
   it('adds one -user: term per excluded owner, whatever the list is', () => {
     const query = buildPrSearchQuery({ author: 'someone', excludedOwners: ['a', 'B', 'a', ' c ', ''] });
     expect(query).toBe('is:pr is:merged is:public author:someone -user:a -user:B -user:c');
@@ -34,6 +42,40 @@ describe('buildPrSearchQuery', () => {
 
   it('never asks for private repositories', () => {
     expect(buildPrSearchQuery({ author: 'aravhawk', excludedOwners: EXCLUDED_OWNERS })).toContain('is:public');
+  });
+});
+
+describe('isExcludedRepo', () => {
+  it('drops every repository of an excluded owner', () => {
+    expect(isExcludedRepo('aravhawk/cc-switch', METRICS_CONFIG.excludedOwners)).toBe(true);
+    expect(isExcludedRepo('Infiniflop/anything', METRICS_CONFIG.excludedOwners)).toBe(true);
+  });
+
+  it('drops an excluded repository and nothing else of its owner', () => {
+    expect(isExcludedRepo('AvinashDevineni/ThrasherAndChambersWebsite', METRICS_CONFIG.excludedOwners)).toBe(true);
+    expect(isExcludedRepo('kanishksasi/investo', METRICS_CONFIG.excludedOwners)).toBe(true);
+    expect(isExcludedRepo('Kanishksasi/another', METRICS_CONFIG.excludedOwners)).toBe(false);
+    expect(isExcludedRepo('pingdotgg/t3code', METRICS_CONFIG.excludedOwners)).toBe(false);
+  });
+
+  it('filters a ledger and a search page by the same rule', () => {
+    const entry = (repo: string, number: number) => ({
+      repo,
+      number,
+      title: 'x',
+      mergedAt: '2026-10-02T10:00:00Z',
+      url: `https://github.com/${repo}/pull/${number}`,
+    });
+    const kept = filterLedger(
+      [entry('pingdotgg/t3code', 1), entry('Kanishksasi/Investo', 2), entry('AvinashDevineni/ThrasherAndChambersWebsite', 3)],
+      METRICS_CONFIG.excludedOwners,
+    );
+    expect(kept.map((e) => e.repo)).toEqual(['pingdotgg/t3code']);
+    const page = parsePrSearchResponse(
+      { total_count: 2, items: [searchItem(entry('Kanishksasi/Investo', 2)), searchItem(entry('junhoyeo/tokscale', 4))] },
+      { excludedOwners: METRICS_CONFIG.excludedOwners },
+    );
+    expect(page.entries.map((e) => e.repo)).toEqual(['junhoyeo/tokscale']);
   });
 });
 
@@ -54,16 +96,17 @@ describe('search urls', () => {
   });
 });
 
+// (The fixture was saved before the two repositories were excluded: the search still returned them. The rule drops them.)
 describe('parsePrSearchResponse (saved search fixture)', () => {
   const parsed = parsePrSearchResponse(JSON.parse(fixture('github-search-upstream.json')), {
-    excludedOwners: EXCLUDED_OWNERS,
+    excludedOwners: METRICS_CONFIG.excludedOwners,
   });
 
-  it('reads the live count and every item', () => {
+  it('reads the count and every item, and keeps only what the rule allows', () => {
     expect(parsed.totalCount).toBe(21);
     expect(parsed.incomplete).toBe(false);
     expect(parsed.itemCount).toBe(21);
-    expect(parsed.entries).toHaveLength(21);
+    expect(parsed.entries).toHaveLength(14);
   });
 
   it('turns items into ledger entries', () => {
@@ -80,9 +123,7 @@ describe('parsePrSearchResponse (saved search fixture)', () => {
   it('aggregates the ledger by repository, largest first', () => {
     expect(countByRepo(parsed.entries).map(({ repo, count }) => [repo, count])).toEqual([
       ['pingdotgg/t3code', 8],
-      ['AvinashDevineni/ThrasherAndChambersWebsite', 5],
       ['junhoyeo/tokscale', 3],
-      ['Kanishksasi/Investo', 2],
       ['devMEremenko/XcodeBenchmark', 1],
       ['fakerybakery/openbridge', 1],
       ['Kilo-Org/kilocode', 1],
