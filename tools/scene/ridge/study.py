@@ -392,6 +392,25 @@ def sawn(name, outline, thickness, center, angles, group, seed):
         tree.links.new(base, lit.inputs[0])
         tree.links.new(taper.outputs[0], lit.inputs[1])
         tree.links.new(lit.outputs[0], through)
+        if name in {"Shaded cut", "Transmitted sunlight"}:
+            # A slit in the cloud illuminates a single cut. Carry its
+            # internal grain through the radiance change in both themes.
+            output = next(node for node in tree.nodes if node.type == "OUTPUT_MATERIAL")
+            socket = output.inputs["Surface"]
+            original = socket.links[0].from_socket
+            sky = tree.nodes.new("ShaderNodeBsdfDiffuse")
+            sky.inputs["Color"].default_value = (.075, .14, .16, 1)
+            mix = tree.nodes.new("ShaderNodeMixShader")
+            mix.inputs[0].default_value = .68 if name == "Shaded cut" else .48
+            tree.links.new(original, mix.inputs[1])
+            if name == "Transmitted sunlight":
+                sunlit = tree.nodes.new("ShaderNodeEmission")
+                sunlit.inputs["Color"].default_value = (.81, .94, .91, 1)
+                sunlit.inputs["Strength"].default_value = 2.8 if args.night else 5.2
+                tree.links.new(sunlit.outputs[0], mix.inputs[2])
+            else:
+                tree.links.new(sky.outputs[0], mix.inputs[2])
+            tree.links.new(mix.outputs[0], socket)
         # The spatial variation of cloud should live inside the sawn face.
         # A saw leaves a comparatively even, translucent satin outer skin.
         satin = tree.nodes["Map Range.006"]

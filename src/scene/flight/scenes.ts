@@ -1,3 +1,4 @@
+import rydarAssets from './rydar-assets.json';
 import tensorpowAssets from './tensorpow-assets.json';
 import ccswitchAssets from './cc-switch-assets.json';
 import ollamaAssets from './ollama-assets.json';
@@ -117,6 +118,7 @@ export const scenes: readonly (Lake | Plate)[] = [
   riverPlate('ollama', ollamaAssets),
   riverPlate('cc-switch', ccswitchAssets),
   riverPlate('tensorpow', tensorpowAssets),
+  riverPlate('rydar', rydarAssets),
 ];
 export const starts: number[] = [];
 let length = 0;

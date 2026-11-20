@@ -22,6 +22,10 @@ for theme in day night; do
                 set -- "$@" --height 8 --target-z 2.4
                 if [ "$gate" = tall ]; then set -- "$@" --height 12 --target-z .2 --aim 2.4; fi ;;
         esac
+        if [ "$reach" = tensorpow ]; then
+            set -- "$@" --distance 36 --aim -2.5 --target-z .15
+            if [ "$gate" = tall ]; then set -- "$@" --distance 48 --aim 2 --target-z -2.4; fi
+        fi
         if [ "$theme" = night ]; then set -- "$@" --night; fi
         "$py" tools/scene/ridge/study.py "$out/$reach/$gate-$theme.png" --reach "$reach" --library "$out/$theme.blend" --samples 12 --roll 0 --sun-z 2.5 "$@"
     done
