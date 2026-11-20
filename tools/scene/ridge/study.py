@@ -129,8 +129,8 @@ else:
     scene.world = imported.worlds[0]
     sun, front, rear = imported.lights
     light(sun, source * 10, (0, 0, 0))
-    light(front, (-2.8, -5, 3.5), (0, 0, 1.1))
-    light(rear, (0, 2.3, 2.5), (0, 0, 0.8))
+    front_lamp = light(front, (-2.8, -5, 3.5), (0, 0, 1.1))
+    rear_lamp = light(rear, (0, 2.3, 2.5), (0, 0, 0.8))
     # Broad sky radiance on the snow tongue below the words.
     fill = bpy.data.lights.new("Sky returned by the snow", "AREA")
     fill.energy = 2300 if args.night else 10700
@@ -822,7 +822,21 @@ if not args.clay:
     tree = fog.node_tree
     tree.nodes.remove(tree.nodes["Principled BSDF"])
     medium = tree.nodes.new("ShaderNodeVolumeScatter")
-    medium.inputs["Density"].default_value = 0.008
+    # Extinguish density before every face of the valley volume. Nearby ice
+    # lights must not project a softbox onto a vertical wall of uniform fog.
+    local = tree.nodes.new("ShaderNodeTexCoord")
+    center = tree.nodes.new("ShaderNodeVectorMath")
+    center.operation = "DISTANCE"
+    center.inputs[1].default_value = (0.5, 0.5, 0.5)
+    tree.links.new(local.outputs["Generated"], center.inputs[0])
+    density = tree.nodes.new("ShaderNodeMapRange")
+    density.interpolation_type = "SMOOTHERSTEP"
+    density.inputs["From Min"].default_value = 0.27
+    density.inputs["From Max"].default_value = 0.50
+    density.inputs["To Min"].default_value = 0.008
+    density.inputs["To Max"].default_value = 0
+    tree.links.new(center.outputs["Value"], density.inputs["Value"])
+    tree.links.new(density.outputs[0], medium.inputs["Density"])
     medium.inputs["Anisotropy"].default_value = 0.52
     medium.inputs["Color"].default_value = (0.69, 0.85, 0.91, 1)
     tree.links.new(medium.outputs[0], tree.nodes["Material Output"].inputs["Volume"])
@@ -861,6 +875,20 @@ if not args.clay:
     if args.reach == "ollama":
         from ollama import place_steam
         place_steam(steam, scene.collection)
+
+    elif args.reach:
+        # Only the breach and the open pools have a source of rising spray.
+        layers["bank"].remove(steam)
+        bpy.data.objects.remove(steam, do_unlink=True)
+
+    # The close studio fills light solid ice and snow. The valley and spray
+    # receive the broad sky and sun without imaging the rectangular emitters.
+    solids = bpy.data.collections.new("Ice and terrain light receivers")
+    for obj in scene.objects:
+        if obj.type == "MESH" and obj.active_material not in (fog, mistmat):
+            solids.objects.link(obj)
+    for lamp in (front_lamp, rear_lamp):
+        lamp.light_linking.receiver_collection = solids
 
     # A finite solar disc in the air above the far shore. Its physical angular
     # diameter survives the wide opening and remains behind the missing slab.

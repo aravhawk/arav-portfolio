@@ -185,7 +185,7 @@ def pack(gate, theme, size, crops, slots, atlas):
         )
         survey.paste(channels, xy)
     stem = args.output / f"{gate}-{theme}"
-    luminance.save(stem.with_suffix(".avif"), quality=args.quality, speed=6)
+    luminance.save(stem.with_suffix(".avif"), quality=args.quality, speed=4)
     width = min(560 if gate == "wide" else 256, w)
     survey = survey.resize(
         (width, round(atlas[1] * width / w)), Image.Resampling.LANCZOS
@@ -197,7 +197,7 @@ def pack(gate, theme, size, crops, slots, atlas):
     survey = Image.merge("RGB", [ch.point(palette) for ch in channels])
     survey.putalpha(river_glitter(survey.size))
     survey.save(
-        stem.with_name(stem.name + "-survey.webp"), lossless=True, exact=True, method=5
+        stem.with_name(stem.name + "-survey.webp"), lossless=True, exact=True, method=6
     )
 
 
@@ -217,7 +217,7 @@ for gate in ("wide", "tall"):
     for name, box, xy in zip(layers[1:], crops[1:], slots[1:]):
         alpha = read(gate, "day", "-" + name).getchannel("A").crop(box)
         matte.paste(alpha, (xy[0], xy[1] - h))
-    matte.save(args.output / f"{gate}-silhouettes.webp", lossless=True, method=5)
+    matte.save(args.output / f"{gate}-silhouettes.webp", lossless=True, method=6)
     registry[gate] = data
     for theme in ("day", "night"):
         pack(gate, theme, size, crops, slots, atlas)

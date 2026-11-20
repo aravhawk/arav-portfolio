@@ -71,7 +71,7 @@ for gate in ("wide", "tall"):
         # beside the depth and water channels in the survey texture.
         y = 0.25 * field[:, :, 0] + 0.5 * field[:, :, 1] + 0.25 * field[:, :, 2]
         baked = np.uint8(np.clip(np.rint(255 * y + dither), 0, 255))
-        Image.fromarray(baked).save(args.output / f"{name}.avif", quality=83, speed=6)
+        Image.fromarray(baked).save(args.output / f"{name}.avif", quality=83, speed=4)
         channels = list(survey.split()[:2])
         for a in (0, 2):
             axis = np.uint8(
@@ -81,7 +81,7 @@ for gate in ("wide", "tall"):
                 Image.fromarray(axis).resize(survey.size, Image.Resampling.LANCZOS)
             )
         Image.merge("RGBA", channels).save(
-            args.output / f"{name}-survey.webp", lossless=True, exact=True
+            args.output / f"{name}-survey.webp", lossless=True, exact=True, method=6
         )
 
 # The registry ledger follows the encoded files, including both camera gates.
