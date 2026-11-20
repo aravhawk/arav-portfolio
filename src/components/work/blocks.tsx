@@ -1,4 +1,5 @@
-import Image from 'next/image';
+import { getImageProps } from 'next/image';
+import { Held } from '@/components/Held';
 import { Link } from '@/components/Link';
 import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
@@ -16,13 +17,17 @@ import { PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
 export const PLATE_SIZES = '(max-width: 1720px) 96vw, 1640px';
 export const HALF_SIZES = '(max-width: 859px) 94vw, (max-width: 1720px) 48vw, 820px';
 
-/** A piece of real media. A light capture is mounted, and dimmed on the dark theme. */
-export function Plate({ media, caption, sizes = PLATE_SIZES, priority = false, className = '' }: { media: ProjectMedia; caption?: React.ReactNode; sizes?: string; priority?: boolean; className?: string }) {
+/**
+ * A piece of real media. A light capture is mounted, and dimmed on the dark theme. No plate is the first thing a
+ * page shows (that is the scene at its head), so every plate is held until the page's first frame: Held.tsx.
+ */
+export function Plate({ media, caption, sizes = PLATE_SIZES, className = '' }: { media: ProjectMedia; caption?: React.ReactNode; sizes?: string; className?: string }) {
   if (media.kind === 'video') return <VideoSlab media={media} />;
+  const { props } = getImageProps({ src: media.src, alt: media.alt, width: media.w, height: media.h, sizes });
   return (
     <figure className={`plate${media.tone === 'light' ? ' plate-light' : ''} ${className}`}>
       <div className="plate-frame" data-dry>
-        <Image className="plate-media" src={media.src} alt={media.alt} width={media.w} height={media.h} sizes={sizes} priority={priority} />
+        <Held className="plate-media" src={props.src} srcSet={props.srcSet} sizes={sizes} alt={media.alt} width={media.w} height={media.h} style={props.style} />
       </div>
       {caption ? <figcaption className="cap">{caption}</figcaption> : null}
     </figure>

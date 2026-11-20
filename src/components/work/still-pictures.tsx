@@ -1,4 +1,5 @@
 import { getImageProps } from 'next/image';
+import { Held } from '@/components/Held';
 
 /**
  * The scenes' committed stills (public/media/scenes) as pictures: each is
@@ -101,10 +102,7 @@ const FEAT_SIZES = '(max-width: 859px) 95vw, (max-width: 1680px) 27vw, 480px';
 export function FeatStill({ scene }: { scene: string }) {
   const pic = (theme: Theme) => {
     const p = still(scene, 'wide', theme, FEAT_SIZES, 256, 1920);
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- two themes, one shown: see above
-      <img className={`feat-still feat-${theme}`} src={p.src} srcSet={p.srcSet} sizes={p.sizes} width={p.width} height={p.height} alt="" loading="lazy" decoding="async" />
-    );
+    return <Held className={`feat-still feat-${theme}`} src={p.src} srcSet={p.srcSet} sizes={p.sizes} width={p.width} height={p.height} />;
   };
   return (
     <>

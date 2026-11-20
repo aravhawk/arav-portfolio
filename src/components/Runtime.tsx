@@ -119,6 +119,23 @@ export function Runtime() {
     return () => io.disconnect();
   }, [pathname]);
 
+  // Held pictures (Held.tsx): each gets its address at the page's first calm moment, and is an ordinary lazy picture
+  // from then on.
+  useEffect(
+    () =>
+      whenCalm(() => {
+        for (const img of document.querySelectorAll<HTMLImageElement>('img[data-held]')) {
+          const { src, srcset } = img.dataset;
+          // (Once the real picture is in, its own shape rules again, exactly as it did before pictures were held.)
+          img.addEventListener('load', () => img.style.removeProperty('aspect-ratio'), { once: true });
+          if (srcset) img.srcset = srcset;
+          if (src) img.src = src;
+          img.removeAttribute('data-held');
+        }
+      }),
+    [pathname],
+  );
+
   // Warm haptics on the first touch, so the first real one is not late.
   useEffect(() => {
     const prime = () => primeHaptics();

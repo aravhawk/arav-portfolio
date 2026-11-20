@@ -1,6 +1,7 @@
 import { Link } from '@/components/Link';
 import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
+import { Held } from '@/components/Held';
 import { nextPic } from '@/components/work/still-pictures';
 import type { SceneId } from '@/water/scene-band';
 
@@ -40,10 +41,8 @@ export function NextBand({
   const name = <span className="display band-title next-title">{title}</span>;
   const pic = (shape: 'band' | 'bandtall', theme: 'light' | 'dark') => {
     const p = nextPic(scene ?? '', shape, theme);
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- four pictures, one shown (CSS picks the theme and the shape); each lazy, so only that one is fetched
-      <img className={`next-pic next-${shape} next-${theme}`} src={p.src} srcSet={p.srcSet} sizes={p.sizes} width={p.width} height={p.height} alt="" loading="lazy" decoding="async" />
-    );
+    // (Four pictures, one shown: CSS picks the theme and the shape. Each is lazy, so only that one is fetched, and held, so not before the page's first frame.)
+    return <Held className={`next-pic next-${shape} next-${theme}`} src={p.src} srcSet={p.srcSet} sizes={p.sizes} width={p.width} height={p.height} />;
   };
   return (
     <nav className={`next${scene ? '' : ' next-type'}`} aria-label={aria}>

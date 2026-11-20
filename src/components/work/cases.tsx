@@ -83,7 +83,7 @@ function Infiniview({ p }: { p: Project }) {
               </div>
             </div>
             <div className="run-show">
-              <Plate media={pic(p, 'infiniview-pipeline.webp')} sizes={RUN_SIZES} priority caption="The pipeline as infiniview.dev shows it. Its illustration uses sample data." />
+              <Plate media={pic(p, 'infiniview-pipeline.webp')} sizes={RUN_SIZES} caption="The pipeline as infiniview.dev shows it. Its illustration uses sample data." />
             </div>
           </li>
           <li className="run-stage">
@@ -816,7 +816,7 @@ function RydAR({ p }: { p: Project }) {
   return (
     <>
       <Sec className="ry-map" label="The map">
-        <Plate media={pic(p, 'rydar-map.webp')} priority />
+        <Plate media={pic(p, 'rydar-map.webp')} />
         <div className="ry-count">
           <p className="fig">
             <span className="fig-value">{RYDAR_CURVES.value}</span>
