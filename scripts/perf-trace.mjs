@@ -74,6 +74,7 @@ function summarise(intervals) {
     p95: +pct(s, 0.95).toFixed(2),
     p99: +pct(s, 0.99).toFixed(2),
     max: +(s[s.length - 1] || 0).toFixed(2),
+    over20ms: s.filter((x) => x > 20).length,
     over25ms: s.filter((x) => x > 25).length,
     over34ms: s.filter((x) => x > 34).length,
   };
@@ -124,6 +125,20 @@ for (const prof of PROFILES) {
     const rival = await other.newPage();
     await rival.goto(base + '/', { waitUntil: 'load' });
     await rival.waitForTimeout(1500);
+  }
+  if (process.argv.includes('--cold')) {
+    // The branch cannot be reached at this viewport. Its fresh literal still
+    // enters the compiled Metal program, unlike a comment or an unused define.
+    await ctx.addInitScript(limit => {
+      const proto = WebGL2RenderingContext.prototype;
+      const original = proto.shaderSource;
+      proto.shaderSource = function (shader, source) {
+        if (this.getShaderParameter(shader, this.SHADER_TYPE) === this.FRAGMENT_SHADER) {
+          source = source.replace(/void main\(\)\s*\{/, body => body + 'if(gl_FragCoord.x > ' + limit + '.0) discard;');
+        }
+        return original.call(this, shader, source);
+      };
+    }, 100000 + Math.floor(Math.random() * 8000000));
   }
   await ctx.addInitScript(instrument);
   const page = await ctx.newPage();
@@ -257,6 +272,7 @@ for (const prof of PROFILES) {
     profile: prof.name,
     theme,
     water: state,
+    visit: summarise(perf.frames),
     scroll: summarise(scroll),
     scrolled: `${(scrolled.y / prof.viewport.height).toFixed(1)} of ${(scrolled.max / prof.viewport.height).toFixed(1)} screens${scrolled.y >= scrolled.max - 2 ? '' : ' (DID NOT REACH THE FOOT)'}`,
     slowPerScreen: perScreen,
