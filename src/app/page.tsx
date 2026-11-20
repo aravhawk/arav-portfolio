@@ -147,7 +147,7 @@ const SAY_WHY_AT = 3.3;
 /** A day as a label says it: "Nov 16". */
 const day = (iso: string) => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' }).format(new Date(iso));
 
-/** The two shards of the tarn are the two ends of the bridge: each is named where it stands. */
+/** The two shards of the tarn are the two ends of the bridge: each is named where it stands (low on its flank: its upper half stands under the nav on a wide frame). */
 const PEERS = ['Grok Bot', 'OpenAI agent'];
 
 export default async function Home() {
@@ -299,7 +299,7 @@ export default async function Home() {
         <div className="fl-pin">
           <div className="fl-calls">
             {SHARDS.map((sh, i) => (
-              <Callout key={PEERS[i]} at={[sh.x, sh.y, sh.h]} from={bridge.calls.from} to={bridge.calls.to} lift={i ? 34 : 52} side={i ? 1 : -1}>
+              <Callout key={PEERS[i]} at={[sh.x, sh.y, sh.h * 0.3]} from={bridge.calls.from} to={bridge.calls.to} lift={i ? 34 : 52} side={i ? 1 : -1}>
                 {PEERS[i]}
               </Callout>
             ))}
