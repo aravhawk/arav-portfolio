@@ -7,7 +7,7 @@ venv="$base/tools/bake-venv"
 temp=".tools/out/o2c/bake"
 mkdir -p "$temp"
 if [ ! -x "$venv/bin/python" ]; then uv venv --python 3.11 "$venv"; fi
-uv pip install --python "$venv/bin/python" bpy==4.5.3 fonttools==4.68.0 scipy==1.17.1 numpy==1.26.4 pillow==13.0.0 brotli==1.2.1 skia-pathops==0.9.2 meshoptimizer==0.2.30a0 opencolorio==2.6.0
+uv pip install --python "$venv/bin/python" bpy==4.5.3 fonttools==4.68.0 scipy==1.17.1 numpy==1.26.4 pillow==13.0.0 brotli==1.2.1 skia-pathops==0.9.2 meshoptimizer==0.2.30a0 opencolorio==2.6.0 zopfli==0.2.3.post1
 if [ -z "${TOKTX:-}" ] && ! command -v toktx >/dev/null; then
     tool="$base/tools/ktx-4.4.2"
     if [ ! -x "$tool/bin/toktx" ]; then
@@ -40,16 +40,19 @@ done
 # Decoder binaries are versioned with the worker and independent of the scene bake.
 # Stills use the production renderer. The temporary server is this command's
 # child and is stopped on success, failure or interruption.
-if lsof -tiTCP:3184 -sTCP:LISTEN >/dev/null; then
-    echo "Port 3184 is in use. Stop the existing lab server before rebuilding." >&2
+port=${LAKE_POSTER_PORT:-3186}
+if lsof -tiTCP:"$port" -sTCP:LISTEN >/dev/null; then
+    echo "Port $port is in use. Choose another LAKE_POSTER_PORT before rebuilding." >&2
     exit 1
 fi
 pnpm build
-node node_modules/next/dist/bin/next start -p 3184 > "$temp/poster-server.log" 2>&1 &
+node node_modules/next/dist/bin/next start -p "$port" > "$temp/poster-server.log" 2>&1 &
 server_pid=$!
 trap 'kill -TERM "$server_pid" 2>/dev/null || true' EXIT
 for tick in $(seq 1 100); do
-    if curl -fsS http://localhost:3184/lab/hero -o /dev/null 2>/dev/null; then break; fi
+    if curl -fsS "http://localhost:$port/" -o /dev/null 2>/dev/null; then break; fi
     sleep .1
 done
-NODE_PATH="${NODE_PATH:-$base/tools/node_modules}" node tools/scene/posters.cjs
+NODE_PATH="${NODE_PATH:-$base/tools/node_modules}" node tools/scene/posters.cjs "http://localhost:$port"
+
+"$venv/bin/python" tools/scene/lake/compact.py
