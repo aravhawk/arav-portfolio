@@ -134,6 +134,8 @@ else:
     fill = bpy.data.lights.new("Sky returned by the snow", "AREA")
     fill.energy = 2300 if args.night else 10700
     fill.color = (0.58, 0.71, 1) if args.night else (0.88, 0.94, 1)
+    if args.night and args.layers:
+        fill.color = (0.38, 0.61, 1.0)
     fill.shape = "DISK"
     fill.size = 23
     light(fill, (-6, -16, 13), (-6, -13, 0))

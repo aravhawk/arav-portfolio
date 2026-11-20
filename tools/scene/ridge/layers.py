@@ -164,10 +164,11 @@ def pack(gate, theme, size, crops, slots, atlas):
             water = np.asarray(wet, np.float32) / 255
             rgb *= 1 - 0.61 * (weight * (1 - water))[:, :, None]
         if theme == "night":
-            # Match the low-chroma eastern sky of the lake after the lee
-            # snow exposure. Retain its luminance and the bright inner rims.
             value = rgb @ np.array([0.2126, 0.7152, 0.0722], np.float32)
-            rgb = 0.53 * rgb + 0.47 * value[:, :, None]
+            # The bank takes its diffuse colour from the blue sky. Fade
+            # the tint out across the bright gap and specular ice rims.
+            shade = 1 - np.clip((value - 0.42) / 0.48, 0, 1)
+            rgb *= 1 + shade[:, :, None] * np.array([-0.15, 0.015, 0.16], np.float32)
         inverse.applyRGB(rgb)
         field = np.log2(1 + 1024 * np.maximum(0, rgb)) / 14
         green = field[:, :, 1]
