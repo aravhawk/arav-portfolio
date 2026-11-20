@@ -93,6 +93,15 @@ describe('@/lib/metrics (Next-facing entry)', () => {
       expect(Number.isFinite(Date.parse(metric.asOf))).toBe(true);
       expect(metric.source).toMatch(/^https:\/\//);
     }
+    // Nothing a page is handed names what the count leaves out: the public
+    // link is a search of the counted repositories, one `repo:` term each.
+    const shipped = JSON.stringify(metrics);
+    expect(shipped).not.toMatch(/-user|-repo|thrasher|investo/i);
+    const q = new URL(metrics.mergedPrs.upstream.source).searchParams.get('q') ?? '';
+    expect(q.split(' ').filter((term) => term.startsWith('repo:')).sort()).toEqual(
+      metrics.mergedPrs.byRepo.map((repo) => `repo:${repo.repo}`).sort(),
+    );
+    expect(q.startsWith('is:pr is:merged is:public author:aravhawk repo:')).toBe(true);
     expect(metrics.contributions.window).toBe('lifetime');
     expect(metrics.contributions.label).toBe('lifetime contributions on GitHub');
     expect(metrics.mergedPrs.upstreamRepoCount).toBe(metrics.mergedPrs.byRepo.length);

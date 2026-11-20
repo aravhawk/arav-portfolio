@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { EXCLUDED_OWNERS, EXCLUDED_REPOS, GITHUB_USER, METRICS_CONFIG } from '@/lib/metrics/config';
 import {
+  buildCountedPrQuery,
   buildPrSearchQuery,
   countByRepo,
   countMergedByOther,
@@ -42,6 +43,19 @@ describe('buildPrSearchQuery', () => {
 
   it('never asks for private repositories', () => {
     expect(buildPrSearchQuery({ author: 'aravhawk', excludedOwners: EXCLUDED_OWNERS })).toContain('is:public');
+  });
+});
+
+describe('buildCountedPrQuery', () => {
+  it('names each counted repository once and carries no exclusion', () => {
+    const query = buildCountedPrQuery({
+      author: 'aravhawk',
+      repos: ['pingdotgg/t3code', 'junhoyeo/tokscale', 'PingDotGG/T3Code', ' Kilo-Org/kilocode ', 'not-a-repo', ''],
+    });
+    expect(query).toBe(
+      'is:pr is:merged is:public author:aravhawk repo:pingdotgg/t3code repo:junhoyeo/tokscale repo:Kilo-Org/kilocode',
+    );
+    expect(query).not.toMatch(/-user|-repo/);
   });
 });
 

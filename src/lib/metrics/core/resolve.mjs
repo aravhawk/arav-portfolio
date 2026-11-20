@@ -26,6 +26,7 @@ import {
 } from './count.mjs';
 import { contributionsProfileUrl, contributionsUrl, isYearFinalInSnapshot, lifetimeYears } from './contributions.mjs';
 import {
+  buildCountedPrQuery,
   buildPrSearchQuery,
   countByRepo,
   countMergedByOther,
@@ -456,6 +457,12 @@ export function toSiteMetrics({ resolved, committed, status, config, retrievedAt
   });
   const lifetime = config.contributionsWindow === 'lifetime';
   const byRepo = countByRepo(resolved.mergedPrs.ledger);
+  // The link a visitor opens names the counted repositories and nothing
+  // else. The snapshot's own `source` carries the exclusions and is never
+  // handed to a page.
+  const upstreamSource = byRepo.length
+    ? prSearchWebUrl(buildCountedPrQuery({ author: config.githubUser, repos: byRepo.map((entry) => entry.repo) }))
+    : contributionsProfileUrl(config.githubUser);
 
   return {
     retrievedAt,
@@ -491,7 +498,7 @@ export function toSiteMetrics({ resolved, committed, status, config, retrievedAt
         resolved.mergedPrs.upstream,
         committed.mergedPrs.upstream,
         status.upstreamPrs,
-        resolved.mergedPrs.source,
+        upstreamSource,
       ),
       upstreamRepoCount: byRepo.length,
       byRepo,

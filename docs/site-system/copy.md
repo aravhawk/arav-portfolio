@@ -18,7 +18,11 @@ Status: **as built** (K1, 2026-11-20).
   read live (`src/lib/metrics`) and said with when they were read.
   Merged pull requests count only repositories he does not own, less
   the repositories in `EXCLUDED_REPOS`
-  (`src/lib/metrics/config.ts`).
+  (`src/lib/metrics/config.ts`). What is left out is never written
+  into a page: the link under the count is a GitHub search with one
+  `repo:` term for each counted repository (`buildCountedPrQuery`),
+  made from the same ledger as the count. The query with the
+  exclusions stays on the server.
 - arav.pro is canonical. No photo of him.
 
 ## The words belong to the scenes
@@ -71,4 +75,5 @@ page's own sentences). The post in `content/posts/` is the owner's
 own writing and is not edited.
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1:
-the definitive list, recognition, the story's rules.
+the definitive list, recognition, the story's rules. 2026-11-20 K2: the
+public pull request link names only counted repositories.

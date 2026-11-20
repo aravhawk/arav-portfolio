@@ -34,6 +34,27 @@ export function buildPrSearchQuery({ author, excludedOwners = [] }) {
 }
 
 /**
+ * The query behind the link a visitor can open: merged PRs in the counted
+ * repositories, each named with a `repo:` term. It names only what the site
+ * shows. The excluding query above stays on the server: what is left out is
+ * never written into a page.
+ *
+ * @param {{ author: string, repos: readonly string[] }} options Repositories as "owner/name".
+ * @returns {string}
+ */
+export function buildCountedPrQuery({ author, repos }) {
+  const parts = ['is:pr', 'is:merged', 'is:public', `author:${author}`];
+  const seen = new Set();
+  for (const repo of repos) {
+    const key = repo.trim().toLowerCase();
+    if (!/^[^/\s]+\/[^/\s]+$/.test(key) || seen.has(key)) continue;
+    seen.add(key);
+    parts.push(`repo:${repo.trim()}`);
+  }
+  return parts.join(' ');
+}
+
+/**
  * @param {string} query
  * @param {{ page?: number, perPage?: number }} [options]
  * @returns {string} REST search URL.

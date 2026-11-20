@@ -118,7 +118,11 @@ describe('all sources healthy', () => {
     ]);
     expect(metrics.mergedPrs.ledger).toHaveLength(4);
     expect(metrics.mergedPrs.ledger[0].url).toBe('https://github.com/Kilo-Org/kilocode/pull/77');
-    expect(new URL(metrics.mergedPrs.upstream.source).searchParams.get('q')).toContain('-user:aravhawk');
+    // The link a visitor opens names the counted repositories and no exclusion.
+    expect(new URL(metrics.mergedPrs.upstream.source).searchParams.get('q')).toBe(
+      'is:pr is:merged is:public author:aravhawk repo:pingdotgg/t3code repo:junhoyeo/tokscale repo:Kilo-Org/kilocode',
+    );
+    expect(JSON.stringify(metrics)).not.toMatch(/-user|-repo|%2Duser|%2Drepo/i);
     expect(metrics.retrievedAt).toBe(NOW.toISOString());
   });
 

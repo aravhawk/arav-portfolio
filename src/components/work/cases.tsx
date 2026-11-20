@@ -209,7 +209,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
           ))}
         </ol>
       </Sec>
-      <Sec className="sec-bars sec-rest" title="The rest, by repository" id="p-repos">
+      <Sec className="sec-bars sec-rest" title="The rest, by repository" id="p-rest">
         <ol className="bars" data-fill>
           {m.mergedPrs.byRepo.map((r) => {
             const [owner, name] = r.repo.split('/');
@@ -217,7 +217,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
               <li key={r.repo} className="bar-row">
                 <a className="bar-name" href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${r.repo}: ${r.count} merged pull request${r.count === 1 ? '' : 's'}`}>
                   <span className="bar-owner">{owner}/</span>
-                  <span className="bar-repo">{name}</span>
+                  <span className="bar-project">{name}</span>
                 </a>
                 <span className="bar-track" aria-hidden="true">
                   <span className="bar-fill" style={{ '--w': r.count / max } as React.CSSProperties} />
