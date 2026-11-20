@@ -5,13 +5,12 @@
    sizes), one spacing scale (the --s-* steps in globals.css), hairlines for
    structure and one accent, which means one thing: this number was read
    live from its source. No scene, no shadow, no gradient, no motion on
-   scroll. Everything here is scoped to .in (the page) or .in-nav (its nav),
-   so nothing leaks onto the home page and nothing of the home page's is
-   needed here.
+   scroll. Everything here is scoped to .in, so nothing leaks onto the home
+   page and nothing of the home page's is needed here. (The nav is the
+   site's one nav: src/components/nav.css.)
    ========================================================================== */
 
-.in,
-.in-nav {
+.in {
   --max: 76rem;
   --gut: clamp(20px, 5vw, 56px);
   --col-gap: clamp(16px, 2vw, 24px);
@@ -31,14 +30,12 @@
   --t-quick: 160ms;
   --t-layer: 200ms;
 }
-:root[data-theme='dark'] .in,
-:root[data-theme='dark'] .in-nav {
+:root[data-theme='dark'] .in {
   --acc: #86d3e4;
 }
 
 /* ---------- the frame ---------- */
 
-.in-nav,
 .in .wrap {
   width: 100%;
   max-width: calc(var(--max) + 2 * var(--gut));
@@ -58,101 +55,6 @@
 }
 .in a {
   -webkit-tap-highlight-color: transparent;
-}
-
-/* ---------- the nav: the name, Work, Writing, the theme switch ---------- */
-
-.in-nav {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 72px;
-  padding-top: env(safe-area-inset-top);
-}
-.in-mark {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-.in-links {
-  display: flex;
-  align-items: center;
-  gap: var(--s-1);
-  margin-right: -10px;
-}
-.in-nav .nav-link {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  height: 44px;
-  padding: 0 12px;
-  font-size: var(--t-small);
-  font-weight: 560;
-  letter-spacing: 0;
-  color: var(--ink-3);
-}
-.in-nav .nav-link[aria-current='page'] {
-  color: var(--ink);
-}
-.in-nav .nav-link[aria-current='page']::after {
-  content: '';
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 10px;
-  height: 1px;
-  background: currentColor;
-}
-.in-nav .nav-link:active,
-.in-mark:active {
-  transform: scale(0.97);
-}
-@media (hover: hover) and (pointer: fine) {
-  .in-nav .nav-link:hover {
-    color: var(--ink);
-  }
-}
-/* A real switch, so its state reads without a label. */
-.in-theme {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 44px;
-}
-.in-theme-track {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  border-radius: var(--r-pill);
-  box-shadow: inset 0 0 0 1px var(--ink-3);
-}
-.in-theme-knob {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--ink);
-  transition: transform var(--t-layer) var(--ease-out);
-}
-:root[data-theme='dark'] .in-theme-knob {
-  transform: translate3d(16px, 0, 0);
-}
-/* (Switched from the keyboard, the knob is simply at its new place.) */
-.in-theme:focus-visible .in-theme-knob {
-  transition: none;
-}
-.in-theme:active .in-theme-track {
-  transform: scale(0.97);
 }
 
 /* ---------- type ---------- */
@@ -218,8 +120,7 @@
   text-decoration-color: var(--ink-3);
 }
 /* Anything pressed answers at once: it gives a little, quickly. */
-.in :is(.tl, .chip, .film-play, .in-copy, .back, .pick-opt span),
-.in-nav :is(.nav-link, .in-mark, .in-theme-track) {
+.in :is(.tl, .chip, .film-play, .in-copy, .back, .pick-opt span) {
   transition: transform 120ms var(--ease-out);
 }
 .in .tl:active,
@@ -2450,37 +2351,16 @@
 
 /* ---------- route changes, reduced motion, print ---------- */
 
-/* Arriving on an inner page is a short cross-fade: nothing travels. */
-:root:has(.in)::view-transition-old(.page) {
-  animation: in-out 120ms var(--ease-out) both;
-}
-:root:has(.in)::view-transition-new(.page) {
-  animation: in-in 150ms var(--ease-out) both;
-}
-@keyframes in-out {
-  to {
-    opacity: 0;
-  }
-}
-@keyframes in-in {
-  from {
-    opacity: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .in *,
-  .in-nav * {
+  .in * {
     transition-property: opacity !important;
   }
-  .in :is(.tl, .chip, .film-play, .in-copy, .back, .pick-opt span):active,
-  .in-nav :is(.nav-link, .in-mark):active {
+  .in :is(.tl, .chip, .film-play, .in-copy, .back, .pick-opt span):active {
     transform: none;
   }
 }
 
 @media print {
-  .in-nav,
   .in .way-on,
   .in .archive-tools,
   .in .film-play {

@@ -1,66 +1,49 @@
-/* The nav is two small solid plates on the frame, like a menu bar's
-   extras. It leaves when you scroll down and returns when you scroll up, so
-   it is never parked over what you are reading. */
+/* ==========================================================================
+   The site's one nav: the name, Work, Writing, the theme switch.
 
-.nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
+   On an inner page it is part of the page: it sits in the page's own
+   measure and scrolls with it. On the home page it stands over the picture
+   (.in-nav-home): two solid plates, fixed, with the number of the scene the
+   reader is in beside the name. Nothing is seen through a plate and nothing
+   behind it is blurred.
+   ========================================================================== */
+
+.in-nav {
+  --max: 76rem;
+  --gut: clamp(20px, 5vw, 56px);
+  position: relative;
+  z-index: 3;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: max(14px, env(safe-area-inset-top)) max(var(--gutter), env(safe-area-inset-right)) 0
-    max(var(--gutter), env(safe-area-inset-left));
-  pointer-events: none;
-  transition: transform 420ms var(--ease-out);
+  justify-content: space-between;
+  width: 100%;
+  max-width: calc(var(--max) + 2 * var(--gut));
+  height: 72px;
+  margin-inline: auto;
+  padding-inline: max(var(--gut), env(safe-area-inset-left)) max(var(--gut), env(safe-area-inset-right));
+  padding-top: env(safe-area-inset-top);
 }
-html[data-nav-hidden] .nav:not(:focus-within) {
-  transform: translate3d(0, -120%, 0);
-  transition: transform 260ms var(--ease-in);
+.in-brand {
+  display: flex;
+  align-items: center;
 }
-
-.nav-mark,
-.nav-links {
-  pointer-events: auto;
-  border-radius: var(--r-2);
-  height: 44px;
+.in-mark {
   display: inline-flex;
   align-items: center;
-}
-
-.nav-mark {
-  padding: 0 18px;
+  min-height: 44px;
   font-family: var(--font-display);
+  font-size: 1rem;
   font-weight: 700;
-  font-size: 0.9375rem;
-  letter-spacing: -0.03em;
-  /* On the home page the name is the hero, so the mark waits until the ice
-     has melted and then takes over. */
-  opacity: 0;
-  transform: scale(0.96);
-  pointer-events: none;
-  transition:
-    opacity var(--t-ui) var(--ease-out),
-    transform var(--t-ui) var(--ease-out);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
-html[data-melted] .nav-mark,
-html:not([data-js]) .nav-mark,
-.nav-mark:focus-visible {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
+.in-links {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  margin-right: -10px;
 }
-.nav-mark:active {
-  transform: scale(0.97);
-}
-
-.nav-links {
-  gap: 2px;
-  padding: 0 6px 0 8px;
-}
-.nav-link {
+.in-nav .nav-link {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -68,119 +51,141 @@ html:not([data-js]) .nav-mark,
   padding: 0 12px;
   font-size: 0.875rem;
   font-weight: 560;
-  letter-spacing: -0.005em;
-  color: var(--ink-2);
-  transition: color var(--t-fast) ease;
+  letter-spacing: 0;
+  color: var(--ink-3);
 }
-.nav-link[aria-current='page'] {
+.in-nav .nav-link[aria-current='page'] {
   color: var(--ink);
 }
-.nav-link[aria-current='page']::after {
+.in-nav .nav-link[aria-current='page']::after {
   content: '';
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: 9px;
+  bottom: 10px;
   height: 1px;
   background: currentColor;
 }
-.nav-link:active {
+.in-nav :is(.nav-link, .in-mark, .in-theme-track) {
+  transition: transform 120ms var(--ease-out);
+}
+.in-nav .nav-link:active,
+.in-mark:active {
   transform: scale(0.97);
 }
 @media (hover: hover) and (pointer: fine) {
-  .nav-link:hover {
+  .in-nav .nav-link:hover {
     color: var(--ink);
   }
 }
-
-/* Theme switch: a real switch, so its state reads without a label. */
-.nav-toggle {
+/* A real switch, so its state reads without a label. */
+.in-theme {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
+  width: 56px;
   height: 44px;
-  border-radius: var(--r-pill);
 }
-.nav-toggle-track {
+.in-theme-track {
   position: relative;
   width: 36px;
   height: 20px;
   border-radius: var(--r-pill);
-  background: var(--line);
-  box-shadow: inset 0 0 0 1px var(--line);
-  transition: background-color var(--t-ui) var(--ease-out);
+  box-shadow: inset 0 0 0 1px var(--ink-3);
 }
-.nav-toggle-knob {
+.in-theme-knob {
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 14px;
-  height: 14px;
+  top: 4px;
+  left: 4px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--ink);
-  /* A crescent in dark, a full disc in light. */
-  box-shadow: inset 0 0 0 0 var(--land);
-  transition:
-    transform var(--t-ui) var(--ease-out),
-    box-shadow var(--t-ui) var(--ease-out);
+  transition: transform 200ms var(--ease-out);
 }
-:root[data-theme='dark'] .nav-toggle-knob {
+:root[data-theme='dark'] .in-theme-knob {
   transform: translate3d(16px, 0, 0);
-  box-shadow: inset 5px -3px 0 0 var(--land-2);
 }
-.nav-toggle:active .nav-toggle-knob {
-  width: 17px;
+/* (Switched from the keyboard, the knob is simply at its new place.) */
+.in-theme:focus-visible .in-theme-knob {
+  transition: none;
 }
-
-/* The sound control stands by the theme switch. On a narrow screen the
-   group closes up, so it takes no more room than it did before. */
-@media (max-width: 400px) {
-  .nav-links {
-    gap: 0;
-    padding: 0 4px 0 6px;
-  }
-  .nav-link {
-    padding: 0 9px;
-  }
-  .nav-links .nav-sound {
-    width: 36px;
-  }
-  .nav-links .nav-haptics {
-    width: 30px;
-  }
-  .nav-toggle {
-    width: 46px;
-  }
+.in-theme:active .in-theme-track {
+  transform: scale(0.97);
 }
 
-/* On the narrowest phones the mark and the group still stand side by side on one line. */
-.nav-mark {
+/* ---------- over the home page's picture ---------- */
+
+.in-at {
+  display: none;
+}
+.in-nav-home {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  max-width: none;
+  /* The picture between the plates is not the nav's. */
+  pointer-events: none;
+}
+.in-nav-home :is(.in-brand, .in-links) {
+  height: 44px;
+  border-radius: var(--r-2);
+  background: var(--chrome);
+  box-shadow: inset 0 0 0 1px var(--chrome-edge);
+  pointer-events: auto;
+}
+.in-nav-home .in-brand {
+  margin-left: -14px;
+  padding: 0 14px;
+}
+.in-nav-home .in-links {
+  margin-right: -6px;
+  padding-left: 6px;
+}
+.in-nav-home .nav-link {
+  color: var(--ink-2);
+}
+/* Where the reader is in the twelve: the scene's number, beside the name. Shown only where the page flies. */
+html[data-flight] .in-nav-home .in-at {
+  display: block;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--chrome-edge);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 480;
+  line-height: 20px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums slashed-zero;
+  color: var(--ink-3);
   white-space: nowrap;
 }
-@media (max-width: 340px) {
-  .nav-mark {
+html[data-flight] .in-nav-home .in-at::before {
+  content: attr(data-n) ' / ' attr(data-of);
+}
+
+@media (max-width: 420px) {
+  html[data-flight] .in-nav-home .in-at {
+    margin-left: 8px;
+    padding-left: 8px;
+    letter-spacing: 0;
+  }
+  .in-nav-home .nav-link {
     padding: 0 9px;
-    font-size: 0.8125rem;
-  }
-  .nav-link {
-    padding: 0 6px;
-  }
-  .nav-links .nav-sound {
-    width: 32px;
-  }
-  .nav-links .nav-haptics {
-    width: 26px;
-  }
-  .nav-toggle {
-    width: 42px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav,
-  .nav-toggle-knob,
-  .nav-mark {
-    transition: none;
+  .in-nav * {
+    transition-property: opacity !important;
+  }
+  .in-nav :is(.nav-link, .in-mark):active {
+    transform: none;
+  }
+}
+@media print {
+  .in-nav {
+    display: none !important;
   }
 }

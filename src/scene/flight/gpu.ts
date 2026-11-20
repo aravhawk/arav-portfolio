@@ -36,14 +36,17 @@ class FlightGPU extends LakeGPU {
   private cursor = 0;
   private readonly tiny: WebGLFramebuffer;
   private readonly pixel: WebGLRenderbuffer;
-  private readonly words: (HTMLElement | null)[];
-  private shown = -1;
+  private shown = -2;
+  /** A cut across scenes that are not neighbours: one whiteout from where the picture is to where the reader is. */
+  private jump: { from: number; to: number; at: number; t: number } | null = null;
   private fence: { index: number; sync: WebGLSync | null } | null = null;
   constructor(
     canvas: HTMLCanvasElement,
     private readonly theme: Theme,
     private readonly gate: Gate,
     readonly reduced: boolean,
+    /** Told which scene's words belong on the picture now (-1: none, a whiteout is passing). */
+    private readonly show: (index: number) => void,
   ) {
     super(canvas);
     const gl = this.gl;
@@ -54,9 +57,6 @@ class FlightGPU extends LakeGPU {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.tiny);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, this.pixel);
     document.addEventListener('visibilitychange', this.visibility);
-    this.words = scenes.map((s) =>
-      canvas.closest('main')!.querySelector<HTMLElement>('[data-copy="' + s.id + '"]'),
-    );
   }
   private readonly visibility = () => {
     for (const r of this.resident.values()) if (!r.ready) r.worker.postMessage({ paused: document.hidden });
@@ -194,10 +194,58 @@ class FlightGPU extends LakeGPU {
       break;
     }
   }
+  /** Where a position rests inside its own scene: never in a whiteout. */
+  private settle(wanted: number, index: number) {
+    return Math.min(starts[index] + scenes[index].screens, Math.max(starts[index], wanted));
+  }
+  /**
+   * Before the canvas is shown: start at the reader's own scene (a reload or
+   * a way back deep in the page), not at the lake with eleven scenes to cross.
+   */
+  async place(wanted: number) {
+    const index = position(wanted).index;
+    if (index > 0) {
+      while (!this.disposed && !this.ready(index)) {
+        this.request(index);
+        this.upload();
+        await nextFrame();
+      }
+    }
+    this.cursor = this.settle(wanted, index);
+    return this.cursor;
+  }
+  private tell(show: number) {
+    if (show === this.shown) return;
+    this.shown = show;
+    this.show(show);
+  }
   /** Advance only over contiguous, warmed scenes, in either direction. */
   advance(wanted: number, dt: number) {
     this.upload();
     const old = position(this.cursor);
+    const want = position(wanted);
+    if (!this.jump && old.mix === 0 && Math.abs(want.index - old.index) > 1)
+      this.jump = { from: old.index, to: want.index, at: this.settle(wanted, want.index), t: 0 };
+    const jump = this.jump;
+    if (jump) {
+      if (want.index === jump.to) jump.at = this.settle(wanted, jump.to);
+      else if (jump.t === 0 && Math.abs(want.index - jump.from) <= 1) {
+        // The reader came back before the cut began.
+        if (want.index !== jump.to) this.releaseScene(jump.to);
+        this.jump = null;
+        return this.cursor;
+      }
+      this.request(jump.to);
+      for (let i = 0; i < scenes.length; i++) if (i !== jump.from && i !== jump.to) this.releaseScene(i);
+      if (this.ready(jump.to)) jump.t = Math.min(1, jump.t + dt / 0.72);
+      this.tell(jump.t < 0.08 ? jump.from : jump.t > 0.92 ? jump.to : -1);
+      if (jump.t >= 1) {
+        this.cursor = jump.at;
+        this.jump = null;
+        this.releaseScene(jump.from);
+      }
+      return this.cursor;
+    }
     let target = wanted;
     if (wanted >= this.cursor) {
       if (old.index + 1 < scenes.length && wanted > starts[old.index] + 0.18) {
@@ -216,17 +264,7 @@ class FlightGPU extends LakeGPU {
     this.cursor += Math.sign(target - this.cursor) * Math.min(Math.abs(target - this.cursor), dt * 5.5);
     const now = position(this.cursor);
     for (let i = 0; i < scenes.length; i++) if (Math.abs(i - now.index) > 1) this.releaseScene(i);
-    const show = now.mix > 0.08 && now.mix < 0.92 ? -1 : now.index + Number(now.mix >= 0.92);
-    if (show !== this.shown) {
-      this.words.forEach((el, i) => {
-        if (el) {
-          el.inert = i !== show;
-          el.toggleAttribute('data-on', i === show);
-          el.setAttribute('aria-hidden', String(i !== show));
-        }
-      });
-      this.shown = show;
-    }
+    this.tell(now.mix > 0.08 && now.mix < 0.92 ? -1 : now.index + Number(now.mix >= 0.92));
     return this.cursor;
   }
   private plate(index: number, pose: Pose, blend: number, textures = this.resident.get(index)!.textures) {
@@ -290,6 +328,24 @@ class FlightGPU extends LakeGPU {
     }
     const { index, mix, progress } = position(pose.progress);
     const camera = { ...pose, progress: this.reduced ? 0 : progress };
+    const jump = this.jump;
+    if (jump && jump.t > 0) {
+      // One scene under, the other brought in (or taken away) through the whiteout.
+      const there = { ...pose, progress: this.reduced ? 0 : position(jump.at).progress };
+      const gl = this.gl,
+        target = this.targets[0];
+      const lake = jump.to === 0 ? there : jump.from === 0 ? camera : null;
+      if (lake) super.draw(lake, output, 5, slab);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.fbo);
+      gl.viewport(0, 0, target.w, target.h);
+      if (jump.to === 0) this.plate(jump.from, camera, 1 - jump.t);
+      else {
+        if (jump.from > 0) this.plate(jump.from, camera, 1);
+        this.plate(jump.to, there, jump.t);
+      }
+      this.finishComposition(output);
+      return;
+    }
     if (index === 0 && !mix) {
       super.draw(camera, output, last, slab);
       return;
@@ -329,13 +385,6 @@ class FlightGPU extends LakeGPU {
   dispose() {
     document.removeEventListener('visibilitychange', this.visibility);
     for (const index of this.resident.keys()) this.releaseScene(index);
-    this.words.forEach((el, i) => {
-      if (el) {
-        el.toggleAttribute('data-on', i === 0);
-        el.inert = i !== 0;
-        el.setAttribute('aria-hidden', String(i !== 0));
-      }
-    });
     if (this.fence) this.gl.deleteSync(this.fence.sync);
     this.gl.deleteFramebuffer(this.tiny);
     this.gl.deleteRenderbuffer(this.pixel);
@@ -349,6 +398,9 @@ export function mountFlight(
   signal: AbortSignal,
   gate: Gate,
   reduced: boolean,
+  /** One screen of scroll, in pixels: the page's sections are laid out in these. */
+  unit: () => number,
+  show: (index: number) => void,
 ) {
-  return mount(canvas, theme, signal, new FlightGPU(canvas, theme, gate, reduced), flightLength);
+  return mount(canvas, theme, signal, new FlightGPU(canvas, theme, gate, reduced, show), flightLength, unit);
 }

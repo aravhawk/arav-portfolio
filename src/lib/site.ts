@@ -20,6 +20,6 @@ export const abs = (path = '/') => `${SITE_URL}${path.startsWith('/') ? path : `
  * on sky, every other page is the land's own colour (--land in globals.css).
  */
 export const THEME_COLOR = {
-  home: { light: '#a5c3db', dark: '#41406e' },
+  home: { light: '#a3acb1', dark: '#394b57' },
   page: { light: '#e4e7e8', dark: '#15181b' },
 } as const;

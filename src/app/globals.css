@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   arav.pro v4, "Meltwater"
-   Tokens first. Nothing below uses a raw colour, duration or curve.
+   arav.pro: what every page shares. Tokens first, then the base, the type
+   roles, the one solid button, and route changes. The home page's own rules
+   are in home.css, the inner pages' in inner.css, the nav's in
+   components/nav.css.
    ========================================================================== */
 
 :root {
-  /* Land is the page. These match the shader's dry slab under each light. */
+  /* Land is the page: snow by day, night ice in the dark. */
   --land: #e4e7e8;
   --land-2: #d9dddf;
   --ink: #0a0c0e;
@@ -15,11 +17,8 @@
   --ink-dim: #798186;
   --line: rgba(10, 12, 14, 0.14);
   --line-2: rgba(10, 12, 14, 0.07);
-  --basin: #0f5466;
-  --basin-2: #093a48;
   --chrome: #f5f7f8;
   --chrome-edge: rgba(10, 12, 14, 0.12);
-  --chrome-shadow: 0 1px 2px rgba(10, 20, 26, 0.1), 0 8px 18px -12px rgba(10, 20, 26, 0.4);
   --live: #0b7a5c;
   --focus: #0a0c0e;
   color-scheme: light;
@@ -29,8 +28,6 @@
   --font-text: var(--f-text), system-ui, sans-serif;
   --font-mono: var(--f-mono), ui-monospace, 'SF Mono', Menlo, monospace;
   --display-wght: 780;
-  --ice-size: clamp(5rem, 17.2vw, 22rem);
-  --ice-size-stacked: 38vw;
 
   /* Fluid scale. Tracking tightens and leading closes as size grows. */
   --fs-label: clamp(0.6875rem, 0.12vw + 0.64rem, 0.75rem);
@@ -38,9 +35,6 @@
   --fs-body: clamp(1.0625rem, 0.25vw + 0.9rem, 1.125rem);
   --fs-lead: clamp(1.125rem, 0.6vw + 1rem, 1.375rem);
   --fs-title: clamp(1.5rem, 1.6vw + 1rem, 2.25rem);
-  --fs-statement: clamp(1.75rem, 3.1vw + 0.6rem, 3.5rem);
-  --fs-display: clamp(2.9rem, 6.6vw + 0.6rem, 7.5rem);
-  --fs-number: clamp(4.5rem, 12.5vw + 0.5rem, 13.5rem);
   /* Display tracking: as tight as the face holds at large sizes with every pair of letters still apart. */
   --track-display: -0.014em;
 
@@ -56,21 +50,17 @@
   --s-8: 64px;
   --s-9: 96px;
   --s-10: 128px;
-  --beat-pad: clamp(72px, 11vh, 140px);
 
   --r-1: 6px;
   --r-2: 12px;
   --r-3: 20px;
   --r-pill: 999px;
 
-  /* Motion (docs/redesign-v4/motion-system.md). */
+  /* Motion: one curve out, short durations. */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  --ease-in: cubic-bezier(0.55, 0, 0.9, 0.3);
   --t-press: 120ms;
   --t-fast: 180ms;
   --t-ui: 260ms;
-  --t-reveal: 760ms;
   --t-theme: 420ms;
 }
 
@@ -83,11 +73,8 @@
   --ink-dim: #6b7479;
   --line: rgba(241, 244, 245, 0.16);
   --line-2: rgba(241, 244, 245, 0.08);
-  --basin: #0b3b52;
-  --basin-2: #061f2e;
   --chrome: #10161a;
   --chrome-edge: rgba(241, 244, 245, 0.14);
-  --chrome-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 22px -12px rgba(0, 0, 0, 0.8);
   --live: #52dcae;
   --focus: #f1f4f5;
   color-scheme: dark;
@@ -113,14 +100,6 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scrollbar-gutter: stable;
-}
-
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
 }
 
 /* Past 1440 wide the whole scale grows with the screen: every size, measure
@@ -246,31 +225,7 @@ svg {
   outline-offset: 2px;
 }
 
-/* ---------- the world under the page ---------- */
-
-.water-root {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100svh;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-  contain: layout paint;
-}
-.water-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: block;
-  will-change: transform;
-  opacity: 0;
-  transition: opacity 900ms var(--ease-out);
-}
-html[data-water='on'] .water-canvas {
-  opacity: 1;
-}
+/* ---------- the page ---------- */
 
 .shell {
   position: relative;
@@ -279,51 +234,8 @@ html[data-water='on'] .water-canvas {
   overflow-x: clip;
 }
 
-/* Static basins: what a pool looks like before the water arrives, and all
-   it ever is where WebGL2 is missing. */
-[data-bed] {
-  border-radius: var(--bed-r, 28px);
-}
-html:not([data-water='on']) [data-bed][data-basin] {
-  background: radial-gradient(120% 120% at 30% 20%, var(--basin), var(--basin-2));
-  box-shadow:
-    inset 0 2px 0 rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
-    inset 0 24px 60px -20px rgba(0, 0, 0, 0.55);
-}
-
 /* ---------- type roles ---------- */
 
-.display {
-  font-family: var(--font-display);
-  font-size: var(--fs-display);
-  font-weight: var(--display-wght);
-  line-height: 0.94;
-  letter-spacing: var(--track-display);
-  text-wrap: balance;
-}
-.number {
-  font-family: var(--font-display);
-  font-size: var(--fs-number);
-  font-weight: var(--display-wght);
-  line-height: 0.82;
-  letter-spacing: -0.06em;
-  font-variant-numeric: tabular-nums lining-nums;
-}
-.statement {
-  font-family: var(--font-display);
-  font-size: var(--fs-statement);
-  font-weight: 560;
-  line-height: 1.06;
-  letter-spacing: -0.032em;
-}
-.title {
-  font-family: var(--font-display);
-  font-size: var(--fs-title);
-  font-weight: 620;
-  line-height: 1.1;
-  letter-spacing: -0.025em;
-}
 .lead {
   font-size: var(--fs-lead);
   line-height: 1.42;
@@ -334,11 +246,6 @@ html:not([data-water='on']) [data-bed][data-basin] {
 .body {
   font-size: var(--fs-body);
   line-height: 1.55;
-  color: var(--ink-2);
-}
-.small {
-  font-size: var(--fs-small);
-  line-height: 1.45;
   color: var(--ink-2);
 }
 .label {
@@ -357,58 +264,7 @@ html:not([data-water='on']) [data-bed][data-basin] {
   letter-spacing: -0.01em;
 }
 
-/* ---------- layout ---------- */
-
-.wrap {
-  width: 100%;
-  max-width: 105rem;
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-}
-
-/* ---------- links and controls ---------- */
-
-/* A text link: the underline draws in from the left and leaves to the right. */
-.link {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45em;
-  min-height: 44px;
-  font-weight: 560;
-  color: var(--ink);
-}
-.link::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 9px;
-  height: 1px;
-  background: currentColor;
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: transform var(--t-ui) var(--ease-out);
-}
-.link .arrow {
-  display: inline-block;
-  transition: transform var(--t-ui) var(--ease-out);
-}
-.link:active {
-  transform: scale(0.98);
-}
-@media (hover: hover) and (pointer: fine) {
-  .link:hover::after {
-    transform: scaleX(1);
-    transform-origin: left;
-  }
-  .link:hover .arrow {
-    transform: translateX(3px);
-  }
-}
-.link:focus-visible::after {
-  transform: scaleX(1);
-}
+/* ---------- controls ---------- */
 
 /* The primary action: a solid pill. */
 .btn {
@@ -440,52 +296,10 @@ html:not([data-water='on']) [data-bed][data-basin] {
     transform: translateX(3px);
   }
 }
-.btn-quiet {
-  background: transparent;
-  color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-@media (hover: hover) and (pointer: fine) {
-  .btn-quiet:hover {
-    background: var(--line-2);
-  }
-}
-
-/* A plate: the surface of the few controls that stand over the picture
-   (the nav, the rail, a switch). Solid, like packed snow by day and night
-   ice before dawn, with a hairline edge and a close shadow. Nothing is seen
-   through it and nothing behind it is blurred. */
-.plate {
-  background: var(--chrome);
-  box-shadow: var(--chrome-shadow), inset 0 0 0 1px var(--chrome-edge);
-}
-
-/* ---------- reveals ---------- */
-
-/* Elements wait slightly low and soft, then settle crisp. Each kind of
-   element gets its own distance: leads travel, support follows, labels only
-   fade (choreograph: lead, support, decoration). */
-html[data-js] [data-reveal] {
-  opacity: 0;
-  transform: translate3d(0, var(--rise, 18px), 0);
-  transition:
-    opacity var(--t-reveal) var(--ease-out) calc(var(--i, 0) * 70ms),
-    transform var(--t-reveal) var(--ease-out) calc(var(--i, 0) * 70ms);
-}
-html[data-js] [data-reveal='lead'] {
-  --rise: 34px;
-}
-html[data-js] [data-reveal='fade'] {
-  --rise: 0px;
-}
-html[data-js] [data-reveal][data-in] {
-  opacity: 1;
-  transform: none;
-}
-
 /* ---------- route transitions ---------- */
 
-/* The world (root) is not swapped: only the page above it is. */
+/* The root is not swapped: only the page inside it is, by a short
+   cross-fade. Nothing travels. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -494,45 +308,10 @@ html[data-js] [data-reveal][data-in] {
   display: none;
 }
 ::view-transition-old(.page) {
-  animation: vt-out 160ms var(--ease-out) both;
+  animation: vt-fade-out 120ms var(--ease-out) both;
 }
 ::view-transition-new(.page) {
-  animation: vt-in 380ms var(--ease-out) 120ms both;
-}
-/* A title travels from the row that opened it to the head of its page. */
-::view-transition-group(.title) {
-  animation-duration: 460ms;
-  animation-timing-function: var(--ease-in-out);
-}
-::view-transition-old(.title),
-::view-transition-new(.title) {
-  height: 100%;
-  width: auto;
-  object-fit: contain;
-  object-position: left top;
-}
-@keyframes vt-out {
-  to {
-    opacity: 0;
-    transform: translate3d(0, -10px, 0);
-  }
-}
-@keyframes vt-in {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 18px, 0);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*) {
-    animation-duration: 120ms;
-  }
-  ::view-transition-old(.page) {
-    animation: vt-fade-out 120ms linear both;
-  }
-  ::view-transition-new(.page) {
-    animation: vt-fade-in 120ms linear both;
-  }
+  animation: vt-fade-in 150ms var(--ease-out) both;
 }
 @keyframes vt-fade-out {
   to {
@@ -545,27 +324,13 @@ html[data-js] [data-reveal][data-in] {
   }
 }
 
-/* While the bed is being measured, text sits at its resting place. */
-html[data-measuring] [data-reveal] {
-  transform: none !important;
-  transition: none !important;
-}
-
 /* ---------- reduced motion, contrast, forced colours, print ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-js] [data-reveal] {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
   *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
-  }
-  .water-canvas {
-    transition: none;
   }
 }
 
@@ -578,44 +343,18 @@ html[data-measuring] [data-reveal] {
 }
 
 @media (forced-colors: active) {
-  .water-root {
-    display: none;
-  }
-  [data-bed][data-basin] {
-    border: 1px solid CanvasText;
-    background: none !important;
-    box-shadow: none !important;
-  }
   .btn {
     border: 1px solid ButtonText;
-  }
-  html[data-flight='on'] [data-ice] [data-ice-line] {
-    opacity: 1 !important;
   }
 }
 
 @media print {
-  .water-root,
-  .nav,
   video {
     display: none !important;
   }
   html,
   body {
     background: #fff !important;
-    color: #000 !important;
-  }
-  .ending {
-    --end-ink: #000;
-    --end-ink-2: #000;
-    --end-line: #000;
-  }
-  [data-reveal] {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-  [data-ice] [data-ice-line] {
-    opacity: 1 !important;
     color: #000 !important;
   }
   a[href^='http']::after {

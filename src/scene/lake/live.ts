@@ -27,6 +27,7 @@ function spring(value: number, speed: number, target: number, dt: number) {
 type Sequence = LakeGPU & {
   reduced: boolean;
   advance(wanted: number, dt: number): number;
+  place(wanted: number): Promise<number>;
   prepareMeasurement(s: number): Promise<void>;
   stats(): { screens: number; bytes: number; ready: string[] };
 };
@@ -36,6 +37,8 @@ export async function mount(
   signal: AbortSignal,
   sequence?: Sequence,
   screens = 2,
+  /** One screen of scroll, in pixels. */
+  unit: () => number = () => (sequence ? 1 : 2) * innerHeight,
 ) {
   const gpu = sequence ?? new LakeGPU(canvas);
   let raf = 0,
@@ -72,6 +75,8 @@ export async function mount(
     z: Math.sin(clock * 0.15) * 0.024,
     t: clock,
   });
+  let screen = unit();
+  const wanted = () => Math.min(sequence ? screens : 1, Math.max(0, window.scrollY / screen));
   const frame = (now: number) => {
     const start = performance.now();
     raf = 0;
@@ -80,10 +85,7 @@ export async function mount(
       dt = Math.min(0.06, delta / 1000);
     prev = now;
     t += dt;
-    lead +=
-      (Math.min(sequence ? screens : 1, Math.max(0, window.scrollY / ((sequence ? 1 : 2) * innerHeight))) -
-        lead) *
-      ease(6.49, dt);
+    lead += (wanted() - lead) * ease(6.49, dt);
     scroll += (lead - scroll) * ease(6.49, dt);
     [x, vx] = spring(x, vx, tx, dt);
     [y, vy] = spring(y, vy, ty, dt);
@@ -136,6 +138,7 @@ export async function mount(
     resume();
   });
   const onResize = () => {
+    screen = unit();
     if (!busy && !signal.aborted) resize();
   };
   const api: LakeProof = {
@@ -208,6 +211,17 @@ export async function mount(
       gl.deleteSync(fence);
     }
     if (signal.aborted) return;
+    if (sequence) {
+      // Open on the reader's own scene, wherever in the page they are.
+      lead = scroll = wanted();
+      const at = await sequence.place(scroll);
+      if (signal.aborted) return;
+      if (at > 0) {
+        gpu.draw(update(at, 0, 0, 0));
+        await nextFrame();
+        if (signal.aborted) return;
+      }
+    }
     window.__lakeProof = api;
     performance.mark('lake:live');
     canvas.style.opacity = '1';

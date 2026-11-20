@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { PROJECTS } from '@/content/projects';
-import { projectsInFlight } from '@/water/registry';
+import { scenes } from '@/scene/flight/scenes';
+
+/** The projects, in the order the home page's scenes come. */
+const projectsInFlight = scenes.map((s) => s.id).filter((id) => PROJECTS.some((p) => p.slug === id));
 
 describe('the featured projects', () => {
   it('are listed in the order the home page visits them', () => {

@@ -1,449 +1,539 @@
-/* What the home page and the project pages share: the name's type, the
-   statement's serif, live numbers, slabs of real media, and the feature
-   boxes whose beds the water owns on a project page. */
+/* ==========================================================================
+   The home page: twelve scenes down the page, the words in the document.
 
-/* ---------- the name ---------- */
+   Two layouts, one markup (src/app/page.tsx).
 
-.ice {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  margin: 0;
-  text-align: center;
-  white-space: nowrap;
-  font-family: var(--f-ice), var(--font-display);
-  font-size: var(--ice-size);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.045em;
-  /* Deep water, seen through the cut. */
-  color: #0c5567;
-  text-shadow: 0 0.012em 0 rgba(255, 255, 255, 0.55);
-  /* Room for ascenders and descenders so nothing is clipped. */
-  padding: 0.08em 0;
-}
-:root[data-theme='dark'] .ice {
-  color: #0a2e39;
-  text-shadow: 0 0.012em 0 rgba(255, 255, 255, 0.25);
-}
-[data-ice] [data-ice-line] {
-  transition: opacity 600ms var(--ease-out);
-}
+   Plain (the default: scripts off, reduced motion, no WebGL2): every section
+   is one screen tall at least, its scene's still behind it and its words on
+   the still's calm ground. A page to read.
 
-/* ---------- statement ---------- */
+   Flying (html[data-flight], set before first paint): every section is as
+   long as its scene's scroll; the picture is one canvas fixed behind the
+   document; each scene's words are pinned where that scene keeps calm
+   ground, shown while the scene is on screen and gone through a whiteout.
+   Until the canvas draws (html[data-flight='live']) the stills stand in.
 
-/* His own sentence, in the serif: the one other voice on the page. */
-.say-text {
-  max-width: min(17ch, 62vw);
-  text-wrap: balance;
-  font-family: var(--font-accent);
-  font-weight: 360;
-  font-size: clamp(2.4rem, 5.4vw + 0.5rem, 6rem);
-  line-height: 0.98;
-  letter-spacing: -0.03em;
-  padding-bottom: 0.08em;
-}
+   Everything is scoped to .hm, so nothing leaks onto the inner pages.
+   Words come and go by opacity alone.
+   ========================================================================== */
 
-/* ---------- figures and the way in ---------- */
-
-.beat-figure {
-  display: grid;
-  gap: var(--s-4);
-}
-.beat-unit {
-  max-width: 17ch;
+.hm {
+  --hm-gut: max(clamp(20px, 5vw, 56px), env(safe-area-inset-left));
+  --hm-foot: calc(clamp(28px, 6.5vh, 60px) + env(safe-area-inset-bottom));
+  --hm-in: 240ms;
+  --hm-out: 190ms;
+  --acc: #0c5567;
+  --hm-soft: var(--ink-2);
+  position: relative;
   color: var(--ink);
 }
-.beat-sub {
-  max-width: 34ch;
-}
-.number-sm {
-  font-size: clamp(3.6rem, 9.4vw + 0.5rem, 10.2rem);
+:root[data-theme='dark'] .hm {
+  --acc: #86d3e4;
+  /* The night's snow is a middle grey: the small words take the full ink on it. */
+  --hm-soft: var(--ink);
 }
 
-/* The way into a project is its name. The arrow says so. */
-.beat-link {
-  transition: transform var(--t-press) var(--ease-out);
+/* ---------- a section: its still, its words ---------- */
+
+.sc {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 100svh;
 }
-.beat-link .arrow {
-  display: inline-block;
-  width: 0.36em;
-  height: 0.36em;
-  margin-left: 0.16em;
-  vertical-align: 0.12em;
-  color: var(--ink-3);
-  transition:
-    transform var(--t-ui) var(--ease-out),
-    color var(--t-fast) ease;
+.sc-still {
+  --pic: var(--d);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--land) center / cover no-repeat;
 }
-.beat-link:active {
-  transform: scale(0.985);
+:root[data-theme='dark'] .sc-still {
+  --pic: var(--n);
 }
-@media (hover: hover) and (pointer: fine) {
-  .beat-link:hover .arrow {
-    transform: translateX(0.12em);
-    color: var(--ink);
+@media (max-aspect-ratio: 1/1) {
+  .sc-still {
+    --pic: var(--dt);
+  }
+  :root[data-theme='dark'] .sc-still {
+    --pic: var(--nt);
   }
 }
-.beat-more {
-  font-size: var(--fs-lead);
+/* The first still is in the first paint. The others are fetched as their
+   sections come near (SceneCanvas marks them), or all at once where no
+   script runs. */
+.sc:first-of-type .sc-still,
+.sc[data-near] .sc-still,
+html:not([data-scripted]) .sc-still {
+  background-image: var(--pic);
+}
+.sc-words {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 104px max(var(--hm-gut), env(safe-area-inset-right)) var(--hm-foot) var(--hm-gut);
+}
+.sc-words[data-placement='lower-right'] {
+  align-items: flex-end;
+  text-align: right;
 }
 
-/* ---------- live readouts ---------- */
+/* ---------- flying ---------- */
 
-.metric {
+.hm-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: none;
+  width: 100%;
+  /* The tallest the window gets, so a phone's moving toolbar never uncovers an edge or resizes the picture. */
+  height: 100lvh;
+  max-width: none;
+  opacity: 0;
+  pointer-events: none;
+}
+html[data-flight] .hm-canvas {
+  display: block;
+}
+html[data-flight] .sc {
+  /* Not a layer of its own here: its words stand over the canvas, its still under it. */
+  isolation: auto;
+  display: block;
+  min-height: 0;
+  height: calc(var(--len) * 100svh);
+}
+html[data-flight] .sc-still {
+  position: sticky;
+  inset: 0 auto auto;
+  z-index: 0;
+  width: 100%;
+  height: 100lvh;
+}
+/* Once the canvas draws, nothing under it is fetched or painted. (The first still stays in the tree: it was the first paint.) */
+html[data-flight='live'] .sc-still {
+  display: none;
+}
+html[data-flight='live'] .sc:first-of-type .sc-still {
+  display: block;
+  visibility: hidden;
+}
+html[data-flight] .sc-words {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hm-out) var(--ease-out);
+}
+html[data-flight] .sc-words[data-on] {
+  opacity: 1;
+  transition-duration: var(--hm-in);
+}
+html[data-flight] .sc-words[data-on] :is(a, button) {
+  pointer-events: auto;
+}
+/* Reached by keyboard, a scene's words are simply there, and the scene follows (SceneCanvas scrolls to it). */
+html[data-flight] .sc-words:has(:focus-visible) {
+  opacity: 1;
+  transition: none;
+}
+html[data-flight] .hm:has(.sc-words:not([data-on]) :focus-visible) .sc-words[data-on] {
+  opacity: 0;
+  transition: none;
+}
+
+/* ---------- the words ---------- */
+
+.hm-kind {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--hm-soft);
+}
+.hm-name {
+  margin-top: var(--s-2);
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 4.2vw + 1rem, 5rem);
+  font-weight: var(--display-wght);
+  line-height: 0.98;
+  letter-spacing: var(--track-display);
+}
+.hm-name a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24em;
+  min-height: 44px;
+}
+.hm-name .arrow {
+  flex: none;
+  width: 0.34em;
+  height: 0.34em;
+  transition: transform 160ms var(--ease-out);
+}
+.hm-line {
+  max-width: 34ch;
+  margin-top: var(--s-3);
+  font-family: var(--font-text);
+  font-size: clamp(0.9375rem, 0.3vw + 0.86rem, 1.0625rem);
+  font-weight: 470;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-wrap: pretty;
+}
+/* The first screen: what he is, then the one sentence. */
+.hm-role {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.5vw + 1rem, 2.125rem);
+  font-weight: 620;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+/* His own sentence, in the serif: the one place it is used. */
+.hm-say {
+  font-family: var(--font-accent);
+  font-size: clamp(2.25rem, 4.4vw + 0.5rem, 4.5rem);
+  font-weight: 380;
+  line-height: 1.02;
+  letter-spacing: -0.022em;
+}
+.hm-say span {
+  display: block;
+}
+/* A count read live, set large, and what it counts. */
+.hm-figure {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--s-1);
+}
+.hm-num {
+  font-family: var(--font-display);
+  font-size: clamp(4.25rem, 5vw + 2rem, 6.5rem);
+  font-weight: var(--display-wght);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.hm-num-long {
+  font-size: clamp(3.5rem, 4.4vw + 1.6rem, 5.75rem);
+}
+.hm-meta {
+  margin-top: var(--s-2);
+  font-size: 0.9375rem;
+  font-weight: 470;
+  line-height: 1.45;
+}
+.hm-meta .live {
+  font-weight: 640;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* Names that belong to a scene: the repositories, the models, the profiles. */
+.hm-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-4);
+  max-width: 46rem;
+  margin-top: var(--s-2);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--hm-soft);
+}
+.hm-names li {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+.hm-names a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--ink-dim);
+}
+.hm-more,
+.hm-reach a:not(.btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 580;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+  text-decoration-color: var(--ink-3);
+}
+.hm-more {
+  margin-top: var(--s-1);
+}
+.hm :is(.hm-more, .hm-reach, .hm-btn) .arrow {
+  flex: none;
+  width: 0.85em;
+  height: 0.85em;
+  transition: transform 160ms var(--ease-out);
+}
+.hm-into {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.55em;
+  max-width: 13.5em;
+  margin-top: var(--s-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  font-weight: 620;
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+.hm-btn {
+  margin-top: var(--s-4);
+}
+.hm-end {
+  margin-top: 0;
+}
+.hm-end-kicker {
+  margin-top: var(--s-3);
+}
+.hm-reach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s-5);
+  margin-top: var(--s-4);
+}
+.hm-email {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+.hm-email .hm-btn {
+  margin-top: 0;
+}
+.hm .in-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 0.875rem;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+
+/* A number read live: the accent under it, and when it was read on hover or focus. */
+.hm .live {
   position: relative;
-  display: inline-block;
-  color: inherit;
-  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline;
+  text-decoration-color: var(--acc);
+  text-decoration-thickness: max(2px, 0.045em);
+  text-underline-offset: 0.14em;
 }
-.metric-value {
-  display: inline-block;
-  white-space: nowrap;
-}
-.digit {
-  display: inline-block;
-  width: 1ch;
-  text-align: center;
-}
-.number .digit {
-  width: 0.66em;
-}
-.sep {
-  display: inline-block;
-}
-.metric-tip {
+.hm .live-tip {
   position: absolute;
   left: 0;
-  bottom: calc(100% + 8px);
-  z-index: 5;
-  padding: 7px 11px;
+  bottom: calc(100% + 6px);
+  padding: 6px 10px;
   border-radius: var(--r-1);
   background: var(--ink);
   color: var(--land);
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  font-weight: 480;
+  font-family: var(--font-text);
+  font-size: 0.875rem;
+  font-weight: 500;
   line-height: 1.3;
-  letter-spacing: 0.04em;
-  width: max-content;
-  max-width: min(22rem, calc(100vw - 2 * var(--gutter)));
-  text-transform: uppercase;
+  letter-spacing: 0;
+  white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transform: translate3d(0, 4px, 0) scale(0.97);
+  transform: scale(0.95);
   transform-origin: 0 100%;
   transition:
-    opacity 140ms var(--ease-out),
-    transform 140ms var(--ease-out);
+    opacity 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
 }
-.metric:focus-visible .metric-tip {
+.hm .live:focus-visible .live-tip {
   opacity: 1;
   transform: none;
+  transition: none;
 }
-@media (hover: hover) and (pointer: fine) {
-  .metric:hover .metric-tip {
-    opacity: 1;
-    transform: none;
-    transition-delay: 160ms;
+
+/* ---------- the film: one control, and the film over the page ---------- */
+
+.hm-play {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-top: var(--s-4);
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--land);
+  transition: transform 120ms var(--ease-out);
+}
+.hm-play svg {
+  margin-left: 2px;
+}
+.hm-film {
+  width: min(1120px, calc(100vw - 2 * var(--hm-gut)));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: visible;
+}
+/* It opens from the control that opened it. */
+.hm-film[open] {
+  transform-origin: calc(var(--from-x, 50vw) - (100vw - 100%) / 2) calc(var(--from-y, 50vh) - (100vh - 100%) / 2);
+  animation: hm-film-in 220ms var(--ease-out);
+}
+.hm-film::backdrop {
+  background: rgba(4, 8, 11, 0.86);
+}
+.hm-film[open]::backdrop {
+  animation: hm-fade-in 220ms var(--ease-out);
+}
+@keyframes hm-film-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
   }
 }
-
-/* ---------- features ---------- */
-
-.feat {
-  position: relative;
-  height: clamp(440px, 68svh, 760px);
+@keyframes hm-fade-in {
+  from {
+    opacity: 0;
+  }
 }
-
-/* A slab: real media on dry land, with one soft contact shadow. */
-.slab {
+.hm-film-frame {
   position: relative;
-  border-radius: var(--r-2);
-  background: var(--land-2);
-  box-shadow:
-    0 0 0 1px var(--line),
-    0 26px 50px -30px rgba(4, 16, 22, 0.55);
-  overflow: hidden;
 }
-.slab-media {
-  display: block;
+.hm-film video {
   width: 100%;
   height: auto;
-}
-
-.slab-video {
+  max-height: calc(100svh - 128px);
+  border-radius: var(--r-2);
   background: #0b0d0f;
 }
-.slab-bar {
-  display: flex;
-  align-items: center;
-  padding: 6px 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.09);
-}
-.slab-play {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 44px;
-  padding: 0 14px 0 12px;
-  border-radius: var(--r-pill);
-  color: #eef2f3;
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  font-weight: 480;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  transition:
-    transform var(--t-press) var(--ease-out),
-    background-color var(--t-fast) ease;
-}
-.slab-play:active {
-  transform: scale(0.97);
-}
-@media (hover: hover) and (pointer: fine) {
-  .slab-play:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-}
-
-/* Upstream: labels on the outer bank, tributaries run from them. */
-.tribs {
+.hm-film-close {
   position: absolute;
-  inset: 4% 0 14% 0;
-  display: grid;
-  align-content: space-between;
-  justify-items: start;
-}
-.trib {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0 2px;
-}
-.trib-repo {
-  font-size: 0.9375rem;
-  font-weight: 520;
-  color: var(--ink);
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-}
-.trib-n {
-  font-size: 0.9375rem;
-  color: var(--ink-3);
-}
-@media (hover: hover) and (pointer: fine) {
-  .trib-repo:hover {
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
-}
-
-/* Agent Bridge: two peers and the launch video on the bank between. */
-.peer {
-  position: absolute;
-  width: clamp(120px, 15vw, 230px);
-  aspect-ratio: 1;
-  --bed-r: 50%;
-  border-radius: 50%;
-}
-.peer-a {
-  left: 6%;
-  top: 2%;
-}
-.peer-b {
-  right: 4%;
-  bottom: 0;
-}
-.feat-bridge .slab {
-  position: absolute;
+  top: -52px;
   right: 0;
-  top: 5%;
-  width: 56%;
-}
-
-/* Open models: basin area follows pulls. */
-.feat-basins {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: center;
-  justify-items: center;
-  gap: 8% 4%;
-  padding: 4% 2%;
-}
-.model {
-  display: grid;
-  justify-items: center;
-  gap: 18px;
-  width: 100%;
-}
-.model-disc {
-  width: calc(max(54px, var(--d) * min(250px, 38%)));
-  width: max(64px, calc(var(--d) * 18vw));
-  max-width: 300px;
-  aspect-ratio: 1;
-  --bed-r: 50%;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
+  background: #23292d;
+  color: #f1f4f5;
+  transition: transform 120ms var(--ease-out);
 }
-.model-name {
-  font-size: 0.9375rem;
-  font-weight: 520;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-}
-@media (hover: hover) and (pointer: fine) {
-  .model-name:hover {
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
+.hm-film-close:focus-visible {
+  outline-color: #f1f4f5;
 }
 
-/* cc-switch: the profile switch sits on the bank beside the fork. */
-.feat-fork .switch {
-  position: absolute;
-  left: 0;
-  bottom: 2%;
+/* ---------- press and hover ---------- */
+
+.hm :is(.hm-name a, .hm-more, .hm-names a, .hm-reach a, .in-copy) {
+  transition: transform 120ms var(--ease-out);
 }
-.switch {
-  position: relative;
-  display: inline-grid;
-  grid-template-columns: repeat(3, 92px);
-  padding: 4px;
-  border-radius: var(--r-2);
-}
-.switch-thumb {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 92px;
-  height: 44px;
-  border-radius: 8px;
-  background: var(--ink);
-  /* Critically damped: it lands, it does not bounce. */
-  transition: transform 300ms var(--ease-out);
-}
-.switch-opt {
-  position: relative;
-  z-index: 1;
-  height: 44px;
-  font-size: 0.75rem;
-  font-weight: 520;
-  color: var(--ink-2);
-  border-radius: 8px;
-  transition: color 200ms ease;
-}
-.switch-opt[aria-checked='true'] {
-  color: var(--land);
-}
-.switch-opt:active {
+.hm :is(.hm-name a, .hm-more, .hm-names a, .hm-reach a, .in-copy, .hm-play, .hm-film-close):active {
   transform: scale(0.97);
 }
-
-/* ---------- interests ---------- */
-
-.into-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.06em 0.6em;
-  font-size: clamp(2rem, 3.7vw + 0.5rem, 4.4rem);
-  line-height: 1.08;
-  letter-spacing: -0.03em;
-  max-width: 17em;
-}
-.into-list li {
-  white-space: nowrap;
-}
-.into-list li:nth-child(even) {
-  color: var(--ink-3);
-}
-
-/* ---------- narrow ---------- */
-
-@media (max-width: 859px) {
-  .ice {
-    font-size: var(--ice-size-stacked);
-    line-height: 0.92;
-    white-space: normal;
+@media (hover: hover) and (pointer: fine) {
+  .hm-name a:hover .arrow,
+  .hm-more:hover .arrow {
+    transform: translate3d(3px, 0, 0);
   }
-  .ice [data-ice-line] {
+  .hm :is(.hm-more, .hm-names a, .hm-reach a:not(.btn)):hover {
+    text-decoration-color: currentColor;
+  }
+  .hm .in-copy:hover {
+    color: var(--ink);
+  }
+  .hm .live:hover .live-tip {
+    opacity: 1;
+    transform: none;
+    transition-duration: 200ms;
+  }
+}
+
+/* ---------- a narrow or a short frame ---------- */
+
+@media (max-width: 700px) {
+  .hm-role span {
     display: block;
   }
-  .feat {
-    height: clamp(340px, 52svh, 520px);
+  .hm-line {
+    max-width: 32ch;
   }
-  .tribs {
-    inset: 0 auto 8% 0;
-    justify-items: start !important;
+  /* The names keep to the calm ground: on a tall frame the river runs down the right. */
+  .hm-names {
+    gap: 0 var(--s-3);
+    max-width: 66vw;
   }
-  .feat-bridge .slab {
-    position: absolute;
-    left: 0;
-    right: auto;
-    top: auto;
-    bottom: 0;
-    width: 62%;
+  .hm-names :is(li, a) {
+    min-height: 30px;
   }
-  .peer {
-    width: 112px;
+  .hm-reach {
+    gap: 0 var(--s-4);
   }
-  .peer-a {
-    left: 4%;
-    top: 0;
+}
+@media (max-height: 560px) {
+  .hm {
+    --hm-foot: calc(20px + env(safe-area-inset-bottom));
   }
-  .peer-b {
-    right: 22%;
-    top: 22%;
-    bottom: auto;
+  .hm-say {
+    font-size: clamp(1.75rem, 9vh, 3rem);
   }
-  .feat-basins {
-    padding-right: 76px;
-    gap: 6% 2%;
-  }
-  .model-disc {
-    width: max(52px, calc(var(--d) * 34vw));
-  }
-  .model-name {
-    font-size: 0.8125rem;
-  }
-  /* The second basin of each pair sits a line lower, so a long model name
-     keeps its own line and its own bank on the narrowest phone. */
-  .model:nth-child(even) {
-    margin-top: 52px;
-  }
-  .switch {
-    grid-template-columns: repeat(3, 80px);
-  }
-  .switch-thumb {
-    width: 80px;
-  }
-  .feat-fork .switch {
-    left: 0;
-    right: auto;
-    bottom: 0;
-  }
-  .say-text {
-    max-width: none;
-    font-size: clamp(1.7rem, 7.6vw, 2.6rem);
-  }
-  .into-list {
-    font-size: clamp(1.7rem, 8.4vw, 2.6rem);
+  .hm-num {
+    font-size: clamp(3rem, 18vh, 5rem);
   }
 }
 
-@media (max-width: 379px) {
-  .model-disc {
-    width: max(48px, calc(var(--d) * 29vw));
-  }
-}
+/* ---------- reduced motion, forced colours, print ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .switch-thumb {
-    transition: none;
+  .hm *,
+  .hm-film[open],
+  .hm-film[open]::backdrop {
+    animation: none !important;
+    transition-property: opacity !important;
+  }
+  .hm :is(a, button):active {
+    transform: none !important;
+  }
+}
+@media (forced-colors: active) {
+  .hm-canvas,
+  .sc-still {
+    display: none !important;
+  }
+}
+@media print {
+  .hm-canvas,
+  .sc-still,
+  .hm-play,
+  .hm .in-copy {
+    display: none !important;
+  }
+  html[data-flight] .sc {
+    display: block;
+    height: auto;
+    min-height: 0;
+  }
+  html[data-flight] .sc-words,
+  .sc-words {
+    position: static;
+    padding-block: 16px;
+    opacity: 1;
   }
 }
