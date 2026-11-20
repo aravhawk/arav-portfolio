@@ -18,6 +18,8 @@ interface Props {
   slab?: string;
   sheet?: string;
   face?: string;
+  /** The scene's still as a picture (BandStill): what the page paints first, under the canvas. */
+  still: React.ReactNode;
   /** The page's label, title and line: they stand in the scene's calm corner. */
   children: React.ReactNode;
 }
@@ -25,10 +27,13 @@ interface Props {
 /**
  * The head of an inner page: a live frame of the home page's world with the
  * page's words standing in it. What loads is a still of that frame (one per
- * theme, and one for an upright screen); the engine arrives after first
- * paint and takes its place. Where the engine cannot run, the still stays.
+ * theme, and one for an upright screen), as a picture in the HTML; the
+ * engine arrives after first paint and takes its place. Where the engine
+ * cannot run, the still stays. The engine is not fetched until the page
+ * has painted and the band is on or near the screen: a page opened part
+ * way down does not start it.
  */
-export function SceneBand({ scene, short, full, index, tribs, cols, slab, sheet, face, children }: Props) {
+export function SceneBand({ scene, short, full, index, tribs, cols, slab, sheet, face, still, children }: Props) {
   const view = useRef<HTMLDivElement>(null);
   const tribKey = tribs?.join(',') ?? '';
   const colKey = cols?.map((c) => c.toFixed(1)).join(',') ?? '';
@@ -62,9 +67,54 @@ export function SceneBand({ scene, short, full, index, tribs, cols, slab, sheet,
           if (process.env.NODE_ENV !== 'production') console.warn(err);
         });
     };
-    const idle = window.requestIdleCallback ? window.requestIdleCallback(start, { timeout: 500 }) : window.setTimeout(start, 40);
+    let idle = 0;
+    let painted: PerformanceObserver | null = null;
+    let giveUp = 0;
+    const atRest = () => {
+      idle = window.requestIdleCallback ? window.requestIdleCallback(start, { timeout: 500 }) : window.setTimeout(start, 40);
+    };
+    // The engine is some 180 kB of script. It is not asked for until the page has shown its first frame (the still
+    // and the words), so it never competes with them on a slow line; then at the next idle moment, as before.
+    const whenIdle = () => {
+      const shown = () => performance.getEntriesByName?.('first-contentful-paint').length > 0;
+      if (cancelled) return;
+      if (typeof PerformanceObserver !== 'function' || shown()) return atRest();
+      const go = () => {
+        painted?.disconnect();
+        painted = null;
+        window.clearTimeout(giveUp);
+        if (!cancelled) atRest();
+      };
+      try {
+        painted = new PerformanceObserver(() => {
+          if (shown()) go();
+        });
+        painted.observe({ type: 'paint', buffered: true });
+        // (A browser that never reports a paint, or a tab opened in the background: do not wait for ever.)
+        giveUp = window.setTimeout(go, 3000);
+      } catch {
+        atRest();
+      }
+    };
+    // (Near: within half a screen. A band at the head of a page a reader has just opened is on it.)
+    const near =
+      typeof IntersectionObserver === 'function'
+        ? new IntersectionObserver(
+            (entries) => {
+              if (!entries.some((e) => e.isIntersecting)) return;
+              near?.disconnect();
+              whenIdle();
+            },
+            { rootMargin: '50% 0px' },
+          )
+        : null;
+    if (near) near.observe(el);
+    else whenIdle();
     return () => {
       cancelled = true;
+      near?.disconnect();
+      painted?.disconnect();
+      window.clearTimeout(giveUp);
       if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
       else window.clearTimeout(idle);
       handle?.detach();
@@ -79,7 +129,9 @@ export function SceneBand({ scene, short, full, index, tribs, cols, slab, sheet,
         data-fill
         aria-hidden="true"
         style={stillVars(scene)}
-      />
+      >
+        {still}
+      </div>
       <div className="band-words wrap" data-band-words>
         {children}
       </div>

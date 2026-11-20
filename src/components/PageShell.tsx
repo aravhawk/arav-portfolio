@@ -4,6 +4,7 @@ import { Footer } from '@/components/ending/Ending';
 import { NextBand } from '@/components/NextBand';
 import { SceneBand } from '@/components/SceneBand';
 import { stationData } from '@/components/work/stations';
+import { BandStill } from '@/components/work/still-pictures';
 import { getMetrics } from '@/lib/metrics';
 import type { SceneId } from '@/water/scene-band';
 import '@/app/home.css';
@@ -87,7 +88,7 @@ export async function PageShell({
     <div className="pg-ground" style={groundOf(`${scene ?? 'type'}${head.title}`)}>
       <main id="main" className="pg" data-scene="page">
         {scene ? (
-          <SceneBand scene={scene} short={short} index={index} {...stationData(m)}>
+          <SceneBand scene={scene} short={short} index={index} still={<BandStill scene={scene} kind={short ? 'short' : index ? 'index' : 'page'} />} {...stationData(m)}>
             <BandWords head={head} />
           </SceneBand>
         ) : (

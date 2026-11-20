@@ -6,7 +6,7 @@ import { LiveNumber } from '@/components/LiveNumber';
 import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
 import { PageShell } from '@/components/PageShell';
 import { sceneOf } from '@/water/registry';
-import { stillVars } from '@/components/work/stills';
+import { FeatStill } from '@/components/work/still-pictures';
 import { PROJECTS, RECOGNITION } from '@/content/projects';
 import { formatPostDate } from '@/lib/dates';
 import { pageMeta } from '@/lib/meta';
@@ -52,7 +52,11 @@ export default async function Work() {
               <li key={p.slug}>
                 <Link className={`row feat-row${scene ? '' : ' feat-row-type'}`} data-row href={`/work/${p.slug}`}>
                   <span className="label feat-n">{p.n}</span>
-                  {scene ? <span className="feat-pic" data-fill style={stillVars(scene)} aria-hidden="true" /> : null}
+                  {scene ? (
+                    <span className="feat-pic" data-fill aria-hidden="true">
+                      <FeatStill scene={scene} />
+                    </span>
+                  ) : null}
                   <span className="feat-copy">
                     <ViewTransition name={`title-${p.slug}`} share="title" default="none">
                       <span className="feat-name">{p.name}</span>

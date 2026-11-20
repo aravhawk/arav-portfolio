@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
+import { nextPic } from '@/components/work/still-pictures';
 import type { SceneId } from '@/water/scene-band';
 
 /**
@@ -12,11 +13,9 @@ import type { SceneId } from '@/water/scene-band';
  * The pictures are photographs of the scene as it is drawn, taken with the
  * words' calm in them (public/media/scenes/<scene>-band-*.webp, made by
  * .tools/out/r3g/stills.js): one for each theme, a wide one and an upright
- * one. Only the one in use is fetched, and not until it is near the screen.
+ * one. Only the one in use is fetched, at the width it is shown, and not
+ * until it is near the screen.
  */
-
-const WIDE = { w: 2880, h: 1200 };
-const TALL = { w: 1170, h: 1440 };
 
 export function NextBand({
   scene,
@@ -39,19 +38,22 @@ export function NextBand({
   aria: string;
 }) {
   const name = <span className="display band-title next-title">{title}</span>;
-  const pic = (shape: 'band' | 'bandtall', theme: 'light' | 'dark', size: { w: number; h: number }) => (
-    // eslint-disable-next-line @next/next/no-img-element -- four fixed files, one shown: the optimiser's srcset would fetch a second size of each
-    <img className={`next-pic next-${shape} next-${theme}`} src={`/media/scenes/${scene}-${shape}-${theme}.webp`} width={size.w} height={size.h} alt="" loading="lazy" decoding="async" />
-  );
+  const pic = (shape: 'band' | 'bandtall', theme: 'light' | 'dark') => {
+    const p = nextPic(scene ?? '', shape, theme);
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- four pictures, one shown (CSS picks the theme and the shape); each lazy, so only that one is fetched
+      <img className={`next-pic next-${shape} next-${theme}`} src={p.src} srcSet={p.srcSet} sizes={p.sizes} width={p.width} height={p.height} alt="" loading="lazy" decoding="async" />
+    );
+  };
   return (
     <nav className={`next${scene ? '' : ' next-type'}`} aria-label={aria}>
       <Link className="next-link" href={href}>
         {scene ? (
           <span className="next-view" data-fill aria-hidden="true">
-            {pic('band', 'light', WIDE)}
-            {pic('band', 'dark', WIDE)}
-            {pic('bandtall', 'light', TALL)}
-            {pic('bandtall', 'dark', TALL)}
+            {pic('band', 'light')}
+            {pic('band', 'dark')}
+            {pic('bandtall', 'light')}
+            {pic('bandtall', 'dark')}
           </span>
         ) : null}
         <span className="next-words wrap">

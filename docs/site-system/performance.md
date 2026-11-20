@@ -89,3 +89,43 @@ CPU time covers submission inside the engine. The query can include time
 waiting for submission. Use the repeated ice benchmark for small differences.
 Pass `--cold` to the scroll trace to insert a unique, unreachable discard in
 each fragment program and exercise first use.
+
+## Inner pages: the stills are pictures (K2, 2026-11-20)
+
+A scene band, a row of the work index and the way on at a page's foot
+each show a committed still (`public/media/scenes`). They are served
+through the image optimiser as AVIF or WebP at the width shown
+(`src/components/work/still-pictures.tsx`): `BandStill` at a page's
+head, `FeatStill` in the index, `nextPic` for the way on. Rules:
+
+- The band's still is the page's largest paint. It is a `picture` in
+  the HTML with `fetchpriority="high"`, never lazy, decoded with the
+  first frame. Its `sizes` follow the band's height in `pages.css`
+  (`BAND_SHARE`): change one, change the other.
+- Do not add `<link rel="preload">` or react-dom's `preload()` for it.
+  React carries both as hints in the data a `<Link>` prefetches, so
+  every page that links to this one fetches its still at high priority
+  beside its own. Measured: +2 s of largest paint on the phone preset.
+- The picture is chosen by the system's scheme. A reader who has set
+  the other theme gets the full file as the band's ground from CSS
+  (`stills.ts`, `.band-still` in `pages.css`).
+- Everything else is `loading="lazy"`, one `img` for each theme with
+  the other `display: none`, so only the one shown is fetched.
+- Stills ask for quality 90 (`images.qualities` in `next.config.ts`).
+  At 75 the snow's grain is smoothed.
+- The live band's engine is not fetched until the page has presented
+  its first frame and the band is within half a screen of the viewport
+  (`SceneBand.tsx`). Asked for earlier, its 180 kB of script races the
+  still.
+- Measure with a warm optimiser: the first request for a width encodes
+  it. `tests/content/stills.test.ts` fails when a still's file and the
+  size its picture reserves disagree.
+
+Where it stands on the phone preset: Lighthouse's simulation counts
+every request that finished before an image largest paint, scripts
+that had begun to run included. On a local server that is the
+framework's scripts (about 160 kB) and the fonts (140 kB) as well as
+the still, so a page whose largest paint is a picture simulates at
+about 3.5 to 4 s however small the picture is; a page whose largest
+paint is text (the home page, Ask Around) simulates at its first
+paint. See `.tools/out/k2/REPORT.md` of the K2 task for the numbers.

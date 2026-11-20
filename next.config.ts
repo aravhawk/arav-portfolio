@@ -9,6 +9,9 @@ import { REDIRECT_HOSTS, SITE_URL } from './src/lib/site';
 const nextConfig: NextConfig = {
   transpilePackages: ['next-mdx-remote'],
   agentRules: false,
+  /* Pictures are served as AVIF where the browser takes it, WebP otherwise. The scenes' stills ask for the higher
+     quality (still-pictures.tsx): at the default their snow and ice lose their grain. */
+  images: { formats: ['image/avif', 'image/webp'], qualities: [75, 90] },
   async redirects() {
     return [
       ...REDIRECT_HOSTS.map((host) => ({

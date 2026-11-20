@@ -98,17 +98,44 @@
   inset: 0;
   background-size: cover;
   background-position: 50% 50%;
-  background-image: var(--still-wide-light);
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - clamp(56px, 11svh, 120px)), transparent);
   mask-image: linear-gradient(to bottom, #000 calc(100% - clamp(56px, 11svh, 120px)), transparent);
 }
-:root[data-theme='dark'] .band-view {
-  background-image: var(--still-wide-dark);
+/* The still is a picture in the HTML (BandStill): the size the screen needs, found before any style is read. It
+   covers the band exactly as a background set to cover would. */
+.band-still {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
 }
-@media (max-aspect-ratio: 9/10) {
-  .band-view {
+/* The picture is chosen by the system's scheme. A reader who has set the other theme gets the right still as the
+   band's ground instead, and the picture stands down. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='dark']) .band-still {
+    display: none;
+  }
+  :root:not([data-theme='dark']) .band-view {
+    background-image: var(--still-wide-light);
+  }
+}
+@media (prefers-color-scheme: dark) and (max-aspect-ratio: 9/10) {
+  :root:not([data-theme='dark']) .band-view {
     background-image: var(--still-tall-light);
   }
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme='dark'] .band-still {
+    display: none;
+  }
+  :root[data-theme='dark'] .band-view {
+    background-image: var(--still-wide-dark);
+  }
+}
+@media (prefers-color-scheme: light) and (max-aspect-ratio: 9/10) {
   :root[data-theme='dark'] .band-view {
     background-image: var(--still-tall-dark);
   }
@@ -2160,19 +2187,32 @@
   color: var(--ink);
 }
 .feat-pic {
+  position: relative;
   aspect-ratio: 2 / 1;
+  overflow: hidden;
   border-radius: clamp(8px, 0.9vw, 14px);
   background-color: var(--land-2);
-  background-image: var(--still-wide-light);
-  background-size: cover;
-  background-position: 60% 50%;
   box-shadow:
     var(--plate-shadow),
     0 0 0 1px var(--line);
   transition: transform 520ms var(--ease-out);
 }
-:root[data-theme='dark'] .feat-pic {
-  background-image: var(--still-wide-dark);
+/* The station's still, one for each theme (FeatStill): only the one shown is fetched, when its row is near. */
+.feat-still {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 60% 50%;
+}
+.feat-dark,
+:root[data-theme='dark'] .feat-light {
+  display: none;
+}
+:root[data-theme='dark'] .feat-dark {
+  display: block;
 }
 @media (hover: hover) and (pointer: fine) {
   .feat-row:hover .feat-pic {
