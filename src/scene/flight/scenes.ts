@@ -1,3 +1,4 @@
+import agentbridgeAssets from './agent-bridge-assets.json';
 import kilobenchAssets from './kilo-bench-assets.json';
 import opensourceAssets from './open-source-assets.json';
 import statementAssets from './statement-assets.json';
@@ -109,6 +110,7 @@ export const scenes: readonly (Lake | Plate)[] = [
   riverPlate('statement', statementAssets),
   riverPlate('open-source', opensourceAssets),
   riverPlate('kilo-bench', kilobenchAssets),
+  riverPlate('agent-bridge', agentbridgeAssets),
 ];
 export const starts: number[] = [];
 let length = 0;
