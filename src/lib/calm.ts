@@ -4,8 +4,10 @@
  * Work that is not needed for that first frame waits for it: the scene
  * band's engine, smooth scrolling on an inner page, and the fetching of
  * pages a link leads to. Asked for earlier, each is a download that
- * competes with the page's own picture and words on a slow line (and the
- * home page's route alone is some 70 kB of the flight's code).
+ * competes with the page's own picture and words on a slow line. (A link
+ * to the home page, fetched ahead, brought some 70 kB of the flight's code
+ * with it: most of that is the engine the band itself asks for later, but
+ * it arrived before the first frame.)
  *
  * After a route change the first frame is long past, so this is only the
  * wait for an idle moment.

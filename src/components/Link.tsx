@@ -13,8 +13,9 @@ type Props = Omit<ComponentProps<typeof NextLink>, 'prefetch' | 'href'> & {
    *    screen, but not before this page has shown its first frame and is
    *    idle (src/lib/calm.ts).
    *  - 'intent': only when the reader reaches for it (pointer over it, a
-   *    touch, focus). For the way home from an inner page: the home page's
-   *    route carries the flight's own code, which no inner page needs.
+   *    touch, focus). For the way home from an inner page: it is on every
+   *    screen, and the home page's own code is of no use to a reader who
+   *    does not go there.
    */
   ahead?: 'calm' | 'intent';
 };

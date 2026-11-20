@@ -130,3 +130,42 @@ the still, so a page whose largest paint is a picture simulates at
 about 3.5 to 4 s however small the picture is; a page whose largest
 paint is text (the home page, Ask Around) simulates at its first
 paint. See `.tools/out/k2/REPORT.md` of the K2 task for the numbers.
+
+## Inner pages: nothing but the page before its first frame (K3, 2026-11-20)
+
+Lighthouse charges an image largest paint with every request that
+finished before it. So on an inner page nothing is asked for before the
+first frame except what that frame needs. The rules, and where each
+lives:
+
+- **One gate.** `src/lib/calm.ts`: `whenCalm(fn)` runs `fn` at the first
+  idle moment after the page has presented its first frame. Anything
+  not needed for the first screen waits on it. Do not add a second
+  mechanism.
+- **Links.** Use `@/components/Link`, not `next/link`, on every page
+  but the home page. It holds the framework's fetching ahead until the
+  page is calm. The way home from an inner page is `ahead="intent"`:
+  fetched only when reached for. Fetched ahead, it brought some 70 kB of
+  the flight's code in before the first frame (60 kB of it the engine a
+  band asks for later anyway, 10 kB the home page's own).
+- **The scene band's engine** and smooth scrolling's library on an
+  inner page wait on the same gate (`SceneBand.tsx`, `Runtime.tsx`).
+- **Pictures under the first screen** are `Held` (`components/Held.tsx`):
+  the work index's rows, the way on, every plate. `loading="lazy"` alone
+  is not enough, a browser asks for a lazy picture at first layout if
+  it is within a few screens. No plate takes `priority`.
+- **A video's poster and source** are set when its slab is within a
+  screen of the viewport (`VideoSlab.tsx`).
+- **Fonts.** Pages load Latin cuts of the two variable fonts
+  (`src/fonts/*-Latin.woff2`, made by `scripts/font-cuts.sh`); the whole
+  fonts are fetched only for a character a cut leaves out
+  (`globals.css`). The name's ice face is not preloaded. A font
+  preload cannot be scoped to one route: the manifest lists a
+  preloaded file for every route.
+
+What an inner page still loads before its largest paint, on the phone
+preset (about 325 kB): the framework's scripts (react-dom 70 kB, the
+router 48 kB, 8 kB more) and the site's own (35 kB), the two fonts
+(74 kB), the still (33 to 48 kB), the stylesheets (25 kB), the page
+(12 kB) and the ground's textures (6 kB). That simulates at about
+3.1 s and scores 92 to 93. See `.tools/out/k3/REPORT.md` of the K3 task.
