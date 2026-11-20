@@ -1,4 +1,3 @@
-import { projectsInFlight } from '@/water/registry';
 /**
  * Featured work. Every statement here is sourced in
  * docs/redesign-v4/content-sources.md. Live numbers are not stored here:
@@ -417,11 +416,13 @@ const entries: Project[] = [
   },
 ];
 
-export const PROJECTS = projectsInFlight.map(slug => {
-  const project = entries.find(entry => entry.slug === slug);
-  if (!project) throw new Error(`Missing project content for ${slug}`);
-  return project;
-});
+/**
+ * The featured projects, in the order they are read everywhere: the order of
+ * this list. The home page's flight visits them in the same order
+ * (tests/content/order.test.ts holds the two together), so this file needs
+ * nothing from the scene.
+ */
+export const PROJECTS: Project[] = entries;
 
 export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === slug);
 
