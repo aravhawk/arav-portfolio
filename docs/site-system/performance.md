@@ -126,35 +126,38 @@ compression), asked for after first paint.
 | | Before | After |
 | --- | --- | --- |
 | How a frame is made | about 9,000 lines of procedural shader, every pixel computed | baked plates and meshes, three to eight draws a frame |
-| Slow frames in a scroll, 1440 at 2x | 1.6 to 2.8 percent | none: longest interval 18.7 ms over 2,341 frames (builder's run, 60 Hz) |
+| Slow frames in a scroll, 1440 at 2x | 1.6 to 2.8 percent | none: longest interval 18.7 ms over 2,341 frames in a cold 35 s scroll (quiet run, Nov 20, 60 Hz); the same on the phone profile |
 | Slow frames, 1728 at 2x | 5.8 to 9.7 percent | not measured at that size |
-| First visit | about eight frames held in a scroll | no held frame, no task over 50 ms in a cold scroll (builder's run) |
-| Main thread a frame | not recorded | 0.2 ms median, 2.2 ms at most (builder's run) |
+| First visit | about eight frames held in a scroll | no held frame, no task over 50 ms in a cold scroll (quiet run, Nov 20) |
+| Main thread a frame | not recorded | 0.2 ms median, 2.2 ms at most (quiet run, Nov 20) |
 
 GPU time a frame at a 3456 by 2234 backing on an Apple M4, and
-bytes shipped, by scene. The times are the builders' last
-measurements for each scene. Some scenes were re-lit or re-framed
-after theirs was taken, and the second and third scenes changed
-places, so treat a whiteout's figure as a guide and measure again
-before relying on it.
+bytes shipped, by scene. The times are one quiet run of
+`measure/gpu-cost.cjs` on Nov 20, 2026, after the last re-lighting
+and the change of order, sampled every 0.4 of a screen: the worst
+sample in each scene's rest and push, and in the whiteout into it.
+The bytes are every file in the scene's folder under
+`public/scene/`, stills included.
 
 | Scene | At rest or pushing (ms) | Whiteout into it (ms) | Bytes |
 | --- | --- | --- | --- |
-| `lake` | 4.2 | none | 2,421,598 |
-| `statement` | 4.2 | 6.3 | 769,597 |
-| `infiniview` | 5.0 | 4.5 | 1,197,267 |
-| `open-source` | 3.3 | 5.7 | 1,073,576 |
-| `kilo-bench` | 4.1 | 6.6 | 713,795 |
-| `agent-bridge` | 3.3 | 6.0 | 785,982 |
-| `ollama` | 3.5 | 6.1 | 856,632 |
-| `cc-switch` | 3.4 | 6.0 | 855,290 |
-| `tensorpow` | 3.4 | 6.0 | 818,497 |
-| `rydar` | 3.4 | 5.9 | 821,787 |
-| `interests` | 4.7 | 6.0 | 904,215 |
-| `ending` | 4.0 | 5.9 | 619,265 |
+| `lake` | 4.7 | none | 2,421,598 |
+| `statement` | 3.7 | 4.6 | 751,527 |
+| `infiniview` | 4.0 | 5.0 | 1,184,577 |
+| `open-source` | 3.8 | 7.3 | 1,040,926 |
+| `kilo-bench` | 4.0 | 5.9 | 692,072 |
+| `agent-bridge` | 4.0 | 6.7 | 758,867 |
+| `ollama` | 3.7 | 5.8 | 834,143 |
+| `cc-switch` | 4.2 | 5.7 | 834,834 |
+| `tensorpow` | 5.3 | 5.8 | 778,973 |
+| `rydar` | 3.9 | 6.1 | 790,119 |
+| `interests` | 5.2 | 5.9 | 872,701 |
+| `ending` | 4.0 | 6.0 | 592,163 |
 
-All twelve ledgers sum to 11,837,501 bytes. Texture memory peaked
-at 134.6 MB across the measured poses (builder's run).
+The folders sum to 11,552,500 bytes. Over budget in this run: `tensorpow`
+(5.3) and `interests` (5.2) at rest against 5 ms, and the whiteout
+into `open-source` (7.3) against 7 ms. Texture memory peaked at
+134.6 MB across the measured poses (builder's run).
 
 Sound: the chunk is 3,457 bytes gzipped; nothing of it loads before
 the first press (builder's run). Today's offline render of a walk
@@ -167,35 +170,32 @@ Stated plainly, worst first.
 
 1. **A task over 50 ms on every route under the phone preset.**
    The evaluation of the framework's own chunk (React DOM and the
-   Next client) measured 76 to 101 ms in today's two runs under
-   Lighthouse's 4x CPU slowdown (the builders measured 67 to 75).
-   Nothing of the site's own is in it, and no way was found to
-   split it.
-2. **A second task on `/` under the phone preset.** Today's two
-   runs each show one task of about 65 ms in the renderer's chunk,
-   and the desktop preset shows one unattributed task of 58 to
-   71 ms on `/`. The machine was rendering in Cycles at the time,
-   and Lighthouse's browser has no GPU, so the cause is not
-   established. Measure again on a quiet machine.
-3. **The lake ships 2,421,598 bytes** against 1,300,000 a scene.
+   Next client) measured 63 to 74 ms on all twelve routes in a
+   quiet run on Nov 20 under Lighthouse's 4x CPU slowdown; a few
+   routes also show one unattributed task of 57 to 75 ms. Nothing
+   of the site's own is in the chunk, and no way was found to
+   split it. Unthrottled it is about 15 to 19 ms.
+2. **Three GPU samples over budget** in the quiet run of Nov 20:
+   `tensorpow` at 5.3 ms and `interests` at 5.2 ms at rest (budget
+   5), and the whiteout into `open-source` at 7.3 ms (budget 7).
+   The builders' own runs had every scene inside. One run, sampled
+   every 0.4 of a screen: measure again before and after any fix.
+   A second long task once reported on `/` did not appear in the
+   quiet run: `/` shows only the framework's.
+3. **The lake ships about 2.4 MB** against 1.3 MB a scene.
    Lossier textures changed fine edges visibly; only lossless
    savings were taken.
-4. **Infiniview is at the 5 ms budget, not under it.**
-5. **Not measured on real hardware:** a 120 Hz display (the owner's
+4. **Not measured on real hardware:** a 120 Hz display (the owner's
    M5 Pro), and any physical phone. Every frame number here is from
    an M4 on a 60 Hz display or an emulated phone.
-6. **INP is in the gate and has never been measured.**
-7. **Night contrast** was measured once by a builder's own probe
+5. **INP is in the gate and has never been measured.**
+6. **Night contrast** was measured once by a builder's own probe
    (every scene 4.7 to 1 or better at both ends of its push). The
    probe is not in the repository. After a night re-render, look,
    and say that it was not re-measured.
-8. **Sound has not been heard by a person** and has only run in
+7. **Sound has not been heard by a person** and has only run in
    Chromium. One Lighthouse phone run of four scored 81 during its
    build and did not repeat.
-9. **Today's own GPU and scroll numbers are not usable**: they were
-   taken while another job rendered on the same GPU (frames of 80
-   ms and more). The scripts ran correctly; the table above uses
-   the builders' quiet runs.
 
 ## Rules that keep the gate
 
