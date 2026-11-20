@@ -40,7 +40,7 @@ out vec4 color;
 uniform sampler2D plate,survey,wind,silhouettes;
 uniform vec2 focus,atlasScale,jawOffset,nearOffset;
 uniform vec4 jawBounds,nearBounds;
-uniform float time,transition,night,reduce;
+uniform float time,transition,night,reduce,push;
 
 vec3 radiance(float y,vec2 axes){
   vec2 c=(axes-128./255.)*(255./1320.);
@@ -85,6 +85,20 @@ void main(){
       float one=texture(plate,st-travel*(a-.5)).r;
       float two=texture(plate,st-travel*(b-.5)).r;
       y=mix(y,mix(one,two,abs(2.*a-1.)),smoothstep(.22,.92,info.b));
+    }
+    if(info.b>.03){
+      // Use a separate metric footprint for the sunlit capillary crests.
+      // Their length across the river survives the close camera's projection.
+      vec2 gateSize=vec2(textureSize(plate,0))*atlasScale;
+      float depth=1./max(.009,.009+floorRay.w/floorRay.z);
+      float across=(ground.x-focus.x)*depth*min(1.,gateSize.x/gateSize.y);
+      vec2 river=vec2(.5+.16*across,(depth-17.)*.035);
+      float phase=reduce>.5?0.:fract(time*.51);
+      float a=1.-texture(survey,river+vec2(0.,.016*(phase-.5))).a;
+      float b=1.-texture(survey,river+vec2(0.,.016*(fract(phase+.5)-.5))).a;
+      float path=exp(-across*across*1.55);
+      y+=mix(a,b,abs(2.*phase-1.))*path*info.b*(.18-.065*night)
+         *mix(.32,1.,smoothstep(0.,14.,push));
     }
     c+=(1.-ice.a)*radiance(y,info.rg);
   }

@@ -62,37 +62,60 @@ def layout(gate):
     return size, crops, slots, (w, rounded(y + row))
 
 
-def broken_reflection(rgb, wet, projection, night):
-    # Resolve the highlights into capillary facets in metre coordinates.
-    # The beauty supplies their colour, extent and incident sunlight.
-    rows, cols = np.nonzero(np.asarray(wet) > 127)
-    h, w = rgb.shape[:2]
-    u, v = cols / w, rows / h
-    a, b, c = projection["ground"]
-    depth = 1 / np.maximum(0.01, a * u + b * v + c)
-    across = (u - projection["focus"][0]) * depth * 0.67
-    scan = (
+def river_glitter(size):
+    # The footprint of the low sun is applied in the shader. This independent
+    # strip records the raked crests in metres along the river, before camera
+    # foreshortening. No patch repeats across the reach.
+    w, h = size
+    v, u = np.mgrid[0 : 1 : complex(h), 0 : 1 : complex(w)].astype(np.float32)
+    source = Image.open(cache / "snow_02_nor_gl_2k.jpg").getchannel("G")
+    slope = (
+        np.asarray(source.resize((w, h), Image.Resampling.LANCZOS), np.float32) / 255
+    )
+    grain = (
         np.asarray(
-            Image.open(cache / "snow_02_nor_gl_2k.jpg").getchannel("G"), np.float32
+            source.resize((17, 31), Image.Resampling.LANCZOS).resize(
+                (w, h), Image.Resampling.BICUBIC
+            ),
+            np.float32,
         )
         / 255
     )
-    # One continuous region of the scan, viewed in perspective. Crossing
-    # facets catch the horizon only in the solid angle subtended by the gap.
-    iy = (np.clip(0.05 + (depth - 16) * 0.027 + across * 0.011, 0, 1) * 2047).astype(
-        int
+    wind = np.sin(7 * u + 9 * v) + 0.47 * np.sin(18 * u - 14 * v)
+    phase = 35 * v + 7 * v * v + 0.62 * wind + 6 * (grain - 0.5)
+    crests = np.maximum(0, np.cos(2 * np.pi * phase)) ** 6
+    short = (
+        np.maximum(
+            0, np.cos(2 * np.pi * (78 * v - 0.87 * wind + 0.8 * np.sin(9 * v + u)))
+        )
+        ** 8
     )
-    ix = (np.clip(0.43 + across * 0.19 - (depth - 30) * 0.008, 0, 1) * 2047).astype(int)
-    facets = np.clip((scan[iy, ix] - 0.45) * 7.0, 0, 1) ** 2
-    downstream = np.maximum(0, v - projection["focus"][1])
-    axis = projection["focus"][0] + 0.035 * downstream
-    solar = np.exp(-(((u - axis) / (0.019 + 0.095 * downstream)) ** 2))
+    broken = np.clip((slope - 0.46) * 6.8, 0, 1)
+    field = np.clip(
+        (crests + 0.45 * short)
+        * (0.2 + 0.8 * broken)
+        * np.clip(1.4 - 0.6 * wind, 0.2, 1),
+        0,
+        1,
+    )
+    # Opaque alpha in an earlier, colour-only survey contributes no glitter.
+    # Keep a nonzero floor so the stored colour is defined across this strip.
+    return Image.fromarray(np.uint8(255 - 8 * np.rint(26 * field)))
+
+
+def shade_water(rgb, wet, projection):
+    rows, cols = np.nonzero(np.asarray(wet) > 127)
+    h, w = rgb.shape[:2]
+    u, v = cols / w, rows / h
+    x, y = projection["focus"]
+    solar = np.exp(
+        -(((u - x - 0.035 * (v - y)) / (0.025 + 0.1 * np.maximum(0, v - y))) ** 2)
+    )
     tone = rgb[rows, cols]
     base = np.array([0.10, 0.173, 0.185], np.float32)
-    broken = tone - np.maximum(0, tone - base) * (0.88 - 0.48 * facets * solar)[:, None]
-    glitter = np.clip((facets - 0.37) * 1.6, 0, 1) * solar
-    light = np.array([0.51, 0.59, 0.69] if night else [0.95, 0.93, 0.82], np.float32)
-    rgb[rows, cols] = broken + np.maximum(0, light - broken) * glitter[:, None]
+    # Preserve the long optically baked ripples beneath the independent
+    # capillary detail. The return is broadest inside the sun's reflection.
+    rgb[rows, cols] = tone - np.maximum(0, tone - base) * (0.90 - 0.38 * solar)[:, None]
 
 
 def pack(gate, theme, size, crops, slots, atlas):
@@ -127,7 +150,7 @@ def pack(gate, theme, size, crops, slots, atlas):
             fringe = (alpha < 0.98) & (distance < 32)
             rgb[fringe] = rgb[nearest[0][fringe], nearest[1][fringe]]
         if name == "bank":
-            broken_reflection(rgb, wet, registry[gate], theme == "night")
+            shade_water(rgb, wet, registry[gate])
         if name == "bank" and theme == "night":
             # In blue hour the western snow tongue faces away from the light.
             # Grade it by metres in the surveyed scene so its exposure holds
@@ -171,6 +194,7 @@ def pack(gate, theme, size, crops, slots, atlas):
     channels = survey.split()
     palette = [int(np.clip(128 + 4 * round((v - 128) / 4), 0, 255)) for v in range(256)]
     survey = Image.merge("RGB", [ch.point(palette) for ch in channels])
+    survey.putalpha(river_glitter(survey.size))
     survey.save(
         stem.with_name(stem.name + "-survey.webp"), lossless=True, exact=True, method=5
     )
