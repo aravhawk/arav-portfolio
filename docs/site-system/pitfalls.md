@@ -91,5 +91,18 @@ Each of these cost time on this build.
 - **Run legibility at 768 as well as 390 and 1440.** A tablet held
   upright sees a cut of the phone's frame with its words elsewhere:
   what is calm under the words on a phone may not be under them there.
+- **A link that nothing gives pointer events back to.** A section of
+  the flight takes no pointer events (`.fl-sec`), and everything in it
+  inherits that. A station's pieces get them back as each one sets
+  (`[data-at][data-in]`); the ending's row is set by its block, had no
+  such rule, and so every contact link on the home page was dead while
+  looking right (the element under each was `main.fl`). Anything
+  pressable added to the flight must be given `pointer-events: auto`
+  by the rule that shows it. `scripts/click-test.mjs` presses every
+  link and control for real and fails on one that does not answer.
+- **A synthetic click proves nothing.** `element.click()` and
+  `dispatchEvent` reach an element whatever covers it. Test a link
+  with Playwright's `click()` or `tap()`, which go to its place on the
+  screen.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 V3: five more.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 V3: five more. 2026-11-21 F1: the dead links.

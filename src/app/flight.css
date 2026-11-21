@@ -1073,6 +1073,13 @@ html[data-hero-words] .fl-hero-words .fl-intro {
     opacity 700ms var(--ease-out) 420ms,
     transform 700ms var(--ease-out) 420ms;
 }
+/* A section takes no pointer events (`.fl-sec`), and what stands in it inherits that. A station's pieces are given
+   them back as each one sets (`[data-at][data-in]`). The ending's pieces are not steps: the block sets them, so the
+   block gives them back, from the moment it is on. Without this every link of the contact row was dead: the press
+   fell through to the page. (`scripts/click-test.mjs` presses each of them.) */
+.fl-end-words[data-on] .fl-end-block {
+  pointer-events: auto;
+}
 .fl-end-words:not([data-set]) .ending-links *,
 .fl-end-words:not([data-set]) .ending-head * {
   pointer-events: none;
