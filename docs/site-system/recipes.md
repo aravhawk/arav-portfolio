@@ -62,6 +62,17 @@ Register a definition with `kind: 'section'`, a rail label, a length, a stop off
 
 Add its entry to `entries` in `src/content/projects.ts` at its place in the owner's order, its label to `src/content/kinds.ts`, and its page to `CASES` in `src/components/work/cases.tsx` (without one it gets the plain page). Its page, its row in `/work`, the band that leads to it and its share card are then type alone (`band-type`, `feat-row-type`, `next-type` in `src/app/pages.css`). For a stretch of words on the home page, register a section with no subject and `camera: () => []`: the eye goes on between its neighbours' keys, and the block stands in the calm the picture keeps behind any words. When the world gets a place for it (as Ask Around did: `AROUND` in the registry), give the section a subject, a paint function, camera keys and a `project`, and photograph its pictures (below).
 
+## Add a tool to the second group of /work
+
+A public repository with substance that is not one of the nine: add it
+to `TOOLS` in `src/content/projects.ts` (name, one line, its source and
+its release) and its kind to `src/content/kinds.ts`. Write the line from
+the repository's own README, releases and code, and record where each
+part came from in `copy.md`. Check the owner's never and hold lists
+there first. Its row is drawn by `/work` (`.tool-row` in `pages.css`):
+nothing else is needed, and it gets no page, picture or place in the
+flight. `tests/content/links.test.ts` checks its links.
+
 ## Re-render the flight after the world or the words change
 
 The home page plays frames rendered ahead of time. Anything that changes
@@ -155,4 +166,4 @@ on a next band, on `.pg-ground`, with type from the tokens in
 (`scripts/fill-test.mjs`); every line against its ground
 (`scripts/overlap-test.mjs`).
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1: a project without a station, no archive. 2026-11-20 V1: re-render the flight.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1: a project without a station, no archive. 2026-11-20 V1: re-render the flight. 2026-11-21 F1: a tool.

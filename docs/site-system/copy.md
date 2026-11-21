@@ -61,9 +61,41 @@ OpenAI DevDay 2026" (about him, never under Infiniview); the
 Business Insider story of May 2026, without his age, city or grade;
 his GitHub contributions in 2026, read live and said with the date.
 
-Nothing else is shown: no archive, no "also" list, no project the
-owner holds back or has dropped, no bot name beyond the two above.
-Ask the owner before adding a tenth.
+### Other tools (the owner's ask of 2026-11-21: "don't skip archived repos")
+
+After the nine, `/work` shows a second group under the heading "Other
+tools": public repositories of his with real substance that the flight
+has no place for (`TOOLS` in `src/content/projects.ts`). A tool is a
+row of type: its kind, its name, one line, and links to its source and
+its release. No page, no picture, no place in the flight, no number.
+Every word of a line is from the repository itself:
+
+| Tool | The line's sources |
+| --- | --- |
+| Lite Stats (`lite-stats`) | README, first sentence ("a trimmed, Apple Silicon-only fork of exelban/stats ... from the macOS menu bar") and its Modules list (CPU, GPU, RAM, Disk, Sensors). It is a fork in spirit and the line says so. Release v1.1.0 (2026-05-13). |
+| envfetch | README, first sentence ("a native macOS CLI for storing environment variables in an encrypted local vault and activating them with Touch ID"). Release v1.1.0 (2026-06-04). Archived. |
+| CryptoLab (`CryptoLab.swiftpm`) | README ("submitted to Apple's 2025 Swift Student Challenge"; an iPad with AR and a Secure Enclave) and the code: `WalletGenerationView.swift` (a Secure Enclave key), `ARMiningScreen.swift` (ARKit; signing and verifying a transaction; proof of work, stake and history), `LearnView.swift`. Release v0.1 (2025-02-24). Archived. |
+| Passport Photo Studio (`passportphoto`) | README, first paragraph (frame against the official guides, whiten the background, export JPG or PNG at 300 DPI, "no photo ever leaves your machine"). No release. Its live site is on a `vercel.app` address, which this site does not show: source only. |
+
+Considered and left out as too slight: SumQuick (2 kB of Python),
+IntergalacticPro (a prompt behind a Streamlit page), Weather-Station-BMP280
+(one script, no README), claude-code-utils (configuration), neuralbytes.net
+(a small site), typing-game (a clone of a known kind, one push), and the
+school and early pages (escaperoom, teamastros, top10tipsforsurvival,
+who-wants-to-be-a-billionaire, workjet-google, workjet-ms,
+ChatGPT-3.5-with-Vision, the profile repository).
+
+Never added, whatever their merit (the owner's list): AlphaPredict and
+its signup page, the trading repository, Macro-Guru, tempify, askrosie,
+wordle-clone, the old github.io site, plain forks, opencode-belweave,
+the VEX robotics repositories, Investo, merlin-control, ClarifAI,
+fix-it-bot, goFoundr, the Thrasher site. On hold, not shown: OxyDrop,
+AgentSocket, project-net, openhark, Agent Island.
+
+Nothing else is shown: no archive, no project the owner holds back or
+has dropped, no bot name beyond the two above. Ask the owner before
+adding a tenth project to the nine; a tool joins `TOOLS` only with a
+line that can be sourced like the ones above.
 
 ## Where copy lives
 
@@ -76,4 +108,4 @@ own writing and is not edited.
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1:
 the definitive list, recognition, the story's rules. 2026-11-20 K2: the
-public pull request link names only counted repositories.
+public pull request link names only counted repositories. 2026-11-21 F1: the other tools.

@@ -2243,6 +2243,34 @@
   grid-template-columns: 2.6rem minmax(0, 1fr) 56px;
   padding: clamp(22px, 2.6vw, 44px) 0;
 }
+/* The other tools: the row's own four columns (kind, name, line, links), in type alone. A tool's row is not a
+   link, so nothing in it answers the pointer but its two links. */
+.tools > :first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.tool-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.1vw + 1.05rem, 2.25rem);
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -0.022em;
+}
+.tool-line {
+  max-width: 48ch;
+  font-size: var(--pg-body);
+  line-height: 1.4;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.tool-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 var(--s-5);
+  font-size: 1rem;
+  white-space: nowrap;
+}
 .recog {
   display: grid;
   gap: clamp(10px, 1vw, 16px);
@@ -2925,6 +2953,9 @@
   }
   .row.feat-row-type {
     grid-template-columns: minmax(0, 1fr) 48px;
+  }
+  .tool-links {
+    justify-content: flex-start;
   }
   .post-item {
     grid-template-columns: minmax(0, 1fr);

@@ -463,6 +463,55 @@ export const PROJECTS: Project[] = entries;
 export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === slug);
 
 /**
+ * Other tools of his: public repositories with real substance that the flight has no place for. Each is a row on
+ * /work after the nine (name, one line, kind, its source and its release) and has no page and no picture. Every
+ * word of a line is from the repository itself (its README, its releases, its code): where each came from is in
+ * docs/site-system/copy.md. The owner's never, drop and hold lists are there too: nothing on them is added here.
+ */
+export interface Tool {
+  slug: string;
+  name: string;
+  line: string;
+  links: ProjectLink[];
+}
+
+export const TOOLS: Tool[] = [
+  {
+    slug: 'lite-stats',
+    name: 'Lite Stats',
+    line: 'A trimmed, Apple Silicon-only fork of Stats that monitors CPU, GPU, RAM, disk and sensors from the macOS menu bar.',
+    links: [
+      { label: 'Source', href: 'https://github.com/aravhawk/lite-stats' },
+      { label: 'v1.1.0', href: 'https://github.com/aravhawk/lite-stats/releases/tag/v1.1.0' },
+    ],
+  },
+  {
+    slug: 'envfetch',
+    name: 'envfetch',
+    line: 'A macOS command-line tool that keeps environment variables in an encrypted local vault and activates them in the shell with Touch ID.',
+    links: [
+      { label: 'Source', href: 'https://github.com/aravhawk/envfetch' },
+      { label: 'v1.1.0', href: 'https://github.com/aravhawk/envfetch/releases/tag/v1.1.0' },
+    ],
+  },
+  {
+    slug: 'cryptolab',
+    name: 'CryptoLab',
+    line: 'A Swift playground for iPad that teaches how cryptocurrencies work: keys made in the Secure Enclave, signed transactions, and mining in augmented reality. Submitted to Apple’s 2025 Swift Student Challenge.',
+    links: [
+      { label: 'Source', href: 'https://github.com/aravhawk/CryptoLab.swiftpm' },
+      { label: 'v0.1', href: 'https://github.com/aravhawk/CryptoLab.swiftpm/releases/tag/v0.1' },
+    ],
+  },
+  {
+    slug: 'passportphoto',
+    name: 'Passport Photo Studio',
+    line: 'A browser tool that frames a photo against the US passport guides, whitens the background and exports a 2 by 2 inch JPG or PNG at 300 DPI. The photo stays in the browser.',
+    links: [{ label: 'Source', href: 'https://github.com/aravhawk/passportphoto' }],
+  },
+];
+
+/**
  * What he is recognised for: lines, never cards. The year's contributions
  * are read live (src/lib/metrics) and said with the date they were read.
  */

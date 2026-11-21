@@ -7,7 +7,8 @@ import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
 import { PageShell } from '@/components/PageShell';
 import { sceneOf } from '@/water/registry';
 import { FeatStill } from '@/components/work/still-pictures';
-import { PROJECTS, RECOGNITION } from '@/content/projects';
+import { KIND } from '@/content/kinds';
+import { PROJECTS, RECOGNITION, TOOLS } from '@/content/projects';
 import { formatPostDate } from '@/lib/dates';
 import { pageMeta } from '@/lib/meta';
 import { formatAsOf, formatCount, getMetrics } from '@/lib/metrics';
@@ -23,9 +24,9 @@ export const metadata: Metadata = pageMeta({
 
 /**
  * The work index: the delta, then the nine projects in the owner's order,
- * each beside the picture of its own station (a project the world has no
- * place for would be its name and line alone), then what he is recognised
- * for, as lines.
+ * each beside the picture of its own station, then his other tools as rows
+ * of type (TOOLS: no picture, no page), then what he is recognised for, as
+ * lines.
  */
 export default async function Work() {
   const m = await getMetrics();
@@ -73,6 +74,30 @@ export default async function Work() {
               </li>
             );
           })}
+        </ul>
+      </section>
+
+      {/* The other tools: the same rows in type alone. A tool has no page, so its row is not a link: its name, its
+          line, what kind of thing it is, and the ways to its source and its release. */}
+      <section className="sec wrap" aria-labelledby="w-tools">
+        <h2 className="sec-h" id="w-tools">
+          Other tools
+        </h2>
+        <ul className="tools">
+          {TOOLS.map((t) => (
+            <li key={t.slug} className="row tool-row">
+              <span className="label">{KIND[t.slug]}</span>
+              <h3 className="tool-name">{t.name}</h3>
+              <p className="tool-line">{t.line}</p>
+              <span className="tool-links">
+                {t.links.map((l) => (
+                  <a key={l.href} className="link" href={l.href} target="_blank" rel="noopener noreferrer" aria-label={`${t.name}: ${l.label === 'Source' ? 'source' : `release ${l.label}`}`}>
+                    {l.label} <Arrow out />
+                  </a>
+                ))}
+              </span>
+            </li>
+          ))}
         </ul>
       </section>
 
