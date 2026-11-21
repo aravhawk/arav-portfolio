@@ -19,7 +19,7 @@ schedule.
 | The one SQL statement | `src/lib/subscribe/db.ts` (Neon serverless driver, `DATABASE_URL`) |
 | The route | `src/app/api/subscribe/route.ts` (POST only) |
 | The pages a form post without scripts lands on | `src/app/newsletter/[state]/page.tsx` (five, static, not indexed, not in the sitemap) |
-| The table | `db/subscribers.sql`, applied with `pnpm db:apply` (`scripts/db-apply.mjs`) |
+| The table | `db/subscribers.sql`. The site makes it itself if it is missing, once on each warm instance before its first insert (`src/lib/subscribe/schema.ts`, the same statement: a test holds the two equal). `pnpm db:apply` (`scripts/db-apply.mjs`) applies and describes it from a machine that has the connection string |
 | Tests | `tests/subscribe/` (no network: the database call is replaced) |
 | End to end, and every state photographed | `scripts/subscribe-e2e.mjs`, `scripts/subscribe-states.mjs`, `scripts/lib/neon-standin.mjs` |
 

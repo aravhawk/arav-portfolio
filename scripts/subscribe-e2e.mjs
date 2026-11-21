@@ -47,7 +47,16 @@ const post = (body, { form = false } = {}) =>
     headers: { 'content-type': form ? 'application/x-www-form-urlencoded' : 'application/json', ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}) },
     body: form ? new URLSearchParams(body).toString() : JSON.stringify(body),
   });
-const total = async () => (sql ? Number((await sql.query('SELECT count(*) AS n FROM subscribers'))[0].n) : null);
+// (Before the first signup the table may not be there yet: the site makes it on its first insert. That counts as no rows.)
+const total = async () => {
+  if (!sql) return null;
+  try {
+    return Number((await sql.query('SELECT count(*) AS n FROM subscribers'))[0].n);
+  } catch (e) {
+    if (e?.code === '42P01') return 0;
+    throw e;
+  }
+};
 const rowsOf = async (email) => (sql ? await sql.query('SELECT email, source, confirmed FROM subscribers WHERE email = $1', [email]) : null);
 
 let failed = 0;
