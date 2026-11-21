@@ -138,6 +138,14 @@ uniform vec3 uKeyCol;
 uniform vec3 uKeyDir;
 uniform vec4 uShadow;   // key slope, snow horizon blend, sun azimuth, bank-shadow reach per unit height
 uniform vec4 uBearings; // unit vectors in the ground plane, sun then key
+// For the renderer's mask track (tools/flight): 1 writes what the frame shows in place of its colour (open water, solid ground, the words' lee).
+uniform float uMaskOut;
+float gMkW = 0.0;
+float gMkG = 0.0;
+float gMkFloe = 0.0;
+// (What stands in front of the ground at this pixel: each object says so where its own ray test finds it.)
+float gMkOcc = 0.0;
+float mkChg(vec3 a, vec3 b) { return smoothstep(0.25, 0.7, length(a - b) / (max(max(a.r, a.g), a.b) + 0.05)); }
 uniform vec4 uFilm;     // vignette strength, grain phase, grain amplitude, lunar haze gain
 uniform vec4 uLee;      // centre and reciprocal radii of the words' lee
 uniform vec3 uAmbCol;
@@ -2439,6 +2447,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     // (Against the low light its thin edge glows: the light comes through it.)
     col = mix(col, mix(vec3(0.93, 0.94, 0.96), vec3(0.62, 0.72, 0.86), uNight) * (lightF + S.hor * 0.22 * uNight) * (1.0 - 0.22 * rim) + S.band * 0.16 * rim * gDusk, aTop);
     lee *= 1.0 - max(aTop, aSide);
+    gMkFloe = max(aTop, aSide);
   }
   gLee = lee;
   return col;
@@ -2772,6 +2781,7 @@ void main() {
       vec2 pw = p + tilt * gFree;
       vec4 bw = bedAt(pw);
       float aWall = smoothstep(-aa, aa, bw.r);
+      gMkW = 1.0 - aWall;
       vec3 cut = vec3(0.0);
       if (aWall > 0.0) {
         // The visible wall turns from an undercut hollow into wet blue ice.
@@ -2831,6 +2841,8 @@ void main() {
     col = nameGround(col, p, dir, foot, aIce);
 #endif
 #endif
+    gMkW *= (1.0 - aLand) * (1.0 - aIce) * (1.0 - aCut) * (1.0 - gMkFloe);
+    gMkG = 1.0;
     gndT = t;
     gndIce = max(aIce, aLand);
     if (aCut > 0.5) gndWall = t + cutS * uIceH / sinE;
@@ -2839,6 +2851,8 @@ void main() {
     // high up the ray crosses less of it; near the ground it hides the far
     // end of the world.
     float fog = airLoss(t);
+    // (Water the air has all but hidden is not open water to the eye.)
+    gMkW *= 1.0 - smoothstep(0.3, 0.75, fog);
     // (Before dawn the air over the name is clear: the ice round a mirror of the sky is the darkest on the lake.)
     fog *= 1.0 - 0.8 * uNight * gNameK * max(aIce, gPond);
     // (And by day the cold air over the far lake's bare ice is clear enough to leave its mirror something to show.)
@@ -2876,7 +2890,9 @@ void main() {
 #endif
 #ifdef F_CONF
     // The cliff at the confluence and its falls stand in front of what lies behind them.
+    vec3 mkBefore = col;
     col = confCliff(col, dir, aLand);
+    gMkW *= 1.0 - mkChg(mkBefore, col);
 #endif
 #ifdef SEA
     // The lee's shade, on the water the words stand over, while the camera is still coming in. (At the ending there is
@@ -2893,11 +2909,14 @@ void main() {
       vec3 hp = uCamPos + dir * tR;
       float aR = gRockA * smoothstep(0.0, 1.5 * tR * uPxAng, hp.z + FREEBOARD);
       if (aR > 0.0) col = mix(col, rockColor(hp, nR, tR), aR);
+      gMkOcc = max(gMkOcc, aR);
     }
   }
 #endif
 #if defined(F_FIELD) && !defined(DBG_NO_NAME)
+  vec3 mkName = col;
   col = nameIce(col, dir, gndT, gndIce, gndWall);
+  gMkOcc = max(gMkOcc, mkChg(mkName, col));
 #endif
 #ifdef F_SHARDS
   if (uShardOn > 0.5) {
@@ -2962,6 +2981,7 @@ void main() {
       float t = shardHit(uCamPos, dir, s, turn, n, tF);
       if (t > 0.0 && (tw < 0.0 || t < tw)) {
         col = shardColor(uCamPos, dir, t, tF, n, s, glow);
+        gMkOcc = 1.0;
       } else if (onTarn > 0.0) {
         // Its mirror image in the still water: clean, until a ring crosses it.
         // (Clean at the shard's foot, bent by the tarn's slow swell further out, and broken where a ring crosses it.)
@@ -3001,6 +3021,7 @@ ${subjects.flatMap(s => s.proximity && s.shader ? [`#ifdef ${s.define}
 ${customSubjects.map(s => `#ifdef ${s.define}
   col = ${s.shader.fn}(col, dir, ${s.event ? 'uProgress_' + s.define : '0.0'});
 #endif`).join('\n')}
+  float mkOver = max(gMkOcc, slabCov);
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
 #ifdef SEA
   // The ribbon of light stands in front of the ranges: it is only looked for in the strip of the frame it can be in.
@@ -3060,6 +3081,19 @@ ${customSubjects.map(s => `#ifdef ${s.define}
       col *= mix(1.0, capped / l, ck * uNight);
       col += (lifted - l) * vec3(0.95, 1.0, 1.07) * ck * (1.0 - uNight);
     }
+  }
+  if (uMaskOut > 0.5) {
+    float mkLee = 0.0;
+    if (uCalmK.x > 0.0) {
+      vec2 q = (vUv - uLee.xy) * uLee.zw;
+      mkLee = (1.0 - smoothstep(0.0, 4.0, dot(q, q))) * uCalmK.x;
+    }
+    if (uCapK > 0.0) {
+      vec2 q = (vUv - uCapBox.xy) * uCapBox.zw;
+      mkLee = max(mkLee, (1.0 - smoothstep(0.0, 3.0, dot(q, q))) * uCapK);
+    }
+    o = vec4(gMkW * (1.0 - mkOver), max(gMkG, mkOver), mkLee, 1.0);
+    return;
   }
   mediump vec3 xa = min(col * 1.12, 64.0);
   // Display-referred fit to the filmic response: a lifted toe, a long shoulder

@@ -15,12 +15,14 @@ const DIR = join(process.cwd(), 'public', 'flight');
 const SETS = ['wide-day', 'wide-night', 'tall-day', 'tall-night'];
 const CODECS = ['av1', 'hevc'];
 /** The whole of public/flight may weigh this much. */
-const LIMIT_MB = 90;
+const LIMIT_MB = 92;
+/** Of that, the live layer's masks may weigh this much. */
+const MASKS_MB = 6;
 
 const index = (set: string, codec: string) => JSON.parse(readFileSync(join(DIR, `${set}.${codec}.json`), 'utf8')) as StreamIndex;
 
 describe('the pre-rendered flight', () => {
-  it('weighs 90 MB or less in all', () => {
+  it('weighs 92 MB or less in all', () => {
     const total = readdirSync(DIR).reduce((sum, f) => sum + statSync(join(DIR, f)).size, 0);
     expect(total / 1048576).toBeLessThanOrEqual(LIMIT_MB);
   });
@@ -70,6 +72,25 @@ describe('the pre-rendered flight', () => {
       expect(statSync(join(DIR, `${shape}.still.cam`)).size).toBe(stillStops().length * CAM_STRIDE * 4);
     });
   }
+  for (const shape of ['wide', 'tall']) {
+    it(`${shape}: a mask for every frame of the flight, on the sheets its index names`, () => {
+      const ix = JSON.parse(readFileSync(join(DIR, `${shape}.mask.json`), 'utf8')) as { w: number; h: number; cols: number; rows: number; per: number; step: number; from: number; n: number; sheets: number; frames: number };
+      const main = index(`${shape}-day`, 'av1').tracks.find((t) => t.id === 'main')!;
+      // (The live layer looks a mask up by the frame's number: the masks must be the frames the stream plays.)
+      expect(ix.frames).toBe(main.per);
+      expect(ix.from).toBe(main.from ?? 0);
+      expect(ix.n).toBe(Math.ceil(main.sizes.length / ix.step));
+      expect(ix.sheets).toBe(Math.ceil((ix.n - 1) / ix.per));
+      // (A sheet holds its masks and the first of the next, so two neighbours are always on one sheet.)
+      expect(ix.cols * ix.rows).toBeGreaterThanOrEqual(ix.per + 1);
+      for (let k = 0; k < ix.sheets; k++) expect(existsSync(join(DIR, `${shape}.mask-${k}.webp`))).toBe(true);
+      expect(readdirSync(DIR).filter((f) => f.startsWith(`${shape}.mask-`)).length).toBe(ix.sheets);
+    });
+  }
+  it('has masks that weigh 6 MB or less in all', () => {
+    const total = readdirSync(DIR).filter((f) => f.includes('.mask')).reduce((sum, f) => sum + statSync(join(DIR, f)).size, 0);
+    expect(total / 1048576).toBeLessThanOrEqual(MASKS_MB);
+  });
   it('has the first paint for every shape, scheme and format the page names', () => {
     for (const theme of ['day', 'night']) {
       for (const type of ['avif', 'webp']) {

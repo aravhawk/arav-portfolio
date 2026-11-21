@@ -968,6 +968,8 @@ export class FlightEngine extends WaterEngine {
   colH = new Float32Array([COLS.hMax, COLS.hMax * 0.75, COLS.hMax * 0.2, COLS.hMin]);
   /** Station 6: which sluice is open, how far open each is, and the surge down each. */
   gate = 0;
+  /** For the renderer's mask track: the frame is written as what it shows (open water, solid ground, the words' lee), not as colour. */
+  maskOut = false;
   private gateNow = new Float32Array([1, 0, 0]);
   private surge = new Float32Array(3);
   private dripAt = 0;
@@ -1646,6 +1648,7 @@ export class FlightEngine extends WaterEngine {
     if (r.u.uMoon) gl.uniform4fv(r.u.uMoon, moon);
     gl.uniform4fv(r.u.uBearings, light.bearings);
     gl.uniform4fv(r.u.uShadow, light.shadow);
+    if (r.u.uMaskOut) gl.uniform1f(r.u.uMaskOut, this.maskOut ? 1 : 0);
     gl.uniform4fv(r.u.uFilm, light.film);
     gl.uniform4fv(r.u.uLee, light.lee);
     gl.uniform3fv(r.u.uSkyZen, sky.zen);

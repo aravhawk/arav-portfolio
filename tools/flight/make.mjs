@@ -17,6 +17,9 @@
  * lossless frames)   and everything render.mjs and encode.mjs take (--per,
  * --tracks, --crf-av1, --crf-hevc, --ssim ...), passed through to both.
  *
+ * Then the live layer's masks (one set a shape, from the day set: render.mjs
+ * `--tracks mask`, then mask.mjs). `--no-masks` leaves them as they are.
+ *
  * See README.md beside this file.
  */
 import { spawnSync } from 'node:child_process';
@@ -33,7 +36,7 @@ const arg = (name, def) => {
 const sets = arg('sets', 'wide-day,wide-night,tall-day,tall-night').split(',');
 const work = arg('work', '.tools/flight');
 const keep = args.includes('--keep');
-const pass = args.filter((a, i) => !['--sets', '--work'].includes(a) && !['--sets', '--work'].includes(args[i - 1]) && a !== '--keep');
+const pass = args.filter((a, i) => !['--sets', '--work'].includes(a) && !['--sets', '--work'].includes(args[i - 1]) && a !== '--keep' && a !== '--no-masks');
 
 for (const set of sets) {
   for (const [script, extra] of [
@@ -44,6 +47,21 @@ for (const set of sets) {
     if (r.status) process.exit(r.status ?? 1);
   }
   if (!keep) for (const f of readdirSync(join(work, set))) if (f.endsWith('.mkv')) rmSync(join(work, set, f));
+}
+// The live layer's masks: what each frame shows (open water, solid ground, the words' lee), small, a set a shape.
+if (!args.includes('--no-masks')) {
+  for (const shape of [...new Set(sets.map((s) => s.split('-')[0]))]) {
+    const maskWork = `${work}-mask`;
+    for (const [script, extra] of [
+      ['render.mjs', ['--out', maskWork, '--tracks', 'mask', '--dpr', '1']],
+      ['mask.mjs', ['--in', maskWork]],
+    ]) {
+      const base = args.includes('--base') ? ['--base', arg('base')] : [];
+      const r = spawnSync(process.execPath, [join(here, script), '--set', `${shape}-day`, ...extra, ...(script === 'render.mjs' ? base : [])], { stdio: 'inherit' });
+      if (r.status) process.exit(r.status ?? 1);
+    }
+    if (!keep) rmSync(join(maskWork, `${shape}-day`), { recursive: true, force: true });
+  }
 }
 const out = arg('out', join('public', 'flight'));
 let total = 0;

@@ -429,6 +429,7 @@ vec3 columns(vec3 col, vec3 dir, float tw) {
       }
     }
     gDepth = best;
+    gMkOcc = 1.0;
     return mix(col, inAir(colColor(uCamPos, dir, best, tF, n, bi, bp), dir, best), cov * gSt.x);
   }
   // (Water is only seen where the land above it is not in the way.)
@@ -656,6 +657,7 @@ vec3 dam(vec3 col, vec3 dir, float tw) {
   if (t > gDepth || (t < 0.0 && tw > gDepth)) return col;
   if (t > 0.0 && (tw < 0.0 || t < tw)) {
     gDepth = t;
+    gMkOcc = 1.0;
     col = mix(col, inAir(damColor(uCamPos, dir, t, tF, n, kind, lo, hi), dir, t), gSt.y);
     return mix(col, mist, clamp(spray * 0.5, 0.0, 0.6) * gSt.y);
   }
@@ -1009,6 +1011,7 @@ vec3 lattice(vec3 col, vec3 dir, float tw) {
   if (t > gDepth || (t < 0.0 && tw > gDepth)) return col;
   if (t > 0.0 && (tw < 0.0 || t < tw)) {
     gDepth = t;
+    gMkOcc = 1.0;
     float cov = 1.0;
     vec3 n2;
     float tF2;
@@ -1487,6 +1490,7 @@ vec3 canyon(vec3 col, vec3 dir, float tw) {
     float topZ = glacierTop(hp.xy);
     if (gWallT < -1.5 && wall > 0.5 && wall < 1.5 && ((topZ < 5.0 && hp.z < 8.0) || (hp.z < 0.5 && textureLod(uBedA, bedUv(hp.xy), 0.0).r > 0.0))) return col;
     gDepth = t;
+    gMkOcc = 1.0;
     gFaceK = 0.0;
     vec3 c0 = glacierColor(uCamPos, dir, t, wall, 1.0, topZ);
     // (At its foot the glacier's front lies down into the land's own snow: no line is drawn where it begins.)

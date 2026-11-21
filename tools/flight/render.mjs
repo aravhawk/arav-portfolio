@@ -23,6 +23,11 @@
  *   dawn    the ending's light event, by time (DAWN in moments.ts)
  *   after   the last stretch by scroll, with the light risen
  *   gate1, gate2   the stretch round the sluices, second and third gate open
+ *   mask    (only when asked for) the whole flight by scroll again, each frame
+ *           written as what it shows, not as colour: open water in red,
+ *           solid ground in green, the words' lee in blue. mask.mjs makes
+ *           the live layer's small masks from it. It does not depend on the
+ *           theme, and is rendered small: `--set wide-day --tracks mask --dpr 1`
  *   stills  each section's composed frame as the engine draws it with
  *           motion reduced (PNG files, not a track)
  *
@@ -39,8 +44,8 @@
  *   NODE_PATH=<a node_modules with playwright> node tools/flight/render.mjs \
  *     --base http://localhost:3183 --out .tools/flight --set wide-day
  *
- * Options: --tracks main,enter,dawn,after,stills[,gate1,gate2]   --per 30   --gates from,to (screens)
- * --from <screens> --to <screens> (main only: a part of it, for a trial)
+ * Options: --tracks main,enter,dawn,after,stills[,gate1,gate2,mask]   --per 30   --dpr <density>   --gates from,to (screens)
+ * --from <screens> --to <screens> (main and mask only: a part of it, for a trial)
  *
  * Playwright is not a dependency of this repo: point NODE_PATH at an
  * install that has it. ffmpeg is taken from `uv run --with imageio-ffmpeg`
@@ -113,7 +118,7 @@ async function main() {
     const browser = await pw.chromium.launch({ headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-web-security'] });
     const ctx = await browser.newContext({
       viewport: { width: S.w, height: S.h },
-      deviceScaleFactor: S.dpr,
+      deviceScaleFactor: Number(arg('dpr', S.dpr)),
       colorScheme: theme === 'night' ? 'dark' : 'light',
       reducedMotion: reduced ? 'reduce' : 'no-preference',
       isMobile: S.mobile,
@@ -135,7 +140,8 @@ async function main() {
       const px = new Uint8Array(c.width * c.height * 4);
       const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       /** One frame: the page at `y`, the picture's clock at `clock`, the page's own clock at `now`. Drawn until every piece of it is drawn by its own program. */
-      window.__shot = async ({ y, clock, now, enter, dawn, gate, send, still }) => {
+      window.__shot = async ({ y, clock, now, enter, dawn, gate, send, still, mask }) => {
+        f.engine.maskOut = !!mask;
         window.scrollTo(0, y);
         // (The place itself is handed over too: a scroll position is rounded to the screen's pixels, and a word whose
         // threshold is this very frame's place must be in, with its lee, in this frame.)
@@ -226,6 +232,12 @@ async function main() {
       meta.tracks.main = { n, from: i0 / per, per };
       meta.dam = dam.length ? [dam[0] / per, dam[dam.length - 1] / per] : null;
       meta.holds = plan.holds;
+    }
+    if (tracks.includes('mask')) {
+      const i0 = partFrom === null ? 0 : Math.round(Number(partFrom) * per);
+      const i1 = partTo === null ? N : Math.round(Number(partTo) * per);
+      const n = await record('mask', size, 30, () => stretch(i0, i1, { mask: true }));
+      meta.tracks.mask = { n, from: i0 / per, per };
     }
     if (tracks.includes('enter')) {
       const frames = Math.round(consts.ENTER * CLIP_FPS);

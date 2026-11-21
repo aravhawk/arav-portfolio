@@ -82,7 +82,34 @@ keyframes are where the index says and can print the SSIM of each track
 against its lossless frames (`--ssim`).
 
 `make.mjs` runs both for every set and removes each set's lossless frames
-before the next (a wide set is several GB).
+before the next (a wide set is several GB). Then it makes the masks.
+
+## The live layer's masks
+
+The home page lays a light live layer over the played picture
+(`src/flight/live.ts`: glints on open water, the pointer's wake and its
+cold light on ice). It has to know what each frame shows. The engine can
+write exactly that in place of a frame's colour (`engine.maskOut`, the
+main shader's `uMaskOut`): red where the pixel is open water (not ice,
+not a floe, not behind a standing object, not lost in the air), green
+where it is solid ground or ice, blue where the words' lee lies (the
+layer does not use the blue: the lee is far wider than the words, so it
+reads the words' own boxes from the page instead).
+
+```sh
+node tools/flight/render.mjs --base http://localhost:3183 --out .tools/flight-mask --set wide-day --tracks mask --dpr 1
+node tools/flight/mask.mjs --in .tools/flight-mask --set wide-day
+```
+
+`render.mjs --tracks mask` photographs every frame of `main` that way (at
+a density of 1: the masks ship small; about 8 minutes wide, 2 tall).
+`mask.mjs` brings each down to a cell (384 x 216 wide, 180 x 390 tall),
+grey (0 sky, 0.5 solid, 1 open water), and packs a screen of scroll's cells, 30 and the
+first of the next, onto one WebP sheet: `<shape>.mask-<k>.webp` with
+`<shape>.mask.json` (33 sheets a shape; 1.21 MB wide, 0.85 MB tall). The
+masks do not depend on the theme: one set a shape, from the day set.
+Render them again whenever `main` is rendered again: a mask is looked up
+by its frame's number.
 
 ## A part of it
 
