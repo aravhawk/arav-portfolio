@@ -13,6 +13,7 @@ Status: **as built** (K1, 2026-11-20).
   ("It switches"). One voice from the first screen to the ending.
 - The home page holds 260 to 300 visible words. `checks.js` in the
   capture tools counts them; adding a word means removing one.
+  (It stands at 300 since the newsletter's field: no room is left.)
 - Every number is real and sourced
   (`docs/redesign-v4/content-sources.md`); numbers that change are
   read live (`src/lib/metrics`) and said with when they were read.
@@ -120,9 +121,10 @@ line that can be sourced like the ones above.
 links; recognition; interests; contact), `src/content/kinds.ts` (the
 small labels), `src/components/work/case-data.ts` (what the project
 pages' designed pieces say), `src/components/flight/` (the home
-page's own sentences). The post in `content/posts/` is the owner's
+page's own sentences), `src/lib/subscribe/messages.ts` (what the
+newsletter's field says). The post in `content/posts/` is the owner's
 own writing and is not edited.
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1:
 the definitive list, recognition, the story's rules. 2026-11-20 K2: the
-public pull request link names only counted repositories. 2026-11-21 F1: the other tools. F1: his interests.
+public pull request link names only counted repositories. 2026-11-21 F1: the other tools. F1: his interests. N1: the newsletter's sentences; the count at 300.

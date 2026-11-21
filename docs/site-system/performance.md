@@ -356,6 +356,13 @@ reading a report's request log (`a['network-requests']`), not its score:
   `curl -s <page> | grep -o '<script src="[^"]*" async' | wc -l` gives
   8 on `/blog` and 9 on `/work` and the project pages. One more is a
   point lost; find what grew.
+- **A client component of its own is a script of its own, and a sheet
+  it imports is a stylesheet of its own.** The newsletter's field was
+  both, and `/blog` went from 96 to 95 on a phone (largest paint 2.78 s
+  to 2.93 s). Its rules are in `home.css`, which every page loads, and
+  the component has no `'use client'`: it is exported through
+  `Ending.tsx`, whose script every page loads. `/blog` is at 8 scripts
+  and 3 stylesheets again.
 - Build clean before measuring (`rm -rf .next`): an incremental build
   can split differently from a clean one.
 
@@ -400,4 +407,4 @@ two fonts (75 kB), as "Inner pages: nothing but the page before its
 first frame" above says, and nothing more of that can be taken without
 changing what the pages are.
 
-Change log: 2026-11-20 V1: the played flight, its rules, its measures. 2026-11-21 F1: the first round and the count of requests.
+Change log: 2026-11-20 V1: the played flight, its rules, its measures. 2026-11-21 F1: the first round and the count of requests. N1: the newsletter's field adds no request.

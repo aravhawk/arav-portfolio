@@ -114,5 +114,18 @@ Each of these cost time on this build.
 - **A comment in `Nav.tsx` cost a request.** The bundler splits the
   layout's script by the size of its source. See `performance.md`,
   "The first round".
+- **A rule that holds presses back can outweigh the one that frees
+  them.** On the page without scripts the ending never sets, and
+  `.fl-end-words:not([data-set]) .ending-links *` outweighed the plain
+  page's `.fl-end-words *`: the contact row was dead there. Whatever is
+  added to the ending needs both rules (`flight.css`, the ending and
+  "without the canvas"), and a press with scripts off
+  (`scripts/subscribe-states.mjs --noscript`).
+- **Hidden text is counted.** A field hidden by being moved off the
+  screen still has visible words to `checks.js`: the newsletter's trap
+  has an `aria-label` and no text, or the home page counts 303.
+- **The database's variables cannot be pulled.** The Neon integration
+  marks them sensitive, and `vercel env pull` writes the word
+  `[SENSITIVE]` in their place. See `newsletter.md`.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 V3: five more. 2026-11-21 F1: the dead links, a line more, a comment's cost.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 V3: five more. 2026-11-21 F1: the dead links, a line more, a comment's cost. N1: three from the newsletter's field.

@@ -37,7 +37,7 @@ function linesOverPicture() {
       // The film is a framed plate of its own: its control is not over the bare picture.
       if (el.closest('.fl-film')) continue;
       // A filled button brings its own opaque ground (checked: not assumed).
-      const btn = el.closest('.btn, .end-primary');
+      const btn = el.closest('.btn, .end-primary, .sub-go');
       if (btn && /^rgb\(/.test(getComputedStyle(btn).backgroundColor)) continue;
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
