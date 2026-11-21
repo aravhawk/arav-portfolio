@@ -17,7 +17,8 @@ performance 95 or more on the phone preset and 100 on desktop; largest
 paint under 1.2 s on desktop and 2.0 s on a phone; layout shift under
 0.02; no task over 50 ms after the first paint; interactions under 100
 ms; no frame interval over 20 ms on a 60 Hz display while the home page
-is scrolled; `public/flight/` 90 MB or less.
+is scrolled; `public/flight/` 92 MB or less (6 MB of it the live
+layer's masks).
 
 What the home page does, and the rule behind each part:
 
@@ -50,6 +51,61 @@ What the home page does, and the rule behind each part:
   reload part way down) is not flown: the picture holds, the frames for
   the new place are fetched and decoded, and it comes in under a 260 ms
   dissolve.
+
+### The live layer (V2, 2026-11-20)
+
+`src/flight/live.ts` draws over the played picture every frame, at rest
+too, so its cost is the page's resting cost. Its budget, a frame, on
+this M4: **1 ms of GPU time and 0.5 ms of the page's thread at a 3456 x
+2234 output; a quarter of that on a phone's**; no program compile over
+10 ms; 12 kB of script (gzipped) after the first paint and none before;
+two programs (three at most).
+
+How it stays inside it:
+
+- **Its canvas is a pixel to a CSS pixel** on a large screen (1728 x
+  1117 under a 3456 x 2234 window), 1.25 on a phone. The layer is soft
+  by nature; the picture under it is what is sharp. This is the layer's
+  own canvas, never the picture's: the rule against lowering the scene's
+  resolution stands.
+- **One pass over the window** for water, pointer and gate (the mask:
+  one lookup at rest, two between frames; a 64 x 64 noise tile, not
+  hashed noise), then the flakes as points, only as many as are out.
+- **Programs compiled off the page's thread**
+  (`KHR_parallel_shader_compile`), taken up in the frame that finds them
+  done.
+- **Masks by need**: a sheet a screen of scroll (about 37 kB wide, 26 kB
+  tall), decoded off the thread (`createImageBitmap`), four kept.
+- **Nothing read from the page each frame**: the words' boxes are read
+  when the blocks change and when the picture comes to rest, and a
+  uniform is handed to a program only when its value has changed.
+- **A governor**: with the picture at rest the layer is all that is
+  drawn, so frames that run long then are its doing. It halves the
+  flakes, then removes itself; it never comes back in that visit.
+
+Measured (`scripts/live-cost.mjs`: a timer query round the layer's own
+draw, the median of 40 at each of eight stops; the page's thread timed by
+the layer over every frame of the stay):
+
+| Output | GPU, median at a stop | Page's thread, mean | Compile on the thread | Longest frame while it starts |
+| --- | --- | --- | --- | --- |
+| 3456 x 2234 (layer 1728 x 1117) | 0.40 to 0.72 ms | 0.12 to 0.20 ms | 0.5 ms | 18.8 ms |
+| phone, 1170 x 2532 (layer 488 x 1055) | 0.13 to 0.23 ms | 0.13 to 0.19 ms | 0.4 ms | 18.6 ms |
+
+(The timer's ninth decile reads 1.2 to 2.1 ms at some stops and equals
+the median at others: the page's own frame lands inside the query there.
+The dearest stop is the ending, where the whole lower frame is water.
+The page's thread does not get cheaper with a smaller output: on a
+phone's output it is at the quarter budget, 0.125 ms, or a little over
+it, measured on this machine with a 0.1 ms clock.) With the layer
+running: Lighthouse on `/` 100 and 100 (three runs), the cold scroll
+traces with no interval over 16.8 ms and no long task, the worst
+interaction 40 ms wide and 64 ms on the phone profile.
+Script: the layer's chunk is 9.0 kB gzipped and the player's grew 0.3
+kB. `scripts/live-states.mjs` shows reduced motion, the hidden tab and
+the governor; `scripts/live-picture-same.mjs` that the picture under the
+layer is byte for byte the picture without it;
+`scripts/live-evidence.mjs` photographs each part.
 
 How to measure (alone on the machine; a render or an encode running
 beside it spoils every number):

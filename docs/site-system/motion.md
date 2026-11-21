@@ -25,6 +25,34 @@ module are **planned** (the motion system task).
    mechanism. Do not reuse one reveal between every beat.
 6. **Crisp at rest.** No blur, ever; no resolution change.
 
+## The live layer (as built, V2)
+
+The played picture is a still at rest; `src/flight/live.ts` lays weather
+and light over it. Its rules:
+
+- **It must read as weather and light, never as an effect.** If a part
+  can be pointed at in a still frame, it is too strong. Glints are a few
+  pixels, sparse and never on a grid; the water's light is a broad shade
+  lighter or darker, never a line; flakes are small and few.
+- **In the world, not on the glass.** Flakes, glints and the pointer's
+  rings are placed in world space and seen through the frame's camera,
+  so they pass with the camera's travel. Only the pointer's cold light
+  and the breath are of the window.
+- **By the clock, from the one frame loop.** Everything is a function of
+  time and place, so it is the same at any refresh rate; springs are
+  integrated exactly. It has no loop or timer of its own.
+- **The pointer never commands.** A ring spreads and fades in 1.5 s;
+  the cold light follows through a critically damped spring (0.36 s) and
+  goes a few seconds after the pointer stops. Nothing flees it, nothing
+  trails it, nothing is drawn where words stand.
+- **The breath is small and lets go.** 0.3 percent of the window's
+  height, periods of 11 and 7.3 s, in over 1.4 s once the entrance has
+  run, out in under 0.1 s at the first scroll.
+- **The gate answers in 200 ms**, ease-out, setting out from the control
+  that chose it; at once when chosen with the keys.
+- **Reduced motion: none of it.** No canvas, no breath. Hidden tab: it
+  stops with the frame loop.
+
 ## Easing (tokens in `src/app/globals.css`)
 
 | Token | Curve | Use |

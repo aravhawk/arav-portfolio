@@ -41,6 +41,12 @@ export interface Plan {
   day: number[];
   /** each later station's reach: lane, x, y, from, to (see stationsNear), for the sound */
   near: number[][];
+  /** the live layer: how much snow is in the air along the valley, as keys of world y and 0..1 */
+  air: number[][];
+  /** the live layer: each sluice of cc-switch's dam: x, y, the height of its middle, its width, the height its name stands at */
+  gates: number[][];
+  /** the live layer: each sluice's channel from the dam down, five points as x, y pairs */
+  sluices: number[][];
 }
 
 export type Shape = 'wide' | 'tall';

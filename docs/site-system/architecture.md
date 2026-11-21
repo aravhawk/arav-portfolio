@@ -33,7 +33,8 @@ a visitor runs.
   README): for each window shape (`wide` 16:9, `tall` a phone) and theme
   (`day`, `night`) a stream of frames as AV1 and as HEVC with an index of
   every frame's offset, the camera of every frame, a still of the first
-  frame (the first paint) and a still of each section.
+  frame (the first paint), a still of each section, and for each shape
+  the live layer's masks.
 - `src/components/FlightPlayer.tsx` puts the first frame's still in the
   HTML as a picture (the largest paint) and loads `src/flight/player.ts`
   after the first paint. Nothing of `src/water` but three small files of
@@ -65,10 +66,43 @@ a visitor runs.
 - With reduced motion, or where neither stream can be decoded, each
   section shows its still with its words whole, and stills change with a
   fade.
-- What the live picture had and the played one has not: the water does
-  not move while the page is at rest, the pointer raises no wake, and the
-  first screen does not breathe. Those belong to the live layer that is to
-  come over the played picture.
+- `live.ts` is the **live layer** (V2): weather and light over the played
+  picture, on a canvas of its own above the picture's (both in
+  `.flight-stage`). It is a lazy chunk of its own, asked for once the
+  picture is up and the entrance has run, and it draws only when the
+  player's frame calls it. What it draws:
+  - blown snow: 2,600 flakes in a box of air that travels with the
+    camera, each placed in world space and projected through the camera
+    of the frame shown (real depth and parallax), one wind; how many are
+    out follows the place (`Plan.air`: keys along the valley);
+  - on open water, sparse glints in slow bands and a faint broad
+    undulation of light, anchored to the water's plane. Where the water
+    is comes from the **masks** (`public/flight/<shape>.mask-<k>.webp`,
+    made by `tools/flight`: every frame of `main`, small and grey, 0 sky,
+    0.5 solid, 1 open water); between two frames the two masks are looked
+    up through their cameras, as `warp.ts` does the picture;
+  - the pointer: on water a soft ring spreads from where it passed and
+    fades in 1.5 s; on ice and snow a faint cold light follows it through
+    a spring. A finger's drag does the same;
+  - the first screen's breath: `.flight-stage` drifts by 0.3 percent of
+    the window's height on two slow periods (transform only), and lets go
+    within a tenth of a second of a scroll;
+  - cc-switch's gate: the chosen sluice is lit (its opening, its image on
+    the water, its channel from the dam down) with the profile's name
+    over it, placed through the camera (`Plan.gates`, `Plan.sluices`),
+    changing in 200 ms, at once when chosen with the keys.
+  Nothing of it is drawn where words stand: it reads the boxes of the
+  blocks now showing and of the captions from the page (when they change
+  and when the picture comes to rest, never each frame). The picture's
+  own canvas is never touched: with `window.__flightLive = false` the
+  page is the played frames alone (`scripts/live-picture-same.mjs`).
+  With reduced motion, or where no stream decodes, there is no layer. A
+  machine that cannot hold its frame with the picture at rest loses half
+  the flakes, then the layer; never the picture.
+- What the engine's picture had and the played one still has not: the
+  switch does not reroute the water (the layer lights the chosen gate;
+  the water still runs through the first), and there is no foam at the
+  ice block's foot.
 
 ## The scroll timeline
 
@@ -178,3 +212,5 @@ flight's draw callback when the canvas has left the viewport, and marks the
 picture dirty on re-entry so reduced-motion readers get a fresh frame.
 
 Change log: 2026-11-20 V1: the home page plays the pre-rendered flight; the engine is the renderer; inner bands are stills.
+
+Change log: 2026-11-20 V2: the live layer over the played picture (`src/flight/live.ts`), its masks, the engine's mask output.

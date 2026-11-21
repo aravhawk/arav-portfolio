@@ -52,4 +52,25 @@ Each of these cost time on this build.
   `git cherry-pick --continue` finishes the whole sequence: rerunning
   the remaining hashes duplicates commits.
 
+- **The words' lee is far wider than the words.** The picture's calm
+  under a block of words falls away over a wide margin (on a phone it
+  covers nearly the whole frame). Using it to keep the live layer off
+  the words turned the layer off. The layer reads the words' own boxes
+  from the page instead (`words()` in `src/flight/live.ts`).
+- **Asking a program's link status waits for its compile.** The live
+  layer's two programs took 141 ms of the page's thread that way. They
+  are now compiled in parallel (`KHR_parallel_shader_compile`) and taken
+  up in the frame that finds them done: 0.4 ms.
+- **A regular pattern over the water reads as an effect at once.** A
+  glint in every cell of a grid, or a net of thin bright lines, could be
+  pointed at in a still frame. Glints are sparse, anywhere in their
+  cell, of their own size and clock; the water's light is broad and
+  faint. Judge the layer on a difference image
+  (`scripts/live-evidence.mjs`), then make sure it cannot be seen in the
+  still itself.
+- **The wall of cc-switch's dam is measured from the bed.** `DAM.h` is
+  150, but its crest stands about 92 units over the water in the
+  picture. A point placed through the camera is checked against the
+  frame, not against the constant.
+
 Change log: 2026-11-18 first version (orchestrator).

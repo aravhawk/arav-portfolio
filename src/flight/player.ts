@@ -28,6 +28,11 @@
  * the sluices' answer to the switch. Each is a track of the same stream
  * (see types.ts).
  *
+ * Over the picture lies a light live layer (live.ts: blown snow, glints on
+ * open water, the pointer's wake, the first screen's breath, the lit gate),
+ * loaded after the picture is up and called from this same frame. It has a
+ * canvas of its own and never touches the picture's.
+ *
  * Where there is no decoder for either stream, or the reader has asked for
  * less motion, the page shows a still for each section (made by the same
  * renderer) with the section's words whole, and changes between stills
@@ -38,6 +43,7 @@ import { onFrame } from '@/lib/frame';
 import { haptic } from '@/lib/haptics';
 import { emit, flightSignal, pictureSignal, pointerSignal, type SignalCam } from '@/lib/signals';
 import { makeCallouts } from '@/water/callouts';
+import type { Live, LiveFrame } from './live';
 import { type Follow, follow } from './spring';
 import { AHEAD, BEHIND, CAM_STRIDE, TALL_BELOW, type Plan, type Shape, type Theme, type Track } from './types';
 import { type Warp, makeWarp } from './warp';
@@ -78,6 +84,8 @@ export interface PlayerHandle {
   hold(s: number | null): void;
   /** For the measurements: what the player has fetched, decoded and holds. */
   stats(): Record<string, unknown>;
+  /** For the checks and the measurements: the live layer, once it is up (null before, and where nothing may move). */
+  live(): Live | null;
 }
 
 export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
@@ -230,6 +238,30 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
   stillA.className = stillB.className = 'fl-still-pic';
   let stillTop = stillA;
   let stillNow = '';
+  /** The picture's canvas, a dissolve's copy of it and the live layer's canvas stand in one box: the first screen's breath moves that box. */
+  const stage = document.createElement('div');
+  stage.className = 'flight-stage';
+
+  /* ---------- the live layer (live.ts): asked for once the picture is up, never where nothing may move ---------- */
+
+  let live: Live | null = null;
+  let liveAsked = false;
+  function askLive() {
+    // (`__flightLive = false`: the checks ask for the picture alone.)
+    if (liveAsked || destroyed || still() || (window as unknown as { __flightLive?: boolean }).__flightLive === false) return;
+    liveAsked = true;
+    import('./live')
+      .then((m) => {
+        if (destroyed || still()) return;
+        live = m.mountLive(stage, plan);
+      })
+      .catch(() => {});
+  }
+  function dropLive() {
+    live?.destroy();
+    live = null;
+    liveAsked = false;
+  }
 
   let worker: Worker | null = null;
   let gen = 0;
@@ -285,6 +317,7 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
     for (const f of frames.values()) f.close();
     frames.clear();
     root.dataset.stills = '';
+    dropLive();
     void loadCam(shape);
   }
   function onWorker(e: MessageEvent) {
@@ -563,6 +596,7 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
     if (mqStill.matches) {
       for (const f of frames.values()) f.close();
       frames.clear();
+      dropLive();
       root.dataset.stills = '';
       void loadCam(shape);
     } else if (!noDecoder) {
@@ -600,6 +634,8 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
   if (fork) forkWatch.observe(fork, { attributes: true, attributeFilter: ['data-active'] });
 
   const cam: SignalCam = { pos: [0, 0, 0], f: [0, 1, 0], r: [1, 0, 0], u: [0, 0, 1], tan: 0.4 };
+  /** What the live layer is handed each frame (one object, written over). */
+  const liveFrame: LiveFrame = { now: 0, dt: 0, s: 0, v: 0, cam: null, cams: null, aspect: 1, fit, shape, night: false, viewW: 1, viewH: 1, on: false, rest: false };
   let camOk = false;
   /** The camera at a place in `main` (between two frames, the mean of theirs), or a still's own. */
   function camAt(s: number, per: number) {
@@ -779,6 +815,25 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
 
     // The captions tied to points of the world, and what the sound follows.
     camAt(s, per);
+    // The live layer, over the flight by scroll once the entrance has run: it draws only here, so it stops with the tab and with the picture.
+    if (visible && !still()) {
+      const up = root.dataset.picture !== undefined && enter === 'over';
+      if (up && !liveAsked) askLive();
+      liveFrame.now = now;
+      liveFrame.dt = dt;
+      liveFrame.s = s;
+      liveFrame.v = pos.v;
+      liveFrame.cam = camOk ? cam : null;
+      liveFrame.cams = cams[shape];
+      liveFrame.aspect = ASPECT[shape];
+      liveFrame.shape = shape;
+      liveFrame.night = theme === 'night';
+      liveFrame.viewW = viewW;
+      liveFrame.viewH = viewH;
+      liveFrame.on = up;
+      liveFrame.rest = atGoal && pos.v === 0 && exact;
+      live?.frame(liveFrame);
+    }
     if (camOk) {
       // (At rest nothing is written: the captions stand where the last frame put them.)
       const placed = `${s}|${heldAt}|${viewW}|${viewH}|${shape}`;
@@ -813,7 +868,8 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
 
   /* ---------- start ---------- */
 
-  root.append(stillA, stillB, canvas);
+  stage.append(canvas);
+  root.append(stillA, stillB, stage);
   visibility.observe(root);
   measureView();
   shape = viewW / viewH < TALL_BELOW ? 'tall' : 'wide';
@@ -851,6 +907,7 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
     hold(s) {
       held = s;
     },
+    live: () => live,
     stats: () => ({ ...stats, warpMs, maxShowMs, draws: warp ? 'warp' : '2d', frames: frames.size, shape, theme, stills: still(), meanDecodeMs: stats.decoded ? stats.decodeMs / stats.decoded : 0, w: canvas.width, h: canvas.height }),
     destroy() {
       destroyed = true;
@@ -873,8 +930,10 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
       for (const f of frames.values()) f.close();
       frames.clear();
       veil?.remove();
+      live?.destroy();
       warp?.destroy();
       canvas.remove();
+      stage.remove();
       stillA.remove();
       stillB.remove();
       delete html.dataset.flight;

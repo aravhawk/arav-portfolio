@@ -552,6 +552,29 @@ html[data-hero-words] .fl-hero-words .fl-intro {
   visibility: hidden;
   transition: visibility 0s 600ms;
 }
+/* The picture's canvas, a dissolve's copy of it and the live layer's canvas stand in one box. The first screen's
+   breath moves that box (src/flight/live.ts): transform only, and none at all anywhere else on the page. */
+.flight-stage {
+  position: absolute;
+  inset: 0;
+}
+/* The live layer: weather and light over the played picture, on a canvas of its own. It never takes a pointer. */
+.flight-live {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* The chosen sluice's name, standing over its gate (placed through the frame's camera, like a caption). */
+.fl-gate-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  color: var(--ink);
+  will-change: transform, opacity;
+}
 /* One picture giving way to another that is not its neighbour in the flight (a jump down the page, the theme, the
    switch): a copy of the picture that was there, over the new one, fading out. */
 .flight-root .flight-veil {

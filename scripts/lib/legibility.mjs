@@ -152,6 +152,7 @@ export async function measureFlight(page, positions, { settle = 820 } = {}) {
     boxes.forEach((b, j) => {
       const cr = Math.min(ratio(b.ink, worst[j].hi), ratio(b.ink, worst[j].lo));
       row.lines++;
+      if (cr < (row.worst ?? Infinity)) row.worstAt = { scroll: +(y / vh).toFixed(2), text: b.text };
       row.worst = Math.min(row.worst ?? Infinity, cr);
       const need = b.large ? 3 : 4.5;
       if (cr < need) row.fails.push({ scroll: +(y / vh).toFixed(2), text: b.text, contrast: +cr.toFixed(2), need });

@@ -17,7 +17,7 @@ import type { Plan } from '@/flight/types';
 import { END_AT, MELT, MOVE, SECTIONS, SETTLE_AT, dayAt, sectionStarts, stillStops } from '@/water/camera';
 import { DAWN, ENTER, GATE } from '@/water/moments';
 import { byId, proximity, timeline } from '@/water/registry';
-import { COLS, FACE, SHARDS, SLAB, TRIBS, colHeights, colApex, streamAnchors } from '@/water/world';
+import { CANYON, COLS, DAM, DELTA, FACE, LAKE, SHARDS, SLAB, SLUICES, TRIBS, colHeights, colApex, streamAnchors } from '@/water/world';
 import '@/app/home.css';
 import '@/app/flight.css';
 
@@ -53,6 +53,22 @@ const PLAN: Plan = {
   // (The day's turn, sampled every quarter screen: the sound reads it.)
   day: Array.from({ length: Math.ceil(END_AT * 4) + 2 }, (_, i) => +dayAt(i / 4).toFixed(4)),
   near: proximity.map(({ lane, x, y, from, to }) => [lane, x, y, from, to]),
+  // (The live layer's weather: blown snow over the open lake, a little down the river, more where the canyon's mouth
+  // draws the wind, almost none in the still light over the delta and the sea.)
+  air: [
+    [LAKE.y1 - 300, 0.8],
+    [LAKE.y1 + 1500, 0.3],
+    [CANYON.y0 - 1400, 0.24],
+    [CANYON.y0 - 200, 0.7],
+    [CANYON.y0 + 500, 0.34],
+    [CANYON.y1, 0.3],
+    [DELTA.apex.y, 0.12],
+    [DELTA.sea, 0.05],
+  ],
+  // (Each sluice: the middle of its opening at the wall's downstream foot, its width, and the crest over it as the
+  // picture draws it: the wall's height is measured from the bed, and the lintel's foot is where its snow begins.)
+  gates: DAM.gates.map((x) => [x, DAM.y + DAM.thick, 12, DAM.gw, DAM.h - DAM.lintel + 6]),
+  sluices: SLUICES.map((line) => line.flatMap((p) => [p.x, p.y])),
 };
 
 const BENCH_P = PROJECTS.find((p) => p.slug === 'kilo-bench')!;

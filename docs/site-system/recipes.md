@@ -68,7 +68,8 @@ The home page plays frames rendered ahead of time. Anything that changes
 the picture makes them stale: the world, the light, a station, the
 camera's path, the page's length; **the words** (the picture keeps a calm
 lee where each block stands, so a block that moves or grows needs its
-frames again); the live numbers the picture shows (the columns' heights
+frames again, and the live layer's masks with them: `make.mjs` does
+both); the live numbers the picture shows (the columns' heights
 from the model pulls, the streams' widths from the merged counts).
 
 1. Make the change and look at it live on `/render` (the home page drawn
@@ -77,11 +78,13 @@ from the model pulls, the streams' widths from the merged counts).
    `NODE_PATH=<playwright's node_modules> node tools/flight/make.mjs --base http://localhost:3183`
    (about three hours for all four sets; `--sets wide-day` for one;
    `tools/flight/README.md` has the parts).
-3. It prints every file of `public/flight/` and the total: 90 MB is the
-   limit. If it is over, raise `--crf-av1` / `--crf-hevc` a step and look
+3. It prints every file of `public/flight/` and the total: 92 MB is the
+   limit (6 MB of it the masks'). If it is over, raise `--crf-av1` / `--crf-hevc` a step and look
    at crops at 100 percent before accepting.
 4. Rebuild, then: `scripts/flight-match.mjs` (the played frame beside the
-   engine's at 16 places), the four page tests
+   engine's at 16 places), `scripts/live-evidence.mjs` (the live layer on
+   the new frames: its glints must lie on the water and nowhere else),
+   the four page tests
    (`legibility-test`, `titles-test`, `words-test`, `overlap-test`),
    `scripts/player-trace.mjs` and Lighthouse (`performance.md`).
 5. Commit `public/flight/` with the change that made it stale, in one
@@ -91,6 +94,27 @@ A new timed event in the picture (something that runs by the clock, not
 by scroll) needs a track of its own: render it in `tools/flight/render.mjs`
 as `enter` and `dawn` are, and play it in `src/flight/player.ts` where
 they are played.
+
+## Change the live layer
+
+The weather and light over the played picture are `src/flight/live.ts`
+(what it is: `architecture.md`; its rules: `motion.md`; its budget:
+`performance.md`). It never draws into the picture's canvas, and a new
+part must not either.
+
+1. Change it and look at it on `pnpm dev`. How much snow is in the air
+   along the valley, and where cc-switch's gates stand, are data on the
+   page's plan (`PLAN.air`, `PLAN.gates`, `PLAN.sluices` in
+   `src/components/flight/FlightPage.tsx`).
+2. On the production build: `scripts/live-evidence.mjs` (each part
+   photographed, with difference images: judge it there, then make sure
+   it cannot be pointed at in the still), `scripts/live-cost.mjs` (the
+   budget), `scripts/live-states.mjs` (reduced motion, hidden tab, the
+   governor), `scripts/live-picture-same.mjs` against the build before
+   (the picture under the layer has not changed).
+3. The four page tests: the layer runs while they photograph the
+   picture behind the words, so they also say whether it has lowered a
+   line's contrast.
 
 ## Add an inner page
 
