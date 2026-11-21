@@ -621,6 +621,7 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
 
   const fork = document.querySelector<HTMLElement>('.fl-fork');
   let gate = 0;
+  let lastById = 'main';
   const gateNow = [1, 0, 0];
   const surge = [0, 0, 0];
   const onGate = () => {
@@ -801,6 +802,9 @@ export function mountPlayer(root: HTMLElement, plan: Plan): PlayerHandle {
           }
         }
       }
+      // (Where a gate's own frames begin and end the water changes its channel: that comes in under a dissolve too.)
+      if (id !== lastById && (id.startsWith('gate') || lastById.startsWith('gate'))) dissolveNext = true;
+      lastById = id;
       const t0 = performance.now();
       const ok = show(id, f);
       maxShowMs = Math.max(maxShowMs, performance.now() - t0);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { arms, groundAt, plan, recordPlan, spills, tribs } from '@/audio/plan';
-import { BASIN, BENDS, CANYON_LINE, COLS, DAM, DELTA, DY, ISLAND, LAKE, LATTICE, POOL, RIVER, SLAB, SLUICES, STREAM, TARN, TRIBS, WORLD, tribWidth } from '@/water/world';
+import { AT, BASIN, BENDS, CANYON_LINE, COLS, DAM, DELTA, DY, ISLAND, LAKE, LATTICE, POOL, RIVER, SLAB, SLUICES, STREAM, TARN, TRIBS, WORLD, tribWidth } from '@/water/world';
 
 const open = [1, 0, 0];
 
@@ -83,10 +83,10 @@ describe('the world’s plan is read from the calls that carve the bed', () => {
     // One brook, and no stream in: the pool is fed by its own melt.
     const sp = spills();
     expect(sp).toHaveLength(1);
-    expect(sp[0]).toEqual({ x: 1800, y: 9620 + DY, w: 56, speed: 0.7 });
+    expect(sp[0]).toEqual({ x: 1800, y: 9620 + AT.pool, w: 56, speed: 0.7 });
     expect(sp[0].y).toBeGreaterThan(POOL.y + POOL.h * 0.8);
-    // It is water where it leaves and runs on toward the tarn.
-    expect(groundAt(1720, 9760 + DY, 1, open)).toMatchObject({ wet: 1, flow: 0.7 });
+    // It is water where it leaves and runs down to the river.
+    expect(groundAt(1740, 9750 + AT.pool, 1, open)).toMatchObject({ wet: 1, flow: 0.7 });
     expect(groundAt(TARN.x, TARN.y, 1, open)).toMatchObject({ wet: 1, still: 1 });
     expect(groundAt(TARN.x, TARN.y, 1, open).flow).toBeLessThan(0.05);
   });

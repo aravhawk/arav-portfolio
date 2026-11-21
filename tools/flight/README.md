@@ -47,15 +47,15 @@ or `night`. Of each set it renders these tracks:
 | `enter` | the first screen's entrance (ENTER in `moments.ts`), 30 frames a second | by time, once, on a load at the top |
 | `dawn` | the ending's light event (DAWN), 30 frames a second, from the frame of `main` where the camera comes to rest | by time, once |
 | `after` | the last stretch with the light risen | by scroll, once the dawn has played |
-| `gate1`, `gate2` | the stretch where the sluices are in the frame, second and third gate open (only with `--tracks ...,gate1,gate2`) | by scroll, when the switch says so |
+| `gate1`, `gate2` | the stretch in which cc-switch's switch can be worked (from 0.3 screens before its composed frame to a screen after it: 40 frames), second and third gate open | by scroll, when the switch says so |
 
-The gates' tracks are not shipped today. The sluices change the picture
-from about screen 16 to screen 24 (strongly from 19.5 to 22), in both
-directions of the switch, so the two tracks add between a fifth and a half
-again to every stream, and the whole of `public/flight/` has a limit of 90
-MB. The player plays them when a stream has them (`player.ts`); until then
-the picture keeps the first gate open and the switch's own drawing in the
-words shows the choice.
+The gates' tracks are whole frames, but only of the 1.3 screens in which
+the switch stands in cc-switch's words: 80 frames a stream, 5.4 MB over all
+eight streams. Over the whole stretch in which the sluices are in the frame
+(about eight screens) they would not fit the limit. The player plays a
+gate's track while the scroll is inside it and that gate is chosen, and
+dissolves at its two ends (`player.ts`); outside it the picture is `main`,
+the first gate open.
 
 Also, with motion reduced (`stills`), each section's composed frame as a
 PNG, with its camera. It also writes the camera of every frame of `main`
@@ -106,7 +106,7 @@ a density of 1: the masks ship small; about 8 minutes wide, 2 tall).
 `mask.mjs` brings each down to a cell (384 x 216 wide, 180 x 390 tall),
 grey (0 sky, 0.5 solid, 1 open water), and packs a screen of scroll's cells, 30 and the
 first of the next, onto one WebP sheet: `<shape>.mask-<k>.webp` with
-`<shape>.mask.json` (33 sheets a shape; 1.21 MB wide, 0.85 MB tall). The
+`<shape>.mask.json` (a sheet for every screen of scroll). The
 masks do not depend on the theme: one set a shape, from the day set.
 Render them again whenever `main` is rendered again: a mask is looked up
 by its frame's number.
@@ -123,8 +123,25 @@ node tools/flight/encode.mjs --in .tools/flight --set wide-day --codecs av1 --ss
 again without the others; `encode.mjs` always encodes every track it finds
 frames for (delete a track's `.mkv` to leave it out).
 
-## What is not here
+## The inner pages' pictures
 
-The engine's own band on an inner page (`src/water/scene-band.ts`) is kept
-for making the inner pages' stills (`public/media/scenes`) again. No
-visitor's page mounts it.
+The inner pages open on stills of the same world (`public/media/scenes`),
+and the sharing cards on photographs of the flight (`public/og`). They are
+not made here, but they go stale with the same changes:
+
+```sh
+node scripts/capture-scenes.mjs --base http://localhost:3183 --only ask-around   # a scene, four shapes, both themes
+node scripts/capture-og.mjs --base http://localhost:3183       # the cards' pictures
+```
+
+`capture-scenes.mjs` photographs the engine's own band
+(`src/water/scene-band.ts`) on the route `/render/band`, which exists for
+it. No visitor's page mounts the band. (Only Ask Around's pictures were
+made with it: see "Re-render the flight" in `docs/site-system/recipes.md`
+before re-shooting another scene.)
+
+## Before rendering
+
+`scripts/render-sheet.mjs` photographs `/render` at places down the flight
+(words and all, stepped as this tool steps it) and lays them on a sheet:
+look at a change to the world there first.

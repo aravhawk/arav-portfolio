@@ -939,12 +939,15 @@ describe('the scene is read from what the picture publishes', () => {
   });
 
   it('the movements follow the flight in order', () => {
-    const { say, bridge, models, canyon, delta, sea } = starts;
+    const { say, bridge, models, bench, around, lattice, canyon, delta, sea } = starts;
     expect(movementAt(true, 0, 0, false)).toBe(MOVE.ice);
     expect(movementAt(true, 1, 0.5, false)).toBe(MOVE.melt);
     expect(movementAt(true, say + 1, 1, false)).toBe(MOVE.river);
     expect(movementAt(true, bridge + 1.2, 1, false)).toBe(MOVE.tarn);
     expect(movementAt(true, models + 1, 1, false)).toBe(MOVE.works);
+    expect(movementAt(true, bench + 1, 1, false)).toBe(MOVE.river);
+    expect(movementAt(true, around + 1, 1, false)).toBe(MOVE.river);
+    expect(movementAt(true, lattice + 1, 1, false)).toBe(MOVE.works);
     expect(movementAt(true, canyon + 1.5, 1, false)).toBe(MOVE.canyon);
     expect(movementAt(true, delta + 1, 1, false)).toBe(MOVE.delta);
     // The run out to sea begins before the sea's own section, and holds until the camera rests.

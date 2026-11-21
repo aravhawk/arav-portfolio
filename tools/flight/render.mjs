@@ -44,7 +44,7 @@
  *   NODE_PATH=<a node_modules with playwright> node tools/flight/render.mjs \
  *     --base http://localhost:3183 --out .tools/flight --set wide-day
  *
- * Options: --tracks main,enter,dawn,after,stills[,gate1,gate2,mask]   --per 30   --dpr <density>   --gates from,to (screens)
+ * Options: --tracks main,enter,dawn,after,stills,gate1,gate2[,mask]   --per 30   --dpr <density>   --gates from,to (screens)
  * --from <screens> --to <screens> (main and mask only: a part of it, for a trial)
  *
  * Playwright is not a dependency of this repo: point NODE_PATH at an
@@ -75,8 +75,8 @@ const base = arg('base', 'http://localhost:3183').replace(/\/$/, '');
 const [shape, theme] = arg('set', 'wide-day').split('-');
 const outDir = join(arg('out', '.tools/flight'), `${shape}-${theme}`);
 const per = Number(arg('per', 30));
-// (The gates' tracks are rendered when asked for: see README.md for why they are not shipped.)
-const want = arg('tracks', 'main,enter,dawn,after,stills').split(',');
+// (The gates' tracks cover the stretch in which the switch can be worked: see README.md.)
+const want = arg('tracks', 'main,enter,dawn,after,stills,gate1,gate2').split(',');
 const partFrom = arg('from', null);
 const partTo = arg('to', null);
 
@@ -274,7 +274,9 @@ async function main() {
     for (const g of [1, 2]) {
       if (!tracks.includes(`gate${g}`)) continue;
       const span = (arg('gates', '') || '').split(',').map(Number);
-      const range = span.length === 2 && span.every(Number.isFinite) ? span : meta.dam;
+      // (By default: from a little before the switch stands in cc-switch's words to where its block leaves.)
+      const hold = plan.holds.find((h) => h.name === 'cc-switch');
+      const range = span.length === 2 && span.every(Number.isFinite) ? span : hold ? [Math.round((hold.stop - 0.3) * per) / per, Math.round((hold.stop + 1) * per) / per] : meta.dam;
       if (!range) throw new Error('no stretch for the gates: render main first, or pass --gates from,to');
       const i0 = Math.round(range[0] * per);
       const i1 = Math.round(range[1] * per);

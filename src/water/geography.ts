@@ -23,29 +23,13 @@ import { type BedPainter, type Pt, type Rect, pt } from './bed';
  */
 export const DY = 4000;
 
-/** How much river the three later stations add between the basin and open water. */
-export const EXT = 5300;
-/** How much river the four last stations add after the tarn. */
-export const EXT2 = 8000;
-/** Where the last four stations' reach begins: the foot of the tarn. */
-export const T2 = 11400 + DY;
-
-/**
- * Which world this build draws. The places stand along the river in the owner's order in the next one (the basin,
- * the confluence, the shallows, the dam, the rock pool, the ring, the canyon, the tarn, the lattice, the delta); the
- * shipped frames were rendered from the first. (A build with NEXT_PUBLIC_FLIGHT_WORLD=next draws the next one on
- * /render. The flag goes when the frames are rendered again.)
- */
-export const NEXT_WORLD = process.env.NEXT_PUBLIC_FLIGHT_WORLD === 'next';
 /**
  * Where each place lies down the valley. A place's own numbers are written from its base, so a place is moved by
  * moving its base, and the river between two places is laid again where their paint functions meet.
  * `pool` and `tarn` are added to those places' numbers (which were written from the lake's foot); the others are the
  * y their numbers are measured from.
  */
-export const AT = NEXT_WORLD
-  ? { pool: DY + 6450, tarn: DY + 11900, shallows: DY + 9900, canyon: DY + 13300, lattice: DY + 20200, delta: DY + 19000 }
-  : { pool: DY, tarn: DY, shallows: T2, canyon: T2, lattice: T2, delta: T2 };
+export const AT = { pool: DY + 6450, tarn: DY + 11900, shallows: DY + 9900, canyon: DY + 13300, lattice: DY + 20200, delta: DY + 19000 };
 
 /** The world ends in open sea: its last rows are water from side to side, and past them the bed repeats, so the sea has no far shore. */
 export const WORLD = { w: 2600, h: AT.delta + 9900 };
@@ -79,9 +63,12 @@ export const STREAM: Pt[] = [
   pt(960, 7480 + DY),
   pt(820, 7950 + DY),
   pt(780, 8450 + DY),
-  ...(NEXT_WORLD
-    ? [pt(650, 8800 + DY), pt(700, 9200 + DY), pt(980, 9520 + DY), pt(1300, 9700 + DY), pt(1300, AT.shallows + 250), pt(1300, AT.shallows + 600)]
-    : [pt(950, 8800 + DY), pt(960, 9200 + DY), pt(1080, 9800 + DY), pt(1350, 10150 + DY), pt(1300, 11450 + DY), pt(1300, 11700 + DY), pt(1300, 12000 + DY)]),
+  pt(650, 8800 + DY),
+  pt(700, 9200 + DY),
+  pt(980, 9520 + DY),
+  pt(1300, 9700 + DY),
+  pt(1300, AT.shallows + 250),
+  pt(1300, AT.shallows + 600),
 ];
 
 /** The walled basin (the sandbox) and the island in it. */
@@ -527,22 +514,16 @@ export function paintConfluence(b: BedPainter, tribs: number[]) {
     b.disc(t.head, w * 0.42 + 6);
     b.agitate(pt(t.mouth.x, t.mouth.y - LIP.foot - 30), 50 + w * 0.6, 0.5 + 0.05 * Math.min(tribs[i], 9));
   });
-  // The bigger river below it swings north again past the pool.
+  // The bigger river below it swings north again.
   const last = reach[reach.length - 1];
-  if (NEXT_WORLD) {
-    // (It comes round the snowfield's back and east again, to the head of the shallows.)
-    b.channel([last, pt(940, 7240 + DY), pt(860, 7520 + DY), pt(820, 7950 + DY), pt(680, 8450 + DY), pt(650, 8800 + DY), pt(700, 9200 + DY), pt(980, 9520 + DY), pt(1300, 9700 + DY), pt(1300, AT.shallows - 100)], {
-      width: [below, below * 0.98, below * 0.94, below * 0.88, 400, 360, 340, 330, 330, 330],
-    });
-    return;
-  }
-  b.channel([last, pt(940, 7240 + DY), pt(860, 7520 + DY), pt(820, 7950 + DY), pt(680, 8450 + DY), pt(650, 8800 + DY), pt(720, 9200 + DY), pt(1080, 9800 + DY), pt(1350, 10150 + DY)], {
-    width: [below, below * 0.98, below * 0.94, below * 0.88, 400, 360, 340, 340, 420],
+  // (It comes round the snowfield's back and east again, to the head of the shallows.)
+  b.channel([last, pt(940, 7240 + DY), pt(860, 7520 + DY), pt(820, 7950 + DY), pt(680, 8450 + DY), pt(650, 8800 + DY), pt(700, 9200 + DY), pt(980, 9520 + DY), pt(1300, 9700 + DY), pt(1300, AT.shallows - 100)], {
+    width: [below, below * 0.98, below * 0.94, below * 0.88, 400, 360, 340, 330, 330, 330],
   });
 }
 
 export function paintPool(b: BedPainter) {
-  // The rock pool: an irregular shore, fed by its own melt and drained by a brook that runs on to the tarn.
+  // The rock pool: an irregular shore, fed by its own melt and drained by a brook that runs down to the river.
   const shore = new Path2D();
   POOL_SHORE.forEach(([x, y], i) => {
     const [nx, ny] = POOL_SHORE[(i + 1) % POOL_SHORE.length];
@@ -555,12 +536,10 @@ export function paintPool(b: BedPainter) {
   shore.closePath();
   b.fill(shore);
   const P = AT.pool;
-  if (NEXT_WORLD) {
-    // The river from the dam's channels swings west of the pool, passes it, and crosses east beyond its far shore.
-    b.channel([pt(830, DAM.y + 2000), pt(680, 8450 + P), pt(650, 8800 + P), pt(720, 9200 + P), pt(1000, 9700 + P), pt(1500, 9970 + P)], { width: [330, 400, 360, 340, 340, 360] });
-    // (The pool's brook runs the short way down to it.)
-    b.channel([pt(1800, 9620 + P), pt(1740, 9750 + P), pt(1700, 9880 + P), pt(1730, 10030 + P), pt(1790, 10170 + P)], { width: [56, 40, 44, 40, 50], speed: 0.7 });
-  } else b.channel([pt(1800, 9620 + P), pt(1720, 9760 + P), pt(1640, 9900 + P), pt(1700, 10080 + P), pt(1800, 10260 + P), pt(1860, 10420 + P)], { width: [56, 40, 44, 40, 46, 60], speed: 0.7 });
+  // The river from the dam's channels swings west of the pool, passes it, and crosses east beyond its far shore.
+  b.channel([pt(830, DAM.y + 2000), pt(680, 8450 + P), pt(650, 8800 + P), pt(720, 9200 + P), pt(1000, 9700 + P), pt(1500, 9970 + P)], { width: [330, 400, 360, 340, 340, 360] });
+  // (The pool's brook runs the short way down to it.)
+  b.channel([pt(1800, 9620 + P), pt(1740, 9750 + P), pt(1700, 9880 + P), pt(1730, 10030 + P), pt(1790, 10170 + P)], { width: [56, 40, 44, 40, 50], speed: 0.7 });
   b.channel([pt(1740, 9250 + P), pt(2080, 9400 + P), pt(1830, 9610 + P)], { width: 300, speed: 0.08, flowOnly: true });
 }
 
@@ -570,7 +549,7 @@ export function paintPool(b: BedPainter) {
  * stands `r` from the pool's middle; `h` and `w` are the tallest's height and half width (about a column's height at
  * the shallows, and slenderer); `lean`: how far each is off the upright, and which way it turns.
  */
-export const RING = { x: 1330, y: 10750 + (NEXT_WORLD ? AT.pool : DY), r: 250, pool: 132, n: 7, h: 292, w: 30, dark: 6, turn: 0.369 };
+export const RING = { x: 1330, y: 10750 + AT.pool, r: 250, pool: 132, n: 7, h: 292, w: 30, dark: 6, turn: 0.369 };
 /** Each stone: where its foot stands, how tall and how wide it is, and how it is turned. */
 export const ringStones = () =>
   Array.from({ length: RING.n }, (_, i) => {
@@ -595,6 +574,9 @@ export function paintRing(b: BedPainter) {
 }
 
 export function paintTarn(b: BedPainter) {
+  const T = AT.tarn;
+  // (Out of the canyon the river turns west and comes round to the bay.)
+  b.channel([pt(2020, AT.canyon + 7100), pt(1990, AT.canyon + 7330), pt(1500, 8850 + T), pt(950, 8950 + T), pt(720, 9200 + T), pt(1080, 9800 + T), pt(1350, 10150 + T)], { width: [CANYON.w, 220, 260, 320, 340, 340, 420] });
   // The tarn: wide, dark and still.
   const tarn = new Path2D();
   tarn.ellipse(TARN.x, TARN.y, TARN.rx, TARN.ry, 0, 0, Math.PI * 2);
@@ -607,9 +589,6 @@ export function paintTarn(b: BedPainter) {
   b.disc(pt(TARN_BAY.x - 200, TARN_BAY.y + 200), 190);
   // (The river slows as it comes into the bay: under the eye that looks across the tarn the water is all but still.)
   b.channel([pt(TARN_BAY.x - 150, TARN_BAY.y - 260), pt(TARN_BAY.x, TARN_BAY.y), pt(TARN_BAY.x + 150, TARN_BAY.y + 230)], { width: 560, speed: 0.1, flowOnly: true });
-  const T = AT.tarn;
-  // (Out of the canyon the river turns west and comes round to the bay.)
-  if (NEXT_WORLD) b.channel([pt(2020, AT.canyon + 7100), pt(1990, AT.canyon + 7330), pt(1760, AT.canyon + 7680), pt(1330, AT.canyon + 7980), pt(1080, 9800 + T), pt(1350, 10150 + T)], { width: [CANYON.w, 220, 260, 320, 340, 420] });
   b.channel([pt(1350, 10150 + T), pt(1330, 10400 + T), pt(1300, 10800 + T), pt(1300, 11400 + T)], { width: 400, speed: 0.1, flowOnly: true });
 }
 
@@ -637,9 +616,7 @@ export function paintDam(b: BedPainter) {
     b.agitate(pt(line[0].x, DAM.y + DAM.thick + DAM.h * DAM.batter + 30), 120, 0.6);
   }
   // The three meet and run on: west, toward the rock pool.
-  if (NEXT_WORLD) b.channel([pt(1300, DAM.y + 960), pt(1300, DAM.y + 1150), pt(1120, DAM.y + 1560), pt(830, DAM.y + 2000)], { width: [300, 260, 290, 330] });
-  // The three meet and run on into the still pool.
-  else b.channel([pt(1300, DAM.y + 960), pt(1300, DAM.y + 1150), pt(1300, T2 + 4060)], { width: [300, 260, 300] });
+  b.channel([pt(1300, DAM.y + 960), pt(1300, DAM.y + 1150), pt(1120, DAM.y + 1560), pt(830, DAM.y + 2000)], { width: [300, 260, 290, 330] });
 }
 
 export function paintLattice(b: BedPainter) {
@@ -648,21 +625,15 @@ export function paintLattice(b: BedPainter) {
   b.disc(pt(LATTICE.x + half - 70, LATTICE.y + 260), 190);
   b.disc(pt(LATTICE.x + half - 40, LATTICE.y - 230), 180);
   b.channel([pt(1300, LATTICE.y - half - 200), pt(1300, LATTICE.y), pt(1300, LATTICE.y + half + 200)], { width: half * 2.6, speed: 0.04, flowOnly: true, straight: true });
-  if (NEXT_WORLD) {
-    // In from the tarn's foot; out of the pool east and round to the delta's head.
-    b.channel([pt(1300, 11280 + AT.tarn), pt(1275, 11750 + AT.tarn), pt(1300, LATTICE.y - half + 40)], { width: [330, 290, 300] });
-    b.channel([pt(1300, LATTICE.y + half - 40), pt(1340, LATTICE.y + half + 280), pt(1620, LATTICE.y + half + 600), pt(1930, LATTICE.y + half + 830), pt(2020, AT.delta + 7100)], { width: [260, 220, 220, 225, CANYON.w] });
-    return;
-  }
-  // Out of the pool, into the canyon, and round to the run-out.
-  b.channel([pt(1300, LATTICE.y + half - 40), pt(1300, T2 + 5200), pt(1300, T2 + 5360)], { width: [260, 200, CANYON.w] });
+  // In from the tarn's foot; out of the pool east and round to the delta's head.
+  b.channel([pt(1300, 11280 + AT.tarn), pt(1275, 11750 + AT.tarn), pt(1300, LATTICE.y - half + 40)], { width: [330, 290, 300] });
+  b.channel([pt(1300, LATTICE.y + half - 40), pt(1340, LATTICE.y + half + 280), pt(1620, LATTICE.y + half + 600), pt(1930, LATTICE.y + half + 830), pt(2020, AT.delta + 7100)], { width: [260, 220, 220, 225, CANYON.w] });
 }
 
 export function paintCanyon(b: BedPainter) {
   b.channel(CANYON_LINE, { width: CANYON.w, straight: true });
   // (The outside of the second bend is cut square: a flat wall faces the water that comes at it.)
   b.pool({ x: HALL.x0, y: HALL.y0 - 12, w: HALL.x1 - HALL.x0 + 20, h: HALL.y1 - HALL.y0 + 24 }, 16);
-  if (!NEXT_WORLD) b.channel([pt(2020, T2 + 7100), pt(1990, T2 + 7330), pt(1800, T2 + 7560), DELTA.apex], { width: [CANYON.w, 220, 270, 300], speed: 0.7 });
   // Fast water on the outside of each bend.
   for (const c of BENDS) {
     const out = c.turn < 0 ? pt(c.x - 0.75 * CANYON.r, c.y + 0.75 * CANYON.r) : pt(c.x + 0.75 * CANYON.r, c.y - 0.75 * CANYON.r);
@@ -674,7 +645,7 @@ export function paintDelta(b: BedPainter) {
   const Y = AT.delta;
   const A = DELTA.apex;
   // (The river's last run to the delta's head.)
-  if (NEXT_WORLD) b.channel([pt(2020, Y + 7100), pt(1990, Y + 7330), pt(1800, Y + 7560), A], { width: [CANYON.w, 220, 270, 300], speed: 0.7 });
+  b.channel([pt(2020, Y + 7100), pt(1990, Y + 7330), pt(1800, Y + 7560), A], { width: [CANYON.w, 220, 270, 300], speed: 0.7 });
   // The sea: everything north of a coast that runs from the western cape round the delta's front to the east.
   const coast: [number, number][] = [
     [-900, 9760],

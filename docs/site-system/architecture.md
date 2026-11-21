@@ -99,15 +99,19 @@ a visitor runs.
   With reduced motion, or where no stream decodes, there is no layer. A
   machine that cannot hold its frame with the picture at rest loses half
   the flakes, then the layer; never the picture.
-- What the engine's picture had and the played one still has not: the
-  switch does not reroute the water (the layer lights the chosen gate;
-  the water still runs through the first), and there is no foam at the
-  ice block's foot.
+- The switch moves the water (V3): while cc-switch's words stand, the
+  frames with the second or the third sluice open are tracks of the
+  stream (`gate1`, `gate2`, 40 frames each), and the player shows the
+  chosen one under a dissolve. Before and after that stretch the picture
+  is `main`, the first gate open, whatever is chosen: the live layer's
+  lit gate still names the choice there.
+- What the engine's picture had and the played one still has not: foam
+  at the ice block's foot.
 
 ## The scroll timeline
 
 - `src/water/registry.ts` owns it. `SECTIONS` gives each stretch its
-  length in screens (hero, say, the eight stations, delta, sea);
+  length in screens (hero, say, the nine stations, delta, sea);
   `sectionStarts()` and `stillStops()` derive from it. Positions are
   always in **screens of scroll**, never pixels.
 - Each station is a `Move`: the eye turns about one point and closes
@@ -117,18 +121,46 @@ a visitor runs.
   own keys. `poseAt(keys, s)` gives the pose at scroll `s`.
 - `dayAt(s)` is a scalar along the flight that the sound reads. Keep
   its meaning.
-- Composed stops today (screens): hero 0, statement 3.10, Infiniview
-  5.60, Upstream 8.45, Kilo Bench 11.15, Agent Bridge 13.80, Open
-  models 16.60, cc-switch 19.40, TensorPoW 22.15, RydAR 25.80, delta
-  28.30, ending 31.10. (Planned: about 24 screens after the pacing
-  task; this list will be regenerated, not hand-edited.)
+- Composed stops today (screens; `scripts/render-sheet.mjs` prints the
+  list): hero 0, statement 3.10, Infiniview 5.60, Upstream 8.45, Open
+  models 11.20, cc-switch 14.00, Kilo Bench 16.75, Ask Around 19.35,
+  RydAR 23.00, Agent Bridge 25.60, TensorPoW 28.35, delta 30.90,
+  ending 33.70. The flight is 34.7 screens long; the page scrolls 33.7.
+  The stations stand in the owner's order (V3, 2026-11-20): the order
+  of `PROJECTS` in `src/content/projects.ts`.
+
+## The places along the river
+
+- Each place's numbers in `src/water/geography.ts` are written from a
+  base of its own (`AT`: `shallows` for the seracs and the dam, `pool`,
+  `canyon`, `tarn`, `lattice`, `delta`; the basin and the confluence
+  are written from the lake's foot, `DY`). A place is moved down the
+  valley by moving its base: its object, its water, its shader's
+  constants, its camera keys and its captions' anchors all follow,
+  because none of them holds a number of its own. The river between
+  two places is laid where their paint functions meet (the last
+  channel of one ends where the first of the next begins).
+- Paint order matters inside a place: the river into a still pool is
+  painted before the pool's slow `flowOnly` water, or the pool runs.
+- Ask Around's place is the ring (`RING`, `ringStones()`,
+  `paintRing`, `src/water/shaders/ring.ts`): seven standing stones of
+  the seracs' ice round a small round pool on the west bank, six lit
+  from within as the tarn's shards are, one dark. It is a registered
+  subject with no pass of its own (`customSubjects`): the pass calls
+  `ringIce` over the finished ground and water, and that one function
+  draws the stones, their shade, their light on the snow and their
+  image in the pool.
 
 ## The scene
 
 - `src/water/world.ts`: the plan. Where the lake, the river, each
   station's object and its water lie in world units.
 - `src/water/sky.ts`: the hours. The light theme is one day, the
-  dark theme one night ending at sunrise, as keys along scroll.
+  dark theme one night ending at sunrise, as keys along scroll. The
+  keys were calibrated on the first order of the places. Since the
+  places took the owner's order each moved place keeps the light it
+  stood in (`relaid`): the sun and the moon go back and forth between
+  places, and every place is lit as it was made to be.
 - `src/water/moments.ts`: clockwork and scroll-driven events
   (`ENTER` and `firstLight` for the first screen, `DAWN` for the
   ending, the melt).

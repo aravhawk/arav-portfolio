@@ -23,9 +23,9 @@ export const metadata: Metadata = pageMeta({
 
 /**
  * The work index: the delta, then the nine projects in the owner's order,
- * each beside the picture of its own station (one the world has no place
- * for yet is its name and line alone), then what he is recognised for, as
- * lines.
+ * each beside the picture of its own station (a project the world has no
+ * place for would be its name and line alone), then what he is recognised
+ * for, as lines.
  */
 export default async function Work() {
   const m = await getMetrics();

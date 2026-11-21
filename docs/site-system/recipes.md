@@ -4,24 +4,24 @@ Read the consistency checklist before editing a station.
 
 ## Add a station
 
-Insert a definition in `FLIGHT` in `src/water/registry.ts`. The list runs upstream to downstream. This example fits between the lattice and the canyon. It raises a block of ice in the water already painted there.
+Insert a definition in `FLIGHT` in `src/water/registry.ts`. The list runs upstream to downstream. This example stands just below the lattice. It raises a block of ice in the water already painted there. (Ask Around's ring, `src/water/shaders/ring.ts`, is a whole place made this way.)
 
 ```ts
 {
   id: 'sample', rail: 'Sample', kind: 'title', length: 0.45, offset: 0.22,
   camera: ({ upright, stop }) => [{
     s: stop,
-    pos: upright ? [1100, T2 + 4680, 380] : [1020, T2 + 4730, 280],
-    aim: [1320, T2 + 5500, 70], fov: upright ? 60 : 46,
+    pos: upright ? [1100, AT.lattice + 4680, 380] : [1020, AT.lattice + 4730, 280],
+    aim: [1320, AT.lattice + 5500, 70], fov: upright ? 60 : 46,
   }],
   subject: {
     bit: 4096, define: 'F_SAMPLE', reach: 1300,
-    boxes: [[[1240, T2 + 5260, 0], [1400, T2 + 5420, 140]]],
+    boxes: [[[1240, AT.lattice + 5260, 0], [1400, AT.lattice + 5420, 140]]],
     event: [0, 0.45],
     shader: {
       fn: 'sampleIce',
       source: `vec3 sampleIce(vec3 col, vec3 ray, float progress) {
-        vec3 lo = vec3(1240.0, ${(T2 + 5260).toFixed(1)}, 0.0);
+        vec3 lo = vec3(1240.0, ${(AT.lattice + 5260).toFixed(1)}, 0.0);
         vec3 hi = lo + vec3(160.0, 160.0, 60.0 + 80.0 * progress);
         vec3 a = (lo - uCamPos) / ray, b = (hi - uCamPos) / ray;
         vec3 nearFace = min(a, b), farFace = max(a, b);
@@ -60,7 +60,7 @@ Register a definition with `kind: 'section'`, a rail label, a length, a stop off
 
 ## Add a project that has no station yet
 
-Add its entry to `entries` in `src/content/projects.ts` at its place in the owner's order, its label to `src/content/kinds.ts`, and its page to `CASES` in `src/components/work/cases.tsx` (without one it gets the plain page). Its page, its row in `/work`, the band that leads to it and its share card are then type alone (`band-type`, `feat-row-type`, `next-type` in `src/app/pages.css`). For a beat on the home page, register a section with `layout: 'beat'`, no subject and `camera: () => []` (see `around` in the registry): the eye goes on between its neighbours' keys, and the block stands in the calm the picture keeps behind any words. When the world gets a place for it, give the section a subject and a `project`, and capture its stills (`public/media/scenes`, `public/og`).
+Add its entry to `entries` in `src/content/projects.ts` at its place in the owner's order, its label to `src/content/kinds.ts`, and its page to `CASES` in `src/components/work/cases.tsx` (without one it gets the plain page). Its page, its row in `/work`, the band that leads to it and its share card are then type alone (`band-type`, `feat-row-type`, `next-type` in `src/app/pages.css`). For a stretch of words on the home page, register a section with no subject and `camera: () => []`: the eye goes on between its neighbours' keys, and the block stands in the calm the picture keeps behind any words. When the world gets a place for it (as Ask Around did: `AROUND` in the registry), give the section a subject, a paint function, camera keys and a `project`, and photograph its pictures (below).
 
 ## Re-render the flight after the world or the words change
 
@@ -78,7 +78,7 @@ from the model pulls, the streams' widths from the merged counts).
    `NODE_PATH=<playwright's node_modules> node tools/flight/make.mjs --base http://localhost:3183`
    (about three hours for all four sets; `--sets wide-day` for one;
    `tools/flight/README.md` has the parts).
-3. It prints every file of `public/flight/` and the total: 92 MB is the
+3. It prints every file of `public/flight/` and the total: 100 MB is the
    limit (6 MB of it the masks'). If it is over, raise `--crf-av1` / `--crf-hevc` a step and look
    at crops at 100 percent before accepting.
 4. Rebuild, then: `scripts/flight-match.mjs` (the played frame beside the
@@ -87,8 +87,38 @@ from the model pulls, the streams' widths from the merged counts).
    the four page tests
    (`legibility-test`, `titles-test`, `words-test`, `overlap-test`),
    `scripts/player-trace.mjs` and Lighthouse (`performance.md`).
-5. Commit `public/flight/` with the change that made it stale, in one
+5. If the world or the light changed, the sharing cards are stale too:
+   `node scripts/capture-og.mjs --base http://localhost:3183`
+   (`public/og`). The inner pages' pictures (`public/media/scenes`) are
+   photographed by
+   `node scripts/capture-scenes.mjs --base http://localhost:3183 --only <scene>`
+   from the route `/render/band`. Only Ask Around's were made this way
+   (V3): the other scenes' pictures are older photographs, taken before
+   the places changed their order, and a page's words were laid out on
+   them. Re-shot as they are now, 78 lines on the inner pages fail
+   `scripts/overlap-test.mjs`, so they were left. Re-shoot a scene only
+   with that test beside you, and clear `.next/cache/images` before you
+   run it: the image optimiser keeps serving the picture it had.
+6. Commit `public/flight/` with the change that made it stale, in one
    commit.
+
+## Move a place, or change the order of the places
+
+1. Move its base in `AT` (`src/water/geography.ts`) and lay the river
+   again where it meets its new neighbours (the last channel of the
+   place before, the first of the place after). Put its definition at
+   its new place in `FLIGHT` (`src/water/registry.ts`); add an approach
+   or a leaving key where the eye would otherwise cross something.
+2. Look at the whole flight on `/render` before rendering anything:
+   `node scripts/render-sheet.mjs --count 32`, `--stops`, and
+   `--around "<rail label>"` for a place's arrival and leaving, in both
+   themes, wide (`--w 1920 --h 1080`) and tall (`--w 390 --h 844`).
+3. `pnpm exec vitest run`: the camera tests say whether every half
+   screen still shows a changed frame and each hold still grows its
+   subject 12 to 20 percent; the audio tests say what the sound now
+   hears at each stop (`movementAt` in `src/audio/scene.ts` names the
+   sections each movement runs between).
+4. Render again (above).
 
 A new timed event in the picture (something that runs by the clock, not
 by scroll) needs a track of its own: render it in `tools/flight/render.mjs`

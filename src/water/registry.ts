@@ -5,7 +5,7 @@ import { COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, CANYON_ICE } from './shaders/
 import { RING_ICE } from './shaders/ring';
 import { boxInView, projectPoint, type Box, type Rect } from './projection';
 import type { Basis, Key, Move, Pose, V3 } from './camera';
-import { AT, BENDS, BOARD_DEPTH, FACE, NEXT_WORLD, RING, SHEET, boardSpan, sheetCols, CANYON, COLS, CONF_Y, DAM, DY, LATTICE, LIP, POOL, SHARDS, SLAB, TARN, TARN_BAY, lipY } from './geography';
+import { AT, BENDS, BOARD_DEPTH, FACE, RING, SHEET, boardSpan, sheetCols, CANYON, COLS, CONF_Y, DAM, DY, LATTICE, LIP, POOL, SHARDS, SLAB, TARN, TARN_BAY, lipY } from './geography';
 
 type FrameMove = (at: Pose, x: number, y: number, push: number, arc: number, rise: number, z?: number) => Move;
 export interface CameraContext {
@@ -20,7 +20,7 @@ export interface CameraContext {
 
 /** Times are screens relative to the section's start. Camera keys use absolute screens. */
 type Words =
-  | { kind: 'section'; layout?: 'opening' | 'statement' | 'interests' | 'ending' | 'beat' }
+  | { kind: 'section'; layout?: 'opening' | 'statement' | 'interests' | 'ending' }
   | { kind: 'figure'; layout: 'contributions' | 'downloads' }
   | { kind: 'title'; layout?: 'display' | 'table' | 'film' | 'switch' | 'pool' | 'wall' };
 
@@ -393,16 +393,6 @@ const BENCH = {
       ...holdKeys(move(benchPose(aspect), 0.44, 0.8, 0.128, 3, 0), stop),
     ],
   } as const satisfies Definition;
-const BEAT = {
-    // A beat of words alone, in the run from the pool to the tarn (Ask Around: the world has no place for it yet).
-    // No subject, no paint and no camera key: the eye goes on between its neighbours' keys, over this much more scroll.
-    // (Its words stand on the bank the eye is flying over, and only while that bank's snow lies under them: they come once
-    // the pool's rim has passed and have left before the tarn's water reaches them.)
-    // (Measured with scripts/titles-test.mjs: that stretch is about half a screen at this pace. Its label leads, as a station's does.)
-    steps: { eyebrow: -0.75, title: -0.25, line: -0.17, leave: 0.25 },
-    id: 'around', rail: 'Ask Around', length: 1.3, offset: 0.45, kind: 'section', layout: 'beat',
-    camera: () => [],
-  } as const satisfies Definition;
 const BRIDGE = {
     id: 'bridge', paint: paintTarn, rail: 'Agent Bridge', length: 2.8, offset: 1.2, kind: 'title', layout: 'film',
     subject: { bit: 16, define: 'F_SHARDS', boxes: [SHARDS_BOX], pass: 'shards', visible: tarnNear, shader: { source: TARN_OBJECT, fn: 'shardHit' } },
@@ -414,14 +404,14 @@ const BRIDGE = {
       // (The eye closes on the point of the shore nearest the name, which keeps its place: the water never comes under the words.)
       ...holdKeys(move({ pos: [1560, 9750 + AT.tarn, 70], aim: [1580, 10900 + AT.tarn, -25], fov: 58 }, 0.56, 0.65, 0.3, -4.5, 0), stop),
       // (Out over the tarn's west side, wide of both shards.)
-      ...(NEXT_WORLD ? [{ s: end - 0.15, pos: [1000, 10850 + AT.tarn, 520], aim: [1150, 11900 + AT.tarn, 0], fov: 58 } as Key] : []),
+      { s: end - 0.15, pos: [1000, 10850 + AT.tarn, 520], aim: [1150, 11900 + AT.tarn, 0], fov: 58 },
     ] : [
       { s: start + 0.3, pos: [1150, 9700 + AT.tarn, 300], aim: [1300, 10500 + AT.tarn, 0], fov: 46 },
       // The tarn, from low on its south-west bank (see tarnPose).
       // (The eye goes round the edge of the bank the words stand on, which keeps its place: the two shards and the ranges slide across the water, away from the words.)
       ...holdKeys(band ? move(tarnBand(aspect), 0.3, 0.8, 0.1, 2, 0) : move(tarnPose(), 0.5, 0.51, 0.1, 9, 0), stop),
-      // (Out over the tarn's west side, wide of both shards.)
-      ...(NEXT_WORLD ? [{ s: end - 0.15, pos: [800, 10900 + AT.tarn, 380], aim: [930, 11900 + AT.tarn, 0], fov: 46 } as Key] : []),
+      // (Out along the tarn's west bank, wide of both shards: the bank the words stand on stays under them until they leave.)
+      { s: end + 0.1, pos: [300, 10500 + AT.tarn, 300], aim: [700, 11900 + AT.tarn, 0], fov: 46 },
     ],
   } as const satisfies Definition;
 const MODELS = {
@@ -433,14 +423,14 @@ const MODELS = {
     hold: { name: 'Open models' },
     camera: ({ start, stop, end, upright, band, move, holdKeys }) => upright ? [
       // (Down the bigger river from the confluence, round the snowfield's back.)
-      ...(NEXT_WORLD ? [{ s: start - 0.3, pos: [900, 7520 + DY, 380], aim: [880, 8380 + DY, 0], fov: 58 } as Key] : []),
+      { s: start - 0.3, pos: [900, 7520 + DY, 380], aim: [880, 8380 + DY, 0], fov: 58 },
       { s: start + 0.3, pos: [1300, AT.shallows - 250, 400], aim: [1300, AT.shallows + 600, 0], fov: 56 },
       // Down the row from its tall end, so all four stand in an upright frame.
       ...holdKeys(move({ pos: [420, AT.shallows + 380, 470], aim: [1235, AT.shallows + 1110, 60], fov: 58 }, 0.46, 0.72, 0.18, -3, 0), stop),
       // Past the dam's east end, turning to look back at it.
       { s: end - 0.1, pos: [1560, AT.shallows + 1750, 420], aim: [1300, AT.shallows + 2550, 20], fov: 58 },
     ] : [
-      ...(NEXT_WORLD ? [{ s: start - 0.3, pos: [900, 7480 + DY, 300], aim: [860, 8350 + DY, 0], fov: 46 } as Key] : []),
+      { s: start - 0.3, pos: [900, 7480 + DY, 300], aim: [860, 8350 + DY, 0], fov: 46 },
       { s: start + 0.3, pos: [1300, AT.shallows - 300, 300], aim: [1300, AT.shallows + 600, 0], fov: 44 },
       // The four seracs from over the shallows' west bank; the eye goes round the row, so each stands clear of the next.
       ...holdKeys(band ? move({ pos: [760, AT.shallows + 60, 250], aim: [1310, AT.shallows + 1080, 96], fov: 42 }, 0.3, 0.8, 0.1, 2, 0) : move(colsPose(), 0.46, 0.62, 0.175, 5, 0), stop),
@@ -461,7 +451,7 @@ const FORK = {
       // (Further out on the bank, so the running channel passes above the words and snow lies under them.)
       ...holdKeys(move({ pos: [2520, AT.shallows + 4380, 900], aim: [1330, AT.shallows + 2960, 0], fov: 62 }, 0.5, 0.56, 0.145, 3, 0), stop, 0.45),
       // Across the three channels where they meet, turning with the water to look down the river again.
-      { s: end - 0.2, pos: [1400, AT.shallows + 3620, 700], aim: NEXT_WORLD ? [1040, AT.shallows + 4520, 0] : [700, AT.shallows + 3720, 0], fov: 60 },
+      { s: end - 0.2, pos: [1400, AT.shallows + 3620, 700], aim: [1040, AT.shallows + 4520, 0], fov: 60 },
     ] : [
       // (Wide of its east end and well over it, already looking back: the wall is never an edge sliding past the lens.)
       { s: start + 0.38, pos: [2200, AT.shallows + 3150, 500], aim: [1420, AT.shallows + 2810, 10], fov: 45 },
@@ -526,7 +516,6 @@ const RING_BOX: Box = [
   [RING.x + RING_REACH, RING.y + RING_REACH, RING.h + 40],
 ];
 const AROUND = {
-  steps: { eyebrow: -0.85 },
   id: 'around', paint: paintRing, rail: 'Ask Around', length: 2.6, offset: 1.15, kind: 'title',
   subject: { bit: 4096, define: 'F_RING', reach: 3300, boxes: [RING_BOX], shader: { source: RING_ICE, fn: 'ringIce' } },
   project: 'ask-around',
@@ -534,24 +523,22 @@ const AROUND = {
   camera: ({ start, stop, end, upright, move, holdKeys }) => upright ? [
     { s: start + 0.25, pos: [900, RING.y - 1400, 480], aim: [1150, RING.y - 500, 0], fov: 58 },
     // The ring from over the bank to its south-west, looked down into: the stones above the middle, the bank at the foot.
-    ...holdKeys(move({ pos: [RING.x - 880, RING.y - 600, 600], aim: [RING.x - 20, RING.y - 10, 60], fov: 58 }, 0.5, 0.62, 0.13, 3, 0), stop),
+    ...holdKeys(move({ pos: [RING.x - 880, RING.y - 600, 600], aim: [RING.x - 90, RING.y - 10, 60], fov: 58 }, 0.5, 0.5, 0.14, 4, 0), stop),
     // Out past the ring's west side, toward the glacier's front.
     { s: end - 0.2, pos: [RING.x - 430, RING.y + 220, 330], aim: [RING.x - 60, RING.y + 1100, 90], fov: 60 },
   ] : [
     { s: start + 0.25, pos: [820, RING.y - 1180, 330], aim: [1150, RING.y - 300, 20], fov: 46 },
     // The ring from low over the bank to its south-west (see ringPose). The eye closes on it and goes a little round it:
     // the stones part and close against the sky.
-    ...holdKeys(move(ringPose(), 0.44, 0.8, 0.128, 4, 0), stop),
+    ...holdKeys(move(ringPose(), 0.46, 0.66, 0.17, 5, 0), stop),
     // Out past the ring's west side, toward the glacier's front.
     { s: end - 0.2, pos: [RING.x - 420, RING.y + 220, 240], aim: [RING.x - 60, RING.y + 1100, 90], fov: 47 },
   ],
 } as const satisfies Definition;
 
 /** Registration order is the scroll order. A layout selects an existing server-rendered words block. */
-const SHIPPED = [HERO, SAY, INFINIVIEW, UPSTREAM, BENCH, BEAT, BRIDGE, MODELS, FORK, LATTICE_POOL, CANYON_RUN, DELTA_FAN, SEA] as const;
-/** The owner's order: the world the next frames are rendered from. */
-const NEXT = [HERO, SAY, INFINIVIEW, UPSTREAM, MODELS, FORK, BENCH, AROUND, CANYON_RUN, BRIDGE, LATTICE_POOL, DELTA_FAN, SEA] as const;
-export const FLIGHT: readonly (typeof SHIPPED[number] | typeof NEXT[number])[] = NEXT_WORLD ? NEXT : SHIPPED;
+// (The places stand in the owner's order: the order of the projects in src/content/projects.ts.)
+export const FLIGHT = [HERO, SAY, INFINIVIEW, UPSTREAM, MODELS, FORK, BENCH, AROUND, CANYON_RUN, BRIDGE, LATTICE_POOL, DELTA_FAN, SEA] as const satisfies readonly Definition[];
 
 export type SectionId = typeof FLIGHT[number]['id'];
 export type ProjectScene = Extract<typeof FLIGHT[number], { project: string }>['project'];

@@ -174,14 +174,18 @@ const VS = [0.56, 0.7, 0.84, 0.97];
  */
 export function movementAt(home: boolean, s: number, melt: number, rest: boolean, risen = true): number {
   if (!home) return MOVE.page;
-  const { say, bridge, models, canyon, delta, sea } = starts;
+  const { say, bridge, models, bench, lattice, canyon, delta, sea } = starts;
   if (rest) return risen ? MOVE.rest : MOVE.approach;
   if (s < say) return melt > 0.06 ? MOVE.melt : MOVE.ice;
   // (Each movement begins as the camera leaves for its first station, half a screen before the section's own start.)
-  if (s < bridge + 0.45) return MOVE.river;
-  if (s < models - 0.2) return MOVE.tarn;
-  if (s < canyon + 0.25) return MOVE.works;
-  if (s < delta - 0.35) return MOVE.canyon;
+  // (The places stand in the owner's order, so the piece comes back to two of its movements: the river's again at the
+  // rock pool and the ring, the works' again at the lattice.)
+  if (s < models - 0.2) return MOVE.river;
+  if (s < bench - 0.2) return MOVE.works;
+  if (s < canyon + 0.25) return MOVE.river;
+  if (s < bridge + 0.45) return MOVE.canyon;
+  if (s < lattice - 0.2) return MOVE.tarn;
+  if (s < delta - 0.35) return MOVE.works;
   // The run out to sea: the dominant is taken up as the camera leaves the delta, and held.
   if (s < sea - APPROACH) return MOVE.delta;
   return MOVE.approach;

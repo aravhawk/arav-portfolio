@@ -73,8 +73,6 @@ const PLAN: Plan = {
 
 const BENCH_P = PROJECTS.find((p) => p.slug === 'kilo-bench')!;
 const RYDAR_P = PROJECTS.find((p) => p.slug === 'rydar')!;
-/** The one project the world has no place for yet: it stands as words alone, in the run after Kilo Bench's pool. */
-const AROUND_P = PROJECTS.find((p) => p.slug === 'ask-around')!;
 
 const INFINIVIEW_HOME: ProjectMedia = {
   kind: 'image',
@@ -511,20 +509,6 @@ export async function FlightPage({ live = false }: { live?: boolean }) {
             />
           </div>
           <div className="fl-still fl-pool" aria-hidden="true" />
-        </div>
-      </section>
-    ),
-    // Ask Around: words alone, between the pool and the tarn. The picture is the flight's own run between the two.
-    beat: (section, beat) => (
-      <section className="fl-sec fl-view fl-beat" data-fl style={len(section.length)} aria-label={AROUND_P.name}>
-        <div className="fl-pin">
-          <div className="fl-words fl-block fl-view-words fl-beat-words" {...beat.block}>
-            <Kind p={AROUND_P} b={beat} />
-            <Name p={AROUND_P} b={beat} />
-            <p className="fl-line" {...beat.line}>
-              {AROUND_P.line}
-            </p>
-          </div>
         </div>
       </section>
     ),

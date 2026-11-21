@@ -757,14 +757,6 @@ html[data-hero-words] .fl-hero-words .fl-intro {
     text-underline-offset: 3px;
   }
 }
-/* Ask Around's beat: words alone, in the run from the pool to the tarn. On a wide frame the tarn's shore comes in
-   along the left margin before the run is over, so the block stands a little in from it, on the bank the eye is
-   flying over: the one ground that stays under it the whole time. An upright frame keeps the common margin. */
-@media (min-width: 721px) and (min-aspect-ratio: 9/10) {
-  html[data-flight='on'] .fl-beat-words {
-    padding-left: calc(var(--gutter) + 22vw);
-  }
-}
 /* cc-switch's line keeps to two lines, so its name stands where the bank is widest. */
 .fl-fork-words > .fl-line {
   max-width: 38ch;

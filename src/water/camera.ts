@@ -11,7 +11,7 @@
 
 import { byId, SECTIONS, timeline } from './registry';
 import type { NameRow } from './name';
-import { AT, DY, NAME, NEXT_WORLD, REST, RIVER } from './world';
+import { AT, DY, NAME, REST, RIVER } from './world';
 
 export type V3 = [number, number, number];
 
@@ -423,8 +423,8 @@ function seaKeys(aspect: number, sunAz: number, start: number, g: number, sea: b
 export function dayAt(s: number): number {
   const h = SECTIONS.hero;
   const s9 = byId.delta.start;
-  // (In the next world the day turns on the run from the lattice to the delta: every place before it keeps the day's light.)
-  const s8 = NEXT_WORLD ? s9 - 3.6 : 23.6 * (END_AT / 31.1);
+  // (The clock turns on the run from the lattice to the delta: every place before it keeps the day.)
+  const s8 = s9 - 3.6;
   const keys: [number, number][] = [
     [0, 0],
     [h, 0],

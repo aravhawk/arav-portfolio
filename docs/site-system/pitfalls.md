@@ -72,5 +72,16 @@ Each of these cost time on this build.
   150, but its crest stands about 92 units over the water in the
   picture. A point placed through the camera is checked against the
   frame, not against the constant.
+- **A still pool that runs.** Flow is painted in order: a river painted
+  after a pool's slow `flowOnly` water makes the pool run (the sound
+  heard a stream at the tarn; the picture's water would have moved).
+  Paint the river in first.
+- **The image optimiser keeps a re-shot picture's old self.** After
+  replacing a file under `public/media/scenes`, remove
+  `.next/cache/images` or the tests photograph the old picture.
+- **A leaving key under standing words.** A block of words stands 0.2
+  screens past its hold. A key that turns the eye in that time can
+  bring water under the title (`scripts/titles-test.mjs` at 0.9 of the
+  stretch). Leave along the bank the words stand on.
 
-Change log: 2026-11-18 first version (orchestrator).
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 V3: three more.

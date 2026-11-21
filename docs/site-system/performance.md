@@ -17,7 +17,7 @@ performance 95 or more on the phone preset and 100 on desktop; largest
 paint under 1.2 s on desktop and 2.0 s on a phone; layout shift under
 0.02; no task over 50 ms after the first paint; interactions under 100
 ms; no frame interval over 20 ms on a 60 Hz display while the home page
-is scrolled; `public/flight/` 92 MB or less (6 MB of it the live
+is scrolled; `public/flight/` 100 MB or less (6 MB of it the live
 layer's masks).
 
 What the home page does, and the rule behind each part:

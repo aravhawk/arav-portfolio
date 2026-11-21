@@ -21,14 +21,15 @@ export const PICTURES = {
   home: 'The name Arav Jain stands as letters of pale glacier ice on a frozen lake swept to dark clear ice, mirrored in it, with snow-covered ranges under a low morning sun beyond.',
   infiniview: 'A rough block of clear ice holding the Infiniview card stands in a pool of teal meltwater, waves breaking at its foot, on a snowfield under far ranges.',
   'open-source': 'Meltwater streams of different widths fall over a cliff of ice into a teal river that winds away across a snowfield.',
-  'kilo-bench': 'Benchmark results set as type on a dark slab on the bed of a clear rock pool, blocks of glacier ice standing in it, on a snowfield with a tarn beyond.',
-  'agent-bridge': 'Two shards of pale ice stand in a still tarn, with a frozen lake and snow-covered ranges beyond.',
+  'kilo-bench': 'Benchmark results set as type on a dark slab on the bed of a clear rock pool, blocks of glacier ice standing in it, on a snowfield with the river and a ring of standing ice beyond.',
+  'ask-around': 'Seven standing stones of clear ice in a ring round a small round pool on a snowfield, six lit from within and one dark, a meltwater river passing beyond them.',
+  'agent-bridge': 'Two shards of pale ice stand in a still tarn, with snow-covered ranges beyond.',
   ollama: 'Four pillars of clear glacier ice of different sizes stand in a pool of meltwater on a snowfield under far ranges.',
   'cc-switch': 'A dam of ice with three sluices holds back a dark pond; below it one channel runs white with meltwater and two lie dry.',
   tensorpow: 'Sixteen cubes of ice stand four by four in a pool of teal meltwater on a snowfield.',
   rydar: 'The RydAR page under a pane of clear ice in a wall of glacier ice, a cornice of snow and icicles over it, meltwater at its foot.',
   work: 'A meltwater river parts round snow-covered bars in a delta and runs out to a deep blue sea under a low sun.',
-  blog: 'A still tarn with two shards of pale ice standing in it, a brook running from it across wind-cut snow to a rock pool with blocks of ice.',
+  blog: 'A meltwater river leaves a canyon of blue glacier ice and runs out across the snow toward a still tarn where two shards of pale ice stand, under far ranges.',
 } as const;
 export type Picture = keyof typeof PICTURES;
 

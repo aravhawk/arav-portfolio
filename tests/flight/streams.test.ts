@@ -15,14 +15,14 @@ const DIR = join(process.cwd(), 'public', 'flight');
 const SETS = ['wide-day', 'wide-night', 'tall-day', 'tall-night'];
 const CODECS = ['av1', 'hevc'];
 /** The whole of public/flight may weigh this much. */
-const LIMIT_MB = 92;
+const LIMIT_MB = 100;
 /** Of that, the live layer's masks may weigh this much. */
 const MASKS_MB = 6;
 
 const index = (set: string, codec: string) => JSON.parse(readFileSync(join(DIR, `${set}.${codec}.json`), 'utf8')) as StreamIndex;
 
 describe('the pre-rendered flight', () => {
-  it('weighs 92 MB or less in all', () => {
+  it('weighs 100 MB or less in all', () => {
     const total = readdirSync(DIR).reduce((sum, f) => sum + statSync(join(DIR, f)).size, 0);
     expect(total / 1048576).toBeLessThanOrEqual(LIMIT_MB);
   });
