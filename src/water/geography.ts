@@ -199,6 +199,8 @@ export function tribPoint(i: number): [number, number, number] {
   const y = t.head.y + (t.mid.y - t.head.y) * 0.45;
   return [x, y, fieldHeight(x, y)];
 }
+/** Where each stream's caption lands: on the stream itself as it is drawn. */
+export const streamAnchors = (): [number, number, number][] => TRIBS.map((_, i) => tribPoint(i));
 /** How wide a stream with this many merged pull requests runs: in proportion, so the counts can be read off the widths. */
 export const tribWidth = (n: number) => 20 * Math.min(n, 10);
 /** How wide the river is at x along the cliff's foot, given each stream's width: it takes each stream in turn. */

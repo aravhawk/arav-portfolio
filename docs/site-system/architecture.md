@@ -4,13 +4,71 @@ Status: **as built** unless a line says planned.
 
 ## The idea
 
-The home page is one glacial world drawn in raw WebGL2 (hand-written
-GLSL, no three.js), flown through by scroll: a frozen lake with the
-name, the lake breaking up, a meltwater river past eight project
-stations, a delta, the sea. The DOM carries every word; the picture
-carries no copy except media a project owns. Inner pages (`/work`,
-`/work/[slug]`, `/blog`, posts) are ordinary pages that open on a band
-of the same world.
+The home page is one glacial world, flown through by scroll: a frozen
+lake with the name, the lake breaking up, a meltwater river past the
+project stations, a delta, the sea. The DOM carries every word; the
+picture carries no copy except media a project owns. Inner pages
+(`/work`, `/work/[slug]`, `/blog`, posts) are ordinary pages that open
+on a still of the same world.
+
+The world is drawn by a hand-written WebGL2 engine (`src/water`, raw
+GLSL, no three.js). **No page a visitor opens runs that engine.** It
+takes most of a minute to build its shaders on a first visit and 10 to
+27 ms a frame on a large screen, so since V1 (2026-11-20) it is the
+**renderer**: `tools/flight` drives it on the owner's machine and
+photographs the flight's frames, and the home page **plays** those frames
+by scroll (`src/flight`). Everything below about the scene, the render
+loop and the stations describes the renderer; "The player" describes what
+a visitor runs.
+
+## The player (what a visitor runs)
+
+- `src/components/flight/FlightPage.tsx` is the page: the sections, the
+  words, the rail. `/` renders it with `FlightPlayer`; `/render`
+  (unlinked, noindex, disallowed in robots, for the tool only) renders the
+  same page with `FlightStage`, the live engine. One component, so the
+  words and their thresholds cannot drift between what is rendered and
+  what is played.
+- `public/flight/` holds what is played (made by `tools/flight`, see its
+  README): for each window shape (`wide` 16:9, `tall` a phone) and theme
+  (`day`, `night`) a stream of frames as AV1 and as HEVC with an index of
+  every frame's offset, the camera of every frame, a still of the first
+  frame (the first paint) and a still of each section.
+- `src/components/FlightPlayer.tsx` puts the first frame's still in the
+  HTML as a picture (the largest paint) and loads `src/flight/player.ts`
+  after the first paint. Nothing of `src/water` but three small files of
+  plain geometry (`callouts.ts`, `words.ts`, `projection.ts`) is in a
+  visitor's scripts; the timeline's numbers reach the player as data
+  (`Plan` in `src/flight/types.ts`), because `camera.ts` and `registry.ts`
+  import the shaders' source.
+- `player.ts` owns the home page's frame: it follows the scroll through
+  one critically damped spring (`spring.ts`: nine tenths of a step in
+  0.55 s, the same at any refresh rate; the scroll itself is native), and
+  that one position sets the words, the rail, the captions tied to points
+  of the world and the frame drawn. A jump of more than 2.5 screens is
+  cut under a dissolve, not flown.
+- `decode.worker.ts` fetches the stream by byte range, a few keyframe
+  groups round the reader and ahead of the way they are going, and
+  decodes with WebCodecs, keeping a window of 14 decoded frames round the
+  reader. A window narrower than 9:10 is shown the tall set, any other the
+  wide one; the frame covers the window (cut, never stretched).
+- `warp.ts` draws the place between two frames. Neighbouring frames are
+  up to hundreds of pixels apart where the camera travels, so they are
+  not laid over each other as they are: each is looked up through the
+  camera it was rendered from, on the ground plane, from the camera that
+  stands between them (one 30-line WebGL program; a 2D canvas that steps
+  from frame to frame where there is no WebGL). At rest the picture is one
+  rendered frame, untouched.
+- Three things run by time as they did live, each a track of the stream:
+  the first screen's entrance, the ending's light (once, when the camera
+  first rests there), and the picture's answer to the switch.
+- With reduced motion, or where neither stream can be decoded, each
+  section shows its still with its words whole, and stills change with a
+  fade.
+- What the live picture had and the played one has not: the water does
+  not move while the page is at rest, the pointer raises no wake, and the
+  first screen does not breathe. Those belong to the live layer that is to
+  come over the played picture.
 
 ## The scroll timeline
 
@@ -92,15 +150,23 @@ of the same world.
 
 `src/app/work/[slug]/`, `src/app/work/`, `src/app/blog/`,
 `src/components/work/**`, `src/app/pages.css`. A page opens on a
-scene band (`src/components/SceneBand.tsx`, `src/water/scene-band.ts`:
-the live scene where it can run, its still otherwise) and ends on the
-next station's band (`src/components/NextBand.tsx`).
+scene band (`src/components/SceneBand.tsx`: the scene's still, a picture
+in the HTML) and ends on the next station's band
+(`src/components/NextBand.tsx`). The engine's own band
+(`src/water/scene-band.ts`) is no longer mounted by any page; it is kept
+for making those stills again.
 
 ## Sound
 
 `src/audio/**`: synthesized, off until asked. It reads the world's
 plan and copies a few of the picture's numbers;
-`tests/audio/picture.test.ts` fails when a copied number drifts.
+`tests/audio/picture.test.ts` fails when a copied number drifts. It
+follows the picture through `src/lib/signals.ts`, which the player now
+writes (the place in the flight, the frame's camera, the melt, the dawn,
+the gates). Its own script, fetched only when the toggle is pressed,
+still imports the world's plan from `src/water` (plain numbers and the
+registry, which carries shader source as text; nothing is compiled or
+drawn).
 
 Change log: 2026-11-18 first version (orchestrator).
 
@@ -110,3 +176,5 @@ A newly allocated simulation window starts with a fresh zero field.
 The shared clock stops in hidden tabs. An intersection observer also gates the
 flight's draw callback when the canvas has left the viewport, and marks the
 picture dirty on re-entry so reduced-motion readers get a fresh frame.
+
+Change log: 2026-11-20 V1: the home page plays the pre-rendered flight; the engine is the renderer; inner bands are stills.

@@ -1,8 +1,104 @@
 # Performance
 
-Status: the budget is the rule now; the gate's owner profile and
-first-visit run are **planned** (the frame budget task). The numbers
-under "where it stands" are measured and dated.
+Status: since V1 (2026-11-20) the home page plays the flight from frames
+rendered ahead of time; "The played flight" below is what a visitor's
+page costs and how to measure it. The sections after it ("The budget",
+"What a new section may cost", "How to measure", "Where it stands")
+describe the **engine**, which is now the renderer and runs only on
+`/render`: they are what a frame costs to render, not what a visitor
+waits for. Point the engine's own scripts (`perf-trace.mjs`,
+`flight-frame-cost.mjs`, `ice-frame-cost.mjs`, `capture-og.mjs`) at
+`/render`.
+
+## The played flight (V1, 2026-11-20)
+
+The gate, on the production build, for every page: Lighthouse
+performance 95 or more on the phone preset and 100 on desktop; largest
+paint under 1.2 s on desktop and 2.0 s on a phone; layout shift under
+0.02; no task over 50 ms after the first paint; interactions under 100
+ms; no frame interval over 20 ms on a 60 Hz display while the home page
+is scrolled; `public/flight/` 90 MB or less.
+
+What the home page does, and the rule behind each part:
+
+- **First paint.** The first frame's still is a picture in the HTML
+  (`FlightPlayer.tsx`): a source for each shape and scheme, its size
+  reserved, `fetchpriority="high"`. No preload link (see the inner
+  pages' note below: React carries a preload to every page that links
+  here).
+- **Nothing of the player before the first paint.** `player.ts`, its
+  worker and `warp.ts` are one lazy chunk, asked for at the first idle
+  moment after the first paint. The canvas and the decoder are made in a
+  task of their own after the words are set.
+- **Marks on the picture's own layer, not on the document.** The player
+  says "the picture is up" with an attribute on `.flight-root`. An
+  attribute on `<html>` makes the browser look at every element's style
+  again; `data-flight="on"` is the one such mark, set once.
+- **One frame loop** (`src/lib/frame.ts`), stopped while the tab is
+  hidden. Per frame: one spring step, attribute writes only where a
+  word's state changes, the captions' transforms only when the place
+  changes, one draw only when the frame to show changes. At rest nothing
+  is written and nothing is drawn.
+- **Decoding off the main thread** (`decode.worker.ts`): fetching by
+  byte range, WebCodecs, a window of 14 frames. The main thread uploads a
+  decoded frame as a texture when it first draws it.
+- **Bytes by need.** On a load: the index (5 to 10 kB), the camera file
+  (51 kB), the entrance's first half second and the first two screens of
+  the flight. Then three keyframe groups (a screen and a half) ahead of
+  the reader and one behind, as they travel.
+- **The cut.** A jump of more than 2.5 screens (a rail tick, End, a
+  reload part way down) is not flown: the picture holds, the frames for
+  the new place are fetched and decoded, and it comes in under a 260 ms
+  dissolve.
+
+How to measure (alone on the machine; a render or an encode running
+beside it spoils every number):
+
+- `scripts/player-trace.mjs`: a cold visit scrolled top to foot,
+  `--profile wide|desk|tall`, `--run read|fling`. Frame intervals, long
+  tasks, bytes over time, frames held, decode cost, heap.
+- `scripts/inp-test.mjs`: the scripted interactions and the worst.
+- `scripts/engine-absent.mjs`: every script each route fetches, and a
+  failure if any carries the engine.
+- `scripts/flight-match.mjs`: the played frame beside the engine's.
+- Lighthouse through the orchestrator's `lh.sh`, three runs, the median.
+  Lighthouse's headless Chrome has no GPU: WebGL and canvas are drawn by
+  the CPU there, so the player's first frames cost more in its trace
+  than on any real device. `player-trace.mjs --software` reproduces that.
+
+Where it stands (2026-11-20, Apple M4, Chromium 159, a 60 Hz display,
+production build; the full tables are in the V1 task's
+`.tools/out/v1/REPORT.md`):
+
+| | Phone preset | Desktop preset |
+| --- | --- | --- |
+| `/` Lighthouse performance (median of 3) | 100 | 100 |
+| `/` largest paint | 1.05 s | 0.28 s |
+| `/` layout shift | 0.004 | 0.000 |
+| inner pages, performance | 94 to 96 | 100 |
+| inner pages, largest paint | 2.8 to 3.1 s | 0.63 to 0.67 s |
+
+- A cold scroll of the whole home page, a screen a second and in
+  flings, 1728 x 1117 at 2x and 390 x 844 at 2x: every frame interval
+  16.7 or 16.8 ms, none over 20 ms, no long task. A frame decodes in 1.3
+  to 2.8 ms in the worker (AV1; 2560 x 1440 wide, 780 x 1688 tall).
+- First paint 56 to 72 ms, first played frame 160 ms after navigation
+  (a local server).
+- Bytes: 3.7 MB before the first scroll on the wide picture (the
+  entrance, and the first two screens, which are the dearest of the
+  flight), 1.6 MB on the tall one; the whole flight 17.7 MB wide, 6.3 MB
+  tall.
+- Memory: 14 decoded frames at most, 74 MB wide and 26 MB tall (a
+  frame is held as 4:2:0); script heap 8 MB.
+- Worst interaction 40 ms (the theme's toggle).
+- `public/flight/`: 85.8 MB of the 90 allowed
+  (`tests/flight/streams.test.ts` fails over the limit).
+
+What does not meet the gate: the inner pages on the phone preset (94 to
+96, largest paint about 3 s simulated). That is the still's simulated
+cost described under "Inner pages" below, as before V1; the engine no
+longer loads on those pages at all. Not verified here: a 120 Hz display
+(this one is 60 Hz), and any real phone.
 
 ## The budget
 
@@ -114,10 +210,8 @@ head, `FeatStill` in the index, `nextPic` for the way on. Rules:
   the other `display: none`, so only the one shown is fetched.
 - Stills ask for quality 90 (`images.qualities` in `next.config.ts`).
   At 75 the snow's grain is smoothed.
-- The live band's engine is not fetched until the page has presented
-  its first frame and the band is within half a screen of the viewport
-  (`SceneBand.tsx`). Asked for earlier, its 180 kB of script races the
-  still.
+- There is no live band any more (V1): no engine is fetched on an inner
+  page. The band is its still.
 - Measure with a warm optimiser: the first request for a width encodes
   it. `tests/content/stills.test.ts` fails when a still's file and the
   size its picture reserves disagree.
@@ -148,8 +242,9 @@ lives:
   fetched only when reached for. Fetched ahead, it brought some 70 kB of
   the flight's code in before the first frame (60 kB of it the engine a
   band asks for later anyway, 10 kB the home page's own).
-- **The scene band's engine** and smooth scrolling's library on an
-  inner page wait on the same gate (`SceneBand.tsx`, `Runtime.tsx`).
+- **Smooth scrolling's library** on an inner page waits on the same gate
+  (`Runtime.tsx`). (The scene band's engine used to: since V1 no inner
+  page loads it.)
 - **Pictures under the first screen** are `Held` (`components/Held.tsx`):
   the work index's rows, the way on, every plate. `loading="lazy"` alone
   is not enough, a browser asks for a lazy picture at first layout if
@@ -169,3 +264,5 @@ router 48 kB, 8 kB more) and the site's own (35 kB), the two fonts
 (74 kB), the still (33 to 48 kB), the stylesheets (25 kB), the page
 (12 kB) and the ground's textures (6 kB). That simulates at about
 3.1 s and scores 92 to 93. See `.tools/out/k3/REPORT.md` of the K3 task.
+
+Change log: 2026-11-20 V1: the played flight, its rules, its measures.

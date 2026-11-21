@@ -34,6 +34,7 @@
  */
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
+import { atRest } from './lib/legibility.mjs';
 
 const require = createRequire(import.meta.url);
 let pw;
@@ -178,7 +179,9 @@ for (const width of widths) {
         await page.evaluate((yy) => window.scrollTo(0, yy), y);
         row.steps++;
         // In transit (anything a reader could make out), then at rest.
-        for (const [wait, minOpacity, when] of [[140, 0.35, 'transit'], [y >= max - 2 ? 4200 : settle, 0.05, 'rest']]) {
+        for (const [wait, minOpacity, when] of [[140, 0.35, 'transit'], [y >= max - 2 ? 1200 : settle, 0.05, 'rest']]) {
+          // (At rest: once the picture, which follows the scroll through a spring, stands where the page is.)
+          if (when === 'rest') await atRest(page, 12000);
           await page.waitForTimeout(wait);
           const got = await page.evaluate(collect, minOpacity);
           const at = +(y / vh).toFixed(2);
@@ -197,7 +200,8 @@ for (const width of widths) {
       row.bare = 0;
       for (let at = 0; at * vh <= max + 1; at += BARE_STEP) {
         await page.evaluate((yy) => window.scrollTo(0, yy), Math.round(Math.min(max, at * vh)));
-        await page.waitForTimeout(at * vh >= max - 2 ? 2600 : 520);
+        await atRest(page, 12000);
+        await page.waitForTimeout(at * vh >= max - 2 ? 1200 : 520);
         const n = await page.evaluate(copyLines);
         if (n === 0 && bareFrom === null) bareFrom = at;
         if (n > 0 && bareFrom !== null) {

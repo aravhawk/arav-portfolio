@@ -71,7 +71,8 @@ const browser = await pw.chromium.launch({ args: ['--use-angle=metal', '--enable
 async function open(width) {
   const ctx = await browser.newContext({ viewport: { width, height: H }, deviceScaleFactor: 2, colorScheme: 'light' });
   const page = await ctx.newPage();
-  await page.goto(`${base}/`, { waitUntil: 'load' });
+  // (The engine's own route: the home page itself plays frames rendered ahead of time and has no engine to hold.)
+  await page.goto(`${base}/render`, { waitUntil: 'load' });
   await page.waitForFunction(() => document.documentElement.dataset.flight === 'on' && !!window.__flight, null, { timeout: 90000 });
   // The bed is carved and the name cut a little after the picture first shows.
   await page.waitForTimeout(4500);

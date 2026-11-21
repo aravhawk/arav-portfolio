@@ -108,6 +108,15 @@ export async function runsFlight(page) {
 }
 
 /**
+ * The picture is played from frames rendered ahead of time, and follows the scroll through a spring: after a
+ * scroll made by script it glides (or, for a long jump, cuts) to where the page now is. This waits until it stands
+ * there, on that place's own frame. (Where there is no player, the page's own state is all there is to wait for.)
+ */
+export async function atRest(page, timeout = 8000) {
+  await page.waitForFunction(() => !window.__player || window.__player.settled(), null, { timeout }).catch(() => {});
+}
+
+/**
  * Walk the flight and measure every line of words against the picture.
  * @param positions scroll positions in px
  * @param settle ms to let words that have just come in finish arriving
@@ -122,7 +131,9 @@ export async function measureFlight(page, positions, { settle = 820 } = {}) {
     const y = Math.round(Math.min(max, y0));
     const last = y >= max - 2;
     await page.evaluate((yy) => window.scrollTo(0, yy), y);
-    await page.waitForTimeout(last ? 4200 : settle);
+    // (At the ending the light event runs by the clock: it is waited out.)
+    await atRest(page, last ? 12000 : 8000);
+    await page.waitForTimeout(last ? 1200 : settle);
     row.steps++;
     const boxes = await page.evaluate(linesOverPicture);
     if (!boxes.length) continue;

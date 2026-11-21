@@ -17,10 +17,19 @@
   top: 0;
   left: 0;
   display: block;
+  /* (The played picture is a frame of one of two shapes, cut to cover the window. The engine's own canvas, on the
+     renderer's route, is given its size in px and is not cut.) */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
   opacity: 0;
   transition: opacity 420ms cubic-bezier(0.3, 0, 0.2, 1);
 }
-html[data-picture] .flight-canvas {
+/* (The player says so on the picture's own layer, the engine on the document: a mark on the document makes the
+   browser look at every element's style again, and the player's comes in the page's first second.) */
+html[data-picture] .flight-canvas,
+.flight-root[data-picture] .flight-canvas {
   opacity: 1;
 }
 
@@ -463,61 +472,106 @@ html[data-hero-words] .fl-hero-words .fl-intro {
 :root[data-theme='dark'] .flight-root {
   background: #0a1422;
 }
+/* The first paint: a still of the flight's first frame (the entrance's own first frame, made by tools/flight with
+   the frames the page plays). In the picture's layer it is a picture in the HTML (FlightPlayer); in the first
+   section, where there is no picture's layer at all, it is this ground. Either way it covers the window as the
+   played frames do: cut at the sides or at the head and foot, never stretched. */
 .fl-poster {
   position: absolute;
   inset: 0;
-  /* (The still is as wide as the widest window of its band and is fitted to the frame's height: a narrower window
-     sees its middle. See posterBands in camera.ts.) */
-  background: center / auto 100% no-repeat;
-  background-image: var(--poster, none);
+  background: 50% 70% / cover no-repeat;
+  background-image: image-set(url('/flight/wide-day.poster-1920.avif') type('image/avif'), url('/flight/wide-day.poster-1920.webp') type('image/webp'));
 }
-/* Without scripts nothing has chosen a still: one of four stands in, by the window's shape and the system's theme. */
-html:not([data-scripted]) .fl-poster {
-  background-size: cover;
-  background-image: image-set(url('/media/poster/wide-3-light.avif') type('image/avif'), url('/media/poster/wide-3-light.webp') type('image/webp'));
+:root[data-theme='dark'] .fl-poster {
+  background-image: image-set(url('/flight/wide-night.poster-1920.avif') type('image/avif'), url('/flight/wide-night.poster-1920.webp') type('image/webp'));
 }
-@media (max-aspect-ratio: 1.2) {
-  html:not([data-scripted]) .fl-poster {
-    background-image: image-set(url('/media/poster/square-1-light.avif') type('image/avif'), url('/media/poster/square-1-light.webp') type('image/webp'));
+@media (max-aspect-ratio: 9/10) {
+  .fl-poster {
+    background-image: image-set(url('/flight/tall-day.poster.avif') type('image/avif'), url('/flight/tall-day.poster.webp') type('image/webp'));
+  }
+  :root[data-theme='dark'] .fl-poster {
+    background-image: image-set(url('/flight/tall-night.poster.avif') type('image/avif'), url('/flight/tall-night.poster.webp') type('image/webp'));
   }
 }
-@media (max-aspect-ratio: 0.9) {
-  html:not([data-scripted]) .fl-poster {
-    background-image: image-set(url('/media/poster/mid-1-light.avif') type('image/avif'), url('/media/poster/mid-1-light.webp') type('image/webp'));
-  }
-}
-@media (max-aspect-ratio: 0.7) {
-  html:not([data-scripted]) .fl-poster {
-    background-image: image-set(url('/media/poster/tall-1-light.avif') type('image/avif'), url('/media/poster/tall-1-light.webp') type('image/webp'));
-  }
-}
+/* (Without scripts nothing has set the theme: the system's scheme chooses.) */
 @media (prefers-color-scheme: dark) {
   html:not([data-scripted]) .fl-lake {
     background: #0a1422;
   }
   html:not([data-scripted]) .fl-poster {
-    background-image: image-set(url('/media/poster/wide-3-dark.avif') type('image/avif'), url('/media/poster/wide-3-dark.webp') type('image/webp'));
-  }
-  @media (max-aspect-ratio: 1.2) {
-    html:not([data-scripted]) .fl-poster {
-      background-image: image-set(url('/media/poster/square-1-dark.avif') type('image/avif'), url('/media/poster/square-1-dark.webp') type('image/webp'));
-    }
-  }
-  @media (max-aspect-ratio: 0.9) {
-    html:not([data-scripted]) .fl-poster {
-      background-image: image-set(url('/media/poster/mid-1-dark.avif') type('image/avif'), url('/media/poster/mid-1-dark.webp') type('image/webp'));
-    }
-  }
-  @media (max-aspect-ratio: 0.7) {
-    html:not([data-scripted]) .fl-poster {
-      background-image: image-set(url('/media/poster/tall-1-dark.avif') type('image/avif'), url('/media/poster/tall-1-dark.webp') type('image/webp'));
-    }
+    background-image: image-set(url('/flight/wide-night.poster-1920.avif') type('image/avif'), url('/flight/wide-night.poster-1920.webp') type('image/webp'));
   }
 }
-/* (Once the live picture stands over it the still is let go: it is never seen through the melt.) */
-html[data-picture] .flight-root > .fl-poster {
+@media (prefers-color-scheme: dark) and (max-aspect-ratio: 9/10) {
+  html:not([data-scripted]) .fl-poster {
+    background-image: image-set(url('/flight/tall-night.poster.avif') type('image/avif'), url('/flight/tall-night.poster.webp') type('image/webp'));
+  }
+}
+.fl-poster-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* (Held as the player holds the first frame: see `hold` in src/flight/player.ts.) */
+  object-position: 50% 70%;
+}
+/* The picture is chosen by the system's scheme. A reader who has set the other theme gets the right still as the
+   layer's ground instead, and the picture stands down (as the inner pages' bands do). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='dark']) .fl-poster-img {
+    display: none;
+  }
+  :root:not([data-theme='dark']) .flight-root:not([data-picture]) {
+    background: #dfeaf1 50% 70% / cover no-repeat;
+    background-image: image-set(url('/flight/wide-day.poster-1920.avif') type('image/avif'), url('/flight/wide-day.poster-1920.webp') type('image/webp'));
+  }
+}
+@media (prefers-color-scheme: dark) and (max-aspect-ratio: 9/10) {
+  :root:not([data-theme='dark']) .flight-root:not([data-picture]) {
+    background-image: image-set(url('/flight/tall-day.poster.avif') type('image/avif'), url('/flight/tall-day.poster.webp') type('image/webp'));
+  }
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme='dark'] .fl-poster-img {
+    display: none;
+  }
+  :root[data-theme='dark'] .flight-root:not([data-picture]) {
+    background: #0a1422 50% 70% / cover no-repeat;
+    background-image: image-set(url('/flight/wide-night.poster-1920.avif') type('image/avif'), url('/flight/wide-night.poster-1920.webp') type('image/webp'));
+  }
+}
+@media (prefers-color-scheme: light) and (max-aspect-ratio: 9/10) {
+  :root[data-theme='dark'] .flight-root:not([data-picture]) {
+    background-image: image-set(url('/flight/tall-night.poster.avif') type('image/avif'), url('/flight/tall-night.poster.webp') type('image/webp'));
+  }
+}
+/* (Once the played picture stands over it the still is let go.) */
+.flight-root[data-picture] .fl-poster-img {
   visibility: hidden;
   transition: visibility 0s 600ms;
+}
+/* One picture giving way to another that is not its neighbour in the flight (a jump down the page, the theme, the
+   switch): a copy of the picture that was there, over the new one, fading out. */
+.flight-root .flight-veil {
+  opacity: 1;
+  transition: opacity 260ms var(--ease-out);
+}
+/* Where the flight is not played (no decoder for either stream, or less motion asked for): a still to a section,
+   one giving way to the next with a fade and nothing else. */
+.fl-still-pic {
+  position: absolute;
+  inset: 0;
+  background: center / cover no-repeat;
+  opacity: 0;
+  transition: opacity 320ms var(--ease-out);
+}
+.fl-still-pic[data-on] {
+  opacity: 1;
+}
+.flight-root[data-stills] .flight-canvas {
+  display: none;
 }
 .fl .fl-still {
   display: none;

@@ -910,6 +910,16 @@ export class FlightEngine extends WaterEngine {
   private get quiet() {
     return this.still || this.held !== null;
   }
+  /**
+   * For the renderer (tools/flight): with the clock held, the ending's light event stands at `t` seconds into it
+   * (0: before it; DAWN.over: after it), whatever the page's position. Null gives the held clock's own rule back
+   * (none of it before the camera rests, all of it once it does).
+   */
+  private dawnHeld: number | null = null;
+  holdDawn(t: number | null) {
+    this.dawnHeld = t;
+    this.dirty = true;
+  }
   private drawHeld(cam: Basis, aspect: number, at: FlightMoment, top: number) {
     const gl = this.gl;
     const held = this.held ?? 0;
@@ -922,7 +932,8 @@ export class FlightEngine extends WaterEngine {
     this.ptr.active = false;
     this.ptr.vx = this.ptr.vy = 0;
     this.meltRate = this.meltAct = 0;
-    this.lift = this.ray = this.rise = at.rest ? 1 : 0;
+    if (this.dawnHeld !== null) ({ lift: this.lift, ray: this.ray, rise: this.rise } = dawnLight(this.dawnHeld));
+    else this.lift = this.ray = this.rise = at.rest ? 1 : 0;
     const steps = 48;
     for (let i = steps - 1; i >= 0; i--) {
       this.drop.s = 0;
@@ -1813,6 +1824,18 @@ export interface FlightHandle {
   holds: ReturnType<typeof HOLDS>;
   /** For the checks and the stills: hold the entrance at `t` seconds into it (0: its first frame; null lets it run from where it is). */
   holdEntrance(t: number | null): void;
+  /**
+   * For the renderer (tools/flight). `manual(true)` takes the page's frames out of the frame loop's hands; `step(now)`
+   * then runs exactly one, at the page's scroll position, with `now` (ms) as its clock, so the lee behind the words
+   * and every other thing that eases by time is a function of the frames stepped and of nothing else. `s`: the place
+   * in the flight that frame is for, in screens, where the scroll position cannot say it exactly (a browser rounds a
+   * scroll position to its pixels, and a word's threshold may fall between two of them). `cam()` is the
+   * camera that frame was drawn from; `loaded()` says whether the pictures the scene carries have arrived.
+   */
+  manual(on: boolean): void;
+  step(now: number, s?: number): void;
+  cam(): Basis;
+  loaded(): boolean;
 }
 
 /**
@@ -2239,7 +2262,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   // The product picture: the slab appears when it has loaded.
   const img = new Image();
   img.decoding = 'async';
+  let waiting = 1 + (root.dataset.face ? 1 : 0) + (root.dataset.sheet ? 1 : 0);
   img.onload = () => {
+    waiting--;
     if (!destroyed) engine.setSlab(img);
   };
   img.src = scenePicture(root.dataset.slab || '/media/infiniview-hero.webp');
@@ -2247,12 +2272,17 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const pic = new Image();
     pic.decoding = 'async';
     pic.onload = () => {
+      waiting--;
       if (!destroyed) engine.setFace(pic);
     };
     pic.src = scenePicture(root.dataset.face);
   }
   // The results on the pool's bed are set as type, for this screen (see board.ts): again when the screen changes.
-  if (root.dataset.sheet) void boardReady().then(buildBoard);
+  if (root.dataset.sheet)
+    void boardReady().then(() => {
+      waiting--;
+      buildBoard();
+    });
 
   // The switch: the chosen option's sluice opens at once (the gates, the surge and each channel's water are drawn).
   // Nothing is carved again: every channel's bed already runs, so a change costs no frame.
@@ -2330,9 +2360,10 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   }, { threshold: Number.EPSILON });
   visibility.observe(canvas);
 
-  const off = onFrame((now) => {
+  let manual = false;
+  const tick = (now: number, place?: number) => {
     if (!built) return;
-    const raw = window.scrollY / unit;
+    const raw = place ?? window.scrollY / unit;
     // Nothing may glide when motion is reduced: each section shows its
     // composed frame, and its words stand with it for the whole of its
     // stretch (they are set for that frame, so nothing is ever hidden).
@@ -2395,14 +2426,18 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     // the second, so it is never seen to jump.
     const dtBox = boxLast ? Math.min(0.1, (now - boxLast) / 1000) : 0;
     boxLast = now;
-    if (active !== leeFor && (boxK <= 0.02 || !leeFor)) {
+    // (For the renderer the lee is a matter of place, not of time: wherever a reader may stop, the words that stand
+    // there have all of their lee, as they do live once it has come in. So it is there in the very frame its words
+    // are, and gone in the frame they are gone.)
+    const snap = mqStill.matches || manual;
+    if (active !== leeFor && (boxK <= 0.02 || !leeFor || manual)) {
       leeFor = active;
       boxOn = false;
       boxLight = !!active && active.el.classList.contains('fl-end-words');
       if (active) scheduleBox();
     } else if (stepped && leeFor === active && active) scheduleBox();
     if (leeFor !== active) boxOn = false;
-    boxK = boxOn ? Math.min(1, boxK + dtBox / (mqStill.matches ? 0.001 : 0.35)) : Math.max(0, boxK - dtBox / (mqStill.matches ? 0.001 : 0.25));
+    boxK = boxOn ? Math.min(1, boxK + dtBox / (snap ? 0.001 : 0.35)) : Math.max(0, boxK - dtBox / (snap ? 0.001 : 0.25));
     // The rail: which section this is; out of the way on the first frame and at the ending.
     if (rail.length) {
       let i = 0;
@@ -2472,8 +2507,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       cap[2] = (span[2] + pad) / viewW;
       cap[3] = 1 - (span[1] - pad) / viewH;
     }
-    capK = span ? Math.min(1, capK + dtCap / (mqStill.matches ? 0.001 : 0.3)) : Math.max(0, capK - dtCap / (mqStill.matches ? 0.001 : 0.25));
-    if (canvasVisible) engine.frame(now, cam, aspect, { melt, day: dayNow, hour: s, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle });
+    capK = span ? Math.min(1, capK + dtCap / (snap ? 0.001 : 0.3)) : Math.max(0, capK - dtCap / (snap ? 0.001 : 0.25));
+    if (canvasVisible || manual) engine.frame(now, cam, aspect, { melt, day: dayNow, hour: s, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle });
     // The live picture stands over its still once a frame of it is drawn; the entrance begins when the dissolve is done.
     if (!pictureUp && engine.drew) {
       pictureUp = true;
@@ -2482,6 +2517,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
         enterT0 = performance.now() + (mqStill.matches ? 0 : 440);
       });
     }
+  };
+  const off = onFrame((now) => {
+    if (!manual) tick(now);
   }, 10);
 
   return {
@@ -2493,6 +2531,15 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       enterHeld = t;
       engine.touch();
     },
+    manual(on) {
+      manual = on;
+    },
+    step(now, s) {
+      engine.touch();
+      tick(now, s);
+    },
+    cam: () => cam,
+    loaded: () => waiting <= 0,
     poseAt: (s) => poseAt(keys, s),
     holdPose(pose) {
       heldPose = pose ? { ...pose } : null;

@@ -5,7 +5,6 @@ import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Nav } from '@/components/Nav';
 import { Runtime } from '@/components/Runtime';
-import { WaterStage } from '@/components/WaterStage';
 import { CONTACT } from '@/content/projects';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL, THEME_COLOR } from '@/lib/site';
 import './globals.css';
@@ -148,7 +147,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a className="skip" href="#main">
           Skip to content
         </a>
-        <WaterStage />
         <Nav />
         <div className="shell">
           {/* Route changes: the old page lifts away, the new one settles in.

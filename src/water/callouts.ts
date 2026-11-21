@@ -17,7 +17,8 @@
  * geometry is in words.ts, where it is tested.
  */
 
-import { type Basis, projectPoint, type V3 } from './camera';
+import type { Basis, V3 } from './camera';
+import { projectPoint } from './projection';
 import { NAV_CLEAR, layoutCaptions, layoutList, layoutStepped } from './words';
 
 interface Call {
@@ -44,7 +45,12 @@ interface Call {
 export interface Callouts {
   measure(): void;
   /** Sets every caption for this frame. Returns where the captions tied to their points stand (x0, y0, x1, y1 in px), or null when there are none. */
-  frame(cam: Basis, aspect: number, viewW: number, viewH: number, s: number): [number, number, number, number] | null;
+  /**
+   * `fit`: where the camera's frame lies over the window, when the picture is a frame of another shape cut to cover it
+   * (the pre-rendered flight): the frame's width and height as shares of the window's, and its left and top edge in
+   * the same. A point at (u, v) of the frame is then at (fit[0] * u + fit[2], fit[1] * v + fit[3]) of the window.
+   */
+  frame(cam: Basis, aspect: number, viewW: number, viewH: number, s: number, fit?: [number, number, number, number]): [number, number, number, number] | null;
 }
 
 /** The most captions a narrow screen ties to their points; a station with more sets them all as one list. */
@@ -93,7 +99,7 @@ export function makeCallouts(): Callouts {
     }
   };
 
-  const frame = (cam: Basis, aspect: number, viewW: number, viewH: number, s: number) => {
+  const frame = (cam: Basis, aspect: number, viewW: number, viewH: number, s: number, fit: [number, number, number, number] = [1, 1, 0, 0]) => {
     const wide = aspect >= 0.9;
     // (A tablet held upright flies the phone's path and sets its words at the foot the same way.)
     const narrow = viewW < 720 || (viewW < 900 && !wide);
@@ -114,8 +120,8 @@ export function makeCallouts(): Callouts {
       let y = 0;
       if (on && !loose) {
         const p = projectPoint(cam, wide && c.atWide ? c.atWide : c.at, aspect);
-        x = p[0] * viewW;
-        y = p[1] * viewH;
+        x = (p[0] * fit[0] + fit[2]) * viewW;
+        y = (p[1] * fit[1] + fit[3]) * viewH;
         on = p[2] > 1 && x > 24 && x < viewW - 24 && y > NAV_CLEAR + 30 && y < viewH - 24;
       }
       if (on !== c.on) {
