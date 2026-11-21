@@ -50,7 +50,7 @@ or `night`. Of each set it renders these tracks:
 | `gate1`, `gate2` | the stretch in which cc-switch's switch can be worked (from 0.3 screens before its composed frame to a screen after it: 40 frames), second and third gate open | by scroll, when the switch says so |
 
 The gates' tracks are whole frames, but only of the 1.3 screens in which
-the switch stands in cc-switch's words: 80 frames a stream, 5.4 MB over all
+the switch stands in cc-switch's words: 80 frames a stream, 3.9 MB over all
 eight streams. Over the whole stretch in which the sluices are in the frame
 (about eight screens) they would not fit the limit. The player plays a
 gate's track while the scroll is inside it and that gate is chosen, and
