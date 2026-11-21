@@ -13,8 +13,5 @@ export const KIND: Record<string, string> = {
   rydar: 'iOS app',
   'ask-around': 'Agent governance',
   // (The other tools on /work: see TOOLS.)
-  'lite-stats': 'macOS app',
   envfetch: 'CLI',
-  cryptolab: 'Swift playground',
-  passportphoto: 'Web app',
 };

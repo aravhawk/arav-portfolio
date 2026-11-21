@@ -83,10 +83,16 @@ Every word of a line is from the repository itself:
 
 | Tool | The line's sources |
 | --- | --- |
-| Lite Stats (`lite-stats`) | README, first sentence ("a trimmed, Apple Silicon-only fork of exelban/stats ... from the macOS menu bar") and its Modules list (CPU, GPU, RAM, Disk, Sensors). It is a fork in spirit and the line says so. Release v1.1.0 (2026-05-13). |
 | envfetch | README, first sentence ("a native macOS CLI for storing environment variables in an encrypted local vault and activating them with Touch ID"). Release v1.1.0 (2026-06-04). Archived. |
-| CryptoLab (`CryptoLab.swiftpm`) | README ("submitted to Apple's 2025 Swift Student Challenge"; an iPad with AR and a Secure Enclave) and the code: `WalletGenerationView.swift` (a Secure Enclave key), `ARMiningScreen.swift` (ARKit; signing and verifying a transaction; proof of work, stake and history), `LearnView.swift`. Release v0.1 (2025-02-24). Archived. |
-| Passport Photo Studio (`passportphoto`) | README, first paragraph (frame against the official guides, whiten the background, export JPG or PNG at 300 DPI, "no photo ever leaves your machine"). No release. Its live site is on a `vercel.app` address, which this site does not show: source only. |
+
+The owner's bar for this list (2026-11-21): show a tool only if it is
+a genuinely good open-source project, something he built that has a
+real edge, or something with traction. Removed on that bar after a
+first pass had added them: Passport Photo Studio (a small tool for his
+own use), Lite Stats (a trimmed fork of someone else's app, for his own
+machines, with no users to point to) and CryptoLab (a contest
+submission with no result to state and no users). Do not add them back
+without his word.
 
 Considered and left out as too slight: SumQuick (2 kB of Python),
 IntergalacticPro (a prompt behind a Streamlit page), Weather-Station-BMP280

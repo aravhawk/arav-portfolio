@@ -463,10 +463,12 @@ export const PROJECTS: Project[] = entries;
 export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === slug);
 
 /**
- * Other tools of his: public repositories with real substance that the flight has no place for. Each is a row on
- * /work after the nine (name, one line, kind, its source and its release) and has no page and no picture. Every
- * word of a line is from the repository itself (its README, its releases, its code): where each came from is in
- * docs/site-system/copy.md. The owner's never, drop and hold lists are there too: nothing on them is added here.
+ * Other tools of his: public repositories that the flight has no place for. Each is a row on /work after the nine
+ * (name, one line, kind, its source and its release) and has no page and no picture. Every word of a line is from
+ * the repository itself (its README, its releases, its code): where each came from is in docs/site-system/copy.md.
+ * The owner's bar for this list (2026-11-21): a genuinely good open-source project, something he built that has a
+ * real edge, or something with traction. A small tool for his own use, a fork of someone else's app, a class or
+ * contest piece without a result: not here. His never, drop and hold lists are in the same doc.
  */
 export interface Tool {
   slug: string;
@@ -477,15 +479,6 @@ export interface Tool {
 
 export const TOOLS: Tool[] = [
   {
-    slug: 'lite-stats',
-    name: 'Lite Stats',
-    line: 'A trimmed, Apple Silicon-only fork of Stats that monitors CPU, GPU, RAM, disk and sensors from the macOS menu bar.',
-    links: [
-      { label: 'Source', href: 'https://github.com/aravhawk/lite-stats' },
-      { label: 'v1.1.0', href: 'https://github.com/aravhawk/lite-stats/releases/tag/v1.1.0' },
-    ],
-  },
-  {
     slug: 'envfetch',
     name: 'envfetch',
     line: 'A macOS command-line tool that keeps environment variables in an encrypted local vault and activates them in the shell with Touch ID.',
@@ -493,21 +486,6 @@ export const TOOLS: Tool[] = [
       { label: 'Source', href: 'https://github.com/aravhawk/envfetch' },
       { label: 'v1.1.0', href: 'https://github.com/aravhawk/envfetch/releases/tag/v1.1.0' },
     ],
-  },
-  {
-    slug: 'cryptolab',
-    name: 'CryptoLab',
-    line: 'A Swift playground for iPad that teaches how cryptocurrencies work: keys made in the Secure Enclave, signed transactions, and mining in augmented reality. Submitted to Apple’s 2025 Swift Student Challenge.',
-    links: [
-      { label: 'Source', href: 'https://github.com/aravhawk/CryptoLab.swiftpm' },
-      { label: 'v0.1', href: 'https://github.com/aravhawk/CryptoLab.swiftpm/releases/tag/v0.1' },
-    ],
-  },
-  {
-    slug: 'passportphoto',
-    name: 'Passport Photo Studio',
-    line: 'A browser tool that frames a photo against the US passport guides, whitens the background and exports a 2 by 2 inch JPG or PNG at 300 DPI. The photo stays in the browser.',
-    links: [{ label: 'Source', href: 'https://github.com/aravhawk/passportphoto' }],
   },
 ];
 

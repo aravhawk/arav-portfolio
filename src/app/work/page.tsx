@@ -81,7 +81,7 @@ export default async function Work() {
           line, what kind of thing it is, and the ways to its source and its release. */}
       <section className="sec wrap" aria-labelledby="w-tools">
         <h2 className="sec-h" id="w-tools">
-          Other tools
+          {TOOLS.length === 1 ? 'One more tool' : 'Other tools'}
         </h2>
         <ul className="tools">
           {TOOLS.map((t) => (
