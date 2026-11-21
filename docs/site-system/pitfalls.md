@@ -83,5 +83,13 @@ Each of these cost time on this build.
   screens past its hold. A key that turns the eye in that time can
   bring water under the title (`scripts/titles-test.mjs` at 0.9 of the
   stretch). Leave along the bank the words stand on.
+- **A pattern counted from the world's origin moves when a place does.**
+  The sea's drift ice is laid out in cells of the world. When the delta
+  moved 7,600 units the plates fell elsewhere, and one drifted under the
+  ending's small line on a tablet (legibility 1.9 at 768 wide, and only
+  there). A place's own pattern is counted from the place's base.
+- **Run legibility at 768 as well as 390 and 1440.** A tablet held
+  upright sees a cut of the phone's frame with its words elsewhere:
+  what is calm under the words on a phone may not be under them there.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 V3: three more.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 V3: five more.

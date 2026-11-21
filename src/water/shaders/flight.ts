@@ -28,6 +28,8 @@ import { customSubjects, subjects } from '../registry';
 import { F_DEFINES } from '../variants';
 import { AT, BASIN, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, SHARDS, STREAM, TARN, TARN_BAY, TRIBS, WORLD } from '../world';
 
+/** The delta's base when the sea's drift ice was laid out (geography.ts: AT.delta, then). */
+const FLOES_FROM = 15400;
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
 
@@ -2058,7 +2060,9 @@ vec2 seaRelief(vec2 p) {
 float floeAt(vec2 p, out vec2 normal) {
   normal = vec2(0,1);
   float dens = 0.58 * smoothstep(${(AT.delta + 8700).toFixed(1)}, ${(AT.delta + 8950).toFixed(1)}, p.y) * (1.0 - smoothstep(${(AT.delta + 9650).toFixed(1)}, ${(AT.delta + 10220).toFixed(1)}, p.y));
-  vec2 q = p / 210.0;
+  // (The plates lie where they lay before the places changed their order: the pattern is counted from the delta, not
+  // from the lake. A plate that drifted under the ending's small line on a tablet was the difference.)
+  vec2 q = (p - vec2(0.0, ${(AT.delta - FLOES_FROM).toFixed(1)})) / 210.0;
   vec2 c = floor(q);
   vec2 hq = hash2(c + 7.0);
   if (hq.y > dens) return 1e3;
