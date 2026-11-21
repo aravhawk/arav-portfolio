@@ -13,10 +13,10 @@
  * the faces ripple.
  */
 
-import { BENDS, CANYON, COLS, DAM, FACE, HALL, LATTICE, SLUICES, T2 } from '../geography';
+import { AT, BENDS, CANYON, COLS, DAM, FACE, HALL, LATTICE, SLUICES } from '../geography';
 
 /** Existing station features whose hits supply the deep fracture and exposed horizon. */
-export const DEEP_ICE_FEATURES = 'defined(F_SLAB) || defined(F_COLS)';
+export const DEEP_ICE_FEATURES = 'defined(F_SLAB) || defined(F_COLS) || defined(F_RING)';
 
 const f = (n: number) => n.toFixed(1);
 
@@ -478,7 +478,7 @@ export const SHALLOWS = `
 // (The shallows the columns stand in are a hand deep: the pale bed shows through.)
 // (Only round its shore: out where the seracs stand the pool goes down into the blue.)
 float shallowsAt(vec2 p) {
-  float k = smoothstep(${f(T2 + 380)}, ${f(T2 + 640)}, p.y) * (1.0 - smoothstep(${f(T2 + 1420)}, ${f(T2 + 1700)}, p.y));
+  float k = smoothstep(${f(AT.shallows + 380)}, ${f(AT.shallows + 640)}, p.y) * (1.0 - smoothstep(${f(AT.shallows + 1420)}, ${f(AT.shallows + 1700)}, p.y));
   if (k <= 0.0) return 0.0;
   float sd = -textureLod(uBedA, bedUv(p), 0.0).r;
   float deep = smoothstep(34.0, 150.0, sd + 22.0 * sin(p.x * 0.013 + 1.0) * sin(p.y * 0.017));
@@ -1084,22 +1084,22 @@ float canyonD(vec2 p) {
   vec2 r1 = p - CY_C1;
   // In the first reach and the quarter bend the other two reaches and the
   // hall lie farther east. The nearest point is on the inlet or the arc.
-  if (r1.x <= 0.0 && r1.y <= CY_R && p.y >= ${f(T2 + 5000)}) {
+  if (r1.x <= 0.0 && r1.y <= CY_R && p.y >= ${f(AT.canyon + 5000)}) {
     return r1.y <= 0.0 ? abs(p.x - 1300.0) : abs(length(r1) - CY_R);
   }
   // Beyond the hall the outlet is nearest wherever its lateral distance
   // is less than the distance back to the hall and the earlier reaches.
   float outlet = abs(p.x - CY_XE);
-  if (outlet < p.y - ${f(HALL.y1)} && p.y <= ${f(T2 + 7700)}) return outlet;
+  if (outlet < p.y - ${f(HALL.y1)} && p.y <= ${f(AT.canyon + 7700)}) return outlet;
   // (The hall: measured square, so its walls meet at true corners.)
   vec2 b = abs(p - vec2(${f((HALL.x0 + HALL.x1) / 2)}, ${f((HALL.y0 + HALL.y1) / 2)})) - vec2(${f((HALL.x1 - HALL.x0) / 2)}, ${f((HALL.y1 - HALL.y0) / 2)});
   float hall = max(b.x, b.y) + CY_W;
   // Every earlier reach is west of the hall entrance. The outlet is
   // at least its lateral distance away, even below its first point.
   if (hall <= min(p.x - ${f(BENDS[1].x)}, outlet)) return hall;
-  vec2 inletGap = vec2(p.x - 1300.0, p.y - clamp(p.y, ${f(T2 + 5000)}, CY_C1.y));
+  vec2 inletGap = vec2(p.x - 1300.0, p.y - clamp(p.y, ${f(AT.canyon + 5000)}, CY_C1.y));
   vec2 crossGap = vec2(p.x - clamp(p.x, CY_C1.x, ${f(BENDS[1].x)}), r1.y - CY_R);
-  vec2 exitGap = vec2(outlet, p.y - clamp(p.y, ${f(BENDS[1].y)}, ${f(T2 + 7700)}));
+  vec2 exitGap = vec2(outlet, p.y - clamp(p.y, ${f(BENDS[1].y)}, ${f(AT.canyon + 7700)}));
   float d = sqrt(min(dot(inletGap, inletGap), min(dot(crossGap, crossGap), dot(exitGap, exitGap))));
   if (r1.x < 0.0 && r1.y > 0.0) d = min(d, abs(length(r1) - CY_R));
   return min(d, hall);

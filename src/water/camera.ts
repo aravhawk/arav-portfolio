@@ -11,7 +11,7 @@
 
 import { byId, SECTIONS, timeline } from './registry';
 import type { NameRow } from './name';
-import { DY, NAME, REST, RIVER, T2 } from './world';
+import { AT, DY, NAME, NEXT_WORLD, REST, RIVER } from './world';
 
 export type V3 = [number, number, number];
 
@@ -375,7 +375,7 @@ export function endLens(aspect: number) {
  * world the sun has been found to rise.
  */
 function seaKeys(aspect: number, sunAz: number, start: number, g: number, sea: boolean): Key[] {
-  const T = T2;
+  const T = AT.delta;
   const upright = aspect < 0.9;
   const L = endLens(aspect);
   const head = sunAz - L.sunOff;
@@ -423,7 +423,8 @@ function seaKeys(aspect: number, sunAz: number, start: number, g: number, sea: b
 export function dayAt(s: number): number {
   const h = SECTIONS.hero;
   const s9 = byId.delta.start;
-  const s8 = 23.6 * (END_AT / 31.1);
+  // (In the next world the day turns on the run from the lattice to the delta: every place before it keeps the day's light.)
+  const s8 = NEXT_WORLD ? s9 - 3.6 : 23.6 * (END_AT / 31.1);
   const keys: [number, number][] = [
     [0, 0],
     [h, 0],

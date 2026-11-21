@@ -26,7 +26,7 @@ import { BOX_HIT, DEEP_ICE_FEATURES, GLACIER_ICE, SEG_D, SHALLOWS, STATION_COMMO
 import { PANO, SHADE_AZ, WIND } from './terrain';
 import { customSubjects, subjects } from '../registry';
 import { F_DEFINES } from '../variants';
-import { BASIN, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, SHARDS, STREAM, T2, TARN, TARN_BAY, TRIBS } from '../world';
+import { AT, BASIN, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, SHARDS, STREAM, TARN, TARN_BAY, TRIBS, WORLD } from '../world';
 
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
@@ -774,7 +774,7 @@ float bedShore;
 vec4 bedAt(vec2 w) {
 #ifdef SEA
   // The painted map ends in open sea across its full width.
-  if (w.y >= ${(T2 + 9900 - 60).toFixed(1)}) { bedShore = 0.0; return vec4(-2000.0, -2000.0, 0.0, 0.0); }
+  if (w.y >= ${(WORLD.h - 60).toFixed(1)}) { bedShore = 0.0; return vec4(-2000.0, -2000.0, 0.0, 0.0); }
 #endif
   // The lake's far shore. Past the world's sides the bed repeats its last
   // column, so the coast there would be a ruled line: it is bent into long
@@ -804,8 +804,8 @@ vec4 bedAt(vec2 w) {
   // the cape's shallows, and the lie of its shore, would run on from there to the horizon (a pale wedge on the
   // sea, with a strip of half-land along the skyline where a far shore's edge is blended widest). By that edge
   // all water is the deep open sea, with no shore near it.
-  if (w.y > ${(T2 + 9900 - 330).toFixed(1)} && b.r < 0.0) {
-    float north = smoothstep(${(T2 + 9900 - 330).toFixed(1)}, ${(T2 + 9900 - 60).toFixed(1)}, w.y);
+  if (w.y > ${(WORLD.h - 330).toFixed(1)} && b.r < 0.0) {
+    float north = smoothstep(${(WORLD.h - 330).toFixed(1)}, ${(WORLD.h - 60).toFixed(1)}, w.y);
     b.rg = mix(b.rg, vec2(-2000.0), north);
     b.ba *= 1.0 - north;
   }
@@ -1380,7 +1380,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 #ifdef F_SHALLOWS_OFF
   float shalK = 0.0;
 #else
-  float shalK = pb.y > ${(T2 + 380).toFixed(1)} && pb.y < ${(T2 + 1700).toFixed(1)} ? shallowsAt(pb) : 0.0;
+  float shalK = pb.y > ${(AT.shallows + 380).toFixed(1)} && pb.y < ${(AT.shallows + 1700).toFixed(1)} ? shallowsAt(pb) : 0.0;
 #endif
   if (shalK > 0.0) depth = mix(depth, min(depth, 13.0 + 12.0 * textureLod(uDetail, pb / 900.0 + 0.2, 0.0).r), shalK);
   // The clear pool: a foot of still water over a pale bed, and the picture lying on it.
@@ -2057,7 +2057,7 @@ vec2 seaRelief(vec2 p) {
  */
 float floeAt(vec2 p, out vec2 normal) {
   normal = vec2(0,1);
-  float dens = 0.58 * smoothstep(${(T2 + 8700).toFixed(1)}, ${(T2 + 8950).toFixed(1)}, p.y) * (1.0 - smoothstep(${(T2 + 9650).toFixed(1)}, ${(T2 + 10220).toFixed(1)}, p.y));
+  float dens = 0.58 * smoothstep(${(AT.delta + 8700).toFixed(1)}, ${(AT.delta + 8950).toFixed(1)}, p.y) * (1.0 - smoothstep(${(AT.delta + 9650).toFixed(1)}, ${(AT.delta + 10220).toFixed(1)}, p.y));
   vec2 q = p / 210.0;
   vec2 c = floor(q);
   vec2 hq = hash2(c + 7.0);
@@ -2415,7 +2415,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   }
   // Drift ice on the way out: each plate a hand of ice above the water, snow on its top, a blue wall on the side
   // the eye sees, and the pale skirt of the ice under water round it.
-  if (pw.y < ${(T2 + 10230).toFixed(1)} && footL < 26.0) {
+  if (pw.y < ${(AT.delta + 10230).toFixed(1)} && footL < 26.0) {
     const float FH = 5.5;
     vec2 sideGradient, topGradient;
     vec2 travel = dir.xy / max(-dir.z,0.02) * FH;

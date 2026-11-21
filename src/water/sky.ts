@@ -28,6 +28,8 @@
  */
 
 import { END_AT, SECTIONS, SETTLE_AT, dayAt, stillStops } from './camera';
+import { NEXT_WORLD } from './geography';
+import { byId, composed } from './registry';
 import { HERO_SUN } from './moments';
 import { SUN } from './shaders/terrain';
 
@@ -191,7 +193,32 @@ const MORNING: Key = {
 
 /** The calibrated heights and colours belong to hours along the whole journey.
  * Stretch the clock when the flight length changes. */
-const hourPositions = [3.1, 5.6, 8.45, 11.15, 13.8, 16.6, 19.4, 22.15, 25.8, 28.3].map(hour => hour * (END_AT / 31.1));
+/** The flight the hours were calibrated on: where it ended, where each of the places since moved stood composed, and where its delta began. */
+const FIRST = { end: 32.4, stops: { bench: 11.15, bridge: 15.1, models: 17.9, fork: 20.7, lattice: 23.45, canyon: 27.1 }, delta: 28.5 } as const;
+const hourPositions = [3.1, 5.6, 8.45, 11.15, 13.8, 16.6, 19.4, 22.15, 25.8, 28.3].map(hour => hour * ((NEXT_WORLD ? FIRST.end : END_AT) / 31.1));
+/**
+ * Each place keeps its own hour when the places change their order. The hours above were calibrated stop by stop on
+ * the first order of the places. In the next one, a place that has moved takes the light it stood in, composed, on
+ * that flight (the curve through the first keys, read at the place's first stop), at its new stop; the lake, the
+ * reach, the basin and the confluence keep their keys where they were; the delta's keys move with the delta. So the
+ * day no longer runs one way down the river: the sun goes back and forth between places, and every place is lit as
+ * it was made to be.
+ */
+function relaid(at: number[], rows: number[][]): { at: number[]; rows: number[][] } {
+  const moved = hourPositions.slice(3, 9);
+  const dl = hourPositions[9];
+  const first = at.map((a, i) => (i === at.length - 1 ? FIRST.end - 0.3 - 0.25 : a));
+  const out: [number, number[]][] = [];
+  at.forEach((a, i) => {
+    if (moved.includes(a)) return;
+    if (i === at.length - 1) out.push([a, rows[i]]);
+    else if (a >= dl) out.push([a + byId.delta.start - FIRST.delta, rows[i]]);
+    else out.push([a, rows[i]]);
+  });
+  for (const [id, stop] of Object.entries(FIRST.stops)) out.push([composed[id as keyof typeof FIRST.stops], through(first, rows, stop)]);
+  out.sort((a, b) => a[0] - b[0]);
+  return { at: out.map((x) => x[0]), rows: out.map((x) => x[1]) };
+}
 
 /**
  * The day, stop by stop (the light theme). The sun's bearing runs on round
@@ -692,7 +719,7 @@ function nightKeys(sunAz: number, elEnd: number): [number, Key][] {
  * eye arrives and has gone before the tarn.
  */
 function auroraAt(s: number): number {
-  const bench = hourPositions[3];
+  const bench = NEXT_WORLD ? composed.bench + hourPositions[3] - FIRST.stops.bench : hourPositions[3];
   return Math.max(1 - smooth(SECTIONS.hero, SECTIONS.hero + 0.6, s), smooth(bench - 1.6, bench - 0.5, s) * (1 - smooth(bench + 0.75, bench + 1.6, s)));
 }
 
@@ -758,7 +785,8 @@ let tableNext = 0;
 function table(theme: number, sunAz: number, ridge: number, elEnd: number): Table {
   for (const t of tables) if (t.theme === theme && t.sunAz === sunAz && t.ridge === ridge && t.elEnd === elEnd) return t;
   const k = theme ? nightKeys(sunAz, elEnd) : dayKeys(sunAz, ridge, elEnd);
-  const t: Table = { theme, sunAz, ridge, elEnd, at: k.map((x) => x[0]), rows: k.map((x) => row(x[1])) };
+  const made = { at: k.map((x) => x[0]), rows: k.map((x) => row(x[1])) };
+  const t: Table = { theme, sunAz, ridge, elEnd, ...(NEXT_WORLD ? relaid(made.at, made.rows) : made) };
   tables[tableNext] = t;
   tableNext = (tableNext + 1) % 6;
   return t;

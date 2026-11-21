@@ -2085,7 +2085,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
 
   /** The bed is the same for every screen; it is carved once. */
   async function buildBed() {
-    const rows = Math.min(engine.maxTexture, coarse ? 4096 : 8192) - 8;
+    const rows = Math.min(engine.maxTexture, coarse ? 4096 : 16384) - 8;
     // (As many cells to a stretch of river as when the world was shorter.)
     const cells = (coarse ? 1.2e6 : 3.0e6) * (WORLD.h / 12400);
     const div = Math.max(3, WORLD.h / rows, Math.sqrt((WORLD.w * WORLD.h) / cells));
