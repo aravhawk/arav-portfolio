@@ -140,12 +140,14 @@
     background-image: var(--still-tall-dark);
   }
 }
-/* The still has no calm made for the words: a soft veil of the ground's own tone stands behind them. */
+/* The still has no calm made for the words: a soft veil of the ground's own tone stands behind them. It reaches as
+   high as the words do: a page's label and its small print stand over the title, up where the still's far shore and
+   ranges are (the live band used to calm the picture there itself; since V1 the band is always its still). */
 .band-view::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 78% 92% at 0% 100%, var(--veil) 0%, var(--veil) 34%, transparent 72%);
+  background: radial-gradient(ellipse 84% 150% at 0% 100%, var(--veil) 0%, var(--veil) 46%, transparent 80%);
   pointer-events: none;
 }
 
