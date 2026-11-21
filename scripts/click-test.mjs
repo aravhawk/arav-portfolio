@@ -198,6 +198,13 @@ async function run(browser, width, theme) {
         at = y;
         if (item.fixed && item.land === 'nav') await page.waitForTimeout(600);
       }
+      // (Inside a closed disclosure, as the post's contents are on a phone: a reader opens it first, so the test does.)
+      const shutIn = await page.evaluate((id) => { const d = document.querySelector(`[data-ct="${id}"]`)?.closest('details:not([open])'); const sum = d?.querySelector('summary'); if (!sum || sum.getAttribute('data-ct') === id) return null; sum.scrollIntoView({ block: 'center', behavior: 'instant' }); return sum.getAttribute('data-ct'); }, item.id);
+      if (shutIn) {
+        const sb = await stillBox(page, shutIn);
+        if (sb) await (touch ? page.touchscreen.tap(sb.x, sb.y) : page.mouse.click(sb.x, sb.y));
+        await page.waitForTimeout(250);
+      }
       // (Off the flight a reader scrolls to it: it is brought to the middle of the screen, clear of the nav.)
       if (y == null) {
         // (A page that is still travelling from the last press, to a heading say, takes the scroll back: so until it holds.)
