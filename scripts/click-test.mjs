@@ -52,7 +52,7 @@ function survey(selector) {
     const shown = cs.display !== 'none' && cs.visibility !== 'hidden' && box.width > 0 && box.height > 0;
     // Where it is said to be: its landmark, then its own words.
     const land = el.closest('header.nav') ? 'nav' : el.closest('.fl-rail') ? 'rail' : el.closest('footer') ? 'footer' : el.closest('.ending') ? 'ending' : el.closest('nav[aria-label]')?.getAttribute('aria-label') ?? 'page';
-    const name = (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    const name = (el.getAttribute('aria-label') || el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60);
     const href = el.tagName === 'A' ? el.getAttribute('href') : null;
     // On the home page a block of words stands for a stretch of scroll: the place, in screens, at which this one does.
     let at = null;
@@ -92,6 +92,7 @@ function stateOf(id) {
   return [
     own,
     group ? Array.from(group.querySelectorAll('[aria-checked]'), (x) => x.getAttribute('aria-checked')).join('') : '',
+    el?.closest('details') ? String(el.closest('details').open) : '',
     document.documentElement.dataset.theme,
     document.querySelectorAll('dialog[open]').length,
     document.querySelectorAll('video').length ? Array.from(document.querySelectorAll('video'), (v) => v.paused).join('') : '',
@@ -199,7 +200,12 @@ async function run(browser, width, theme) {
       }
       // (Off the flight a reader scrolls to it: it is brought to the middle of the screen, clear of the nav.)
       if (y == null) {
-        await page.evaluate((id) => document.querySelector(`[data-ct="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'instant' }), item.id);
+        // (A page that is still travelling from the last press, to a heading say, takes the scroll back: so until it holds.)
+        for (let tries = 0; tries < 4; tries++) {
+          await page.evaluate((id) => document.querySelector(`[data-ct="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'instant' }), item.id);
+          const b = await stillBox(page, item.id);
+          if (b && b.y > 70 && b.y < (touch ? 844 : 900) - 10) break;
+        }
         at = -1;
       }
       // (A block of words sets in steps once the picture is there: wait for this piece, no longer than a reader would.)
@@ -268,7 +274,11 @@ async function run(browser, width, theme) {
         } else {
           row.ok = now.hash === href;
           row.did = `the address takes ${now.hash || 'no fragment'}`;
-          at = -1;
+          // (The page is now travelling to that heading: the next press starts from a page at rest.)
+          await open(0);
+          at = 0;
+          fresh = true;
+          continue;
         }
       } else if (item.tag === 'a') {
         const want = new URL(href, base + route);
@@ -356,7 +366,7 @@ async function stillBox(page, id) {
 function diff(a, b) {
   const x = a.split(' ~ ');
   const y = b.split(' ~ ');
-  const names = ['itself', 'its group', 'theme', 'open dialogs', 'video paused'];
+  const names = ['itself', 'its group', 'its details open', 'theme', 'open dialogs', 'video paused'];
   return x.map((v, i) => (v === y[i] ? null : `${names[i]} ${short(v)} to ${short(y[i])}`)).filter(Boolean).join('; ');
 }
 const short = (s) => s.replace(/\s+/g, ' ').slice(0, 70);
