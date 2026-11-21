@@ -8,7 +8,7 @@ import { PageShell } from '@/components/PageShell';
 import { sceneOf } from '@/water/registry';
 import { FeatStill } from '@/components/work/still-pictures';
 import { KIND } from '@/content/kinds';
-import { PROJECTS, RECOGNITION, TOOLS } from '@/content/projects';
+import { INTERESTS_LINE, PROJECTS, RECOGNITION, TOOLS } from '@/content/projects';
 import { formatPostDate } from '@/lib/dates';
 import { pageMeta } from '@/lib/meta';
 import { formatAsOf, formatCount, getMetrics } from '@/lib/metrics';
@@ -25,8 +25,8 @@ export const metadata: Metadata = pageMeta({
 /**
  * The work index: the delta, then the nine projects in the owner's order,
  * each beside the picture of its own station, then his other tools as rows
- * of type (TOOLS: no picture, no page), then what he is recognised for, as
- * lines.
+ * of type (TOOLS: no picture, no page), then what he is recognised for and
+ * what he is into, as lines.
  */
 export default async function Work() {
   const m = await getMetrics();
@@ -126,6 +126,13 @@ export default async function Work() {
             </li>
           ) : null}
         </ul>
+      </section>
+
+      <section className="sec wrap" aria-labelledby="w-interests">
+        <h2 className="sec-h" id="w-interests">
+          Interests
+        </h2>
+        <p className="recog">{INTERESTS_LINE.charAt(0).toUpperCase() + INTERESTS_LINE.slice(1)}</p>
         <p className="small footnote">
           Live numbers on this site are read from{' '}
           <a href={m.mergedPrs.upstream.source} target="_blank" rel="noopener noreferrer">

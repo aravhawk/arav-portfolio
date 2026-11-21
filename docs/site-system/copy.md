@@ -61,6 +61,17 @@ OpenAI DevDay 2026" (about him, never under Infiniview); the
 Business Insider story of May 2026, without his age, city or grade;
 his GitHub contributions in 2026, read live and said with the date.
 
+### His interests (the owner's list of 2026-11-21)
+
+One sentence, the same in both places it is said (`INTERESTS` in
+`src/content/projects.ts`): the delta's block on the home page
+("Interests: GPUs, AI, ML, evals, benchmarks, cryptography, crypto,
+blockchain, space, light.") and a short section on `/work`. No rockets:
+"space" carries it. No section of its own in the flight. On the home
+page the sentence must set in two lines from 390 wide up, as the one
+the flight was rendered with did: a third line lifts the block over
+ground the picture did not keep calm for it.
+
 ### Other tools (the owner's ask of 2026-11-21: "don't skip archived repos")
 
 After the nine, `/work` shows a second group under the heading "Other
@@ -108,4 +119,4 @@ own writing and is not edited.
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1:
 the definitive list, recognition, the story's rules. 2026-11-20 K2: the
-public pull request link names only counted repositories. 2026-11-21 F1: the other tools.
+public pull request link names only counted repositories. 2026-11-21 F1: the other tools. F1: his interests.

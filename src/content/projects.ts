@@ -525,15 +525,20 @@ export const RECOGNITION = {
   year: '2026',
 };
 
-export const INTERESTS = [
-  'Agents and evals',
-  'ML',
-  'Security',
-  'GPUs',
-  'Flight computers',
-  'Spaceflight',
-  'Robotics',
-];
+/**
+ * What he is into now (his own list, 21 November 2026), in his order. The home page says it in one sentence in the
+ * delta's block, over a picture rendered with that block's size in mind: the sentence must set in as many lines as
+ * the one the flight was rendered with (two, from 390 wide up), or the block grows over ground that was not kept
+ * calm for it. This wording does; "AI and ML ... crypto and blockchain, space and light" takes a third line. Measure
+ * a new wording in the page before keeping it, and mind the home page's 300 words (docs/site-system/copy.md).
+ */
+export const INTERESTS = ['GPUs', 'AI', 'ML', 'Evals', 'Benchmarks', 'Cryptography', 'Crypto', 'Blockchain', 'Space', 'Light'];
+
+/** An interest inside a sentence: a name keeps its capitals (GPUs, AI, ML), a plain word does not. */
+const inline = (x: string) => (/^[A-Z][a-z]/.test(x) ? x[0].toLowerCase() + x.slice(1) : x);
+
+/** The one sentence of his interests, the same wherever it is said (the home page's delta, /work). */
+export const INTERESTS_LINE = `${INTERESTS.map(inline).join(', ')}.`;
 
 export const CONTACT = {
   github: 'https://github.com/aravhawk',
