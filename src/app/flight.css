@@ -1041,6 +1041,11 @@ html[data-hero-words] .fl-hero-words .fl-intro {
   margin-top: 0;
   align-items: center;
 }
+/* The newsletter's field, under the row: the quieter of the two. It sets with the row and takes presses as it does. */
+.fl-end-sub {
+  width: min(27rem, calc(100vw - 2 * var(--gutter)));
+  margin-top: clamp(2px, 0.6vh, 8px);
+}
 /* The entrance. The small line leads, alone, as the camera comes down to the sea (the block is on from then);
    when the camera rests the block sets (`data-set`): the headline wipes in and the links follow. It leaves fast. */
 .fl-end-words .ending-line {
@@ -1052,7 +1057,8 @@ html[data-hero-words] .fl-hero-words .fl-intro {
   transition: clip-path 900ms var(--ease-in-out);
 }
 .fl-end-words .ending-kicker,
-.fl-end-words .ending-links {
+.fl-end-words .ending-links,
+.fl-end-words .fl-end-sub {
   opacity: 0;
   transform: translate3d(0, 14px, 0);
   transition:
@@ -1073,6 +1079,13 @@ html[data-hero-words] .fl-hero-words .fl-intro {
     opacity 700ms var(--ease-out) 420ms,
     transform 700ms var(--ease-out) 420ms;
 }
+.fl-end-words[data-set] .fl-end-sub {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 700ms var(--ease-out) 520ms,
+    transform 700ms var(--ease-out) 520ms;
+}
 /* A section takes no pointer events (`.fl-sec`), and what stands in it inherits that. A station's pieces are given
    them back as each one sets (`[data-at][data-in]`). The ending's pieces are not steps: the block sets them, so the
    block gives them back, from the moment it is on. Without this every link of the contact row was dead: the press
@@ -1081,6 +1094,7 @@ html[data-hero-words] .fl-hero-words .fl-intro {
   pointer-events: auto;
 }
 .fl-end-words:not([data-set]) .ending-links *,
+.fl-end-words:not([data-set]) .fl-end-sub *,
 .fl-end-words:not([data-set]) .ending-head * {
   pointer-events: none;
 }
@@ -1089,9 +1103,14 @@ html[data-hero-words] .fl-hero-words .fl-intro {
 }
 
 @media (max-width: 719px) {
+  /* (The field is the block's last line and stands near the foot: under it there is room for the one line that says
+     what went wrong, and the headline stays below the end of the ribbon of light.) */
   .fl-end-block {
     max-width: 68vw;
-    margin-bottom: clamp(16px, 3.4vh, 34px);
+    margin-bottom: 8px;
+  }
+  .fl-end-sub {
+    margin-top: 0;
   }
 
   .fl .fl-into-list {
@@ -1102,7 +1121,8 @@ html[data-hero-words] .fl-hero-words .fl-intro {
 @media (prefers-reduced-motion: reduce) {
   .fl-end-words .ending-line,
   .fl-end-words .ending-kicker,
-  .fl-end-words .ending-links {
+  .fl-end-words .ending-links,
+  .fl-end-words .fl-end-sub {
     clip-path: none;
     transform: none;
     transition: opacity 200ms linear;
@@ -1269,11 +1289,17 @@ html[data-hero-words] .fl-hero-words .fl-intro {
   clip-path: none;
 }
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-kicker,
-:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-links {
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-links,
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .fl-end-sub {
   opacity: 1;
   transform: none;
 }
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words * {
+  pointer-events: auto;
+}
+/* (The block never sets here, and the rule that holds its row and its field until it sets outweighs the one above:
+   without this the contact row and the newsletter's field took no presses on the page without scripts.) */
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words:not([data-set]) :is(.ending-links, .fl-end-sub, .ending-head) * {
   pointer-events: auto;
 }
 @media (max-width: 859px) {
