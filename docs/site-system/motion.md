@@ -103,6 +103,42 @@ the hero, the river or any 3D work.
   fade in place of any large movement.
 - `text-wrap: pretty` on body copy.
 
+### The theme switch (as built, F1)
+
+`ThemeToggle` in `src/components/Nav.tsx`, styled in `nav.css`. It is
+the model for a small control:
+
+- **A real switch** (`role="switch"`, named "Dark theme",
+  `aria-checked`). Off is light: an open track with a full disc at its
+  left. On is dark: a filled track, the disc at its right, cut to a
+  crescent. The state is read without a label, in both themes.
+- **On the pixel grid.** A 40 by 22 track, a 16 px disc 3 px in, 18 px
+  of travel: whole pixels, so every edge is sharp at 1x and 2x. The
+  nav's side padding is rounded to a pixel for the same reason (the
+  gutter is a share of the window's width).
+- **The button is the target** (52 by 44, never under 44 wide); the
+  focus ring stands round the track.
+- **180 ms, ease-out, transform and opacity only.** The track's two
+  looks are two layers that cross-fade; their colours are the
+  switch's own and do not turn with the theme's tokens, so nothing
+  flashes as the tokens change under them. The press is
+  `scale(0.97)` on the track.
+- **Nothing moves when it is changed from the keyboard**
+  (`data-instant`, set from the click's press count), nor is there a
+  press scale under `:focus-visible`.
+- **Reduced motion: a cross-fade.** The disc does not travel: one
+  stands at each end and one fades as the other comes.
+- **The theme itself turns by the page's colours cross-fading in
+  place** (`--t-theme`). Nothing grows from the centre of the screen;
+  if a reveal is ever added it sets out from the switch.
+- The first paint has the system's scheme or the stored choice
+  (`boot` in `layout.tsx`); the switch is drawn from `data-theme`, so
+  it is right in that paint too.
+
+`scripts/toggle-sheet.mjs <base> <outdir>` photographs every state at
+1x and 2x, enlarged, with the travel frame by frame, and writes the
+control's name, role, sizes and what the keys do.
+
 ## Springs (planned: one helper in the engine)
 
 For anything that follows the pointer or a drag: critically damped
@@ -136,4 +172,4 @@ stations, and a new station must not add one.
 Only as the direct consequence of a meaningful action; never on load,
 hover or continuous scroll; in the picture, only at discrete beats.
 
-Change log: 2026-11-18 first version (orchestrator).
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 F1: the theme switch.
