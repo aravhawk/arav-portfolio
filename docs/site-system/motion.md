@@ -122,7 +122,12 @@ the model for a small control:
   looks are two layers that cross-fade; their colours are the
   switch's own and do not turn with the theme's tokens, so nothing
   flashes as the tokens change under them. The press is
-  `scale(0.97)` on the track.
+  `scale(0.97)` on the button.
+- **One element in the markup.** The track's two looks, the
+  crescent's bite and reduced motion's second disc are pseudo-elements
+  in `nav.css`. `Nav.tsx` is in every page's script, and a few more
+  bytes of it cost every page a request (`performance.md`, "The
+  first round").
 - **Nothing moves when it is changed from the keyboard**
   (`data-instant`, set from the click's press count), nor is there a
   press scale under `:focus-visible`.

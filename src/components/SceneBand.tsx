@@ -9,7 +9,7 @@ interface Props {
   full?: boolean;
   /** An index page: a little lower, so the first row of the list stands in the first screen. */
   index?: boolean;
-  /** The scene's still as a picture (BandStill): the band's picture. */
+  /** The scene's still as a picture (BandStill): the band's picture. `null`: the still is the band's ground, set from CSS (the 404). */
   still: React.ReactNode;
   /** The page's label, title and line: they stand in the scene's calm corner. */
   children: React.ReactNode;
@@ -27,7 +27,7 @@ interface Props {
  */
 export function SceneBand({ scene, short, full, index, still, children }: Props) {
   return (
-    <header className={`band${short ? ' band-short' : ''}${full ? ' band-full' : ''}${index ? ' band-index' : ''}`} data-scene-id={scene}>
+    <header className={`band${short ? ' band-short' : ''}${full ? ' band-full' : ''}${index ? ' band-index' : ''}${still ? '' : ' band-ground'}`} data-scene-id={scene}>
       <div className="band-view" data-fill aria-hidden="true" style={stillVars(scene)}>
         {still}
       </div>

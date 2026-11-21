@@ -140,6 +140,21 @@
     background-image: var(--still-tall-dark);
   }
 }
+/* A band without a picture (the 404): the still is its ground, by the page's theme and the screen's shape. */
+.band-ground .band-view {
+  background-image: var(--still-wide-light);
+}
+:root[data-theme='dark'] .band-ground .band-view {
+  background-image: var(--still-wide-dark);
+}
+@media (max-aspect-ratio: 9/10) {
+  .band-ground .band-view {
+    background-image: var(--still-tall-light);
+  }
+  :root[data-theme='dark'] .band-ground .band-view {
+    background-image: var(--still-tall-dark);
+  }
+}
 /* The still has no calm made for the words: a soft veil of the ground's own tone stands behind them. It reaches as
    high as the words do: a page's label and its small print stand over the title, up where the still's far shore and
    ranges are (the live band used to calm the picture there itself; since V1 the band is always its still). */

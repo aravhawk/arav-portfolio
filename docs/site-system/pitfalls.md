@@ -104,5 +104,15 @@ Each of these cost time on this build.
   `dispatchEvent` reach an element whatever covers it. Test a link
   with Playwright's `click()` or `tap()`, which go to its place on the
   screen.
+- **Words on the home page that set in one line more.** The picture
+  under a block of words was rendered with the block's size in mind. A
+  sentence that wraps to another line lifts the whole block (the
+  interests sentence, 23 to 30 px) over ground that was not kept calm
+  for it. Measure the block's boxes before and after a change of
+  words at 390, 768, 1440 and 1728; if they differ, find a wording
+  that sets as the old one did, or the flight must be rendered again.
+- **A comment in `Nav.tsx` cost a request.** The bundler splits the
+  layout's script by the size of its source. See `performance.md`,
+  "The first round".
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 V3: five more. 2026-11-21 F1: the dead links.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 V3: five more. 2026-11-21 F1: the dead links, a line more, a comment's cost.

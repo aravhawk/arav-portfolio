@@ -321,4 +321,83 @@ router 48 kB, 8 kB more) and the site's own (35 kB), the two fonts
 (12 kB) and the ground's textures (6 kB). That simulates at about
 3.1 s and scores 92 to 93. See `.tools/out/k3/REPORT.md` of the K3 task.
 
-Change log: 2026-11-20 V1: the played flight, its rules, its measures.
+## Inner pages: the first round, and the count of requests (F1, 2026-11-21)
+
+Two more things the phone preset's simulation charges for, both found by
+reading a report's request log (`a['network-requests']`), not its score:
+
+- **The page's HTML must fit a server's first round.** A new connection
+  sends about 14.6 kB before it waits for an answer; a page whose HTML
+  (headers and all) is over that pays another round trip, 150 ms on the
+  preset, on its first paint and its largest. Here that is about
+  **14.0 kB of gzipped HTML** (`curl -s -H 'Accept-Encoding: gzip' <page>
+  | wc -c`). `/work` was 14.2 kB and grew to 15.9 with its second group;
+  it is 13.5 now. What was taken out of every page:
+  - **A held picture says its widths once** (`pack` in `Held.tsx`,
+    `data-set`; `Runtime.tsx` writes the same `srcset` out again;
+    `tests/content/held.test.ts` holds the two together). The lists of
+    the work index's eighteen pictures were a quarter of its HTML, each
+    carried twice (in the page and in the data it hydrates from).
+  - **The 404's picture is its band's ground, from CSS** (`band-ground`).
+    The root's not-found page is carried in the data of every page, and
+    its picture's four lists of addresses were in each of them.
+  - **The site's structured data is on the home page only**
+    (`src/app/page.tsx`). In the root layout it was 0.6 kB of every
+    page, twice.
+- **Every script file before the largest paint is a request of its own**
+  on the six connections the simulation gives a page. The bundler
+  splits by the size of the source: a few hundred bytes more in
+  `src/components/Nav.tsx` (comments included) moved three small
+  loaders into a file of their own, a ninth request on every page, and
+  that alone cost `/blog` and Upstream a point each. So the theme
+  switch is one element with its layers drawn in CSS, and `Nav.tsx`
+  keeps its commentary in `nav.css`. After a change to anything in the
+  layout's script (`Nav`, `Runtime`, `SoundToggle`, `Link`), count:
+  `curl -s <page> | grep -o '<script src="[^"]*" async' | wc -l` gives
+  8 on `/blog` and 9 on `/work` and the project pages. One more is a
+  point lost; find what grew.
+- Build clean before measuring (`rm -rf .next`): an incremental build
+  can split differently from a clean one.
+
+What is still over the first round: Upstream (14.2 kB: its ledger of
+merged pull requests is the page) and the post (17.4 kB: the article
+itself, carried twice by the framework). Both paint a round trip later
+than the rest and score 93 to 94.
+
+Interactions on an inner page: `scripts/inp-inner.mjs` (`--profile
+tall`, `--slow 4`). Worst on `/work` and cc-switch's page: 72 ms wide,
+88 ms on a phone's screen, 72 ms with the thread four times slower (the
+theme's turn each time).
+
+Where the pages stand (2026-11-21, the median of three runs each, a
+clean production build on a local server, Apple M4; accessibility, best
+practices and SEO are 100 on every route in both presets):
+
+| Route | Phone before | Phone after | Phone LCP before | after | Desktop before | after | Desktop LCP before | after | CLS after (phone) | TBT after (phone) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `/` | 100 | 100 | 1.05 s | 1.05 s | 100 | 100 | 0.28 s | 0.28 s | 0.004 | 10 ms |
+| `/work` | 93 | 94 | 3.22 s | 3.08 s | 100 | 100 | 0.67 s | 0.63 s | 0.004 | 10 ms |
+| `/work/infiniview` | 94 | 94 | 3.08 s | 3.08 s | 100 | 100 | 0.67 s | 0.67 s | 0.004 | 11 ms |
+| `/work/open-source` | 93 | 93 | 3.23 s | 3.23 s | 100 | 100 | 0.70 s | 0.70 s | 0.004 | 10 ms |
+| `/work/ollama` | 94 | 94 | 3.08 s | 3.08 s | 100 | 100 | 0.66 s | 0.67 s | 0.004 | 11 ms |
+| `/work/cc-switch` | 94 | 94 | 3.08 s | 3.08 s | 100 | 100 | 0.68 s | 0.68 s | 0.004 | 10 ms |
+| `/work/kilo-bench` | 95 | 95 | 3.00 s | 3.00 s | 100 | 100 | 0.67 s | 0.67 s | 0.004 | 10 ms |
+| `/work/ask-around` | 95 | 96 | 2.99 s | 2.78 s | 100 | 100 | 0.62 s | 0.62 s | 0.004 | 10 ms |
+| `/work/rydar` | 95 | 95 | 2.93 s | 2.93 s | 100 | 100 | 0.62 s | 0.63 s | 0.004 | 11 ms |
+| `/work/agent-bridge` | 94 | 94 | 3.07 s | 3.14 s | 100 | 100 | 0.66 s | 0.67 s | 0.004 | 7 ms |
+| `/work/tensorpow` | 94 | 94 | 3.09 s | 3.14 s | 100 | 100 | 0.68 s | 0.68 s | 0.004 | 6 ms |
+| `/blog` | 96 | 96 | 2.78 s | 2.77 s | 100 | 100 | 0.62 s | 0.62 s | 0.004 | 10 ms |
+| `/blog/three-ai-agents-five-saas-products` | 94 | 93 | 3.08 s | 3.15 s | 100 | 100 | 0.67 s | 0.67 s | 0.004 | 10 ms |
+
+The phone preset's largest paint moves in steps of about 70 ms from one
+build to the next on the same page (which connection a file is given,
+and whether the ground's small textures are asked for before or after
+the first layout). A page within a step of a boundary, as the post is,
+can show a point either way with nothing changed on it. The inner pages
+whose largest paint is a picture stay at 93 to 96: the simulation
+charges that paint with the framework's scripts (about 160 kB) and the
+two fonts (75 kB), as "Inner pages: nothing but the page before its
+first frame" above says, and nothing more of that can be taken without
+changing what the pages are.
+
+Change log: 2026-11-20 V1: the played flight, its rules, its measures. 2026-11-21 F1: the first round and the count of requests.

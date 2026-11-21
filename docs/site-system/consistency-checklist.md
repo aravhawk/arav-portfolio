@@ -77,4 +77,4 @@ FAIL with reasons (no scores). A PASS needs all of:
 8. Beside the three references, the critic cannot name a fault that
    makes this the lesser site.
 
-Change log: 2026-11-18 first version (orchestrator).
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 F1: links and controls are pressed.

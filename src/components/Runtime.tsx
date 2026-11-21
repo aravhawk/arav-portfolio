@@ -127,7 +127,10 @@ export function Runtime() {
     () =>
       whenCalm(() => {
         for (const img of document.querySelectorAll<HTMLImageElement>('img[data-held]')) {
-          const { src, srcset } = img.dataset;
+          const { src, set } = img.dataset;
+          // (The widths said once, written out again: `pack` in Held.tsx, and tests/content/held.test.ts holds the two together.)
+          const [base, q, widths] = set ? set.split('|') : [];
+          const srcset = set ? widths.split(',').map((w) => `${base}&w=${w}&q=${q} ${w}w`).join(', ') : img.dataset.srcset;
           // (Once the real picture is in, its own shape rules again, exactly as it did before pictures were held.)
           img.addEventListener('load', () => img.style.removeProperty('aspect-ratio'), { once: true });
           if (srcset) img.srcset = srcset;

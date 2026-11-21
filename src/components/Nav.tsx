@@ -31,17 +31,11 @@ export function setTheme(next: Theme) {
   window.dispatchEvent(new Event('themechange'));
 }
 
-/**
- * The theme switch. A real switch: off is the light theme (an open track, a full disc at its left), on is the dark
- * one (a filled track, the disc at its right, cut to a crescent). What it shows is drawn from the theme on the
- * document (`data-theme`, set before the first paint), not from this component's state, so it is right in the first
- * frame. A press moves it; a change from the keyboard does not animate (`data-instant`).
- */
+/** The theme switch: role switch, on is dark. Its looks and motion are in nav.css; why this file stays short is in docs/site-system/performance.md. */
 function ThemeToggle() {
   const theme = useSyncExternalStore(subscribe, getTheme, getServerTheme);
   const toggle = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    // (A click the keyboard made carries no press count.)
-    e.currentTarget.toggleAttribute('data-instant', e.detail === 0);
+    e.currentTarget.toggleAttribute('data-instant', e.detail === 0); // a click from the keyboard has no press count: nothing animates
     // Haptic and visual change in the same handler, on the same frame.
     haptic('light');
     setTheme(getTheme() === 'dark' ? 'light' : 'dark');
@@ -54,16 +48,10 @@ function ThemeToggle() {
       onClick={toggle}
       aria-label="Dark theme"
       aria-checked={theme === 'dark'}
-      title={theme === 'dark' ? 'Theme: dark' : 'Theme: light'}
       suppressHydrationWarning
     >
       <span className="nav-toggle-track" aria-hidden="true">
-        <span className="nav-toggle-rest" />
-        <span className="nav-toggle-fill" />
         <span className="nav-toggle-knob" />
-        {/* (Shown only where motion is reduced: the disc does not travel there, one fades as the other comes.) */}
-        <span className="nav-toggle-knob nav-toggle-knob-on" />
-        <span className="nav-toggle-bite" />
       </span>
     </button>
   );

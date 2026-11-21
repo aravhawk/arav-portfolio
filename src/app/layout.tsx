@@ -5,7 +5,6 @@ import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Nav } from '@/components/Nav';
 import { Runtime } from '@/components/Runtime';
-import { CONTACT } from '@/content/projects';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL, THEME_COLOR } from '@/lib/site';
 import './globals.css';
 
@@ -93,32 +92,6 @@ export const metadata: Metadata = {
   },
 };
 
-/* Structured data: who this is and which address is the real one. */
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'Person',
-      '@id': `${SITE_URL}/#person`,
-      name: SITE_NAME,
-      url: SITE_URL,
-      description: SITE_TAGLINE,
-      jobTitle: 'Co-founder, Infiniflop Labs',
-      worksFor: { '@type': 'Organization', name: 'Infiniflop Labs', url: 'https://infiniflop.com' },
-      sameAs: [CONTACT.github, CONTACT.x, CONTACT.linkedin],
-    },
-    {
-      '@type': 'WebSite',
-      '@id': `${SITE_URL}/#website`,
-      url: SITE_URL,
-      name: SITE_NAME,
-      description: SITE_DESCRIPTION,
-      inLanguage: 'en',
-      publisher: { '@id': `${SITE_URL}/#person` },
-    },
-  ],
-};
-
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -141,7 +114,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={fontVars} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: boot }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body>
         <a className="skip" href="#main">

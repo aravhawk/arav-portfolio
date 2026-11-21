@@ -49,9 +49,9 @@ await page.waitForFunction(() => !!document.querySelector('.flight-root[data-pic
 await settle(3500);
 await page.evaluate(() => window.__ev.splice(0));
 
-await press('button[aria-label^="Switch to"]');
+await press('.nav-toggle');
 await take('theme toggle (to dark)');
-await press('button[aria-label^="Switch to"]');
+await press('.nav-toggle');
 await take('theme toggle (to light)');
 
 // A wheel scroll: the longest gap between frames in the second after it.
