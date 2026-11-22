@@ -93,6 +93,6 @@ export const WAY_TO_WORK: Way = {
   href: '/work',
   label: 'Work',
   title: 'Everything I have built',
-  line: 'Nine projects, in the order I would show them.',
+  line: 'Ten projects, in the order I would show them.',
   aria: 'Work',
 };

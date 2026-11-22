@@ -18,7 +18,7 @@ import { MOVE, SETTLE_AT } from '@/water/camera';
 import { byId, timeline } from '@/water/registry';
 import { posterBoot } from '@/water/poster';
 import { streamAnchors } from '@/water/words';
-import { COLS, FACE, SHARDS, SLAB, TRIBS, colHeights, colApex } from '@/water/world';
+import { COLS, FACE, SHARDS, SLAB, TRIBS, VAULT, colHeights, colApex } from '@/water/world';
 import './home.css';
 import './flight.css';
 
@@ -409,6 +409,29 @@ export default async function Home() {
               </svg>
               <ProfileSwitch />
             </div>
+          </div>
+          <div className="fl-still fl-pool" aria-hidden="true" />
+        </div>
+      </section>
+    ),
+    // envfetch: the block in the kettle is the vault, and it is named by the file it is (the README's own path).
+    vault: (section, vault, p) => (
+      <section className="fl-sec fl-view fl-vault" data-fl style={len(section.length)} aria-label="envfetch">
+        <div className="fl-pin">
+          <div className="fl-calls">
+            <Callout at={[VAULT.x, VAULT.y, VAULT.h]} href={p.links[0].href} from={vault.calls.from} to={vault.calls.to} lift={40}>
+              ~/.envfetch/vault.enc
+            </Callout>
+          </div>
+          <div className="fl-words fl-block fl-view-words fl-vault-words" {...vault.block}>
+            <Kind p={p} b={vault} />
+            <Name p={p} b={vault} />
+            <p className="fl-line" {...vault.line}>
+              {p.line}
+            </p>
+            <p className="fl-meta" {...vault.meta}>
+              Written in Swift. The private key lives in the Secure Enclave.
+            </p>
           </div>
           <div className="fl-still fl-pool" aria-hidden="true" />
         </div>

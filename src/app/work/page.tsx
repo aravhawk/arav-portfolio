@@ -16,12 +16,12 @@ export const revalidate = 3600;
 export const metadata: Metadata = pageMeta({
   title: 'Work',
   description:
-    'What Arav Jain has built: Infiniview, upstream open source, open models on Ollama, cc-switch, Kilo Bench, Ask Around, RydAR, Agent Bridge and TensorPoW.',
+    'What Arav Jain has built: Infiniview, upstream open source, open models on Ollama, cc-switch, Kilo Bench, Ask Around, RydAR, Agent Bridge, TensorPoW and envfetch.',
   path: '/work',
 });
 
 /**
- * The work index: the delta, then the nine projects in the owner's order,
+ * The work index: the delta, then the ten projects in the owner's order,
  * each beside the picture of its own station (one the world has no place
  * for yet is its name and line alone), then what he is recognised for, as
  * lines.

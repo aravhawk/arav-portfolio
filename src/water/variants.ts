@@ -309,11 +309,13 @@ export interface Cover {
  * 75 percent more; the block costs 5 ms more wherever it is carried; the lake's ice 3 to 5 ms more, and with the
  * stations as well, three to eight times the frame. The wait behind the still: a program's first draw takes about
  * 0.15 s and 0.1 to 0.4 s more for each subject it carries, so five stretches of five subjects each took 4.9 s
- * where three stretches take 3.2. So a stretch takes in stations until it has `most` subjects (all of the river's,
- * as it stands), and always ends where the lake's ice, or the block, has left the frame.
+ * where three stretches take 3.2. So a stretch takes in stations until it has `most` subjects (all of the river's
+ * with the sea, as it stands: nine since the vault was laid in, where a limit of eight would have cut the lower river
+ * in two and built a fourth program behind the still), and always ends where the lake's ice, or the block, has left
+ * the frame.
  * @param needs what the whole frame needs (passNeeds) at evenly spaced positions down the scroll, in order
  */
-export function coverFlight(needs: { s: number; need: number }[], most = 8): Cover[] {
+export function coverFlight(needs: { s: number; need: number }[], most = 9): Cover[] {
   const out: Cover[] = [];
   let cur: Cover | null = null;
   let last = 0;

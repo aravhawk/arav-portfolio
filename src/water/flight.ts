@@ -16,7 +16,7 @@ import { emit, flightSignal, pictureSignal, pointerSignal, signals } from '@/lib
 import { type BedData, BedPainter } from './bed';
 import { boardMask, boardReady } from './board';
 import { makeCallouts } from './callouts';
-import { type Basis, END_AT, HOLDS, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, heroStart, moved, poseAt, posterBand, posterBands, stillScroll, type Key, type Pose, type V3 } from './camera';
+import { type Basis, END_AT, HOLDS, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, lightAt, heroStart, moved, poseAt, posterBand, posterBands, stillScroll, type Key, type Pose, type V3 } from './camera';
 import { type EngineOpts, FLOW_SPEED, ICE_GONE, TIERS, WaterEngine } from './engine';
 import { type Pending, type Program, type Target, bindTex, compileBegin, compileDone, compileEnd, drawTo, freeTarget, makeTarget } from './gl';
 import { DAWN, ENTER, GATE, LAP, PULSE, RIBBON, breathAt, dawnLight, enterAt, firstLight, heroLight, heroLightAt, nextDrip, stationsNear, stepGates } from './moments';
@@ -1723,7 +1723,8 @@ export class FlightEngine extends WaterEngine {
     const mistDepth = cam.pos[2] / 70;
     const extinction = 0.00021 * sky.haze * -Math.expm1(-depth) / Math.max(depth, 0.001);
     // The thicker valley air begins beyond the foreground. Keep the opening lake and final sea clear.
-    const hour = at.hour ?? 0;
+    // (On the light's own clock: a station laid in later moves none of these hours.)
+    const hour = lightAt(at.hour ?? 0);
     const valley = smooth(2, 3.1, hour) * (1 - smooth(28.3, 30.1, hour));
     const blueHour = night * smooth(13.8, 16.6, hour) * (1 - smooth(19.4, 22.15, hour));
     const extra = (0.00027 + 0.00007 * night) * sky.haze * valley * (1 - 0.55 * sky.dusk - 0.50 * blueHour);

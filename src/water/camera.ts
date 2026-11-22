@@ -60,6 +60,31 @@ export const FLIGHT_SCREENS = Object.values(SECTIONS).reduce((a, b) => a + b, 0)
 /** Where the scroll ends, and where the camera has come to rest over the sea (a little before it, so the last of the scroll is the ending held). */
 export const END_AT = FLIGHT_SCREENS - 1;
 export const SETTLE_AT = END_AT - 0.3;
+/**
+ * The light's own clock. The hours were calibrated station by station on the flight as it was first laid out, and a
+ * station laid in later (`added` in the registry) must not move them: every station after it keeps its own hour, that
+ * much further down the page. So the light reads the scroll through this: the position on the flight without the
+ * added stations. Through an added station the hour still goes on, slowly (it takes that station and a fifth of its
+ * length either side to pass what it used to pass in two fifths of its length), and its pace never jumps: it eases
+ * down to that slow pace over the first quarter of the stretch and back up over the last. The stretch ends before
+ * the next station's move begins and starts after the last one's words have left, so neither is touched.
+ */
+const ADDED = timeline.filter((entry) => 'added' in entry && entry.added).map((entry) => ({ from: entry.start, length: entry.length }));
+export function lightAt(s: number): number {
+  let out = s;
+  for (const { from, length } of ADDED) {
+    const lead = length * 0.2;
+    const t = Math.min(1, Math.max(0, (s - (from - lead)) / (length + 2 * lead)));
+    // (A straight run with a quarter of the stretch eased at either end: steep enough nowhere to turn the hour back.)
+    const w = 0.25;
+    const g = t < w ? (t * t) / (2 * w * (1 - w)) : t > 1 - w ? 1 - ((1 - t) * (1 - t)) / (2 * w * (1 - w)) : (t - w / 2) / (1 - w);
+    out -= length * g;
+  }
+  return out;
+}
+/** Where the light's clock ends and where it settles: the flight's own end and rest, on that clock. */
+export const LIGHT_END = END_AT - ADDED.reduce((sum, a) => sum + a.length, 0);
+export const LIGHT_SETTLE = LIGHT_END - 0.3;
 /** Where the sun rises at the end of the flight when nothing has measured the ranges: bearing from +y toward +x, radians. */
 export const SUN_END_AZ = 0.62;
 /** Scroll (in screens) over which the lake's ice melts. */
@@ -421,9 +446,13 @@ function seaKeys(aspect: number, sunAz: number, start: number, g: number, sea: b
  * it inside the canyon and over the sea, where no words depend on it.
  */
 export function dayAt(s: number): number {
+  return dayOnLight(lightAt(s));
+}
+/** The same, at a position on the light's own clock (see `lightAt`). */
+export function dayOnLight(s: number): number {
   const h = SECTIONS.hero;
-  const s9 = byId.delta.start;
-  const s8 = 23.6 * (END_AT / 31.1);
+  const s9 = lightAt(byId.delta.start);
+  const s8 = 23.6 * (LIGHT_END / 31.1);
   const keys: [number, number][] = [
     [0, 0],
     [h, 0],
@@ -432,8 +461,8 @@ export function dayAt(s: number): number {
     [s9 + 0.45, 0.42],
     [s9 + 1.1, 0.55],
     [s9 + SECTIONS.delta - 0.55, 0.6],
-    [SETTLE_AT - 0.25, 1],
-    [END_AT, 1],
+    [LIGHT_SETTLE - 0.25, 1],
+    [LIGHT_END, 1],
   ];
   if (s <= 0) return 0;
   for (let i = 0; i < keys.length - 1; i++) {

@@ -26,6 +26,7 @@ export const PICTURES = {
   ollama: 'Four pillars of clear glacier ice of different sizes stand in a pool of meltwater on a snowfield under far ranges.',
   'cc-switch': 'A dam of ice with three sluices holds back a dark pond; below it one channel runs white with meltwater and two lie dry.',
   tensorpow: 'Sixteen cubes of ice stand four by four in a pool of teal meltwater on a snowfield.',
+  envfetch: 'A block of rimed glacier ice stands in a small round pool of teal meltwater on a snowfield, slivers of lit ice sealed inside it.',
   rydar: 'The RydAR page under a pane of clear ice in a wall of glacier ice, a cornice of snow and icicles over it, meltwater at its foot.',
   work: 'A meltwater river parts round snow-covered bars in a delta and runs out to a deep blue sea under a low sun.',
   blog: 'A still tarn with two shards of pale ice standing in it, a brook running from it across wind-cut snow to a rock pool with blocks of ice.',

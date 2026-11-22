@@ -399,6 +399,34 @@ export const SLUICES: Pt[][] = [
   [pt(1040, DAM.y - 30), pt(1040, DAM.y + 150), pt(930, DAM.y + 420), pt(1000, DAM.y + 760), pt(1240, DAM.y + 1010)],
 ];
 
+/**
+ * The kettle: a round pool of meltwater on the west bank below the dam, with no stream in and none out. It is the
+ * one water of the flight that the river does not run through. A block of ice stands in it, a little past its
+ * middle from the bank the eye comes over, so its image lies on the water before it.
+ *
+ * The block is the vault: a piece of clear glacier ice rimed over, with slivers of ice sealed in its heart.
+ * `turn` is the way its front looks, radians from -y toward +x (it faces the eye that arrives from the river);
+ * `w` across that front, `d` through it, `h` from the land's level to its top; `touch` the place on the front
+ * (across, up) where the rime first clears, and `clear` how far from there it clears.
+ */
+export const KETTLE = { x: 330, y: T2 + 3706, r: 214 };
+export const VAULT = { x: 292, y: T2 + 3730, w: 150, d: 112, h: 176, turn: 1.08, touch: [5, 90] as [number, number], clear: 88 };
+/** How far past the kettle's rim the block's shade and light are looked for on the ground: the pass and the registry's box agree on it. */
+export const VAULT_GROUND = 300;
+/**
+ * When each sliver lights, as a share of the block's event (the rime clearing, 0 to 1): the first at `from`, each next
+ * one `step` later, each over `over`. The picture lights them by these and the sound says a note as each is lit.
+ */
+export const VAULT_LIT = { from: 0.3, step: 0.115, over: 0.1 };
+/** The slivers sealed in the block, in its own frame (x across its front, y into it, z up): each from its foot to its tip, and its half width. */
+export const VAULT_SLIVERS: { a: [number, number, number]; b: [number, number, number]; r: number }[] = [
+  { a: [-36, 6, 46], b: [-25, -8, 118], r: 4.0 },
+  { a: [-12, 20, 28], b: [-17, 10, 140], r: 4.8 },
+  { a: [14, -2, 52], b: [29, 8, 124], r: 4.2 },
+  { a: [42, 18, 36], b: [35, 8, 98], r: 3.4 },
+  { a: [2, -14, 66], b: [-4, -6, 108], r: 3.0 },
+];
+
 /** Station 7, the still pool and the four by four lattice of cubes of ice in it. */
 export const LATTICE = { x: 1300, y: T2 + 4520, pitch: 172, size: 92, h: 50 };
 
@@ -576,6 +604,13 @@ export function paintDam(b: BedPainter) {
   }
   // The three meet and run on into the still pool.
   b.channel([pt(1300, DAM.y + 960), pt(1300, DAM.y + 1150), pt(1300, T2 + 4060)], { width: [300, 260, 300] });
+}
+
+export function paintKettle(b: BedPainter) {
+  // A closed pool: round, with one shallow bay, and no current in it at all.
+  b.disc(pt(KETTLE.x, KETTLE.y), KETTLE.r);
+  b.disc(pt(KETTLE.x - 104, KETTLE.y + 128), 112);
+  b.disc(pt(KETTLE.x - 30, KETTLE.y + 170), 80);
 }
 
 export function paintLattice(b: BedPainter) {

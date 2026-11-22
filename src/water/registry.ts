@@ -1,10 +1,11 @@
 import { BASIN_OBJECT, CONFLUENCE, ROCK_POOL, TARN_OBJECT } from './shaders/river-stations';
-import { paintLake, paintReach, paintBasin, paintConfluence, paintPool, paintTarn, paintShallows, paintDam, paintLattice, paintCanyon, paintDelta } from './geography';
+import { paintLake, paintReach, paintBasin, paintConfluence, paintPool, paintTarn, paintShallows, paintDam, paintKettle, paintLattice, paintCanyon, paintDelta } from './geography';
 import type { BedPainter } from './bed';
 import { COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, CANYON_ICE } from './shaders/stations';
+import { VAULT_ICE } from './shaders/vault';
 import { boxInView, projectPoint, type Box, type Rect } from './projection';
 import type { Basis, Key, Move, Pose, V3 } from './camera';
-import { BENDS, BOARD_DEPTH, FACE, SHEET, boardSpan, sheetCols, CANYON, COLS, CONF_Y, DAM, DY, LATTICE, LIP, POOL, SHARDS, SLAB, T2, TARN, TARN_BAY, lipY } from './geography';
+import { BENDS, BOARD_DEPTH, FACE, SHEET, boardSpan, sheetCols, CANYON, COLS, CONF_Y, DAM, DY, KETTLE, LATTICE, LIP, POOL, SHARDS, SLAB, T2, TARN, TARN_BAY, VAULT, VAULT_GROUND, lipY } from './geography';
 
 type FrameMove = (at: Pose, x: number, y: number, push: number, arc: number, rise: number, z?: number) => Move;
 export interface CameraContext {
@@ -21,7 +22,7 @@ export interface CameraContext {
 type Words =
   | { kind: 'section'; layout?: 'opening' | 'statement' | 'interests' | 'ending' | 'beat' }
   | { kind: 'figure'; layout: 'contributions' | 'downloads' }
-  | { kind: 'title'; layout?: 'display' | 'table' | 'film' | 'switch' | 'pool' | 'wall' };
+  | { kind: 'title'; layout?: 'display' | 'table' | 'film' | 'switch' | 'vault' | 'pool' | 'wall' };
 
 type Definition = Words & {
   id: string; rail: string; length: number; offset: number;
@@ -30,6 +31,8 @@ type Definition = Words & {
   steps?: Partial<Record<'eyebrow' | 'title' | 'line' | 'meta' | 'act' | 'leave', number>>;
   project?: string;
   hold?: { name: string; before?: number; after?: number };
+  /** Laid in after the light's hours were set: the hours keep their places and later stations move down by its length (camera.ts, `lightAt`). */
+  added?: true;
   bandLift?: number;
   camera: (frame: CameraContext) => Key[];
 }
@@ -93,6 +96,12 @@ const LAT_BOX: Box = [
 const CANYON_BOX: Box = [
   [CANYON.x0 - 4, CANYON.y0 - 4, WATER_LOW],
   [CANYON.x1 + 4, CANYON.y1 + 4, CANYON.h + 6],
+];
+// The vault: the block, and the pool and bank round it where its shade, its image and its light lie (vault: `fromPool < r + VAULT_GROUND`).
+const VAULT_REACH = KETTLE.r + VAULT_GROUND + 20;
+const VAULT_BOX: Box = [
+  [KETTLE.x - VAULT_REACH, KETTLE.y - VAULT_REACH, WATER_LOW],
+  [KETTLE.x + VAULT_REACH, KETTLE.y + VAULT_REACH, VAULT.h + 30],
 ];
 // The tarn's shards: the tarn and its bay (their image, their rings, the pulse), and the light each throws into the
 // air and onto the water round it, which dies away with distance (to a three-thousandth of itself, eight of its own
@@ -463,6 +472,28 @@ export const FLIGHT = [
       ...holdKeys(move({ pos: [2130, T2 + 3800, 640], aim: [1520, T2 + 2900, 0], fov: 42 }, 0.45, 0.58, 0.175, -4, 0), stop, 0.45),
       // Across the three channels where they meet, turning with the water to look down the river again.
       { s: end - 0.25, pos: [1620, T2 + 3560, 400], aim: [1120, T2 + 3840, 0], fov: 45 },
+    ],
+  },
+  {
+    // envfetch: the vault in the kettle, on the west bank the flight crosses to below the dam.
+    // (Laid in after the rest: `added` keeps every later station's hour. Its length is a whole number of quarter
+    // screens, so every later station meets the cost map's samples exactly where it did: see performance.md.)
+    id: 'vault', paint: paintKettle, rail: 'envfetch', length: 2.5, offset: 1.15, kind: 'title', layout: 'vault', added: true,
+    subject: {
+      bit: 4096, define: 'F_VAULT', reach: 2900, boxes: [VAULT_BOX],
+      // (The rime begins to clear as the block's name sets, and the last sliver is lit as the frame composes.)
+      event: [0.45, 1.3],
+      shader: { source: VAULT_ICE, fn: 'vaultIce' },
+    },
+    project: 'envfetch',
+    hold: { name: 'envfetch' },
+    camera: ({ stop, upright, move, holdKeys }) => upright ? [
+      // From over the bank east of the kettle, looking down into it: the block above the middle, the bank at the foot.
+      ...holdKeys(move({ pos: [900, T2 + 3440, 300], aim: [368, T2 + 3694, 0], fov: 58 }, 0.5, 0.6, 0.16, 3, 0), stop),
+    ] : [
+      // Low over the bank between the river and the kettle: the block right of the middle with its image before it,
+      // the bank at lower left. The eye closes on the block and goes a little round it, toward its cleared face.
+      ...holdKeys(move({ pos: [1010, T2 + 3410, 190], aim: [400, T2 + 3565, 40], fov: 44 }, 0.42, 0.7, 0.195, 5, 0), stop),
     ],
   },
   {

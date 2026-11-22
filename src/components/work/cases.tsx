@@ -12,6 +12,9 @@ import {
   BRIDGE_LIMITS,
   BRIDGE_MORE,
   BRIDGE_PEERS,
+  ENVFETCH_CARE,
+  ENVFETCH_KEYS,
+  ENVFETCH_SESSION,
   INFINIVIEW_PASSES,
   KILO_MEASURES,
   KILO_MODES,
@@ -42,7 +45,7 @@ import {
 } from './case-data';
 
 /**
- * The nine project pages. No two share a skeleton: each is built from what
+ * The ten project pages. No two share a skeleton: each is built from what
  * the project is. A pipeline is drawn as a pipeline, a message flow as a
  * sequence diagram, a command line tool as a terminal session, a ledger as
  * a ledger. Numerals stand for a sequence only where there is none to draw
@@ -810,6 +813,67 @@ function AskAround({ p }: { p: Project }) {
   );
 }
 
+/* ---------- envfetch: its own commands as a session, how the vault is kept, the keys of its interface ---------- */
+
+function Envfetch({ p }: { p: Project }) {
+  return (
+    <>
+      <Sec className="kb-open" label="What it is">
+        <p className="sum">{p.summary}</p>
+        <div className="kb-side">
+          <Spec facts={p.facts} />
+        </div>
+      </Sec>
+      <Sec className="cs-session" label="In the terminal">
+        <div className="session" data-fill style={{ '--n': ENVFETCH_SESSION.length } as React.CSSProperties}>
+          <div className="session-bar" aria-hidden="true">
+            <span className="term-title mono">envfetch</span>
+          </div>
+          {ENVFETCH_SESSION.map((r, i) => (
+            <div key={r.cmds[0]} className="session-row">
+              <pre className="session-cmd mono" style={{ gridRow: i + 2 }}>
+                {r.cmds.map((c) => (
+                  <span key={c} className="term-line">
+                    <span className="term-p" aria-hidden="true">
+                      ${' '}
+                    </span>
+                    <span className="term-cmd">{c}</span>
+                    {'\n'}
+                  </span>
+                ))}
+              </pre>
+              <div className="session-note" style={{ gridRow: i + 2 }}>
+                <Note title={r.note.title}>{r.note.body}</Note>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Sec>
+      <Sec className="ab-limits" label="How the vault is kept">
+        <div className="notes">
+          {p.how.map((h) => (
+            <Note key={h.title} title={h.title}>
+              {h.body}
+            </Note>
+          ))}
+        </div>
+        <div>
+          <ul className="limits">
+            {ENVFETCH_CARE.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+          <p className="cap">From the README’s security notes.</p>
+        </div>
+      </Sec>
+      <Sec className="tp-abs" label="The interactive interface">
+        <p className="sum sum-s">Run envfetch with no arguments and it opens a list of profiles in the terminal. These are its keys.</p>
+        <Spec facts={ENVFETCH_KEYS} />
+      </Sec>
+    </>
+  );
+}
+
 /* ---------- RydAR: the map, the phone, the two pages ---------- */
 
 function RydAR({ p }: { p: Project }) {
@@ -869,6 +933,7 @@ const CASES: Record<string, (props: { p: Project; m: SiteMetrics }) => React.Rea
   tensorpow: TensorPoW,
   rydar: RydAR,
   'ask-around': AskAround,
+  envfetch: Envfetch,
 };
 
 /** A project's page, under its scene. */

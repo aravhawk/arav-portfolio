@@ -2,7 +2,7 @@ import { composed, type SectionId } from '@/water/registry';
 import { writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { END_AT, HOLDS, MOVE, SETTLE_AT, type Basis, type V3, basisOf, flightKeys, groundUnder, poseAt, projectPoint, rayThrough } from '@/water/camera';
-import { COLS, DAM, DELTA, FACE, LATTICE, SHARDS, SHEET, SLAB, T2, boardSpan, lipY, sheetCols } from '@/water/world';
+import { COLS, DAM, DELTA, FACE, LATTICE, SHARDS, SHEET, SLAB, T2, VAULT, boardSpan, lipY, sheetCols } from '@/water/world';
 
 /**
  * The scroll never holds still. The camera is a pure function of scroll, so
@@ -57,6 +57,10 @@ const SUBJECTS: Record<string, (aspect: number) => [V3, V3]> = {
   'cc-switch': () => [
     [DAM.gates[1], DAM.y, 0],
     [DAM.gates[1], DAM.y, DAM.h],
+  ],
+  envfetch: () => [
+    [VAULT.x, VAULT.y, 0],
+    [VAULT.x, VAULT.y, VAULT.h],
   ],
   TensorPoW: () => [
     [LATTICE.x, LATTICE.y, 0],

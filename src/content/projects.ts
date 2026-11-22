@@ -1,6 +1,7 @@
 /**
- * The work the site shows: nine projects, in the owner's order (his list of
- * 20 November 2026; docs/site-system/copy.md keeps its limits). Every
+ * The work the site shows: ten projects, in the owner's order (his list of
+ * 20 November 2026, and envfetch, which he added on the 22nd;
+ * docs/site-system/copy.md keeps its limits). Every
  * statement here is in that list or sourced in
  * docs/redesign-v4/content-sources.md. Live numbers are not stored here:
  * they come from src/lib/metrics at render time.
@@ -455,9 +456,48 @@ const entries: Project[] = [
     links: [{ label: 'Source', href: 'https://github.com/aravhawk/TensorPoW' }],
     media: [],
   },
+  {
+    // Every statement is from the repository's README, its languages and its one release (v1.1.0, published June 4, 2026).
+    slug: 'envfetch',
+    n: '10',
+    name: 'envfetch',
+    kicker: 'macOS',
+    line: 'A macOS command-line tool that keeps environment variables in an encrypted local vault and activates them with Touch ID.',
+    summary:
+      'envfetch is a native macOS command-line tool, written in Swift. It stores profiles of environment variables in an encrypted local vault and activates them into the current shell with Touch ID or the password. It works in zsh, bash and fish, and it has an interactive terminal interface.',
+    how: [
+      {
+        title: 'The vault',
+        body: 'Profiles of environment variables are stored in ~/.envfetch/vault.enc. The vault directory is 0700, and encrypted data and key material are written 0600.',
+      },
+      {
+        title: 'The key',
+        body: 'Encryption uses an ephemeral P-256 key agreement plus HKDF plus AES-GCM. The private key lives in the Secure Enclave.',
+      },
+      {
+        title: 'Unlocking',
+        body: 'Touch ID or the password decrypts the vault and is asked for before it is changed. SSH and remote sessions are blocked, because the tool expects local authentication.',
+      },
+      {
+        title: 'The shell',
+        body: 'envfetch activate prints shell statements, and a small wrapper function evaluates them into the current shell: export for zsh and bash, set -gx for fish.',
+      },
+    ],
+    facts: [
+      { label: 'Platform', value: 'macOS 13 or later, on a Mac with a Secure Enclave' },
+      { label: 'Language', value: 'Swift' },
+      { label: 'Shells', value: 'zsh, bash and fish' },
+      { label: 'Release', value: 'v1.1.0, June 4, 2026' },
+    ],
+    links: [
+      { label: 'Source', href: 'https://github.com/aravhawk/envfetch' },
+      { label: 'v1.1.0', href: 'https://github.com/aravhawk/envfetch/releases/tag/v1.1.0' },
+    ],
+    media: [],
+  },
 ];
 
-/** The nine, in the owner's order: the order of /work, of every list, and of the way round the set. */
+/** The ten, in the owner's order: the order of /work, of every list, and of the way round the set. */
 export const PROJECTS: Project[] = entries;
 
 export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === slug);

@@ -35,7 +35,7 @@ describe('the flight is covered by a few broad variants', () => {
       for (const c of cover) if (c.mask & lake) expect(c.to).toBeLessThan(MELT.to + 0.3);
       // (And the block is not carried through the lower river.)
       for (const c of cover) if (c.mask & F.SLAB) expect(c.from).toBeLessThan(10);
-      for (const c of cover) expect(bits(c.mask)).toBeLessThanOrEqual(8);
+      for (const c of cover) expect(bits(c.mask)).toBeLessThanOrEqual(9);
     });
   }
 });

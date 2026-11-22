@@ -119,5 +119,16 @@
     },
     "bytes": 212462,
     "quality": 74
+  },
+  "envfetch": {
+    "s": 23.33,
+    "tone": "light",
+    "light": {
+      "low": 0.509,
+      "mid": 0.664,
+      "high": 0.739
+    },
+    "bytes": 203028,
+    "quality": 86
   }
 }

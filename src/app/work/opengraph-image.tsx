@@ -5,5 +5,5 @@ export const size = OG_SIZE;
 export const contentType = OG_TYPE;
 
 export default function Image() {
-  return renderOg({ kicker: 'Work', title: 'Everything I have built', line: 'Nine projects, in the order I would show them.', picture: 'work' });
+  return renderOg({ kicker: 'Work', title: 'Everything I have built', line: 'Ten projects, in the order I would show them.', picture: 'work' });
 }

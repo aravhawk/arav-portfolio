@@ -27,7 +27,7 @@
  * that clock stands for.
  */
 
-import { END_AT, SECTIONS, SETTLE_AT, dayAt, stillStops } from './camera';
+import { LIGHT_END as END_AT, SECTIONS, LIGHT_SETTLE as SETTLE_AT, dayAt, dayOnLight, lightAt, stillStops } from './camera';
 import { HERO_SUN } from './moments';
 import { SUN } from './shaders/terrain';
 
@@ -190,7 +190,8 @@ const MORNING: Key = {
 };
 
 /** The calibrated heights and colours belong to hours along the whole journey.
- * Stretch the clock when the flight length changes. */
+ * Stretch the clock when the flight length changes. Every position in this file is on the light's own clock
+ * (`lightAt` in camera.ts): a station laid in later moves no hour. */
 const hourPositions = [3.1, 5.6, 8.45, 11.15, 13.8, 16.6, 19.4, 22.15, 25.8, 28.3].map(hour => hour * (END_AT / 31.1));
 
 /**
@@ -704,7 +705,7 @@ function scrollOf(day: number): number {
   let b = END_AT;
   for (let i = 0; i < 44; i++) {
     const m = (a + b) / 2;
-    if (dayAt(m) < day) a = m;
+    if (dayOnLight(m) < day) a = m;
     else b = m;
   }
   return (a + b) / 2;
@@ -776,7 +777,7 @@ export function skyAt(theme: number, day: number, lift: number, sunAz: number, r
   // The sun waits behind the ranges, its upper edge just under the crest, and clears it when the camera settles:
   // it comes to rest with its middle a little above the crest, a clean limb standing on the ranges.
   const elEnd = ridge - 0.018 + 0.023 * lift;
-  const s = at ?? scrollOf(day);
+  const s = at === undefined ? scrollOf(day) : lightAt(at);
   const light = () => {
     const k = table(0, sunAz, ridge, elEnd);
     return through(k.at, k.rows, s);

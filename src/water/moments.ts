@@ -5,8 +5,8 @@
  * very same rules instead of a copy of them.
  */
 
-import { proximity } from './registry';
-import { COLS } from './world';
+import { events, proximity } from './registry';
+import { COLS, VAULT_LIT, VAULT_SLIVERS } from './world';
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -131,6 +131,19 @@ export const dawnLight = (t: number) => ({ lift: smooth(DAWN.lift[0], DAWN.lift[
  * (RIB_E0, RIB_REACH).
  */
 export const RIBBON = { at: (aspect: number) => (aspect < 0.8 ? 0.16 : 0.2), lean: 0.5, e0: 0.1, reach: 0.13 };
+
+/**
+ * How many of the vault's slivers are lit at a scroll position: its event runs with the reader's arrival, so this is
+ * a count the scroll alone decides (the pass lights them by the same numbers: `vaultLit` in shaders/vault.ts).
+ */
+export function vaultLitAt(s: number): number {
+  const event = events.find((e) => e.uniform === 'uProgress_F_VAULT');
+  if (!event) return 0;
+  const progress = smooth(event.from, event.to, s);
+  let n = 0;
+  for (let i = 0; i < VAULT_SLIVERS.length; i++) if (progress >= VAULT_LIT.from + VAULT_LIT.step * i + VAULT_LIT.over / 2) n++;
+  return n;
+}
 
 /** How much of each later station's subject is there to see from a camera position: the columns, the dam, the lattice, the canyon. */
 // (The dam is drawn out to 3300 units and let go by 4000: whole from the columns' frame, never a half-faded duplicate.)

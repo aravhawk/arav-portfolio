@@ -23,8 +23,8 @@
  */
 
 import { groundUnder, rayThrough } from '@/water/camera';
-import { DAWN, GATE, LAP, PULSE } from '@/water/moments';
-import { LAKE, LATTICE, SHARDS, SLAB, SLUICES } from '@/water/world';
+import { DAWN, GATE, LAP, PULSE, vaultLitAt } from '@/water/moments';
+import { LAKE, LATTICE, SHARDS, SLAB, SLUICES, VAULT } from '@/water/world';
 import { ClockMap, LOOK, SLACK, frameFor, startAt } from './clock';
 import { type Graph, LEVEL, bell, bloom, clink, drip, drop, gateLift, gateSet, groan, hush, iceCrack, pluck, shard, tick, whoosh } from './graph';
 import {
@@ -62,7 +62,7 @@ import {
 } from './mapping';
 import { type Scene, heard, sat, seenAt, smooth, wetUnder } from './scene';
 import { Score } from './score';
-import { ARRIVAL, BEAT, CLIMB, GATHER, LATTICE_START, MOVE, type Rng, hz, makeRng } from './theory';
+import { ARRIVAL, BEAT, CLIMB, GATHER, LATTICE_START, MOTIF, MOVE, type Rng, hz, makeRng } from './theory';
 
 /** How loud each of the world's sounds is at its fullest, within the world bus. */
 const TRIM = { wind: 0.3, whistle: 0.035, wake: 0.14, aurora: 0.0075 };
@@ -126,6 +126,8 @@ export class Sound {
   private leftWas = -1;
   private letters: { aspect: number; at: { x: number; y: number }[]; order: number[] } | null = null;
   private jumpAt = -1e9;
+  /** How many of the vault's slivers were lit at the last frame (-1 before the first). */
+  private vaultLit = -1;
   private dawnAt = -1;
   private dawnClock = -1;
   private dawnTop = 0.24;
@@ -600,6 +602,20 @@ export class Sound {
       this.note('theme', frameAt, t);
     }
     this.night = night;
+
+    // The vault: its five slivers light one after another as the reader arrives, and each says the theme's next note
+    // as it does, in the shards' own voice, softer. It is the reader's scroll that lights them, so a note is only for
+    // a sliver lit by scrolling on to it: none scrolled back past, none passed in a jump, none with motion reduced
+    // (a still flight goes from one composed frame to the next, and all five would speak at once).
+    const lit = sc.home ? vaultLitAt(sc.s) : 0;
+    if (this.vaultLit >= 0 && lit > this.vaultLit && sc.cam && !sc.calm && !sc.jump && t - this.jumpAt > 0.4) {
+      const see = seenAt(sc.cam, sc.aspect, VAULT.x, VAULT.y, VAULT.h * 0.5);
+      if (see.k >= 0.1) {
+        shard(g, MOTIF[(lit - 1) % MOTIF.length], t, 0.5 * see.k, Math.max(-0.8, Math.min(0.8, see.pan * 0.8)), 5200 - 2200 * sc.night, 0.6 + 0.2 * sc.night, sc.night);
+        this.note('sliver', frameAt, t);
+      }
+    }
+    this.vaultLit = lit;
 
     // The ice, in the order the picture melts it. First the ice under the name's blocks takes the meltwater at
     // their feet: small cracks, near, where the letters stand. Then, as leads open across the sheet, larger ones out

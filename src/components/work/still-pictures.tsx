@@ -41,12 +41,12 @@ export const stillSrc = (scene: string, shape: Shape, theme: Theme) => `/media/s
  * the whole file (a wider one would be the same picture under another
  * address), or to `upTo` where it is never shown larger.
  */
-function still(scene: string, shape: Shape, theme: Theme, sizes: string, from = 640, upTo = Infinity) {
+function still(scene: string, shape: Shape, theme: Theme, sizes: string, from = 640, upTo = Infinity, skip: number[] = []) {
   const { w, h } = stillSize(scene, shape);
   const { props } = getImageProps({ src: stillSrc(scene, shape, theme), alt: '', width: w, height: h, sizes, quality: STILL_QUALITY });
   const all = (props.srcSet ?? '').split(', ').map((entry) => ({ entry, w: parseInt(entry.split(' ')[1] ?? '0', 10) }));
   const whole = all.find((c) => c.w >= w)?.w ?? Infinity;
-  const kept = all.filter((c) => c.w >= from && c.w <= Math.min(whole, upTo));
+  const kept = all.filter((c) => c.w >= from && c.w <= Math.min(whole, upTo) && !skip.includes(c.w));
   return { src: kept[kept.length - 1]?.entry.split(' ')[0] ?? props.src, srcSet: kept.map((c) => c.entry).join(', '), sizes, width: w, height: h };
 }
 
@@ -98,10 +98,19 @@ export function BandStill({ scene, kind = 'page' }: { scene: string; kind?: Band
 /** A row of the work index: on a phone the picture is as wide as the column, at a desk it is the row's second column. */
 const FEAT_SIZES = '(max-width: 859px) 95vw, (max-width: 1680px) 27vw, 480px';
 
+/**
+ * The widths a row's picture is not offered at. Each is a width the next one up serves as sharply: 256 is only for a
+ * desk screen at 1x under 950px wide, 750 is the 375px phone at 2x, which takes 828 with the 414px one, and 1080 is a
+ * tenth narrower than 1200. Every candidate is written into the page twice for each of twenty pictures, and with a
+ * tenth row the page's HTML no longer fitted a new connection's first round (performance.md): leaving these three
+ * out brought it back under.
+ */
+const FEAT_SKIP = [256, 750, 1080];
+
 /** A project's picture in the work index, one for each theme: only the one shown is fetched, and not until it is near the screen. */
 export function FeatStill({ scene }: { scene: string }) {
   const pic = (theme: Theme) => {
-    const p = still(scene, 'wide', theme, FEAT_SIZES, 256, 1920);
+    const p = still(scene, 'wide', theme, FEAT_SIZES, 384, 1920, FEAT_SKIP);
     return <Held className={`feat-still feat-${theme}`} src={p.src} srcSet={p.srcSet} sizes={p.sizes} width={p.width} height={p.height} />;
   };
   return (

@@ -216,6 +216,52 @@ export const SWITCH_CAVEAT = {
   source: 'cc-switch README',
 };
 
+/**
+ * envfetch: a session in its own commands (the README's "Build And Install", "Shell Setup" and "Typical Usage",
+ * each with what the README says it does), the keys of its interactive interface ("TUI Controls", the profile
+ * list) and what the README's "Security Notes" say besides what the page's notes carry.
+ */
+export const ENVFETCH_SESSION: { cmds: string[]; note: { title: string; body: string } }[] = [
+  {
+    cmds: ['git clone https://github.com/aravhawk/envfetch.git', 'cd envfetch', 'make install'],
+    note: { title: 'Install', body: 'make install builds the release binary, code-signs it and copies it to /usr/local/bin/envfetch. No Apple Developer account is needed.' },
+  },
+  {
+    cmds: ['eval "$(command envfetch init zsh)"'],
+    note: { title: 'Shell setup', body: 'One line in ~/.zshrc. There is a line for bash and one for fish.' },
+  },
+  {
+    cmds: ['envfetch profile create work', 'envfetch add work OPENAI_API_KEY'],
+    note: { title: 'A profile', body: 'Adding a variable prompts for its value with echo disabled.' },
+  },
+  {
+    cmds: ['envfetch activate work'],
+    note: { title: 'Activate', body: 'The profile’s variables are exported into the current shell. Activating more than one profile stacks their variables.' },
+  },
+  {
+    cmds: ['envfetch run work -- printenv OPENAI_API_KEY'],
+    note: { title: 'One command', body: 'Runs a single command with the variables injected, without changing the current shell.' },
+  },
+  {
+    cmds: ['envfetch deactivate'],
+    note: { title: 'Deactivate', body: 'ENVFETCH_ACTIVE tracks every key exported in the session, so this clears them all.' },
+  },
+];
+export const ENVFETCH_KEYS: { label: string; value: string }[] = [
+  { label: 'Up, Down', value: 'Move' },
+  { label: 'Enter', value: 'Activate the selected profile' },
+  { label: 'Tab', value: 'Open the profile’s variables' },
+  { label: 'Space', value: 'In a profile, toggle a variable' },
+  { label: 'a, d, r', value: 'Add, delete or rename a profile' },
+  { label: 'q', value: 'Quit' },
+];
+export const ENVFETCH_CARE = [
+  'Mutations are protected by an advisory lock to avoid concurrent write races.',
+  'Interactive secret entry disables terminal echo, in the commands and in the interface.',
+  'If vault.enc is corrupted or the original key material is lost, the vault cannot be recovered.',
+  'envfetch update rebuilds the latest tagged release from source, signs it locally and replaces the binary in place. The vault is left untouched.',
+];
+
 /** TensorPoW: the parts of a node (README), and what stands between it and a live network. */
 export const TENSOR_BACKENDS = ['CPU', 'Apple GPU', 'CUDA GPU'];
 export const TENSOR_STACK: { name: string; does: string }[] = [
