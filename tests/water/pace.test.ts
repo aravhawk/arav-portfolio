@@ -43,7 +43,7 @@ describe('the pace', () => {
         expect(p.scale).toBeGreaterThanOrEqual(FLOOR.desktop);
         expect(p.every).toBe(1);
         if (p.scale > FLOOR.desktop && p.scale < 1) expect(p.ms).toBeLessThanOrEqual(TRAVEL_SHARE * i.base * 1.001);
-        if (p.scale === 1) expect(cost(i, 1, 0)).toBeLessThanOrEqual(TRAVEL_SHARE * i.base * 1.15);
+        if (p.scale === 1) expect(cost(i, 1, 0)).toBeLessThanOrEqual(TRAVEL_SHARE * i.base * 1.001);
       }
     }
   });

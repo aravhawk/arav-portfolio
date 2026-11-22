@@ -35,6 +35,11 @@ import map from './cost-map.json';
 
 /** The share of a display interval a travelling frame may take of the GPU: the rest is the page's own compositing, and room. */
 export const TRAVEL_SHARE = 0.65;
+/**
+ * The share the resolution on the move is worked out for: a little under the budget, because the map says what a
+ * frame costs to within a tenth (measured: frames chosen for 65 percent landed at 62 to 73).
+ */
+export const TRAVEL_AIM = 0.6;
 /** The share of its interval (or its two) a frame at rest may take. */
 export const REST_SHARE = 0.85;
 /** The lowest resolution on the move, as a share of the screen's, a side: a desktop's, a phone's. */
@@ -119,10 +124,11 @@ export function travelPace(i: PaceInput): Pace {
   const every = Math.max(1, Math.round(8 / i.base));
   const room = TRAVEL_SHARE * i.base * every;
   const over = i.speed * RECONSTRUCT_MS * i.mpx;
+  const aim = TRAVEL_AIM * i.base * every;
   const fit = (lean: number) => {
-    if (expect(i, 1, lean) <= room) return 1;
+    if (expect(i, 1, lean) <= aim) return 1;
     const p = parts(i, lean);
-    return Math.sqrt(Math.max(room - over - p.fixed, 0.1 * room) / p.scene);
+    return Math.sqrt(Math.max(aim - over - p.fixed, 0.1 * aim) / p.scene);
   };
   let lean = 0;
   let scale = fit(0);
@@ -131,8 +137,8 @@ export function travelPace(i: PaceInput): Pace {
   const late = (l: number) => expect(i, Math.max(floor, Math.min(1, fit(l))), l) > (i.phone ? room : 0.92 * i.base * every);
   while (lean < 2 && scale < floor && late(lean)) scale = fit(++lean);
   scale = Math.min(1, Math.max(floor, scale));
-  // (A resolution that near the screen's is the screen's, where the whole frame is then no more than a tenth over.)
-  if (scale >= NEAR_FULL) scale = expect(i, 1, lean) <= 1.1 * room ? 1 : NEAR_FULL - 0.02;
+  // (A resolution that near the screen's is the screen's, where the whole frame is then inside the budget.)
+  if (scale >= NEAR_FULL) scale = expect(i, 1, lean) <= room ? 1 : NEAR_FULL - 0.02;
   return { scale, every, lean, ms: expect(i, scale, lean) };
 }
 

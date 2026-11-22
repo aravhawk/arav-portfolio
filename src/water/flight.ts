@@ -1891,6 +1891,8 @@ export class FlightEngine extends WaterEngine {
       // (Four half frames cost a little more than one whole: 1.1 times, measured on the map's own GPU.)
       this.speed = this.speed0 = Math.min(12, Math.max(0.15, ms / (expected * 1.1)));
       this.paced = true;
+      // (The step a large screen was started at by its size alone is let go: the pace says what this device needs.)
+      if (!this.leanHeld) this.lean = this.leanNow = 0;
     }
     chan.port1.close();
     // A frame through the smaller path, so its copy and its pass are not first met on the first scroll.
