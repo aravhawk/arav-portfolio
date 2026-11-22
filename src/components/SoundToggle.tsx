@@ -88,12 +88,12 @@ function statusLine() {
  * pointer comes onto the control of a reader who had muted.
  */
 let warming: Promise<unknown> | null = null;
-let warm = false;
+
 function warmUp() {
   try {
-    warming ??= (navigator.mediaDevices?.enumerateDevices?.() ?? Promise.resolve()).catch(() => {}).then(() => (warm = true));
+    warming ??= (navigator.mediaDevices?.enumerateDevices?.() ?? Promise.resolve()).catch(() => {});
   } catch {
-    warm = true;
+    // Device enumeration is optional.
   }
 }
 
@@ -119,24 +119,13 @@ function make(C: Ctor) {
     .catch(() => (mod = null));
 }
 
-/** Try to start. `type` is the event's, or '' for the control's own press and its key. */
-function start(type = '') {
+/** Unlock before returning from the browser's activation handler. */
+function start() {
   const C = window.AudioContext ?? (window as unknown as { webkitAudioContext?: Ctor }).webkitAudioContext;
   if (!C) return;
   const ua = navigator.userActivation;
-  // (Where the browser cannot be asked, only the events every browser counts.)
-  if (ua ? !ua.isActive && !ua.hasBeenActive : type === 'pointerdown' || type === 'wheel') return;
-  // (The audio service is not up yet and the browser remembers the gesture: the context is made the moment it is,
-  // or a third of a second on, so the gesture itself is not held for it.)
-  if (!ctx && !warm && warming && ua) {
-    let done = false;
-    const go = () => {
-      if (!done) make(C);
-      done = true;
-    };
-    void warming.then(go);
-    window.setTimeout(go, 320);
-  } else make(C);
+  if (ua && !ua.isActive) return;
+  make(C);
 }
 
 /** The reader's press on the control, or the M key. From the keys nothing is in transition. */
@@ -157,18 +146,21 @@ function toggle(instant: boolean) {
   sync();
 }
 
-/** (A wheel is listened for too: no browser a reader has counts it, and the browser is asked before anything is made of it.) */
-const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown', 'wheel'] as const;
+/** A wheel can only use activation the browser already grants. */
+const GESTURES = ['pointerdown', 'pointerup', 'mousedown', 'touchend', 'click', 'keydown', 'wheel'] as const;
 const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
 function gesture(e: Event) {
-  if (e instanceof KeyboardEvent && (e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey && !typing(e.target)) {
-    if (!e.repeat) toggle(true);
-    return;
-  }
-  // The control's own press is its own business: a first press on it mutes, and nothing ever sounds.
+  if (e.type === 'wheel' && !navigator.userActivation?.isActive) return;
   if (e.target instanceof Element && e.target.closest('.nav-sound')) return;
-  if (choice() && state() !== 'playing') start(e.type);
+  if (e instanceof KeyboardEvent && e.key.toLowerCase() === 'm' && !typing(e.target)) return;
+  if (choice() && state() !== 'playing') start();
+}
+
+function shortcut(e: KeyboardEvent) {
+  if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !e.altKey && !typing(e.target)) {
+    if (!e.repeat) toggle(true);
+  }
 }
 
 const TITLE: Record<State, string> = {
@@ -188,7 +180,14 @@ export function SoundToggle() {
   const now = useSyncExternalStore<Shown>(subscribe, state, () => 'unread');
 
   useEffect(() => {
-    choice();
+    on = document.documentElement.dataset.sound !== 'off';
+    read = true;
+    const early = (window as Window & { takeFlightAudio?: () => AudioContext | undefined }).takeFlightAudio?.();
+    if (!ctx && early) {
+      ctx = early;
+      ctx.addEventListener('statechange', sync);
+      make(AudioContext);
+    }
     statusLine();
     sync();
     // The sound's script: a second after the page's own load has ended, at the first idle moment (the one gate,
@@ -210,8 +209,18 @@ export function SoundToggle() {
     };
     if (document.readyState === 'complete') arm();
     else window.addEventListener('load', arm, { once: true });
-    for (const g of GESTURES) window.addEventListener(g, gesture, { capture: true, passive: true });
+    function armGestures() {
+      for (const g of GESTURES) {
+        if (ctx?.state === 'running' && ready) window.removeEventListener(g, gesture, true);
+        else window.addEventListener(g, gesture, { capture: true, passive: true });
+      }
+    }
+    const unsubscribe = subscribe(armGestures);
+    armGestures();
+    window.addEventListener('keydown', shortcut, true);
     return () => {
+      unsubscribe();
+      window.removeEventListener('keydown', shortcut, true);
       window.removeEventListener('load', arm);
       window.clearTimeout(wait);
       off();

@@ -139,6 +139,44 @@ export const viewport: Viewport = {
    they turn it on); or, where they have never chosen, unless the system asks
    for less data (Save-Data, prefers-reduced-data) or the device says it has
    a gigabyte of memory or less. */
+// Capture activation even while the client bundle is still in flight. The control
+// takes ownership of this context and removes these temporary listeners at hydration.
+const earlyAudio = `(() => {
+  const events = ['pointerdown','pointerup','mousedown','touchend','click','keydown','wheel'];
+  function unlock(e) {
+    if (e.type === 'wheel' && !navigator.userActivation?.isActive) return;
+    if (document.documentElement.dataset.sound === 'off' || e.target.closest?.('.nav-sound') ||
+        (e.key || '').toLowerCase() === 'm' || navigator.userActivation?.isActive === false) return;
+    activate();
+  }
+  function activate() {
+    try {
+      const ctx = window.flightAudioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state !== 'running') ctx.resume().catch(() => {});
+      if (ctx.state === 'running') remove();
+    } catch {}
+  }
+  function remove() { for (const event of events) removeEventListener(event, unlock, true); }
+  function earlyToggle(e) {
+    if (!e.target.closest?.('.nav-sound')) return;
+    // Hydration must not replay a click already handled here.
+    e.stopImmediatePropagation();
+    const button = e.target.closest('.nav-sound');
+    const on = document.documentElement.dataset.sound === 'off';
+    document.documentElement.dataset.sound = on ? 'on' : 'off';
+    button.setAttribute('aria-checked', String(on));
+    try { localStorage.setItem('sound', on ? 'on' : 'off'); } catch {}
+    if (on) activate();
+  }
+  addEventListener('click', earlyToggle, true);
+  window.takeFlightAudio = () => {
+    remove();
+    removeEventListener('click', earlyToggle, true);
+    return window.flightAudioContext;
+  };
+  for (const event of events) addEventListener(event, unlock, {capture:true, passive:true});
+})()`;
+
 const boot = `(function(){history.scrollRestoration='manual';function top(){if(!location.hash)scrollTo({top:0,behavior:'instant'})}top();addEventListener('pageshow',top);var d=document.documentElement;d.setAttribute('data-scripted','');try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}var n=navigator,o='on';try{var m=localStorage.getItem('sound');if(m=='off'||m!='on'&&((n.connection||0).saveData||n.deviceMemory<=1||matchMedia('(prefers-reduced-data:reduce)').matches))o='off'}catch(e){}d.dataset.sound=o})()`;
 
 const fontVars = [orbiter, mono, accent, ice].map((f) => f.variable).join(' ');
@@ -147,7 +185,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={fontVars} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: boot }} />
+        <script dangerouslySetInnerHTML={{ __html: boot + ';' + earlyAudio }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body>

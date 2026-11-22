@@ -81,22 +81,17 @@ writes what the keys do.
 
 ## Starting, exactly
 
-`SoundToggle.tsx` listens (capture, passive) for `pointerdown`,
-`pointerup`, `touchend`, `click`, `keydown` and `wheel`. On each, while
-sound is on and not yet playing:
+The head script listens in capture phase while React loads. On the first
+accepted mouse press, tap, or key, it creates or resumes one audio
+context inside the handler. A press on the sound control saves the
+reader’s choice even during this interval. On hydration,
+`SoundToggle.tsx` takes the same context and hands it to the lazy synth.
 
-1. Where the browser has `navigator.userActivation` it is asked whether
-   the event counts (`isActive`, or `hasBeenActive` for one remembered).
-   If not, nothing is done: an audio context made or resumed where the
-   browser would refuse it is a warning in the console. Where that
-   interface is missing, only `pointerup`, `touchend`, `click` and
-   `keydown` are tried.
-2. The context is made (or resumed) inside the event and handed to
-   `soundOn` in `src/audio`. If the context is still not `running`, the
-   next event tries again. Nothing throws and nothing is logged.
-
-A press on the control itself is never a start: it is the reader's
-choice to mute.
+The window listens for `pointerdown`, `pointerup`, `mousedown`,
+`touchend`, `click`, and `keydown`. Where the browser reports activation,
+the handler checks `navigator.userActivation.isActive`. A wheel is tried
+only when the browser explicitly reports activation. Later gestures can
+retry until the context runs. The M shortcut stays available after startup.
 
 `scripts/sound-visit.mjs` runs first and second visits in Chromium,
 WebKit and Firefox. A real browser does not count a wheel; the WebKit

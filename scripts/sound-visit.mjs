@@ -272,7 +272,7 @@ for (const name of browsers) {
     await page.waitForURL(`${base}/`);
     return [a, await take('on the home page, arrived by a press', 4500)];
   }, ({ first, before, steps }) => [
-    ...must(waitingFirst(first) && waiting(before) && before.fetched > 0, 'an inner page is not on-and-waiting with the script fetched at idle'),
+    ...must(waitingFirst(first) && waiting(before) && before.fetched === 0, 'the inner page should wait for activation before fetching the synth'),
     ...must(playing(steps[0]), 'not playing on an inner page after a click'),
     ...must(playing(steps[1]) && steps[1].contexts === 1, 'the sound did not carry across to the home page in the one context'),
   ]);
