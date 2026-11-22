@@ -261,6 +261,16 @@ absolutes).
   phone preset (one more 30 ms task in most runs); set in steps it reads
   98. See `pitfalls.md` and `load.ts` before adding motion to it.
 
+With the blue-hour grade in the first paint (second pass, against
+`27d5838`, in turn): a first visit's live picture at 5.98 s by day and
+6.51 by night (5.95 and 6.45 before); a returning visit 0.89 s (0.90);
+48 pinned pairs identical; Lighthouse 98 on the phone preset and 100 on
+desktop in all three runs of both builds, the largest paint 1.05 s and
+CLS 0.003 in both. The phone preset's Speed Index is 1.47 s against
+1.34: the first frame is darker than the last by design. The grade is a
+gradient on the still's own box, so it adds no request and is not a
+candidate for the largest paint.
+
 What only the owner's machine and a real phone can settle is in
 `.tools/out/r2/REPORT.md` of the R2 task: chiefly whether the first two
 screens hold 120 on the move, and how long a first visit's wait is on a

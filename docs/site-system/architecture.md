@@ -92,10 +92,20 @@ of the same world.
 ## The loading sequence (L1)
 
 A first visit waits about six seconds behind the still while the driver
-builds the programs (`performance.md`). What it waits for is shown over
-the first line of the first screen: an ice core, one stratum to a step,
-as wide as the step was measured to take, with the step's name in the
-small mono label.
+builds the programs (`performance.md`). The wait is the hour before the
+light, told twice by the same reports:
+
+- **The grade.** One layer over the still (`.fl-poster::after`, a
+  two-stop gradient in the scene's shadow colour, thinner toward the
+  foot so the first words keep their ground; deeper by night) holds the
+  first frame in the blue hour. Its opacity is `--fl-grade`, set lower
+  at each step by that step's share of the wait, and it is exactly
+  nothing at the last: the still is then the picture's first frame, and
+  the entrance's light is the end of the same story.
+- **The readout.** Over the first line: which step this is, set large in
+  the display face, the step's name beside it in the small mono label,
+  and under both an ice core as their rule, one stratum to a step, as
+  wide as the step was measured to take.
 
 - `src/water/load-steps.ts`: the steps in order, the words each is named
   by, what each was measured to take, and `armLoad`, which the page's
@@ -103,14 +113,16 @@ small mono label.
   `data-load` on the document: `cold` for a first visit (the core is in
   the first paint), `warm` for a reader whose driver has built the
   programs before (remembered in `localStorage`; the core stays out
-  unless the wait passes 1.7 s). This file is in the page's first script.
+  unless the wait passes 1.7 s, and then the readout alone: a grade that
+  came late would darken a page already seen bright). This file is in
+  the page's first script.
 - `src/water/load.ts`: `loadStep(id, k, n)`, called by `prepare`, `stand`
   and `mountFlight` as each piece of a step is done, and `loadOver`,
   called in the frame that sets `data-picture`. One report is one style
   write (one short transition on that stratum); nothing runs per frame
   and nothing moves between reports. It is in
   the flight's own script. `__flight.loadLog` keeps every report.
-- `.fl-load` in `flight.css`: the core's rules, the hold (the page cannot
+- `.fl-load` and the grade in `flight.css`: their rules, the hold (the page cannot
   be scrolled while `data-load` is `cold` or `warm`, so the picture
   always comes up at the top; `Runtime.tsx` tells the smooth scrolling
   not to gather a wheel meanwhile), the hand-off (`over`: the core sinks
@@ -175,4 +187,4 @@ Change log: 2026-11-22 R2: the pace; programs built behind the still and at rest
 
 Measure projected callout rings and label intersections against the camera uniforms submitted to WebGL with `NODE_PATH=<Playwright node_modules> node scripts/callout-check.mjs http://localhost:3189 .tools/out/b3/callouts`.
 
-Change log: 2026-11-22 L1: the loading sequence.
+Change log: 2026-11-22 L1: the loading sequence. Second pass: the grade, the readout set large.
