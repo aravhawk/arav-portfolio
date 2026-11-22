@@ -13,7 +13,7 @@ import { events } from './registry';
 import { onFrame } from '@/lib/frame';
 import { haptic } from '@/lib/haptics';
 import { emit, flightSignal, pictureSignal, pointerSignal, signals } from '@/lib/signals';
-import { BedPainter } from './bed';
+import { type BedData, BedPainter } from './bed';
 import { boardMask, boardReady } from './board';
 import { makeCallouts } from './callouts';
 import { type Basis, END_AT, HOLDS, MELT, SECTIONS, SETTLE_AT, SUN_END_AZ, basisOf, dayAt, endLens, flightKeys, groundUnder, heroDesign, heroStart, moved, poseAt, posterBand, posterBands, stillScroll, type Key, type Pose, type V3 } from './camera';
@@ -661,6 +661,14 @@ export class FlightEngine extends WaterEngine {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    // (The skyline is read back: the GPU is waited for a task at a time first, so the read does not hold the page
+    // while the panorama is still being marched.)
+    {
+      const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      gl.flush();
+      for (let n = 0; fence && n < 400 && !gl.isContextLost() && gl.getSyncParameter(fence, gl.SYNC_STATUS) !== gl.SIGNALED; n++) await new Promise<void>((r) => setTimeout(r, 4));
+      if (fence) gl.deleteSync(fence);
+    }
     this.findSunrise(w);
     freeTarget(gl, country);
     freeTarget(gl, raw);
@@ -2414,17 +2422,41 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     // (As many cells to a stretch of river as when the world was shorter.)
     const cells = (coarse ? 1.2e6 : 3.0e6) * (WORLD.h / 12400);
     const div = Math.max(3, WORLD.h / rows, Math.sqrt((WORLD.w * WORLD.h) / cells));
-    const painter = new BedPainter(WORLD.w, WORLD.h, div);
-    const tick = () => new Promise<void>((res) => setTimeout(res, 0));
-    paintWorld(painter, tribCounts.length ? tribCounts : undefined, engine.gate);
-    await tick();
-    const r = painter.rasters();
-    const sd = await solver.solve({ alpha: r.mask, w: painter.w, h: painter.h, clamp: r.clampTexels, scale: painter.div });
-    if (destroyed) return false;
-    await tick();
-    const bed = painter.assemble(sd.sd, r.flow);
-    await tick();
-    if (destroyed) return false;
+    const counts = tribCounts.length ? tribCounts : undefined;
+    // The world is painted, its distances solved and the bed assembled in a worker: a third of a second of work that
+    // used to hold the page behind its still. (Where a worker cannot draw, the page does it as before.)
+    let bed: BedData | null = null;
+    if (typeof OffscreenCanvas !== 'undefined' && typeof Worker !== 'undefined') {
+      let worker: Worker | undefined;
+      try {
+        worker = new Worker(new URL('./bed.worker.ts', import.meta.url), { type: 'module' });
+        const active = worker;
+        bed = await new Promise<BedData>((resolve, reject) => {
+          active.onmessage = (event: MessageEvent<BedData>) => resolve(event.data);
+          active.onerror = reject;
+          active.onmessageerror = reject;
+          active.postMessage({ div, counts, gate: engine.gate });
+        });
+      } catch {
+        bed = null;
+      } finally {
+        worker?.terminate();
+      }
+    }
+    if (destroyed || isCancelled()) return false;
+    if (!bed) {
+      const painter = new BedPainter(WORLD.w, WORLD.h, div);
+      const tick = () => new Promise<void>((res) => setTimeout(res, 0));
+      paintWorld(painter, counts, engine.gate);
+      await tick();
+      const r = painter.rasters();
+      const sd = await solver.solve({ alpha: r.mask, w: painter.w, h: painter.h, clamp: r.clampTexels, scale: painter.div });
+      if (destroyed) return false;
+      await tick();
+      bed = painter.assemble(sd.sd, r.flow);
+      await tick();
+      if (destroyed) return false;
+    }
     engine.setBed(bed);
     engine.shoalY = SHOAL_Y;
     (tribCounts.length ? tribCounts : [9, 5, 3, 2, 1, 1, 1]).slice(0, TRIBS.length).forEach((n, i) => (engine.tribW[i] = tribWidth(n)));

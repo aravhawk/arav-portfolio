@@ -59,8 +59,8 @@ export class BedPainter {
   outlet: { x: number; y: number; w: number } | null = null;
   /** World y where the stream opens into the wide shallows before the ending, if the page has them. */
   shoal: number | null = null;
-  private mask: CanvasRenderingContext2D;
-  private flow: CanvasRenderingContext2D;
+  private mask: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+  private flow: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
   constructor(docW: number, docH: number, div: number) {
     this.div = div;
@@ -69,7 +69,8 @@ export class BedPainter {
     this.w = Math.max(8, Math.ceil(docW / div));
     this.h = Math.max(8, Math.ceil(docH / div));
     const mk = () => {
-      const c = document.createElement('canvas');
+      // (In a worker there is no document: the same raster, off screen.)
+      const c = typeof document === 'undefined' ? new OffscreenCanvas(this.w, this.h) : document.createElement('canvas');
       c.width = this.w;
       c.height = this.h;
       const ctx = c.getContext('2d', { willReadFrequently: true })!;
