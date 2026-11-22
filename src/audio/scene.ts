@@ -14,7 +14,7 @@ import { starts } from '@/water/registry';
 
 import { type Basis, SETTLE_AT, groundUnder, projectPoint } from '@/water/camera';
 import { skyAt } from '@/water/sky';
-import { BASIN, BENDS, CANYON, CANYON_LINE, COLS, DAM, ISLAND, LATTICE, NAME, RING, SHARDS, SLUICES, ringStones } from '@/water/world';
+import { BASIN, BENDS, CANYON, CANYON_LINE, COLS, DAM, ISLAND, LATTICE, NAME, SHARDS, SLUICES } from '@/water/world';
 import { type Ground, type Reach, arms, groundAt, spills, tribs } from './plan';
 import { MOVE } from './theory';
 
@@ -138,9 +138,6 @@ export interface Scene {
   arms: Source[];
   /** the name on the lake: its middle, as it stands in the frame */
   name: Seen;
-  /** the ring of standing stones round its pool: the ring as a whole, and each of its stones in the plan's own order */
-  ring: Seen;
-  stones: Seen[];
   /** the camera and the frame's shape, for placing a sound where its cause is seen */
   cam: Basis | null;
   aspect: number;
@@ -177,18 +174,14 @@ const VS = [0.56, 0.7, 0.84, 0.97];
  */
 export function movementAt(home: boolean, s: number, melt: number, rest: boolean, risen = true): number {
   if (!home) return MOVE.page;
-  const { say, bridge, models, bench, lattice, canyon, delta, sea } = starts;
+  const { say, bridge, models, canyon, delta, sea } = starts;
   if (rest) return risen ? MOVE.rest : MOVE.approach;
   if (s < say) return melt > 0.06 ? MOVE.melt : MOVE.ice;
   // (Each movement begins as the camera leaves for its first station, half a screen before the section's own start.)
-  // (The places stand in the owner's order, so the piece comes back to two of its movements: the river's again at the
-  // rock pool and the ring, the works' again at the lattice.)
-  if (s < models - 0.2) return MOVE.river;
-  if (s < bench - 0.2) return MOVE.works;
-  if (s < canyon + 0.25) return MOVE.river;
-  if (s < bridge + 0.45) return MOVE.canyon;
-  if (s < lattice - 0.2) return MOVE.tarn;
-  if (s < delta - 0.35) return MOVE.works;
+  if (s < bridge + 0.45) return MOVE.river;
+  if (s < models - 0.2) return MOVE.tarn;
+  if (s < canyon + 0.25) return MOVE.works;
+  if (s < delta - 0.35) return MOVE.canyon;
   // The run out to sea: the dominant is taken up as the camera leaves the delta, and held.
   if (s < sea - APPROACH) return MOVE.delta;
   return MOVE.approach;
@@ -235,8 +228,6 @@ export interface Env {
 }
 
 const UNSEEN: Seen = { k: 0, pan: 0, far: 0 };
-/** The ring's stones, found once (the plan's own: where each foot stands and how tall it is). */
-let stonesAt: ReturnType<typeof ringStones> | null = null;
 const NO_SOURCE: Source = { ...UNSEEN, size: 0 };
 
 /** The world's places that have a voice, found once. */
@@ -370,8 +361,6 @@ export class SceneReader {
     let lanes = UNSEEN;
     let bend = UNSEEN;
     let name = UNSEEN;
-    let ring = UNSEEN;
-    let stones: Seen[] = [];
     if (cam) {
       let wAll = 0;
       let wWet = 0;
@@ -437,9 +426,6 @@ export class SceneReader {
       thread = seenAt(cam, sig.aspect, LATTICE.x, LATTICE.y - LATTICE.pitch * 2 - 110);
       lanes = seenAt(cam, sig.aspect, LATTICE.x, LATTICE.y);
       name = seenAt(cam, sig.aspect, NAME.x, NAME.y);
-      // The ring: the middle of its pool at the stones' shoulder, and each stone half way up.
-      ring = seenAt(cam, sig.aspect, RING.x, RING.y, RING.h * 0.4);
-      stones = (stonesAt ??= ringStones()).map((st) => seenAt(cam, sig.aspect, st.x, st.y, st.h * 0.5));
       for (const b of BENDS) {
         const s = seenAt(cam, sig.aspect, b.x, b.y);
         if (heard(s) >= heard(bend)) bend = s;
@@ -511,8 +497,6 @@ export class SceneReader {
       bend,
       arms: armsSeen,
       name,
-      ring,
-      stones,
       cam,
       aspect: sig.aspect,
     };

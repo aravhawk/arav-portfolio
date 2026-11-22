@@ -1,8 +1,8 @@
 import { composed } from '@/water/registry';
 import { describe, expect, it } from 'vitest';
 import { basisOf, flightKeys, poseAt, projectPoint, type V3 } from '@/water/camera';
-import { type Cap, type Placed, NAV_CLEAR, isFan, layoutCaptions, layoutList, layoutStepped } from '@/water/words';
-import { COLS, colApex, colHeights, streamAnchors } from '@/water/world';
+import { type Cap, type Placed, NAV_CLEAR, isFan, layoutCaptions, layoutList, layoutStepped, streamAnchors } from '@/water/words';
+import { COLS, colApex, colHeights } from '@/water/world';
 
 /**
  * The home page's words may never meet. The captions' geometry is run here

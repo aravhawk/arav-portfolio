@@ -37,7 +37,7 @@ function linesOverPicture() {
       // The film is a framed plate of its own: its control is not over the bare picture.
       if (el.closest('.fl-film')) continue;
       // A filled button brings its own opaque ground (checked: not assumed).
-      const btn = el.closest('.btn, .end-primary, .sub-go');
+      const btn = el.closest('.btn, .end-primary');
       if (btn && /^rgb\(/.test(getComputedStyle(btn).backgroundColor)) continue;
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
@@ -108,15 +108,6 @@ export async function runsFlight(page) {
 }
 
 /**
- * The picture is played from frames rendered ahead of time, and follows the scroll through a spring: after a
- * scroll made by script it glides (or, for a long jump, cuts) to where the page now is. This waits until it stands
- * there, on that place's own frame. (Where there is no player, the page's own state is all there is to wait for.)
- */
-export async function atRest(page, timeout = 8000) {
-  await page.waitForFunction(() => !window.__player || window.__player.settled(), null, { timeout }).catch(() => {});
-}
-
-/**
  * Walk the flight and measure every line of words against the picture.
  * @param positions scroll positions in px
  * @param settle ms to let words that have just come in finish arriving
@@ -131,9 +122,7 @@ export async function measureFlight(page, positions, { settle = 820 } = {}) {
     const y = Math.round(Math.min(max, y0));
     const last = y >= max - 2;
     await page.evaluate((yy) => window.scrollTo(0, yy), y);
-    // (At the ending the light event runs by the clock: it is waited out.)
-    await atRest(page, last ? 12000 : 8000);
-    await page.waitForTimeout(last ? 1200 : settle);
+    await page.waitForTimeout(last ? 4200 : settle);
     row.steps++;
     const boxes = await page.evaluate(linesOverPicture);
     if (!boxes.length) continue;
@@ -152,7 +141,6 @@ export async function measureFlight(page, positions, { settle = 820 } = {}) {
     boxes.forEach((b, j) => {
       const cr = Math.min(ratio(b.ink, worst[j].hi), ratio(b.ink, worst[j].lo));
       row.lines++;
-      if (cr < (row.worst ?? Infinity)) row.worstAt = { scroll: +(y / vh).toFixed(2), text: b.text };
       row.worst = Math.min(row.worst ?? Infinity, cr);
       const need = b.large ? 3 : 4.5;
       if (cr < need) row.fails.push({ scroll: +(y / vh).toFixed(2), text: b.text, contrast: +cr.toFixed(2), need });

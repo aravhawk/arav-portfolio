@@ -1,11 +1,11 @@
 import { starts, composed } from '@/water/registry';
 import { describe, expect, it } from 'vitest';
 import { DAWN, GATE, LAP, RIBBON, stationsNear } from '@/water/moments';
-import { RING_DARK, ringNear, ringVoice, ARRIVE_AT, BLOCK_EARS, BLOCK_MID, LIGHT, NAME_MELT, SHEET_BREAKS, SHIMMER_AT, W, WATER, arrivalOf, arrivalTime, bearingAt, blockSet, camN, climbTime, climbVoice, curtainAt, curtainsAt, gatherTime, gatherVoice, landings, lightPan, lineRun, lineTime, nameLetters, nameMelt, railVoice, ribbonHead, ribbonTime, sinkAt, sinkOrder, sinkVoice, unsmooth, chirpAt, chirpLen, crackVoice, dripVoice, dropVoice, gust, latticeAt, latticeTime, latticeVoice, mixOf, roomsOf, scrollN, seaAt, shardVoice, slapTime, surgeRing, swellAt, uiVoice, waterOf, windPanOf } from '@/audio/mapping';
+import { ARRIVE_AT, BLOCK_EARS, BLOCK_MID, LIGHT, NAME_MELT, SHEET_BREAKS, SHIMMER_AT, W, WATER, arrivalOf, arrivalTime, bearingAt, blockSet, camN, climbTime, climbVoice, curtainAt, curtainsAt, gatherTime, gatherVoice, landings, lightPan, lineRun, lineTime, nameLetters, nameMelt, railVoice, ribbonHead, ribbonTime, sinkAt, sinkOrder, sinkVoice, unsmooth, chirpAt, chirpLen, crackVoice, dripVoice, dropVoice, gust, latticeAt, latticeTime, latticeVoice, mixOf, roomsOf, scrollN, seaAt, shardVoice, slapTime, surgeRing, swellAt, uiVoice, waterOf, windPanOf } from '@/audio/mapping';
 import { APPROACH, type Scene, SceneReader, type Seen, type SignalsLike, groundAt, heard, movementAt, seenAt, wetUnder } from '@/audio/scene';
 import { ARRIVAL, ARRIVAL_AT, CLIMB, GATHER, MOTIF, MOVE, PENTA } from '@/audio/theory';
 import { END_AT, MELT, SETTLE_AT, basisOf, dayAt, endLens, flightKeys, heroDesign, poseAt, stillStops } from '@/water/camera';
-import { CANYON, COLS, DELTA, LAKE, LATTICE, NAME, RING, SHARDS, SLAB, SLUICES, STREAM, TARN } from '@/water/world';
+import { CANYON, COLS, DELTA, LAKE, LATTICE, NAME, SHARDS, SLAB, SLUICES, STREAM, TARN } from '@/water/world';
 
 const UNSEEN: Seen = { k: 0, pan: 0, far: 0 };
 const NEAR: Seen = { k: 1, pan: 0, far: 300 };
@@ -70,8 +70,6 @@ const scene = (over: Partial<Scene> = {}): Scene => ({
   bend: UNSEEN,
   arms: [],
   name: UNSEEN,
-  ring: UNSEEN,
-  stones: [],
   cam: null,
   aspect: 1.6,
   ...over,
@@ -941,15 +939,12 @@ describe('the scene is read from what the picture publishes', () => {
   });
 
   it('the movements follow the flight in order', () => {
-    const { say, bridge, models, bench, around, lattice, canyon, delta, sea } = starts;
+    const { say, bridge, models, canyon, delta, sea } = starts;
     expect(movementAt(true, 0, 0, false)).toBe(MOVE.ice);
     expect(movementAt(true, 1, 0.5, false)).toBe(MOVE.melt);
     expect(movementAt(true, say + 1, 1, false)).toBe(MOVE.river);
     expect(movementAt(true, bridge + 1.2, 1, false)).toBe(MOVE.tarn);
     expect(movementAt(true, models + 1, 1, false)).toBe(MOVE.works);
-    expect(movementAt(true, bench + 1, 1, false)).toBe(MOVE.river);
-    expect(movementAt(true, around + 1, 1, false)).toBe(MOVE.river);
-    expect(movementAt(true, lattice + 1, 1, false)).toBe(MOVE.works);
     expect(movementAt(true, canyon + 1.5, 1, false)).toBe(MOVE.canyon);
     expect(movementAt(true, delta + 1, 1, false)).toBe(MOVE.delta);
     // The run out to sea begins before the sea's own section, and holds until the camera rests.
@@ -1011,31 +1006,6 @@ describe('the scene is read from what the picture publishes', () => {
     expect(heard(pool.spill)).toBeGreaterThan(0.5);
     expect(gain(pool, W.thin)).toBeGreaterThan(0.3);
     expect(pool.tarn).toBeLessThan(0.2);
-
-    // 4b The ring (Ask Around): the stones stand right of the middle with their pool among them. The air is still,
-    // the pool gives a bubble now and then, the still room is in, and the stones ring; from the rock pool before it
-    // and the canyon after it, less or nothing; from the lake and the sea, nothing.
-    const ring = at(composed.around);
-    expect(ring.ring.k).toBe(1);
-    expect(ring.ring.pan).toBeGreaterThan(0);
-    expect(ring.stones).toHaveLength(RING.n);
-    expect(ring.stones.filter((st) => st.k > 0.5).length).toBeGreaterThanOrEqual(6);
-    expect(ringNear(ring)).toBeGreaterThan(0.8);
-    const ringMix = mixOf(ring, 0);
-    expect(ringMix.rings).toBeGreaterThan(0.25);
-    expect(ringMix.rooms[2]).toBeGreaterThan(0.6);
-    expect(ringMix.whistle).toBeLessThan(0.02);
-    expect(ringMix.wind).toBeLessThan(0.5 * mixOf({ ...ring, ring: UNSEEN }, 0).wind);
-    expect(gain(ring, W.lap)).toBeGreaterThan(0.2);
-    expect(waterOf(ring, 0)[W.lap][RATE]).toBeLessThan(1);
-    expect(waterOf(ring, 0)[W.lap][PAN]).toBeGreaterThan(0);
-    for (const stop of [composed.hero, composed.say, composed.infiniview, composed.upstream, composed.models, composed.fork, composed.bridge, composed.lattice, composed.delta, composed.sea]) expect(mixOf(at(stop), 0).rings, `rings at ${stop}`).toBe(0);
-    for (const stop of [composed.bench, composed.canyon]) expect(mixOf(at(stop), 0).rings).toBeLessThan(0.75 * ringMix.rings);
-    // Six notes for six lit stones, all in the key, no two the same; the dark stone is not asked.
-    const notes = Array.from({ length: RING.n }, (_, i) => i).filter((i) => i !== RING_DARK).map((i) => ringVoice(i, 0, 0).midi);
-    expect(new Set(notes).size).toBe(6);
-    for (const n of notes) expect(PENTA).toContain(pc(n));
-    expect(ringVoice(0, 0.9, 1).bright).toBeLessThan(ringVoice(0, 0.9, 0).bright);
 
     // 5 The tarn: both shards in frame, the further one left of the nearer, and next to no water sound.
     const tarn = at(composed.bridge);

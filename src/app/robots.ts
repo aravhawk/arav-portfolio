@@ -6,8 +6,6 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      // (The renderer's own route: the home page drawn live, for tools/flight.)
-      disallow: '/render',
     },
     sitemap: abs('/sitemap.xml'),
     host: SITE_URL,

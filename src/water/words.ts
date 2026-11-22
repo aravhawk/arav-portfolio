@@ -9,13 +9,14 @@
  * words builds, step by step, is in src/app/page.tsx and flight.css.)
  */
 
+import { TRIBS, tribPoint } from './world';
 import type { V3 } from './camera';
 
 /** The nav is 44 px tall, 14 px from the top of the frame: nothing of the words' layer stands nearer than 24 px under it. */
 export const NAV_CLEAR = 84;
 
-// (Where each stream's caption lands is the world's to say: `streamAnchors` in geography.ts. This file imports
-// nothing of the world, so the page's player can use it without loading the engine.)
+/** Where each stream's caption lands: on the stream itself as it is drawn (the world says where: tribPoint). */
+export const streamAnchors = (): V3[] => TRIBS.map((_, i) => tribPoint(i));
 /** A caption to place: its point in the frame, its label's size, and how its station wants it set. */
 export interface Cap {
   x: number;

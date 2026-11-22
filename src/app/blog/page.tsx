@@ -4,7 +4,6 @@ import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { openingLines } from '@/components/blog/opening';
 import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
-import { SubscribeForm } from '@/components/ending/Ending';
 import { PageShell } from '@/components/PageShell';
 import { getAllPosts } from '@/lib/posts';
 import { formatPostDate } from '@/lib/dates';
@@ -78,13 +77,6 @@ export default function BlogPage() {
         ) : (
           <p className="empty">Nothing published yet. The first post is on its way.</p>
         )}
-      </section>
-      {/* After the posts, before the way on: new posts by email. (Interface only: it knows nothing of a post.) */}
-      <section className="sec wrap" aria-labelledby="newsletter">
-        <h2 className="sec-h" id="newsletter">
-          Newsletter
-        </h2>
-        <SubscribeForm source="blog" label="Email address" split />
       </section>
     </PageShell>
   );

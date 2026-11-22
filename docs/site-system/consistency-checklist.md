@@ -40,13 +40,6 @@ old one.
    page, one project page and one blog post, at 1440 and at 390.
    Every address (canonical, share image, feed, sitemap, robots,
    structured data) on `https://arav.pro`.
-8a. **Links and controls**: `scripts/click-test.mjs <base>` on the
-   production build: every link and control on `/`, `/work`, a project
-   page, `/blog` and a post is pressed for real at 1440 with a mouse
-   and at 390 with touch, in both themes, and must do what it says
-   (a new tab at its address with `rel="noopener"`, `mailto:`, the
-   clipboard, the page it names). It takes about ten minutes; add a
-   route with `--routes` when a page gains a control of a new kind.
 9. **Code**: `pnpm lint`, `pnpm exec tsc --noEmit`,
    `pnpm exec vitest run`, `pnpm build`; no console errors; pages read
    with scripts off.
@@ -77,4 +70,4 @@ FAIL with reasons (no scores). A PASS needs all of:
 8. Beside the three references, the critic cannot name a fault that
    makes this the lesser site.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 F1: links and controls are pressed.
+Change log: 2026-11-18 first version (orchestrator).

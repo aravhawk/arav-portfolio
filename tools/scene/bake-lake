@@ -1,0 +1,55 @@
+#!/bin/sh
+set -eu
+export PYTHONDONTWRITEBYTECODE=1
+cd "$(dirname "$0")/../.."
+base="$HOME/.t3/portfolio-redesign-v4"
+venv="$base/tools/bake-venv"
+temp=".tools/out/o2c/bake"
+mkdir -p "$temp"
+if [ ! -x "$venv/bin/python" ]; then uv venv --python 3.11 "$venv"; fi
+uv pip install --python "$venv/bin/python" bpy==4.5.3 fonttools==4.68.0 scipy==1.17.1 numpy==1.26.4 pillow==13.0.0 brotli==1.2.1 skia-pathops==0.9.2 meshoptimizer==0.2.30a0 opencolorio==2.6.0
+if [ -z "${TOKTX:-}" ] && ! command -v toktx >/dev/null; then
+    tool="$base/tools/ktx-4.4.2"
+    if [ ! -x "$tool/bin/toktx" ]; then
+        mkdir -p "$tool"
+        curl -fsSL --retry 2 https://github.com/KhronosGroup/KTX-Software/releases/download/v4.4.2/KTX-Software-4.4.2-Darwin-arm64.pkg -o "$tool/download.pkg"
+        echo "500bd8f9d63358c3f3a0d83b724c8574436a72c37dc0e4bad90ec1ca38032c3c  $tool/download.pkg" | shasum -a 256 -c -
+        work=$(mktemp -d "$tool/extract.XXXXXX")
+        pkgutil --expand-full "$tool/download.pkg" "$work/packages"
+        cp -R "$work"/packages/*library.pkg/Payload/usr/local/lib "$tool/"
+        cp -R "$work"/packages/*tools.pkg/Payload/usr/local/bin "$tool/"
+    fi
+    export TOKTX="$tool/bin/toktx"
+fi
+"$venv/bin/python" tools/scene/lake/inputs.py
+mkdir -p "$temp/night" "$temp/portrait" "$temp/approach-portrait"
+"$venv/bin/python" tools/scene/lake/author.py --bake-geometry --width 4864 --samples 24 --output "$temp/day.png"
+"$venv/bin/python" tools/scene/lake/author.py --theme night --width 1440 --samples 24 --output "$temp/night/night.png"
+for theme in day night; do
+    mkdir -p "$temp/approach-$theme"
+    "$venv/bin/python" tools/scene/lake/author.py --lake-uv --theme "$theme" --width 1408 --samples 24 --output "$temp/lake-uv-$theme.png"
+    "$venv/bin/python" tools/scene/lake/author.py --phone-study stack --theme "$theme" --width 768 --samples 20 --output "$temp/phone-$theme/$theme.png"
+    width=2880
+    if [ "$theme" = night ]; then width=1440; fi
+    "$venv/bin/python" tools/scene/lake/author.py --approach --theme "$theme" --width "$width" --samples 20 --output "$temp/approach-$theme/$theme.png"
+    "$venv/bin/python" tools/scene/lake/author.py --approach --portrait --theme "$theme" --width 624 --samples 16 --output "$temp/approach-portrait/$theme.png"
+    "$venv/bin/python" tools/scene/lake/author.py --portrait --theme "$theme" --width 624 --samples 16 --output "$temp/portrait/$theme.png"
+done
+"$venv/bin/python" tools/scene/lake/pack.py "$temp" public/scene/lake --portrait "$temp/portrait/day.png"
+"$venv/bin/python" tools/scene/lake/pack.py "$temp/night" public/scene/lake --theme night --shared "$temp" --portrait "$temp/portrait/night.png"
+# Decoder binaries are versioned with the worker and independent of the scene bake.
+# Stills use the production renderer. The temporary server is this command's
+# child and is stopped on success, failure or interruption.
+if lsof -tiTCP:3184 -sTCP:LISTEN >/dev/null; then
+    echo "Port 3184 is in use. Stop the existing lab server before rebuilding." >&2
+    exit 1
+fi
+pnpm build
+node node_modules/next/dist/bin/next start -p 3184 > "$temp/poster-server.log" 2>&1 &
+server_pid=$!
+trap 'kill -TERM "$server_pid" 2>/dev/null || true' EXIT
+for tick in $(seq 1 100); do
+    if curl -fsS http://localhost:3184/lab/hero -o /dev/null 2>/dev/null; then break; fi
+    sleep .1
+done
+NODE_PATH="${NODE_PATH:-$base/tools/node_modules}" node tools/scene/posters.cjs

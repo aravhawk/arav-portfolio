@@ -19,7 +19,6 @@
  * Options: --browsers chromium,webkit,firefox  --widths 1440,390
  *          --themes light,dark  --step 0.1 (screens)  --pages /  --out report.json
  *          --from 12 --to 15 (screens: walk only part of the way)  --settle 820 (ms)
- *          --live off (the home page without its live layer)
  */
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
@@ -65,8 +64,6 @@ for (const name of browsers) {
           isMobile: phone && name !== 'firefox',
         });
         const page = await ctx.newPage();
-        // (`--live off`: the picture alone, without the live layer over it, to tell what the layer costs a line.)
-        if (arg('live', 'on') === 'off') await page.addInitScript(() => (window.__flightLive = false));
         let row = { steps: 0, lines: 0, worst: null, fails: [] };
         let flight = null;
         let error = '';

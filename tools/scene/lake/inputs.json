@@ -1,0 +1,157 @@
+[
+  {
+    "file": "Ice003_2K-JPG.zip",
+    "sha256": "7e46df58180500ce8d7aae37a5ae64c96d484b00107a4afd3c658240bb18446d",
+    "url": "https://ambientcg.com/get?file=Ice003_2K-JPG.zip"
+  },
+  {
+    "file": "Ice004_2K-JPG.zip",
+    "sha256": "d648880717cff4f6dd739e6ac9c2ea6080b6aa6642a659049679347102d6ca13",
+    "url": "https://ambientcg.com/get?file=Ice004_2K-JPG.zip"
+  },
+  {
+    "file": "Snow008A_2K-JPG.zip",
+    "sha256": "969220731db106a3805cfb94d2ca11833089ab4d2f86298e029b2d9bf38fb830",
+    "url": "https://ambientcg.com/get?file=Snow008A_2K-JPG.zip"
+  },
+  {
+    "file": "Snow009A_2K-JPG.zip",
+    "sha256": "2ec7a97f4374efe590bd0836cd4e8a2399b75383f1f9d72197e11aa1f5f2765b",
+    "url": "https://ambientcg.com/get?file=Snow009A_2K-JPG.zip"
+  },
+  {
+    "file": "Terrain003_2K-JPG.zip",
+    "sha256": "35fcf5037bf546e4be6c485dbcba9c684807d668e741a63acc63e8a46180dd93",
+    "url": "https://ambientcg.com/get?file=Terrain003_2K-JPG.zip"
+  },
+  {
+    "file": "Terrain004_2K-JPG.zip",
+    "sha256": "0570837238a9f7d931e69eaba6b89c97fe8635681d1b7681c35e2c85fd505bd6",
+    "url": "https://ambientcg.com/get?file=Terrain004_2K-JPG.zip"
+  },
+  {
+    "file": "Terrain005_2K-JPG.zip",
+    "sha256": "08e5f9ff12fdf852b3d685de5be33fc18b944d3724d6f7895b3475d5a1bd95d3",
+    "url": "https://ambientcg.com/get?file=Terrain005_2K-JPG.zip"
+  },
+  {
+    "file": "Terrain003_2K.exr",
+    "sha256": "8d01eb5f5b726d142c67dded2c1695102e28da12dfbbf0cb62c49ae87801ee26",
+    "url": "https://ambientcg.com/get?file=Terrain003_2K.exr"
+  },
+  {
+    "file": "Terrain004_2K.exr",
+    "sha256": "7f3c4b987b6bfabf2de1b43854441bac4681420caa2ed9b4304b860e2875f0b8",
+    "url": "https://ambientcg.com/get?file=Terrain004_2K.exr"
+  },
+  {
+    "file": "Terrain005_2K.exr",
+    "sha256": "ad4b0c36fe705c8a4ee161f996b7c3165104f4e728ffa0a860d1aaf1c667c1ff",
+    "url": "https://ambientcg.com/get?file=Terrain005_2K.exr"
+  },
+  {
+    "file": "frozen_lake_2k.hdr",
+    "sha256": "0501bf3165ef51afbb428eabb483a7ff3ebbef712cd1c3f138ccfc4c0a92d33e",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/frozen_lake_2k.hdr"
+  },
+  {
+    "file": "kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+    "sha256": "5244534e9cf5b606f2ff513aa00ddb161b0a4826ffd88a0d3bd03ac29247d198",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_48d_partly_cloudy_puresky_2k.hdr"
+  },
+  {
+    "file": "qwantani_dawn_puresky_4k.hdr",
+    "sha256": "62f7763a04916700972069a34ebc1f966e3ed26e5c7a96008749497b37d2ba1d",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/qwantani_dawn_puresky_4k.hdr"
+  },
+  {
+    "file": "qwantani_sunrise_puresky_2k.hdr",
+    "sha256": "25dd4ac46b584706a6777b9fe69325eecdb9edb541a0ad2dcc18486349474c93",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/qwantani_sunrise_puresky_2k.hdr"
+  },
+  {
+    "file": "snow_field_2_puresky_4k.hdr",
+    "sha256": "51fb3b329af2773655bfd40b4456879062d3b3e3d2fd6dada16684ac949d21dc",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/snow_field_2_puresky_4k.hdr"
+  },
+  {
+    "file": "wasteland_clouds_puresky_2k.hdr",
+    "sha256": "c9be5b722797528f2deae5969d6af061e75fca912675bcb11d467de5eea427c6",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/wasteland_clouds_puresky_2k.hdr"
+  },
+  {
+    "file": "snow_02_diff_2k.jpg",
+    "sha256": "d185c2853c7e674161789db4eed1c5708d85e4f6e3dcb5698209568adf02aa98",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/snow_02/snow_02_diff_2k.jpg"
+  },
+  {
+    "file": "snow_02_disp_2k.jpg",
+    "sha256": "c3fe9fe26907138e23e685c53c43152858f27042b802931e0f71bc0c62286fdd",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/snow_02/snow_02_disp_2k.jpg"
+  },
+  {
+    "file": "snow_02_nor_gl_2k.jpg",
+    "sha256": "288539ee33387e91035be4dc8d10da574bf6a95c8374d33b6b1dc465c6949e8f",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/snow_02/snow_02_nor_gl_2k.jpg"
+  },
+  {
+    "file": "snow_field_aerial_col_2k.jpg",
+    "sha256": "aa52efea36819ea5bdbefad370cbcd587952f622eb526218bcfa0c72c3fd047a",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/snow_field_aerial/snow_field_aerial_col_2k.jpg"
+  },
+  {
+    "file": "snow_field_aerial_height_2k.jpg",
+    "sha256": "184353c091f4429ade216894bcf240fa5b129077c8974a8e8fe5b4b02c502549",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/snow_field_aerial/snow_field_aerial_height_2k.jpg"
+  },
+  {
+    "file": "mountainside/mountainside.bin",
+    "sha256": "08e4ca60e050045de8224d12d23af84f9406bc558943038114d81e184158d953",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/mountainside/mountainside.bin"
+  },
+  {
+    "file": "mountainside/mountainside.gltf",
+    "sha256": "ccdbbb75744b764b19c8868e5f47b6a85e62961fa2f7fe3dc9b73b219c89834d",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/mountainside/mountainside_2k.gltf"
+  },
+  {
+    "file": "mountainside/textures/mountainside_arm_2k.jpg",
+    "sha256": "a494e404df96eb43df11ae7b4c14901461d129af0ae6b3ecc8f75390c3b41c35",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/mountainside/mountainside_arm_2k.jpg"
+  },
+  {
+    "file": "mountainside/textures/mountainside_diff_2k.jpg",
+    "sha256": "3fe1a61dc38423b07a757fc74e1dce5d02a5ea0b4fbab52b5bcddece052df811",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/mountainside/mountainside_diff_2k.jpg"
+  },
+  {
+    "file": "mountainside/textures/mountainside_nor_gl_2k.jpg",
+    "sha256": "dbfd022b4dad44a2d6fb30b7bd68d44a7349a22c06a9701bcfbedc8e73400a87",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/mountainside/mountainside_nor_gl_2k.jpg"
+  },
+  {
+    "file": "rock_09/rock_09.bin",
+    "sha256": "780c37d6fc11ca3a01c3763535ef883908b6007271a46bd446d2289ded820751",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_09/rock_09.bin"
+  },
+  {
+    "file": "rock_09/rock_09.gltf",
+    "sha256": "f5f430215ad93e3d95755aa78c1c84a619497dfdc1ee297f8ac35df607ee03a3",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/rock_09/rock_09_2k.gltf"
+  },
+  {
+    "file": "rock_09/textures/rock_09_arm_2k.jpg",
+    "sha256": "eaedeb8428079a27bc5e290a61375454035b5fcfb1e9c7d16ce4bc85313789da",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/rock_09/rock_09_arm_2k.jpg"
+  },
+  {
+    "file": "rock_09/textures/rock_09_diff_2k.jpg",
+    "sha256": "657406a77530db692061b475681f98cbf1c67be81a5c422830dbe6eb36df813a",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/rock_09/rock_09_diff_2k.jpg"
+  },
+  {
+    "file": "rock_09/textures/rock_09_nor_gl_2k.jpg",
+    "sha256": "944b7763b6431671e07b4e7ebe082cf747e791513e27c830a3bb2dbee0246614",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/rock_09/rock_09_nor_gl_2k.jpg"
+  }
+]

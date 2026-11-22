@@ -1,8 +1,10 @@
-import { paintLake, paintReach, paintBasin, paintConfluence, paintPool, paintRing, paintTarn, paintShallows, paintDam, paintLattice, paintCanyon, paintDelta } from './geography';
+import { BASIN_OBJECT, CONFLUENCE, ROCK_POOL, TARN_OBJECT } from './shaders/river-stations';
+import { paintLake, paintReach, paintBasin, paintConfluence, paintPool, paintTarn, paintShallows, paintDam, paintLattice, paintCanyon, paintDelta } from './geography';
 import type { BedPainter } from './bed';
+import { COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, CANYON_ICE } from './shaders/stations';
 import { boxInView, projectPoint, type Box, type Rect } from './projection';
 import type { Basis, Key, Move, Pose, V3 } from './camera';
-import { AT, BENDS, BOARD_DEPTH, FACE, RING, SHEET, boardSpan, sheetCols, CANYON, COLS, CONF_Y, DAM, DY, LATTICE, LIP, POOL, SHARDS, SLAB, TARN, TARN_BAY, lipY } from './geography';
+import { BENDS, BOARD_DEPTH, FACE, SHEET, boardSpan, sheetCols, CANYON, COLS, CONF_Y, DAM, DY, LATTICE, LIP, POOL, SHARDS, SLAB, T2, TARN, TARN_BAY, lipY } from './geography';
 
 type FrameMove = (at: Pose, x: number, y: number, push: number, arc: number, rise: number, z?: number) => Move;
 export interface CameraContext {
@@ -17,7 +19,7 @@ export interface CameraContext {
 
 /** Times are screens relative to the section's start. Camera keys use absolute screens. */
 type Words =
-  | { kind: 'section'; layout?: 'opening' | 'statement' | 'interests' | 'ending' }
+  | { kind: 'section'; layout?: 'opening' | 'statement' | 'interests' | 'ending' | 'beat' }
   | { kind: 'figure'; layout: 'contributions' | 'downloads' }
   | { kind: 'title'; layout?: 'display' | 'table' | 'film' | 'switch' | 'pool' | 'wall' };
 
@@ -156,12 +158,8 @@ export interface Subject {
   wholeWhen?: (cam: Basis) => boolean;
   combine?: boolean;
   silhouette?: (cam: Basis, aspect: number) => Rect | null;
-  /**
-   * A named GLSL function. Custom objects receive (colour, world ray, scroll progress). Its source is registered
-   * under the same name in shaders/subjects.ts, which only the renderer loads: this file holds no shader text, so
-   * what reads the plan (the sound, the pages) does not carry it.
-   */
-  shader: { fn: string };
+  /** A named GLSL function. Custom objects receive (colour, world ray, scroll progress). */
+  shader: { source: string; fn: string };
   /** Existing objects whose rays also affect the ground, media or water pass. */
   pass?: 'slab' | 'confluence' | 'pool' | 'shards' | 'columns' | 'dam' | 'lattice' | 'canyon';
   proximity?: { lane: 0 | 1 | 2 | 3; x: number; y: number; from: number; to: number };
@@ -255,7 +253,7 @@ function tarnPose(): Pose {
  * shallows running out to the right, and the west bank's snow filling the lower left, where the count stands.
  */
 function colsPose(): Pose {
-  return { pos: [640, AT.shallows - 20, 300], aim: [1260, AT.shallows + 1090, 20], fov: 42 };
+  return { pos: [640, T2 - 20, 300], aim: [1260, T2 + 1090, 20], fov: 42 };
 }
 
 const PAST = 54;
@@ -316,11 +314,13 @@ function canyonKeys(s8: number, fov: number, g = 1): Key[] {
 }
 
 const slabAim: V3 = [SLAB.x, SLAB.y, SLAB.h * 0.5];
-const HERO = {
+/** Registration order is the scroll order. A layout selects an existing server-rendered words block. */
+export const FLIGHT = [
+  {
     id: 'hero', paint: paintLake, rail: 'Arav Jain', length: 2.4, offset: 0, kind: 'section', layout: 'opening',
     camera: ({ opening }) => opening(),
-  } as const satisfies Definition;
-const SAY = {
+  },
+  {
     id: 'say', paint: paintReach, rail: 'What I do', length: 2.2, offset: 0.7, kind: 'section', layout: 'statement',
     camera: ({ stop, end, upright, reach }) => upright ? [
       // The statement: the near bank fills the foot of the frame, the river crosses beyond it; the eye goes on down the reach.
@@ -335,14 +335,14 @@ const SAY = {
       reach(stop, 2720),
       reach(end - 0.5, 3230),
     ],
-  } as const satisfies Definition;
-const INFINIVIEW = {
+  },
+  {
     id: 'infiniview', paint: paintBasin, rail: 'Infiniview', length: 2.6, offset: 1, kind: 'title', layout: 'display',
     subject: { bit: 2, define: 'F_SLAB', boxes: [SLAB_GROUND], pass: 'slab', visible: slabVisible,
       silhouette: (cam, aspect) => {
         const frame = slabInFrame(cam, aspect);
         return frame.behind === 0 ? frame.box : null;
-      }, shader: { fn: 'slabHit' } },
+      }, shader: { source: BASIN_OBJECT, fn: 'slabHit' } },
     project: 'infiniview',
     hold: { name: 'Infiniview' },
     camera: ({ stop, end, upright, move, holdKeys }) => upright ? [
@@ -358,11 +358,11 @@ const INFINIVIEW = {
       // and at a distance, never as an edge sliding past the lens.
       { s: end - 0.1, pos: [780, 4950 + DY, 250], aim: [1180, 5900 + DY, 0], fov: 42 },
     ],
-  } as const satisfies Definition;
-const UPSTREAM = {
+  },
+  {
     steps: { eyebrow: -1.3 },
     id: 'upstream', paint: paintConfluence, rail: 'Open source', length: 2.8, offset: 1.25, kind: 'figure', layout: 'contributions',
-    subject: { bit: 4, define: 'F_CONF', boxes: [CONF_RIVER_BOX], pass: 'confluence', wholeWhen: confNearCam, combine: true, shader: { fn: 'confLift' } },
+    subject: { bit: 4, define: 'F_CONF', boxes: [CONF_RIVER_BOX], pass: 'confluence', wholeWhen: confNearCam, combine: true, shader: { source: CONFLUENCE, fn: 'confLift' } },
     project: 'open-source',
     hold: { name: 'Upstream' },
     camera: ({ start, stop, aspect, upright, band, move, holdKeys }) => upright ? [
@@ -377,169 +377,135 @@ const UPSTREAM = {
       // The eye rises over the bank and closes on the cliff: the snowfield and its streams open out above the falls.
       ...holdKeys(move({ pos: [1380, 5950 + DY, 330], aim: [1730, 7000 + DY, -118], fov: 52 }, 0.48, 0.52, 0.18, 2, 3), stop),
     ],
-  } as const satisfies Definition;
-const BENCH = {
+  },
+  {
     id: 'bench', paint: paintPool, rail: 'Kilo Bench', length: 2.6, offset: 1.15, kind: 'title', layout: 'table',
-    subject: { bit: 8, define: 'F_POOL', boxes: [POOL_BOX], pass: 'pool', wholeWhen: poolNearCam, combine: true, shader: { fn: 'rockHit' } },
+    subject: { bit: 8, define: 'F_POOL', boxes: [POOL_BOX], pass: 'pool', wholeWhen: poolNearCam, combine: true, shader: { source: ROCK_POOL, fn: 'rockHit' } },
     project: 'kilo-bench',
     hold: { name: 'Kilo Bench' },
     camera: ({ start, stop, aspect, upright, move, holdKeys }) => upright ? [
-      { s: start + 0.25, pos: [900, 7700 + AT.pool, 380], aim: [1100, 8500 + AT.pool, 0], fov: 58 },
+      { s: start + 0.25, pos: [900, 7700 + DY, 380], aim: [1100, 8500 + DY, 0], fov: 58 },
       // The rock pool, looked down into from over its near bank: the plates across the frame, the bank at the foot.
       ...holdKeys(move(benchPose(aspect), 0.5, 0.62, 0.13, 0, -2, -36), stop),
     ] : [
       // Down the bigger river.
-      { s: start + 0.25, pos: [860, 7650 + AT.pool, 300], aim: [1000, 8500 + AT.pool, 0], fov: 46 },
+      { s: start + 0.25, pos: [860, 7650 + DY, 300], aim: [1000, 8500 + DY, 0], fov: 46 },
       // The rock pool from low over its near bank: the plates right of the words, the far shore, the tarn and the ranges above.
       ...holdKeys(move(benchPose(aspect), 0.44, 0.8, 0.128, 3, 0), stop),
     ],
-  } as const satisfies Definition;
-const BRIDGE = {
+  },
+  {
+    // A beat of words alone, in the run from the pool to the tarn (Ask Around: the world has no place for it yet).
+    // No subject, no paint and no camera key: the eye goes on between its neighbours' keys, over this much more scroll.
+    // (Its words stand on the bank the eye is flying over, and only while that bank's snow lies under them: they come once
+    // the pool's rim has passed and have left before the tarn's water reaches them.)
+    // (Measured with scripts/titles-test.mjs: that stretch is about half a screen at this pace. Its label leads, as a station's does.)
+    steps: { eyebrow: -0.75, title: -0.25, line: -0.17, leave: 0.25 },
+    id: 'around', rail: 'Ask Around', length: 1.3, offset: 0.45, kind: 'section', layout: 'beat',
+    camera: () => [],
+  },
+  {
     id: 'bridge', paint: paintTarn, rail: 'Agent Bridge', length: 2.8, offset: 1.2, kind: 'title', layout: 'film',
-    subject: { bit: 16, define: 'F_SHARDS', boxes: [SHARDS_BOX], pass: 'shards', visible: tarnNear, shader: { fn: 'shardHit' } },
+    subject: { bit: 16, define: 'F_SHARDS', boxes: [SHARDS_BOX], pass: 'shards', visible: tarnNear, shader: { source: TARN_OBJECT, fn: 'shardHit' } },
     project: 'agent-bridge',
     hold: { name: 'Agent Bridge' },
-    camera: ({ start, stop, end, aspect, upright, band, move, holdKeys }) => upright ? [
-      { s: start + 0.3, pos: [1200, 9650 + AT.tarn, 360], aim: [1300, 10500 + AT.tarn, 0], fov: 58 },
+    camera: ({ start, stop, aspect, upright, band, move, holdKeys }) => upright ? [
+      { s: start + 0.3, pos: [1200, 9650 + DY, 360], aim: [1300, 10500 + DY, 0], fov: 58 },
       // The tarn, from low over its near shore: both shards stand against the sky above the middle, the words below on the bank.
       // (The eye closes on the point of the shore nearest the name, which keeps its place: the water never comes under the words.)
-      ...holdKeys(move({ pos: [1560, 9750 + AT.tarn, 70], aim: [1580, 10900 + AT.tarn, -25], fov: 58 }, 0.56, 0.65, 0.3, -4.5, 0), stop),
-      // (Out over the tarn's west side, wide of both shards.)
-      { s: end - 0.15, pos: [1000, 10850 + AT.tarn, 520], aim: [1150, 11900 + AT.tarn, 0], fov: 58 },
+      ...holdKeys(move({ pos: [1560, 9750 + DY, 70], aim: [1580, 10900 + DY, -25], fov: 58 }, 0.56, 0.65, 0.3, -4.5, 0), stop),
     ] : [
-      { s: start + 0.3, pos: [1150, 9700 + AT.tarn, 300], aim: [1300, 10500 + AT.tarn, 0], fov: 46 },
+      { s: start + 0.3, pos: [1150, 9700 + DY, 300], aim: [1300, 10500 + DY, 0], fov: 46 },
       // The tarn, from low on its south-west bank (see tarnPose).
       // (The eye goes round the edge of the bank the words stand on, which keeps its place: the two shards and the ranges slide across the water, away from the words.)
       ...holdKeys(band ? move(tarnBand(aspect), 0.3, 0.8, 0.1, 2, 0) : move(tarnPose(), 0.5, 0.51, 0.1, 9, 0), stop),
-      // (Out along the tarn's west bank, wide of both shards: the bank the words stand on stays under them until they leave.)
-      { s: end + 0.1, pos: [300, 10500 + AT.tarn, 300], aim: [700, 11900 + AT.tarn, 0], fov: 46 },
     ],
-  } as const satisfies Definition;
-const MODELS = {
+  },
+  {
     steps: { eyebrow: -1.3 },
     id: 'models', paint: paintShallows, rail: 'Open models', length: 2.8, offset: 1.2, kind: 'figure', layout: 'downloads',
-    subject: { bit: 32, define: 'F_COLS', boxes: [COLS_BOX, COLS_DEEP], pass: 'columns', proximity: { lane: 0, x: 1340, y: COLS.y, from: 1750, to: 2350 }, shader: { fn: 'columns' } },
+    subject: { bit: 32, define: 'F_COLS', boxes: [COLS_BOX, COLS_DEEP], pass: 'columns', proximity: { lane: 0, x: 1340, y: COLS.y, from: 1750, to: 2350 }, shader: { source: COLUMNS, fn: 'columns' } },
     project: 'ollama',
     bandLift: 0.1,
     hold: { name: 'Open models' },
     camera: ({ start, stop, end, upright, band, move, holdKeys }) => upright ? [
-      // (Down the bigger river from the confluence, round the snowfield's back.)
-      { s: start - 0.3, pos: [900, 7520 + DY, 380], aim: [880, 8380 + DY, 0], fov: 58 },
-      { s: start + 0.3, pos: [1300, AT.shallows - 250, 400], aim: [1300, AT.shallows + 600, 0], fov: 56 },
+      { s: start + 0.3, pos: [1300, T2 - 250, 400], aim: [1300, T2 + 600, 0], fov: 56 },
       // Down the row from its tall end, so all four stand in an upright frame.
-      ...holdKeys(move({ pos: [420, AT.shallows + 380, 470], aim: [1235, AT.shallows + 1110, 60], fov: 58 }, 0.46, 0.72, 0.18, -3, 0), stop),
+      ...holdKeys(move({ pos: [420, T2 + 380, 470], aim: [1235, T2 + 1110, 60], fov: 58 }, 0.46, 0.72, 0.18, -3, 0), stop),
       // Past the dam's east end, turning to look back at it.
-      { s: end - 0.1, pos: [1560, AT.shallows + 1750, 420], aim: [1300, AT.shallows + 2550, 20], fov: 58 },
+      { s: end - 0.1, pos: [1560, T2 + 1750, 420], aim: [1300, T2 + 2550, 20], fov: 58 },
     ] : [
-      { s: start - 0.3, pos: [900, 7480 + DY, 300], aim: [860, 8350 + DY, 0], fov: 46 },
-      { s: start + 0.3, pos: [1300, AT.shallows - 300, 300], aim: [1300, AT.shallows + 600, 0], fov: 44 },
+      { s: start + 0.3, pos: [1300, T2 - 300, 300], aim: [1300, T2 + 600, 0], fov: 44 },
       // The four seracs from over the shallows' west bank; the eye goes round the row, so each stands clear of the next.
-      ...holdKeys(band ? move({ pos: [760, AT.shallows + 60, 250], aim: [1310, AT.shallows + 1080, 96], fov: 42 }, 0.3, 0.8, 0.1, 2, 0) : move(colsPose(), 0.46, 0.62, 0.175, 5, 0), stop),
+      ...holdKeys(band ? move({ pos: [760, T2 + 60, 250], aim: [1310, T2 + 1080, 96], fov: 42 }, 0.3, 0.8, 0.1, 2, 0) : move(colsPose(), 0.46, 0.62, 0.175, 5, 0), stop),
       // Past the dam's east end, turning to look back at it.
-      { s: end - 0.1, pos: [1520, AT.shallows + 1720, 280], aim: [1300, AT.shallows + 2520, 20], fov: 46 },
+      { s: end - 0.1, pos: [1520, T2 + 1720, 280], aim: [1300, T2 + 2520, 20], fov: 46 },
     ],
-  } as const satisfies Definition;
-const FORK = {
+  },
+  {
     steps: { eyebrow: -1.3, title: -0.45, line: -0.32, meta: -0.2 },
     id: 'fork', paint: paintDam, rail: 'cc-switch', length: 2.8, offset: 1.2, kind: 'title', layout: 'switch',
-    subject: { bit: 64, define: 'F_DAM', boxes: [DAM_BOX], pass: 'dam', proximity: { lane: 1, x: 1300, y: DAM.y, from: 3300, to: 4000 }, shader: { fn: 'dam' } },
+    subject: { bit: 64, define: 'F_DAM', boxes: [DAM_BOX], pass: 'dam', proximity: { lane: 1, x: 1300, y: DAM.y, from: 3300, to: 4000 }, shader: { source: [DAM_ICE, DAM_WATER].join('\n'), fn: 'dam' } },
     project: 'cc-switch',
     hold: { name: 'cc-switch', before: 0.45 },
     camera: ({ start, stop, end, upright, move, holdKeys }) => upright ? [
       // (Wide of its east end and well over it, already looking back: the wall is never an edge sliding past the lens.)
-      { s: start + 0.38, pos: [2330, AT.shallows + 3420, 720], aim: [1340, AT.shallows + 2850, 0], fov: 60 },
+      { s: start + 0.38, pos: [2330, T2 + 3420, 720], aim: [1340, T2 + 2850, 0], fov: 60 },
       // From the east bank below it: the dam across the frame, its three sluices, the channels running out toward the eye; the bank at the foot.
       // (Further out on the bank, so the running channel passes above the words and snow lies under them.)
-      ...holdKeys(move({ pos: [2520, AT.shallows + 4380, 900], aim: [1330, AT.shallows + 2960, 0], fov: 62 }, 0.5, 0.56, 0.145, 3, 0), stop, 0.45),
+      ...holdKeys(move({ pos: [2520, T2 + 4380, 900], aim: [1330, T2 + 2960, 0], fov: 62 }, 0.5, 0.56, 0.145, 3, 0), stop, 0.45),
       // Across the three channels where they meet, turning with the water to look down the river again.
-      { s: end - 0.2, pos: [1400, AT.shallows + 3620, 700], aim: [1040, AT.shallows + 4520, 0], fov: 60 },
+      { s: end - 0.2, pos: [1400, T2 + 3620, 700], aim: [700, T2 + 3720, 0], fov: 60 },
     ] : [
       // (Wide of its east end and well over it, already looking back: the wall is never an edge sliding past the lens.)
-      { s: start + 0.38, pos: [2200, AT.shallows + 3150, 500], aim: [1420, AT.shallows + 2810, 10], fov: 45 },
+      { s: start + 0.38, pos: [2200, T2 + 3150, 500], aim: [1420, T2 + 2810, 10], fov: 45 },
       // From the east bank below it: the dam across the frame, the open sluice's water coming toward the eye, the bank at lower left.
-      ...holdKeys(move({ pos: [2130, AT.shallows + 3800, 640], aim: [1520, AT.shallows + 2900, 0], fov: 42 }, 0.45, 0.58, 0.175, -4, 0), stop, 0.45),
+      ...holdKeys(move({ pos: [2130, T2 + 3800, 640], aim: [1520, T2 + 2900, 0], fov: 42 }, 0.45, 0.58, 0.175, -4, 0), stop, 0.45),
       // Across the three channels where they meet, turning with the water to look down the river again.
-      { s: end - 0.25, pos: [1620, AT.shallows + 3560, 400], aim: [1120, AT.shallows + 3840, 0], fov: 45 },
+      { s: end - 0.25, pos: [1620, T2 + 3560, 400], aim: [1120, T2 + 3840, 0], fov: 45 },
     ],
-  } as const satisfies Definition;
-const LATTICE_POOL = {
+  },
+  {
     id: 'lattice', paint: paintLattice, rail: 'TensorPoW', length: 2.6, offset: 1.15, kind: 'title', layout: 'pool',
-    subject: { bit: 128, define: 'F_LAT', boxes: [LAT_BOX], pass: 'lattice', proximity: { lane: 2, x: LATTICE.x, y: LATTICE.y, from: 2300, to: 2900 }, shader: { fn: 'lattice' } },
+    subject: { bit: 128, define: 'F_LAT', boxes: [LAT_BOX], pass: 'lattice', proximity: { lane: 2, x: LATTICE.x, y: LATTICE.y, from: 2300, to: 2900 }, shader: { source: LATTICE_ICE, fn: 'lattice' } },
     project: 'tensorpow',
     bandLift: 0.05,
     hold: { name: 'TensorPoW' },
     camera: ({ start, stop, upright, move, holdKeys }) => upright ? [
       // The lattice from up the west bank: all sixteen above the middle, the bank at the foot.
-      ...holdKeys(move({ pos: [500, AT.lattice + 2930, 930], aim: [1350, AT.lattice + 4480, 0], fov: 58 }, 0.5, 0.62, 0.14, 4, 0), stop),
+      ...holdKeys(move({ pos: [500, T2 + 2930, 930], aim: [1350, T2 + 4480, 0], fov: 58 }, 0.5, 0.62, 0.14, 4, 0), stop),
     ] : [
-      { s: start + 0.3, pos: [800, AT.lattice + 3660, 420], aim: [920, AT.lattice + 4380, 10], fov: 44 },
+      { s: start + 0.3, pos: [800, T2 + 3660, 420], aim: [920, T2 + 4380, 10], fov: 44 },
       // The lattice from over its west bank, corner on: every cube and its mirror image. The eye goes round it, and the rows open and close.
       // (Turned a little to the left, so the bank at lower left is wide enough for the name to stand on snow alone.)
-      ...holdKeys(move({ pos: [500, AT.lattice + 3800, 640], aim: [1085, AT.lattice + 4625, 0], fov: 45 }, 0.4, 0.7, 0.14, 6, 0), stop),
+      ...holdKeys(move({ pos: [500, T2 + 3800, 640], aim: [1085, T2 + 4625, 0], fov: 45 }, 0.4, 0.7, 0.14, 6, 0), stop),
     ],
-  } as const satisfies Definition;
-const CANYON_RUN = {
+  },
+  {
     steps: { eyebrow: -2.15, leave: 0.75 },
     id: 'canyon', paint: paintCanyon, rail: 'RydAR', length: 3.6, offset: 2.2, kind: 'title', layout: 'wall',
-    subject: { bit: 256, define: 'F_CANYON', boxes: [CANYON_BOX], pass: 'canyon', proximity: { lane: 3, x: 1700, y: (CANYON.y0 + CANYON.y1) / 2, from: 3700, to: 4600 }, shader: { fn: 'canyon' } },
+    subject: { bit: 256, define: 'F_CANYON', boxes: [CANYON_BOX], pass: 'canyon', proximity: { lane: 3, x: 1700, y: (CANYON.y0 + CANYON.y1) / 2, from: 3700, to: 4600 }, shader: { source: CANYON_ICE, fn: 'canyon' } },
     project: 'rydar',
     hold: { name: 'RydAR', after: 0.6 },
     camera: ({ start, upright, g }) => upright ? [
-      { s: start + 0.3, pos: [1300, AT.canyon + 4900, 230], aim: [1300, AT.canyon + 5700, 90], fov: 60 },
+      { s: start + 0.3, pos: [1300, T2 + 4900, 230], aim: [1300, T2 + 5700, 90], fov: 60 },
       ...canyonKeys(start, 66, g),
     ] : [
-      { s: start + 0.3, pos: [1300, AT.canyon + 4960, 170], aim: [1300, AT.canyon + 5700, 90], fov: 48 },
+      { s: start + 0.3, pos: [1300, T2 + 4960, 170], aim: [1300, T2 + 5700, 90], fov: 48 },
       ...canyonKeys(start, 50, g),
     ],
-  } as const satisfies Definition;
-const DELTA_FAN = {
+  },
+  {
     steps: { leave: 1.75 },
     id: 'delta', paint: paintDelta, rail: 'Recognition', length: 2.6, offset: 1.1, kind: 'section', layout: 'interests',
     hold: { name: 'Interests' },
     camera: ({ ending }) => ending(false),
-  } as const satisfies Definition;
-const SEA = {
+  },
+  {
     id: 'sea', rail: 'Contact', length: 2.3, offset: 1.3, kind: 'section', layout: 'ending',
     camera: ({ ending }) => ending(true),
-  } as const satisfies Definition;
-
-/**
- * Ask Around's frame: the ring from its south-west, on the bank. The stones stand right of the middle against the sky,
- * the pool among them, the river beyond them on the right; the bank's snow fills the lower left, where the words stand.
- */
-function ringPose(): Pose {
-  return { pos: [RING.x - 830, RING.y - 560, 340], aim: [RING.x - 120, RING.y + 10, 66], fov: 44 };
-}
-/** Where the ring, its pool, its shade and its light can be. */
-const RING_REACH = RING.r + 560;
-const RING_BOX: Box = [
-  [RING.x - RING_REACH, RING.y - RING_REACH, WATER_LOW],
-  [RING.x + RING_REACH, RING.y + RING_REACH, RING.h + 40],
-];
-const AROUND = {
-  id: 'around', paint: paintRing, rail: 'Ask Around', length: 2.6, offset: 1.15, kind: 'title',
-  subject: { bit: 4096, define: 'F_RING', reach: 3300, boxes: [RING_BOX], shader: { fn: 'ringIce' } },
-  project: 'ask-around',
-  hold: { name: 'Ask Around' },
-  camera: ({ start, stop, end, upright, move, holdKeys }) => upright ? [
-    { s: start + 0.25, pos: [900, RING.y - 1400, 480], aim: [1150, RING.y - 500, 0], fov: 58 },
-    // The ring from over the bank to its south-west, looked down into: the stones above the middle, the bank at the foot.
-    ...holdKeys(move({ pos: [RING.x - 880, RING.y - 600, 600], aim: [RING.x - 90, RING.y - 10, 60], fov: 58 }, 0.5, 0.5, 0.14, 4, 0), stop),
-    // Out past the ring's west side, toward the glacier's front.
-    { s: end - 0.2, pos: [RING.x - 430, RING.y + 220, 330], aim: [RING.x - 60, RING.y + 1100, 90], fov: 60 },
-  ] : [
-    { s: start + 0.25, pos: [820, RING.y - 1180, 330], aim: [1150, RING.y - 300, 20], fov: 46 },
-    // The ring from low over the bank to its south-west (see ringPose). The eye closes on it and goes a little round it:
-    // the stones part and close against the sky.
-    ...holdKeys(move(ringPose(), 0.46, 0.66, 0.17, 5, 0), stop),
-    // Out past the ring's west side, toward the glacier's front.
-    { s: end - 0.2, pos: [RING.x - 420, RING.y + 220, 240], aim: [RING.x - 60, RING.y + 1100, 90], fov: 47 },
-  ],
-} as const satisfies Definition;
-
-/** Registration order is the scroll order. A layout selects an existing server-rendered words block. */
-// (The places stand in the owner's order: the order of the projects in src/content/projects.ts.)
-export const FLIGHT = [HERO, SAY, INFINIVIEW, UPSTREAM, MODELS, FORK, BENCH, AROUND, CANYON_RUN, BRIDGE, LATTICE_POOL, DELTA_FAN, SEA] as const satisfies readonly Definition[];
+  },
+] as const satisfies readonly Definition[];
 
 export type SectionId = typeof FLIGHT[number]['id'];
 export type ProjectScene = Extract<typeof FLIGHT[number], { project: string }>['project'];

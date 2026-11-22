@@ -1,26 +1,34 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
+import { pickPoster } from '@/water/poster';
 import type { FlightHandle } from '@/water/flight';
-import type { StageHandle } from '@/water/stage';
 
 declare global {
   interface Window {
     __flight?: FlightHandle;
-    /** (The engine again, where the switch in the words reaches for it: ProfileSwitch.) */
-    __water?: StageHandle;
   }
 }
 
 /**
- * The flight's world drawn live: one fixed canvas behind the page, by the
- * engine (src/water). No page a visitor opens mounts this: it is the
- * renderer's stage (src/app/render), where tools/flight photographs the
- * frames the home page plays. If WebGL2 or float targets are missing,
+ * The flight's world: one fixed canvas behind the page. Loaded after first
+ * paint, like the page's water. If WebGL2 or float targets are missing,
  * nothing mounts and the sections stack as a plain page.
  */
 export function FlightStage({ slab, sheet, tribs, cols, face }: { slab: string; sheet: string; tribs: string; cols: string; face: string }) {
   const root = useRef<HTMLDivElement>(null);
+
+  // The first paint's still. The page's own first script chooses it on a fresh load; coming here from another page
+  // nothing has, so it is chosen now, before the paint. It follows the theme for as long as it may be seen.
+  useLayoutEffect(() => {
+    pickPoster();
+    window.addEventListener('themechange', pickPoster);
+    window.addEventListener('resize', pickPoster);
+    return () => {
+      window.removeEventListener('themechange', pickPoster);
+      window.removeEventListener('resize', pickPoster);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +68,8 @@ export function FlightStage({ slab, sheet, tribs, cols, face }: { slab: string; 
 
   return (
     <div ref={root} className="flight-root" data-slab={slab} data-sheet={sheet} data-tribs={tribs} data-cols={cols} data-face={face} aria-hidden="true">
+      {/* The first paint: a still of the scene's own first frame, under the canvas (see flight.css). */}
+      <div className="fl-poster" />
     </div>
   );
 }

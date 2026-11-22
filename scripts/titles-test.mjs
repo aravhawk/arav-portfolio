@@ -33,7 +33,7 @@
  */
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
-import { atRest, runsFlight, setTheme } from './lib/legibility.mjs';
+import { runsFlight, setTheme } from './lib/legibility.mjs';
 
 const require = createRequire(import.meta.url);
 let pw;
@@ -157,7 +157,6 @@ for (const width of widths) {
     const list = await page.evaluate(stops, POINTS);
     for (const { stop, at } of list) {
       await page.evaluate((s) => window.scrollTo(0, s * innerHeight), stop);
-      await atRest(page);
       await page.waitForTimeout(settle);
       const boxes = await page.evaluate(titles);
       if (!boxes.length) continue;

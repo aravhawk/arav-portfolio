@@ -2,7 +2,7 @@ import { composed, type SectionId } from '@/water/registry';
 import { writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { END_AT, HOLDS, MOVE, SETTLE_AT, type Basis, type V3, basisOf, flightKeys, groundUnder, poseAt, projectPoint, rayThrough } from '@/water/camera';
-import { COLS, DAM, DELTA, FACE, LATTICE, SHARDS, SHEET, SLAB, AT, boardSpan, ringStones, lipY, sheetCols } from '@/water/world';
+import { COLS, DAM, DELTA, FACE, LATTICE, SHARDS, SHEET, SLAB, T2, boardSpan, lipY, sheetCols } from '@/water/world';
 
 /**
  * The scroll never holds still. The camera is a pure function of scroll, so
@@ -50,10 +50,6 @@ const SUBJECTS: Record<string, (aspect: number) => [V3, V3]> = {
   ],
   // (Where the eye goes round its subject, the subject's size is the height of something upright in it: a width seen
   // at a slant changes with the slant, not only with how near the eye has come.)
-  'Ask Around': () => [
-    [ringStones()[2].x, ringStones()[2].y, 0],
-    [ringStones()[2].x, ringStones()[2].y, ringStones()[2].h],
-  ],
   'Open models': () => [
     [COLS.xs[1], COLS.y, 0],
     [COLS.xs[1], COLS.y, COLS.hMax],
@@ -224,9 +220,9 @@ describe('the scroll never holds still', () => {
     const at: [SectionId, V3][] = [
       ['infiniview', [930, 8110, 300]],
       ['upstream', [1380, 9950, 330]],
-      ['fork', [2130, AT.shallows + 3800, 640]],
-      ['lattice', [500, AT.lattice + 3800, 640]],
-      ['delta', [1100, AT.delta + 7450, 400]],
+      ['fork', [2130, T2 + 3800, 640]],
+      ['lattice', [500, T2 + 3800, 640]],
+      ['delta', [1100, T2 + 7450, 400]],
     ];
     for (const [i, pos] of at) {
       const p = poseAt(flightKeys(1.6), composed[i]);

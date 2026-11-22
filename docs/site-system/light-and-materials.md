@@ -17,12 +17,6 @@
 | Delta | Peach sky and pink ice | Warm dawn reflected in the sea |
 | Ending | Setting sun | Rising sun |
 
-The rows are in the order the hours were written, not the flight's:
-each place carries its hour with it (`relaid` in `src/water/sky.ts`),
-so down the river the day is no longer in order. Ask Around has no
-hour of its own: it stands in the light between Kilo Bench's noon and
-RydAR's last sun.
-
 A new stop inherits its hour from its scroll position. To author a new
 hour, add the stop to the day and night key sequences in
 `src/water/sky.ts`. The interpolation carries key direction, fill,

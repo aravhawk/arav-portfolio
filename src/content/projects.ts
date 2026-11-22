@@ -463,33 +463,6 @@ export const PROJECTS: Project[] = entries;
 export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === slug);
 
 /**
- * Other tools of his: public repositories that the flight has no place for. Each is a row on /work after the nine
- * (name, one line, kind, its source and its release) and has no page and no picture. Every word of a line is from
- * the repository itself (its README, its releases, its code): where each came from is in docs/site-system/copy.md.
- * The owner's bar for this list (2026-11-21): a genuinely good open-source project, something he built that has a
- * real edge, or something with traction. A small tool for his own use, a fork of someone else's app, a class or
- * contest piece without a result: not here. His never, drop and hold lists are in the same doc.
- */
-export interface Tool {
-  slug: string;
-  name: string;
-  line: string;
-  links: ProjectLink[];
-}
-
-export const TOOLS: Tool[] = [
-  {
-    slug: 'envfetch',
-    name: 'envfetch',
-    line: 'A macOS command-line tool that keeps environment variables in an encrypted local vault and activates them in the shell with Touch ID.',
-    links: [
-      { label: 'Source', href: 'https://github.com/aravhawk/envfetch' },
-      { label: 'v1.1.0', href: 'https://github.com/aravhawk/envfetch/releases/tag/v1.1.0' },
-    ],
-  },
-];
-
-/**
  * What he is recognised for: lines, never cards. The year's contributions
  * are read live (src/lib/metrics) and said with the date they were read.
  */
@@ -503,20 +476,15 @@ export const RECOGNITION = {
   year: '2026',
 };
 
-/**
- * What he is into now (his own list, 21 November 2026), in his order. The home page says it in one sentence in the
- * delta's block, over a picture rendered with that block's size in mind: the sentence must set in as many lines as
- * the one the flight was rendered with (two, from 390 wide up), or the block grows over ground that was not kept
- * calm for it. This wording does; "AI and ML ... crypto and blockchain, space and light" takes a third line. Measure
- * a new wording in the page before keeping it, and mind the home page's 300 words (docs/site-system/copy.md).
- */
-export const INTERESTS = ['GPUs', 'AI', 'ML', 'Evals', 'Benchmarks', 'Cryptography', 'Crypto', 'Blockchain', 'Space', 'Light'];
-
-/** An interest inside a sentence: a name keeps its capitals (GPUs, AI, ML), a plain word does not. */
-const inline = (x: string) => (/^[A-Z][a-z]/.test(x) ? x[0].toLowerCase() + x.slice(1) : x);
-
-/** The one sentence of his interests, the same wherever it is said (the home page's delta, /work). */
-export const INTERESTS_LINE = `${INTERESTS.map(inline).join(', ')}.`;
+export const INTERESTS = [
+  'Agents and evals',
+  'ML',
+  'Security',
+  'GPUs',
+  'Flight computers',
+  'Spaceflight',
+  'Robotics',
+];
 
 export const CONTACT = {
   github: 'https://github.com/aravhawk',

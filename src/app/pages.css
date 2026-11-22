@@ -140,30 +140,33 @@
     background-image: var(--still-tall-dark);
   }
 }
-/* A band without a picture (the 404): the still is its ground, by the page's theme and the screen's shape. */
-.band-ground .band-view {
-  background-image: var(--still-wide-light);
-}
-:root[data-theme='dark'] .band-ground .band-view {
-  background-image: var(--still-wide-dark);
-}
-@media (max-aspect-ratio: 9/10) {
-  .band-ground .band-view {
-    background-image: var(--still-tall-light);
-  }
-  :root[data-theme='dark'] .band-ground .band-view {
-    background-image: var(--still-tall-dark);
-  }
-}
-/* The still has no calm made for the words: a soft veil of the ground's own tone stands behind them. It reaches as
-   high as the words do: a page's label and its small print stand over the title, up where the still's far shore and
-   ranges are (the live band used to calm the picture there itself; since V1 the band is always its still). */
+/* Until the engine is drawing (and for good where it cannot), the still has
+   no calm made for the words: a soft veil of the ground's own tone stands
+   behind them instead. The engine keeps its own picture readable, so the
+   veil leaves as the canvas arrives. */
 .band-view::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 84% 150% at 0% 100%, var(--veil) 0%, var(--veil) 46%, transparent 80%);
+  background: radial-gradient(ellipse 78% 92% at 0% 100%, var(--veil) 0%, var(--veil) 34%, transparent 72%);
+  transition: opacity 900ms var(--ease-out);
   pointer-events: none;
+}
+.band-view[data-band='on']::after {
+  opacity: 0;
+}
+.band-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out);
+}
+.band-view[data-band='on'] .band-canvas {
+  opacity: 1;
 }
 
 /* A page with no scene of its own yet opens on its words alone: the same block, lower left, on the page's snow. */
@@ -2258,34 +2261,6 @@
   grid-template-columns: 2.6rem minmax(0, 1fr) 56px;
   padding: clamp(22px, 2.6vw, 44px) 0;
 }
-/* The other tools: the row's own four columns (kind, name, line, links), in type alone. A tool's row is not a
-   link, so nothing in it answers the pointer but its two links. */
-.tools > :first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-.tool-name {
-  font-family: var(--font-display);
-  font-size: clamp(1.5rem, 1.1vw + 1.05rem, 2.25rem);
-  font-weight: 700;
-  line-height: 1.06;
-  letter-spacing: -0.022em;
-}
-.tool-line {
-  max-width: 48ch;
-  font-size: var(--pg-body);
-  line-height: 1.4;
-  color: var(--ink-2);
-  text-wrap: pretty;
-}
-.tool-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0 var(--s-5);
-  font-size: 1rem;
-  white-space: nowrap;
-}
 .recog {
   display: grid;
   gap: clamp(10px, 1vw, 16px);
@@ -2969,9 +2944,6 @@
   .row.feat-row-type {
     grid-template-columns: minmax(0, 1fr) 48px;
   }
-  .tool-links {
-    justify-content: flex-start;
-  }
   .post-item {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3096,6 +3068,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .band-canvas,
   .band-view::after,
   .feat-pic,
   .next-pic {

@@ -4,131 +4,120 @@
     "tone": "light",
     "light": {
       "low": 0.018,
-      "mid": 0.606,
-      "high": 0.855
+      "mid": 0.461,
+      "high": 0.794
     },
-    "bytes": 213604,
-    "quality": 66
+    "bytes": 215275,
+    "quality": 62
   },
   "infiniview": {
-    "s": 5.47,
+    "s": 5.77,
     "tone": "light",
     "light": {
-      "low": 0.27,
-      "mid": 0.676,
-      "high": 0.713
+      "low": 0.234,
+      "mid": 0.743,
+      "high": 0.815
     },
-    "bytes": 191408,
-    "quality": 82
+    "bytes": 199472,
+    "quality": 70
   },
   "open-source": {
-    "s": 8.27,
+    "s": 8.57,
     "tone": "light",
     "light": {
-      "low": 0.306,
-      "mid": 0.631,
-      "high": 0.68
+      "low": 0.223,
+      "mid": 0.745,
+      "high": 0.808
     },
-    "bytes": 205236,
-    "quality": 82
+    "bytes": 209565,
+    "quality": 66
   },
   "kilo-bench": {
-    "s": 16.63,
+    "s": 11.4,
     "tone": "light",
     "light": {
-      "low": 0.309,
-      "mid": 0.766,
-      "high": 0.913
+      "low": 0.2,
+      "mid": 0.746,
+      "high": 0.839
     },
-    "bytes": 206503,
-    "quality": 86
+    "bytes": 205006,
+    "quality": 66
   },
   "agent-bridge": {
-    "s": 25.47,
+    "s": 13.93,
     "tone": "light",
     "light": {
-      "low": 0.427,
-      "mid": 0.723,
-      "high": 0.775
+      "low": 0.216,
+      "mid": 0.518,
+      "high": 0.939
     },
-    "bytes": 107012,
-    "quality": 86
+    "bytes": 179161,
+    "quality": 82
   },
   "blog": {
-    "s": 24.24,
-    "tone": "dark",
+    "s": 12.4,
+    "tone": "light",
     "light": {
-      "low": 0.161,
-      "mid": 0.272,
-      "high": 0.737
+      "low": 0.203,
+      "mid": 0.688,
+      "high": 0.839
     },
-    "bytes": 220530,
-    "quality": 86
+    "bytes": 207349,
+    "quality": 66
   },
   "ollama": {
-    "s": 11.03,
+    "s": 16.75,
     "tone": "light",
     "light": {
-      "low": 0.374,
-      "mid": 0.715,
-      "high": 0.866
+      "low": 0.249,
+      "mid": 0.649,
+      "high": 0.831
     },
-    "bytes": 179568,
-    "quality": 86
+    "bytes": 206722,
+    "quality": 70
   },
   "cc-switch": {
-    "s": 13.83,
+    "s": 19.57,
     "tone": "light",
     "light": {
-      "low": 0.278,
-      "mid": 0.697,
-      "high": 0.783
+      "low": 0.268,
+      "mid": 0.756,
+      "high": 0.794
     },
-    "bytes": 213506,
-    "quality": 78
+    "bytes": 215659,
+    "quality": 58
   },
   "tensorpow": {
-    "s": 28.23,
+    "s": 22.2,
     "tone": "light",
     "light": {
-      "low": 0.342,
-      "mid": 0.652,
-      "high": 0.725
+      "low": 0.29,
+      "mid": 0.756,
+      "high": 0.8
     },
-    "bytes": 201646,
-    "quality": 82
+    "bytes": 214730,
+    "quality": 58
   },
   "rydar": {
-    "s": 22.3,
+    "s": 25.31,
     "tone": "light",
     "light": {
-      "low": 0.117,
-      "mid": 0.313,
-      "high": 0.587
+      "low": 0.215,
+      "mid": 0.383,
+      "high": 0.751
     },
-    "bytes": 207675,
-    "quality": 86
-  },
-  "work": {
-    "s": 31.17,
-    "tone": "light",
-    "light": {
-      "low": 0.259,
-      "mid": 0.588,
-      "high": 0.673
-    },
-    "bytes": 192033,
+    "bytes": 204868,
     "quality": 82
   },
-  "ask-around": {
-    "s": 19.23,
+  "work": {
+    "s": 28.47,
     "tone": "light",
     "light": {
-      "low": 0.438,
-      "mid": 0.739,
-      "high": 0.897
+      "low": 0.174,
+      "mid": 0.656,
+      "high": 0.739
     },
-    "bytes": 174597,
-    "quality": 86
+    "bytes": 212462,
+    "quality": 74
   }
 }

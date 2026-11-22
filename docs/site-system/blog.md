@@ -17,10 +17,8 @@ designed states, not afterthoughts.
 - `content/posts/` (the owner's writing) and `blog-editor/` (his
   local editor) are never changed:
   `git diff 9a487fb -- content/posts blog-editor` must stay empty.
-- No CMS, MCP or email work. Those are the owner's decisions, later.
-  (The newsletter's signup field after the posts is the owner's ask of
-  2026-11-21: `newsletter.md`. It is interface only and knows nothing
-  of a post; nothing is sent.)
+- No newsletter, CMS, MCP, backend or email work. Those are the
+  owner's decisions, later.
 
 ## The content seam
 
@@ -87,4 +85,4 @@ CMS can replace the files without a redesign.
   give `https://arav.pro` addresses.
 
 Change log: 2026-11-18 first version; the seam and the post's title
-as built (orchestrator). 2026-11-21 N1: the newsletter's field after the posts.
+as built (orchestrator).

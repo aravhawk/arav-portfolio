@@ -124,7 +124,7 @@ const smooth01 = (t: number) => t * t * (3 - 2 * t);
 async function carve(s: Shared, tribs: number[] | undefined, isDead: () => boolean) {
   const { engine, solver } = s;
   const coarse = window.matchMedia('(pointer: coarse)').matches;
-  const rows = Math.min(engine.maxTexture, coarse ? 4096 : 16384) - 8;
+  const rows = Math.min(engine.maxTexture, coarse ? 4096 : 8192) - 8;
   const cells = (coarse ? 1.2e6 : 3.0e6) * (WORLD.h / 12400);
   const div = Math.max(3, WORLD.h / rows, Math.sqrt((WORLD.w * WORLD.h) / cells));
   const painter = new BedPainter(WORLD.w, WORLD.h, div);

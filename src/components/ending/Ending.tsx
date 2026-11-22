@@ -7,9 +7,6 @@ import { haptic } from '@/lib/haptics';
 import { Arrow } from '../bits';
 import './ending.css';
 
-// The newsletter's field rides in this module's script (see the note at the head of its file).
-export { SubscribeForm } from '../subscribe/SubscribeForm';
-
 /**
  * The contact row and its small controls. The home page sets them in the
  * last frame of its flight (src/app/page.tsx); inner pages end with the

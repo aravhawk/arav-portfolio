@@ -12,6 +12,4 @@ export const KIND: Record<string, string> = {
   tensorpow: 'Protocol',
   rydar: 'iOS app',
   'ask-around': 'Agent governance',
-  // (The other tools on /work: see TOOLS.)
-  envfetch: 'CLI',
 };

@@ -25,18 +25,9 @@ import { NAME_ICE } from './name';
 import { BOX_HIT, DEEP_ICE_FEATURES, GLACIER_ICE, SEG_D, SHALLOWS, STATION_COMMON } from './stations';
 import { PANO, SHADE_AZ, WIND } from './terrain';
 import { customSubjects, subjects } from '../registry';
-import { sourceOf } from './subjects';
-
-/** The source of the subject that draws in a named pass, or what stands in for it where no such subject is registered. */
-const passSource = (pass: string, none: string) => {
-  const subject = subjects.find(s => s.pass === pass);
-  return subject ? sourceOf(subject) : none;
-};
 import { F_DEFINES } from '../variants';
-import { AT, BASIN, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, SHARDS, STREAM, TARN, TARN_BAY, TRIBS, WORLD } from '../world';
+import { BASIN, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, SHARDS, STREAM, T2, TARN, TARN_BAY, TRIBS } from '../world';
 
-/** The delta's base when the sea's drift ice was laid out (geography.ts: AT.delta, then). */
-const FLOES_FROM = 15400;
 /** The water sits this far below the land, world units. */
 export const FLIGHT_FREEBOARD = 22;
 
@@ -147,14 +138,6 @@ uniform vec3 uKeyCol;
 uniform vec3 uKeyDir;
 uniform vec4 uShadow;   // key slope, snow horizon blend, sun azimuth, bank-shadow reach per unit height
 uniform vec4 uBearings; // unit vectors in the ground plane, sun then key
-// For the renderer's mask track (tools/flight): 1 writes what the frame shows in place of its colour (open water, solid ground, the words' lee).
-uniform float uMaskOut;
-float gMkW = 0.0;
-float gMkG = 0.0;
-float gMkFloe = 0.0;
-// (What stands in front of the ground at this pixel: each object says so where its own ray test finds it.)
-float gMkOcc = 0.0;
-float mkChg(vec3 a, vec3 b) { return smoothstep(0.25, 0.7, length(a - b) / (max(max(a.r, a.g), a.b) + 0.05)); }
 uniform vec4 uFilm;     // vignette strength, grain phase, grain amplitude, lunar haze gain
 uniform vec4 uLee;      // centre and reciprocal radii of the words' lee
 uniform vec3 uAmbCol;
@@ -776,14 +759,14 @@ vec3 iciclesOn(vec3 col, float along, float dz, float px, float reach);
 vec3 waterlineOn(vec3 col, float z, float g);
 vec3 snowOn(vec3 n, float lump);
 
-${passSource('slab', "float gSlabSoft = 0.0;")}
+${subjects.find(s => s.pass === 'slab')?.shader?.source ?? "float gSlabSoft = 0.0;"}
 /* ---------- the bed ---------- */
 
 float bedShore;
 vec4 bedAt(vec2 w) {
 #ifdef SEA
   // The painted map ends in open sea across its full width.
-  if (w.y >= ${(WORLD.h - 60).toFixed(1)}) { bedShore = 0.0; return vec4(-2000.0, -2000.0, 0.0, 0.0); }
+  if (w.y >= ${(T2 + 9900 - 60).toFixed(1)}) { bedShore = 0.0; return vec4(-2000.0, -2000.0, 0.0, 0.0); }
 #endif
   // The lake's far shore. Past the world's sides the bed repeats its last
   // column, so the coast there would be a ruled line: it is bent into long
@@ -813,8 +796,8 @@ vec4 bedAt(vec2 w) {
   // the cape's shallows, and the lie of its shore, would run on from there to the horizon (a pale wedge on the
   // sea, with a strip of half-land along the skyline where a far shore's edge is blended widest). By that edge
   // all water is the deep open sea, with no shore near it.
-  if (w.y > ${(WORLD.h - 330).toFixed(1)} && b.r < 0.0) {
-    float north = smoothstep(${(WORLD.h - 330).toFixed(1)}, ${(WORLD.h - 60).toFixed(1)}, w.y);
+  if (w.y > ${(T2 + 9900 - 330).toFixed(1)} && b.r < 0.0) {
+    float north = smoothstep(${(T2 + 9900 - 330).toFixed(1)}, ${(T2 + 9900 - 60).toFixed(1)}, w.y);
     b.rg = mix(b.rg, vec2(-2000.0), north);
     b.ba *= 1.0 - north;
   }
@@ -1270,9 +1253,9 @@ vec3 cutFoot(vec3 col, vec2 pw, vec3 dir, vec2 slope, float foot, float k) {
 }
 
 #endif
-${passSource('confluence', '')}
+${subjects.find(s => s.pass === 'confluence')?.shader?.source ?? ''}
 #if defined(F_POOL)
-${passSource('pool', '')}
+${subjects.find(s => s.pass === 'pool')?.shader?.source ?? ''}
 #else
 // (No pool in this variant of the pass: nowhere is inside its reach.)
 #define poolAt(p) 0.0
@@ -1389,7 +1372,7 @@ vec3 waterColor(vec2 pw, vec4 bw, vec3 dir, float foot, float footL, float iceSh
 #ifdef F_SHALLOWS_OFF
   float shalK = 0.0;
 #else
-  float shalK = pb.y > ${(AT.shallows + 380).toFixed(1)} && pb.y < ${(AT.shallows + 1700).toFixed(1)} ? shallowsAt(pb) : 0.0;
+  float shalK = pb.y > ${(T2 + 380).toFixed(1)} && pb.y < ${(T2 + 1700).toFixed(1)} ? shallowsAt(pb) : 0.0;
 #endif
   if (shalK > 0.0) depth = mix(depth, min(depth, 13.0 + 12.0 * textureLod(uDetail, pb / 900.0 + 0.2, 0.0).r), shalK);
   // The clear pool: a foot of still water over a pale bed, and the picture lying on it.
@@ -2066,10 +2049,8 @@ vec2 seaRelief(vec2 p) {
  */
 float floeAt(vec2 p, out vec2 normal) {
   normal = vec2(0,1);
-  float dens = 0.58 * smoothstep(${(AT.delta + 8700).toFixed(1)}, ${(AT.delta + 8950).toFixed(1)}, p.y) * (1.0 - smoothstep(${(AT.delta + 9650).toFixed(1)}, ${(AT.delta + 10220).toFixed(1)}, p.y));
-  // (The plates lie where they lay before the places changed their order: the pattern is counted from the delta, not
-  // from the lake. A plate that drifted under the ending's small line on a tablet was the difference.)
-  vec2 q = (p - vec2(0.0, ${(AT.delta - FLOES_FROM).toFixed(1)})) / 210.0;
+  float dens = 0.58 * smoothstep(${(T2 + 8700).toFixed(1)}, ${(T2 + 8950).toFixed(1)}, p.y) * (1.0 - smoothstep(${(T2 + 9650).toFixed(1)}, ${(T2 + 10220).toFixed(1)}, p.y));
+  vec2 q = p / 210.0;
   vec2 c = floor(q);
   vec2 hq = hash2(c + 7.0);
   if (hq.y > dens) return 1e3;
@@ -2426,7 +2407,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   }
   // Drift ice on the way out: each plate a hand of ice above the water, snow on its top, a blue wall on the side
   // the eye sees, and the pale skirt of the ice under water round it.
-  if (pw.y < ${(AT.delta + 10230).toFixed(1)} && footL < 26.0) {
+  if (pw.y < ${(T2 + 10230).toFixed(1)} && footL < 26.0) {
     const float FH = 5.5;
     vec2 sideGradient, topGradient;
     vec2 travel = dir.xy / max(-dir.z,0.02) * FH;
@@ -2458,7 +2439,6 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     // (Against the low light its thin edge glows: the light comes through it.)
     col = mix(col, mix(vec3(0.93, 0.94, 0.96), vec3(0.62, 0.72, 0.86), uNight) * (lightF + S.hor * 0.22 * uNight) * (1.0 - 0.22 * rim) + S.band * 0.16 * rim * gDusk, aTop);
     lee *= 1.0 - max(aTop, aSide);
-    gMkFloe = max(aTop, aSide);
   }
   gLee = lee;
   return col;
@@ -2494,29 +2474,29 @@ float gNmCov = 0.0;
 #endif
 ${SHALLOWS}
 #ifdef F_COLS
-${passSource('columns', '')}
+${subjects.find(s => s.pass === 'columns')?.shader?.source ?? ''}
 #endif
 #if defined(F_DAM) || defined(F_LAT) || defined(F_CANYON)
 ${BOX_HIT}
 #endif
 #ifdef F_DAM
-${passSource('dam', '')}
+${subjects.find(s => s.pass === 'dam')?.shader?.source ?? ''}
 #endif
 #if defined(F_LAT) || defined(F_CANYON)
 ${SEG_D}
 #endif
 #ifdef F_LAT
-${passSource('lattice', '')}
+${subjects.find(s => s.pass === 'lattice')?.shader?.source ?? ''}
 #endif
 #ifdef F_CANYON
-${passSource('canyon', '')}
+${subjects.find(s => s.pass === 'canyon')?.shader?.source ?? ''}
 #endif
 #ifdef F_SHARDS
-${passSource('shards', '')}
+${subjects.find(s => s.pass === 'shards')?.shader?.source ?? ''}
 #endif
 
 ${customSubjects.map(s => `#ifdef ${s.define}
-${sourceOf(s)}
+${s.shader.source}
 #endif`).join('\n')}
 void main() {
   skyKey();
@@ -2792,7 +2772,6 @@ void main() {
       vec2 pw = p + tilt * gFree;
       vec4 bw = bedAt(pw);
       float aWall = smoothstep(-aa, aa, bw.r);
-      gMkW = 1.0 - aWall;
       vec3 cut = vec3(0.0);
       if (aWall > 0.0) {
         // The visible wall turns from an undercut hollow into wet blue ice.
@@ -2852,8 +2831,6 @@ void main() {
     col = nameGround(col, p, dir, foot, aIce);
 #endif
 #endif
-    gMkW *= (1.0 - aLand) * (1.0 - aIce) * (1.0 - aCut) * (1.0 - gMkFloe);
-    gMkG = 1.0;
     gndT = t;
     gndIce = max(aIce, aLand);
     if (aCut > 0.5) gndWall = t + cutS * uIceH / sinE;
@@ -2862,8 +2839,6 @@ void main() {
     // high up the ray crosses less of it; near the ground it hides the far
     // end of the world.
     float fog = airLoss(t);
-    // (Water the air has all but hidden is not open water to the eye.)
-    gMkW *= 1.0 - smoothstep(0.3, 0.75, fog);
     // (Before dawn the air over the name is clear: the ice round a mirror of the sky is the darkest on the lake.)
     fog *= 1.0 - 0.8 * uNight * gNameK * max(aIce, gPond);
     // (And by day the cold air over the far lake's bare ice is clear enough to leave its mirror something to show.)
@@ -2901,9 +2876,7 @@ void main() {
 #endif
 #ifdef F_CONF
     // The cliff at the confluence and its falls stand in front of what lies behind them.
-    vec3 mkBefore = col;
     col = confCliff(col, dir, aLand);
-    gMkW *= 1.0 - mkChg(mkBefore, col);
 #endif
 #ifdef SEA
     // The lee's shade, on the water the words stand over, while the camera is still coming in. (At the ending there is
@@ -2920,14 +2893,11 @@ void main() {
       vec3 hp = uCamPos + dir * tR;
       float aR = gRockA * smoothstep(0.0, 1.5 * tR * uPxAng, hp.z + FREEBOARD);
       if (aR > 0.0) col = mix(col, rockColor(hp, nR, tR), aR);
-      gMkOcc = max(gMkOcc, aR);
     }
   }
 #endif
 #if defined(F_FIELD) && !defined(DBG_NO_NAME)
-  vec3 mkName = col;
   col = nameIce(col, dir, gndT, gndIce, gndWall);
-  gMkOcc = max(gMkOcc, mkChg(mkName, col));
 #endif
 #ifdef F_SHARDS
   if (uShardOn > 0.5) {
@@ -2992,7 +2962,6 @@ void main() {
       float t = shardHit(uCamPos, dir, s, turn, n, tF);
       if (t > 0.0 && (tw < 0.0 || t < tw)) {
         col = shardColor(uCamPos, dir, t, tF, n, s, glow);
-        gMkOcc = 1.0;
       } else if (onTarn > 0.0) {
         // Its mirror image in the still water: clean, until a ring crosses it.
         // (Clean at the shard's foot, bent by the tarn's slow swell further out, and broken where a ring crosses it.)
@@ -3032,7 +3001,6 @@ ${subjects.flatMap(s => s.proximity && s.shader ? [`#ifdef ${s.define}
 ${customSubjects.map(s => `#ifdef ${s.define}
   col = ${s.shader.fn}(col, dir, ${s.event ? 'uProgress_' + s.define : '0.0'});
 #endif`).join('\n')}
-  float mkOver = max(gMkOcc, slabCov);
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
 #ifdef SEA
   // The ribbon of light stands in front of the ranges: it is only looked for in the strip of the frame it can be in.
@@ -3092,19 +3060,6 @@ ${customSubjects.map(s => `#ifdef ${s.define}
       col *= mix(1.0, capped / l, ck * uNight);
       col += (lifted - l) * vec3(0.95, 1.0, 1.07) * ck * (1.0 - uNight);
     }
-  }
-  if (uMaskOut > 0.5) {
-    float mkLee = 0.0;
-    if (uCalmK.x > 0.0) {
-      vec2 q = (vUv - uLee.xy) * uLee.zw;
-      mkLee = (1.0 - smoothstep(0.0, 4.0, dot(q, q))) * uCalmK.x;
-    }
-    if (uCapK > 0.0) {
-      vec2 q = (vUv - uCapBox.xy) * uCapBox.zw;
-      mkLee = max(mkLee, (1.0 - smoothstep(0.0, 3.0, dot(q, q))) * uCapK);
-    }
-    o = vec4(gMkW * (1.0 - mkOver), max(gMkG, mkOver), mkLee, 1.0);
-    return;
   }
   mediump vec3 xa = min(col * 1.12, 64.0);
   // Display-referred fit to the filmic response: a lifted toe, a long shoulder

@@ -53,8 +53,6 @@ export class Score {
   private chordNow: Chord | null = null;
   private rung: { t: number; head: GainNode }[] = [];
   private bassLevel = -1;
-  private changedAt = -1e9;
-  private holdUntil = -1e9;
   /** For the checks: every chord as it was voiced, and every phrase the bells said. */
   history: { t: number; move: string; chord: string; notes: number[] }[] = [];
   phrases: Phrase[] = [];
@@ -87,10 +85,7 @@ export class Score {
    */
   hold(t: number, until: number) {
     this.cut(t + 0.3);
-    this.holdUntil = until;
-    // (If the dominant is still on its way, held back a moment by a chord that had just changed, it comes first and
-    // is then held: see `advance`.)
-    if (this.move === this.want) this.nextChord = Math.max(this.nextChord, until);
+    this.nextChord = Math.max(this.nextChord, until);
   }
 
   /** Called every frame with the time the frame's sound is for. */
@@ -101,11 +96,9 @@ export class Score {
       this.want = st.move;
       if (this.move < 0) this.nextChord = t;
       else if (st.move === MOVE.approach || st.move === MOVE.rest) {
-        // The dominant, and the tonic it resolves to, are taken at once. (At once, but never on the heels of a change:
-        // where the harmony has just moved, as when the page is taken to the ending by the rail from a place whose
-        // movement had only just begun, the dominant waits until that chord has had two seconds.)
+        // The dominant, and the tonic it resolves to, are taken at once.
         this.cut(t);
-        this.nextChord = st.move === MOVE.rest ? t : Math.max(t, this.changedAt + 2.05);
+        this.nextChord = t;
       } else {
         // The new movement begins when the phrase being said is over, or at the chord's own end if that is sooner.
         const wait = Math.max(t + 0.9, Math.min(this.phraseEnd + BEAT, t + PATIENCE));
@@ -158,7 +151,6 @@ export class Score {
       this.bassLevel = 0.5 * mv.bass * st.bass;
       bassTo(this.g, bassNote(chord), t, this.bassLevel);
       this.chordNow = chord;
-      this.changedAt = t;
       if (this.history.length < 400) this.history.push({ t: +t.toFixed(2), move: mv.name, chord: chord.name, notes: want.slice().sort((a, b) => a - b) });
       this.at++;
 
@@ -187,7 +179,6 @@ export class Score {
       } else if (!turned) this.phraseEnd = t;
       this.rung = this.rung.filter((b) => b.t > t - 1);
       this.nextChord = t + beats * BEAT;
-      if (this.move === MOVE.approach) this.nextChord = Math.max(this.nextChord, this.holdUntil);
     } else if (this.chordNow && this.move >= 0) {
       // The bass follows the water in and out between changes.
       const level = 0.5 * MOVEMENTS[this.move].bass * st.bass;

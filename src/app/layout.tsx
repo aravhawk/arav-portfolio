@@ -5,6 +5,8 @@ import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Nav } from '@/components/Nav';
 import { Runtime } from '@/components/Runtime';
+import { WaterStage } from '@/components/WaterStage';
+import { CONTACT } from '@/content/projects';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL, THEME_COLOR } from '@/lib/site';
 import './globals.css';
 
@@ -92,6 +94,32 @@ export const metadata: Metadata = {
   },
 };
 
+/* Structured data: who this is and which address is the real one. */
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Person',
+      '@id': `${SITE_URL}/#person`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      description: SITE_TAGLINE,
+      jobTitle: 'Co-founder, Infiniflop Labs',
+      worksFor: { '@type': 'Organization', name: 'Infiniflop Labs', url: 'https://infiniflop.com' },
+      sameAs: [CONTACT.github, CONTACT.x, CONTACT.linkedin],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      inLanguage: 'en',
+      publisher: { '@id': `${SITE_URL}/#person` },
+    },
+  ],
+};
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -104,14 +132,8 @@ export const viewport: Viewport = {
 
 /* Runs before first paint: the stored theme or the system's, so the wrong
    theme never flashes. It also says that scripts run here at all: without
-   that mark the home page lays itself out as a plain page.
-
-   And the sound's choice, so its control is drawn in its true state in the
-   first paint: on, unless the reader muted it before (it stays muted until
-   they turn it on); or, where they have never chosen, unless the system asks
-   for less data (Save-Data, prefers-reduced-data) or the device says it has
-   a gigabyte of memory or less. */
-const boot = `(function(){var d=document.documentElement;d.setAttribute('data-scripted','');try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}var n=navigator,o='on';try{var m=localStorage.getItem('sound');if(m==='off'||(m!=='on'&&((n.connection&&n.connection.saveData)||n.deviceMemory<=1||matchMedia('(prefers-reduced-data: reduce)').matches)))o='off'}catch(e){}d.dataset.sound=o})()`;
+   that mark the home page lays itself out as a plain page. */
+const boot = `(function(){var d=document.documentElement;d.setAttribute('data-scripted','');try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}})()`;
 
 const fontVars = [orbiter, mono, accent, ice].map((f) => f.variable).join(' ');
 
@@ -120,11 +142,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={fontVars} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: boot }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body>
         <a className="skip" href="#main">
           Skip to content
         </a>
+        <WaterStage />
         <Nav />
         <div className="shell">
           {/* Route changes: the old page lifts away, the new one settles in.

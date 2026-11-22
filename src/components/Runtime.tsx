@@ -23,10 +23,8 @@ export function Runtime() {
     let lenis: import('lenis').default | null = null;
     let cancelled = false;
 
-    /** The flight's own pages scroll natively: the picture follows the scroll through its own smoothing (src/flight/spring.ts), and a second one under it would be scroll-jacking. */
-    const flight = () => window.location.pathname === '/' || window.location.pathname === '/render';
     const start = async () => {
-      if (!fine.matches || reduced.matches || lenis || flight()) return;
+      if (!fine.matches || reduced.matches || lenis) return;
       const { default: Lenis } = await import('lenis');
       if (cancelled) return;
       lenis = new Lenis({ autoRaf: false, lerp: 0.115, wheelMultiplier: 1, anchors: true });
@@ -38,10 +36,10 @@ export function Runtime() {
       lenis?.destroy();
       lenis = null;
     };
-    const sync = () => (fine.matches && !reduced.matches && !flight() ? void start() : stop());
-    // An inner page's first screen does not need the library: it is fetched once the page has shown that screen and
-    // is idle. (Again on every route change: it stops on the way to the home page and starts on the way from it.)
-    const offCalm = whenCalm(sync);
+    const sync = () => (fine.matches && !reduced.matches ? void start() : stop());
+    // The home page is scrolled from its first frame and starts at once. An inner page's first screen does not
+    // need the library: it is fetched once the page has shown that screen and is idle.
+    const offCalm = window.location.pathname === '/' ? (sync(), () => {}) : whenCalm(sync);
     reduced.addEventListener('change', sync);
     fine.addEventListener('change', sync);
     return () => {
@@ -51,7 +49,7 @@ export function Runtime() {
       fine.removeEventListener('change', sync);
       stop();
     };
-  }, [pathname]);
+  }, []);
 
   // Nav state and scroll-linked word reveals, read once per frame.
   useEffect(() => {
@@ -127,10 +125,7 @@ export function Runtime() {
     () =>
       whenCalm(() => {
         for (const img of document.querySelectorAll<HTMLImageElement>('img[data-held]')) {
-          const { src, set } = img.dataset;
-          // (The widths said once, written out again: `pack` in Held.tsx, and tests/content/held.test.ts holds the two together.)
-          const [base, q, widths] = set ? set.split('|') : [];
-          const srcset = set ? widths.split(',').map((w) => `${base}&w=${w}&q=${q} ${w}w`).join(', ') : img.dataset.srcset;
+          const { src, srcset } = img.dataset;
           // (Once the real picture is in, its own shape rules again, exactly as it did before pictures were held.)
           img.addEventListener('load', () => img.style.removeProperty('aspect-ratio'), { once: true });
           if (srcset) img.srcset = srcset;

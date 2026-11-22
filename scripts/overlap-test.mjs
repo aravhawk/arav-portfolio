@@ -169,8 +169,11 @@ async function measureView(page) {
  * Returns the row's part: steps, lines, the worst contrast, the failures.
  */
 async function measureInner(page, row) {
-  // (The band is its still: no engine arrives on an inner page.)
-  row.engine = false;
+  // The scene's canvas arrives after first paint; where it cannot, the still stays and is what is measured.
+  row.engine = await page
+    .waitForFunction(() => !!document.querySelector('.band-view[data-band="on"]'), null, { timeout: 15000 })
+    .then(() => true)
+    .catch(() => false);
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(1300);
   // Everything at rest: nothing is measured half way through a fade.
