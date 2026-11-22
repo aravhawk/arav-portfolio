@@ -109,6 +109,10 @@ the model for a small control in the nav:
 1x and 2x, enlarged, with the travel frame by frame, and writes the
 control's name, role, sizes and what the keys do.
 
+The sound control beside it is drawn in the same manner (`sound.md`,
+`sound.css`): whole pixels, a 44 px target, opacity and transform only
+in 180 ms, nothing in transition from the keys.
+
 ## Springs (planned: one helper in the engine)
 
 For anything that follows the pointer or a drag: critically damped

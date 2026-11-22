@@ -98,8 +98,9 @@ next station's band (`src/components/NextBand.tsx`).
 
 ## Sound
 
-`src/audio/**`: synthesized, off until asked. It reads the world's
-plan and copies a few of the picture's numbers;
+`src/audio/**`: synthesized, on unless the reader mutes it
+(`sound.md`: the control, how it starts, what it costs, its level). It
+reads the world's plan and copies a few of the picture's numbers;
 `tests/audio/picture.test.ts` fails when a copied number drifts.
 
 Change log: 2026-11-18 first version (orchestrator).

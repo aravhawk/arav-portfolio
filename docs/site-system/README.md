@@ -13,6 +13,7 @@ redesigning the whole.
 | [performance.md](performance.md) | The budget and how to measure it on the owner's display |
 | [copy.md](copy.md) | How the site speaks, and what may appear on it |
 | [blog.md](blog.md) | The blog's pages, its rules, and the seam between its UI and where posts come from |
+| [sound.md](sound.md) | Sound on by default: what a reader gets, the control and its three states, how it starts in each browser, what it costs, the level it is held to |
 | [newsletter.md](newsletter.md) | The signup field, where it stands, its route and its table; that nothing is sent |
 | [recipes.md](recipes.md) | Step by step: add, retire or restore a station, a home section, an inner page |
 | [consistency-checklist.md](consistency-checklist.md) | The whole-site pass every change must clear, and the critics' PASS criteria |
