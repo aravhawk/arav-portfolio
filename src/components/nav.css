@@ -266,18 +266,18 @@ html:not([data-js]) .nav-mark,
   }
 }
 
-/* The sound control stands by the theme switch. On a narrow screen the
-   group closes up, so it takes no more room than it did before. */
+/* On a narrow screen the group closes up. The sound control (home page only) and the theme switch keep their
+   44 px targets; the links give up their side padding. */
 @media (max-width: 400px) {
   .nav-links {
     gap: 0;
     padding: 0 4px 0 6px;
   }
-  .nav-link {
-    padding: 0 9px;
+  .nav-mark {
+    padding: 0 12px;
   }
-  .nav-links .nav-sound {
-    width: 36px;
+  .nav-link {
+    padding: 0 7px;
   }
   .nav-links .nav-haptics {
     width: 30px;
@@ -293,14 +293,11 @@ html:not([data-js]) .nav-mark,
 }
 @media (max-width: 340px) {
   .nav-mark {
-    padding: 0 9px;
+    padding: 0 6px;
     font-size: 0.8125rem;
   }
   .nav-link {
-    padding: 0 6px;
-  }
-  .nav-links .nav-sound {
-    width: 32px;
+    padding: 0 4px;
   }
   .nav-links .nav-haptics {
     width: 26px;

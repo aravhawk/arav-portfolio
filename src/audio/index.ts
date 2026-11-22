@@ -1,6 +1,8 @@
 /**
- * Sound on the page. This module, and everything it imports, is loaded the
- * first time the visitor turns sound on, and never before.
+ * Sound on the page. This module, and everything it imports, is fetched by
+ * the control (SoundToggle.tsx) once the home page has painted and the
+ * thread is idle, or at the press that turns sound on for a reader who had
+ * muted it; never in a page's first load and never on an inner page.
  *
  * On the home page it takes its turn inside the flight's frame, as soon as
  * that frame's state is known and before the picture is drawn, so a long
@@ -133,6 +135,7 @@ let run: Running | null = null;
 let building: Promise<Running | null> | null = null;
 let wanted = false;
 let sleep = 0;
+let begun = false;
 
 async function build(ctx: AudioContext): Promise<Running | null> {
   const cost = await measure();
@@ -279,52 +282,80 @@ async function build(ctx: AudioContext): Promise<Running | null> {
     { capture: true, passive: true },
   );
 
-  // A hidden tab is silent: what was set ahead is taken back, the mix fades, then the context rests.
-  document.addEventListener('visibilitychange', () => {
+  // A hidden tab is silent: what was set ahead is taken back, the mix fades, then the context rests. A page put away
+  // (another page opened over it, the tab closed) rests the same way, and wakes if it is brought back.
+  const away = () => {
     if (!wanted) return;
-    if (document.hidden) {
-      sound.cancelAhead(ctx.currentTime);
-      rest(1);
-    } else wake(1.2);
-  });
+    sound.cancelAhead(ctx.currentTime);
+    rest(HIDE);
+  };
+  const back = () => {
+    if (wanted && !document.hidden) wake(SHOW);
+  };
+  document.addEventListener('visibilitychange', () => (document.hidden ? away() : back()));
+  window.addEventListener('pagehide', away);
+  window.addEventListener('pageshow', back);
 
   window.__sound = { ctx, sound, map, tier, cost, signals, lead: () => lead };
   return { ctx, sound };
 }
 
+/** The fades, in seconds: in from silence at the start, out when muted, in again when turned back on, out and in as the tab is hidden and shown. */
+const START = 1.5;
+const MUTE = 0.2;
+const UNMUTE = 0.4;
+const HIDE = 0.3;
+const SHOW = 0.8;
+
+/** Fade out, and rest the context once the fade has reached silence. */
 function rest(seconds: number) {
   if (!run) return;
   const { ctx, sound } = run;
   sound.setOn(false, ctx.currentTime, seconds);
   window.clearTimeout(sleep);
-  sleep = window.setTimeout(() => void ctx.suspend().catch(() => {}), seconds * 1000 + 250);
-}
-
-function wake(seconds: number) {
-  if (!run) return;
-  const { ctx, sound } = run;
-  window.clearTimeout(sleep);
-  void ctx
-    .resume()
-    .then(() => sound.setOn(true, ctx.currentTime, seconds))
-    .catch(() => {});
+  sleep = window.setTimeout(() => void ctx.suspend().catch(() => {}), seconds * 1000 + 80);
 }
 
 /**
- * Turn sound on. `ctx` was made inside the visitor's gesture by the
- * control, which is what browsers ask for; the graph is built here, in
- * pieces, and the mix fades in over about two seconds.
+ * Wake the context and fade in. Where the browser will not let the context run yet (no gesture it accepts), the fade
+ * waits with it: it begins from silence at the moment the context really starts.
  */
-export async function soundOn(ctx: AudioContext): Promise<void> {
+function wake(seconds: number): Promise<boolean> {
+  if (!run) return Promise.resolve(false);
+  const { ctx, sound } = run;
+  window.clearTimeout(sleep);
+  return ctx
+    .resume()
+    .then(() => {
+      if (!wanted || document.hidden) return false;
+      // (Already on its way in or there: a second asking does not start the fade again.)
+      if (!sound.rising) sound.setOn(true, ctx.currentTime, seconds);
+      return ctx.state === 'running';
+    })
+    .catch(() => false);
+}
+
+/**
+ * Turn sound on. `ctx` was made inside the reader's gesture by the control, which is what browsers ask for; the
+ * graph is built here, once, in pieces, and the mix fades in from silence over a second and a half. Asking again is
+ * harmless (the control asks at every gesture until the context really runs). Says whether the sound is built and
+ * the context running.
+ */
+export async function soundOn(ctx: AudioContext): Promise<boolean> {
   wanted = true;
   building ??= build(ctx).catch(() => null);
   run = await building;
-  if (!run || !wanted) return;
-  if (!document.hidden) wake(2);
+  if (!run) return false;
+  // (Muted, or the home page left, while it was being built: the context is not left running in silence.)
+  if (!wanted) return void ctx.suspend().catch(() => {}), false;
+  if (document.hidden) return false;
+  const first = !begun;
+  begun = true;
+  return wake(first ? START : UNMUTE);
 }
 
-/** Turn sound off: a short fade, then the context rests. */
-export function soundOff() {
+/** Turn sound off: a short fade to silence, then the context rests. */
+export function soundOff(seconds = MUTE) {
   wanted = false;
-  rest(0.5);
+  rest(seconds);
 }

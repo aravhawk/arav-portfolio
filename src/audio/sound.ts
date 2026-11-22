@@ -33,6 +33,7 @@ import {
   LIGHT,
   type Mix,
   NAME_NEAR,
+  RING_DARK,
   SHEET_BREAKS,
   arrivalOf,
   arrivalTime,
@@ -53,6 +54,8 @@ import {
   nameMelt,
   place,
   railVoice,
+  ringNear,
+  ringVoice,
   shardVoice,
   sinkAt,
   sinkOrder,
@@ -75,6 +78,10 @@ const LATE = 0.4;
 
 /** How long the dominant is held before a resolution that no light event prepares: two beats. */
 const PREPARE = 2 * BEAT;
+
+/** The mix's fade in and out: how many straight pieces its curve is laid in, and the curve (no speed at either end). */
+const FADE_STEPS = 12;
+const ease = (x: number) => x * x * (3 - 2 * x);
 
 export interface SoundEvent {
   type: string;
@@ -115,6 +122,9 @@ export class Sound {
   private crackNext = 0.4;
   private groanAcc = 0;
   private groanNext = 0.6;
+  private ringAcc = 0;
+  private ringNext = 0.7;
+  private ringLast = -1;
   private melting = false;
   private brokeAt = -1e9;
   private firstAt = -1e9;
@@ -149,6 +159,7 @@ export class Sound {
   private shows = 0;
   private lastFrameAt = 0;
   private times: Times = { now: 0, frameAt: 0, map: ClockMap.fixed(0) };
+  private power = { t: 0, d: 1, from: 0, to: 0 };
   /** How often the picture's clock was found disturbed and what was set ahead taken back. */
   disturbed = 0;
   /** When set, every moment's cause and start are kept here (the sync check reads it). */
@@ -169,10 +180,35 @@ export class Sound {
     return ev;
   }
 
-  /** Fade the whole mix in or out. `seconds` is how long until it is as good as there. */
+  /**
+   * Fade the whole mix in or out, over exactly `seconds`, from wherever it is at `t` (a fade may be turned round part
+   * way). The level follows an eased curve laid as straight pieces, so it starts from rest, ends at rest and ends
+   * exactly at silence or at full: nothing steps, so nothing clicks, and what rests the context after a fade out
+   * rests it on true silence.
+   */
   setOn(on: boolean, t: number, seconds: number) {
-    this.g.on.cancelScheduledValues(t);
-    this.g.on.setTargetAtTime(on ? 1 : 0, t, seconds / 3);
+    const from = this.powerAt(t);
+    const to = on ? 1 : 0;
+    const p = this.g.on;
+    p.cancelScheduledValues(t);
+    p.setValueAtTime(from, t);
+    const d = Math.max(0.02, seconds);
+    for (let i = 1; i <= FADE_STEPS; i++) p.linearRampToValueAtTime(from + (to - from) * ease(i / FADE_STEPS), t + (d * i) / FADE_STEPS);
+    this.power = { t, d, from, to };
+  }
+
+  /** Whether the mix is on, or on its way there. */
+  get rising(): boolean {
+    return this.power.to === 1;
+  }
+
+  /** Where the fade stands at `t`: the same straight pieces the audio thread is following. */
+  powerAt(t: number): number {
+    const { t: t0, d, from, to } = this.power;
+    const x = Math.min(1, Math.max(0, (t - t0) / d)) * FADE_STEPS;
+    const i = Math.min(FADE_STEPS - 1, Math.floor(x));
+    const a = ease(i / FADE_STEPS);
+    return from + (to - from) * (a + (ease((i + 1) / FADE_STEPS) - a) * (x - i));
   }
 
   /** Take back everything set ahead that has not begun (the picture's clock was disturbed, or the page is going out of sight). */
@@ -564,7 +600,8 @@ export class Sound {
     // The theme: air moves through and one bell marks it, as the two mixes cross.
     const night = sc.night > 0.5 ? 1 : 0;
     if (this.night >= 0 && night !== this.night) {
-      whoosh(g, t, 0.9, night ? 2600 : 520, night ? 480 : 2800, 0.1, 0);
+      // (Reduced motion: the bell marks the turn; the sweep of air is left out.)
+      if (!sc.calm) whoosh(g, t, 0.9, night ? 2600 : 520, night ? 480 : 2800, 0.1, 0);
       bell(g, night ? 78 : 81, t + 0.05, 0.5, 0, { bright: night ? 0.3 : 0.9, long: 3.2, send: 0.7 });
       this.note('theme', frameAt, t);
     }
@@ -611,6 +648,26 @@ export class Sound {
         this.groanNext = 0.5 + this.rng();
         groan(g, t, this.rng() * 1.4 - 0.7, this.rng() < 0.6 ? 0.5 + 0.5 * this.rng() : 0);
         if (this.rng() < 0.5) iceCrack(g, t + 0.3 + 0.8 * this.rng(), crackVoice(this.rng(), 2500 + 3000 * this.rng(), 0.2 + 0.3 * this.rng(), 0), 0.5);
+      }
+    }
+
+    // The ring: one of its lit stones rings, faintly, now and then, from where it stands; never the same stone twice
+    // running, never the dark one. (It is the place's own stillness, not a thing the page's motion drives: it is
+    // there with motion reduced too.)
+    if (m.rings > 0 && settled && sc.stones.length) {
+      this.ringAcc += m.rings * sc.dt;
+      if (this.ringAcc >= this.ringNext) {
+        this.ringAcc = 0;
+        this.ringNext = 0.55 + 0.9 * this.rng();
+        let i = Math.floor(this.rng() * sc.stones.length) % sc.stones.length;
+        while (i === RING_DARK || i === this.ringLast) i = (i + 1) % sc.stones.length;
+        this.ringLast = i;
+        const see = sc.stones[i];
+        if (see.k > 0.05) {
+          const v = ringVoice(i, see.pan, sc.night);
+          bell(g, v.midi, t, v.gain * ringNear(sc) * (0.6 + 0.4 * see.k), v.pan, { bright: v.bright, long: v.long, send: v.send, bus: g.fx });
+          this.note('stone', frameAt, t);
+        }
       }
     }
 
@@ -756,7 +813,8 @@ export class Sound {
         // for that is air, moving the way the page goes (down the flight it falls, up it rises), under which the
         // world is brought round to the new place.
         this.jumpAt = t;
-        whoosh(g, t, 0.5, a >= 0 ? 1500 : 620, a >= 0 ? 620 : 1500, 0.055, 0);
+        // (Reduced motion: the world is still brought round, with no sweep of air over it.)
+        if (!sc?.calm) whoosh(g, t, 0.5, a >= 0 ? 1500 : 620, a >= 0 ? 620 : 1500, 0.055, 0);
         this.note('jump', cause, t);
         return;
       case 'switch': {
@@ -794,11 +852,13 @@ export class Sound {
         // (Not when the page has just gone there in one frame: nothing was seen to melt.)
         if (t - this.jumpAt < 0.6) return;
         // The last of the ice has gone.
-        bloom(g, t, 50, 0.55, 1.5);
+        // (Reduced motion: the bell alone, without the swell under it.)
+        if (!sc?.calm) bloom(g, t, 50, 0.55, 1.5);
         bell(g, 86, t + 0.08, 0.5, 0, { bright: 0.8, long: 3.4, send: 0.7 });
         this.note('melt', cause, t);
         return;
       case 'route':
+        if (sc?.calm) return;
         whoosh(g, t, 0.7, 640, 1900, 0.085, 0);
         this.note('route', cause, t);
         return;

@@ -104,8 +104,14 @@ export const viewport: Viewport = {
 
 /* Runs before first paint: the stored theme or the system's, so the wrong
    theme never flashes. It also says that scripts run here at all: without
-   that mark the home page lays itself out as a plain page. */
-const boot = `(function(){var d=document.documentElement;d.setAttribute('data-scripted','');try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}})()`;
+   that mark the home page lays itself out as a plain page.
+
+   And the sound's choice, so its control is drawn in its true state in the
+   first paint: on, unless the reader muted it before (it stays muted until
+   they turn it on); or, where they have never chosen, unless the system asks
+   for less data (Save-Data, prefers-reduced-data) or the device says it has
+   a gigabyte of memory or less. */
+const boot = `(function(){var d=document.documentElement;d.setAttribute('data-scripted','');try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}var n=navigator,o='on';try{var m=localStorage.getItem('sound');if(m==='off'||(m!=='on'&&((n.connection&&n.connection.saveData)||n.deviceMemory<=1||matchMedia('(prefers-reduced-data: reduce)').matches)))o='off'}catch(e){}d.dataset.sound=o})()`;
 
 const fontVars = [orbiter, mono, accent, ice].map((f) => f.variable).join(' ');
 

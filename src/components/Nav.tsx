@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation';
 import { useCallback, useSyncExternalStore } from 'react';
 import { haptic, hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/lib/haptics';
 import { THEME_COLOR } from '@/lib/site';
-import { SoundToggle } from './SoundToggle';
 import './nav.css';
+import './sound.css';
 
 type Theme = 'light' | 'dark';
 
@@ -93,6 +93,10 @@ function HapticsToggle() {
   );
 }
 
+/* The sound control (sound.css, src/lib/sound-control.ts): its markup, and its name set right as it is parsed for a reader who had muted. */
+const SOUND_WAITS = 'Sound is on and starts at your first click or key. Mute (M)';
+const SOUND_NAME = `(function(b){if(document.documentElement.dataset.sound==='off'){b.setAttribute('aria-label','Turn sound on');b.title='Turn sound on (M)'}})(document.currentScript.previousElementSibling)`;
+
 const LINKS = [
   { href: '/work', label: 'Work' },
   { href: '/blog', label: 'Writing' },
@@ -120,7 +124,17 @@ export function Nav() {
             </Link>
           );
         })}
-        <SoundToggle />
+        {pathname === '/' && (
+          <button type="button" className="nav-sound" aria-label="Mute sound" aria-keyshortcuts="M" title={SOUND_WAITS} suppressHydrationWarning>
+            <span className="nav-sound-mark" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          </button>
+        )}
+        {pathname === '/' && <script dangerouslySetInnerHTML={{ __html: SOUND_NAME }} />}
+        {pathname === '/' && <span className="nav-sound-status sr-only" role="status" />}
         <HapticsToggle />
         <ThemeToggle />
       </nav>

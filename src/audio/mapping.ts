@@ -9,7 +9,7 @@
 
 import { type Basis, heroDesign, rayThrough } from '@/water/camera';
 import { DAWN, GATE, LAP, RIBBON } from '@/water/moments';
-import { NAME, SLAB } from '@/water/world';
+import { NAME, RING, SLAB } from '@/water/world';
 import { type Scene, type Seen, heard, sat, smooth } from './scene';
 import { ARRIVAL_AT, CLIMB, GATHER, ladder, latticeNote, shardNote, snap } from './theory';
 import type { WaterVoice } from './water';
@@ -67,6 +67,8 @@ export interface Mix {
   /** the ice working: cracks a second, and groans a second */
   cracks: number;
   groans: number;
+  /** the ring's standing stones: how many of them ring in a second (a faint glass note from one stone, now and then) */
+  rings: number;
 }
 
 /** How much of a sweep is left when motion is reduced. */
@@ -131,11 +133,29 @@ export const seaAt = (t: number) => swellAt(t, 8.4, 11);
 /** Where the wind sits: it comes round with the camera's bank and against its turn, and wanders a little of itself. */
 export const windPanOf = (sc: Scene, t: number) => (sc.calm ? 0 : clamp(-1.3 * sc.bank - 0.9 * sc.turn + 0.18 * Math.sin(0.11 * t), -0.85, 0.85));
 
+/**
+ * How much the place is the ring: nothing from a station away, all of it from its bank, where the camera composes it
+ * (about a thousand units off, where a thing is half heard). Ask Around's place is still air, a small pool, and ice
+ * that rings faintly: this one number quiets the wind, brings the still room and the pool's rare bubble, and lets
+ * the stones ring.
+ */
+export const ringNear = (sc: Scene) => (sc.home ? sat(heard(sc.ring) * 1.9) : 0);
+
+/** A stone of the ring as it rings: each lit stone has its own note of the key, high and glassy, from where it stands; the taller ring lower. */
+export function ringVoice(stone: number, pan: number, night: number): { midi: number; gain: number; pan: number; bright: number; long: number; send: number } {
+  const rungs = ladder(78, 93);
+  // (Seven stones, six notes in use: the order round the ring is not the order up the scale, so neighbours are not a run.)
+  const midi = rungs[(stone * 3) % rungs.length];
+  return { midi, gain: 0.5 - 0.012 * (midi - 78), pan: clamp(pan * 0.85, -0.8, 0.8), bright: 0.22 - 0.1 * night, long: 3.8, send: 0.8 };
+}
+/** Which of the ring's stones does not ring: the dark one. */
+export const RING_DARK = RING.dark;
+
 /** How much of each room the place is: the open lake and sea, the canyon, the still pools. */
 export function roomsOf(sc: Scene): [number, number, number] {
   if (!sc.home) return [0.6, 0, 0.4];
   const canyon = sat(sc.walls);
-  const still = (1 - canyon) * sat(Math.max(sc.tarn, 0.8 * sc.pool));
+  const still = (1 - canyon) * sat(Math.max(sc.tarn, 0.8 * sc.pool, 0.8 * ringNear(sc)));
   return [Math.max(0, 1 - canyon - still), canyon, still];
 }
 
@@ -216,12 +236,16 @@ export function waterOf(sc: Scene, t: number): WaterVoice[] {
   const basin = 0.8 * sc.basin * (0.4 + 0.6 * heard(sc.slab)) * (sc.calm ? 0.7 : 0.35 + 0.65 * blockSet(BLOCK_MID, sc.clock));
   const cols = 0.62 * sc.cols * (0.3 + 0.7 * heard(sc.shallows));
   const tarn = 0.22 * sc.tarn;
+  // (The ring's pool: a bubble now and then, where the pool stands in the frame. Nothing runs into it that can be heard.)
+  const ringPool = 0.3 * ringNear(sc);
   out[W.lap] =
-    basin >= cols && basin >= tarn
+    basin >= cols && basin >= tarn && basin >= ringPool
       ? voice(WATER.stream, basin, 0.6 * sc.slab.pan, { rate: 13, lo: 300, hi: 1500 * dark, tilt: 0.5, spread: 0.5, noise: 0.06, nHi: 900 })
-      : cols >= tarn
+      : cols >= tarn && cols >= ringPool
         ? voice(WATER.stream, cols, 0.6 * sc.shallows.pan, { rate: 8, lo: 520, hi: 2600 * dark, tilt: 0.45, spread: 0.6, noise: 0.03, nHi: 1200 })
-        : voice(WATER.pool, tarn, 0, { rate: 0.35 });
+        : ringPool > tarn
+          ? voice(WATER.pool, ringPool, 0.6 * sc.ring.pan, { rate: 0.5 })
+          : voice(WATER.pool, tarn, 0, { rate: 0.35 });
 
   // The open sluice: a rush that swells as the surge runs down the channel and settles as it passes.
   let surge = 0;
@@ -271,9 +295,11 @@ export function mixOf(sc: Scene, t: number): Mix {
 
   // Wind: over the ice, and wherever the camera is high or fast. Before dawn it is steadier and lower.
   const windBase = sc.home ? 0.2 + 0.5 * sc.ice + 0.3 * exposure + 0.25 * sc.sea * wN : 0.1;
-  const wind = sat((windBase + 0.55 * cN + 0.25 * sN) * (1 - 0.75 * hush) * (1 - 0.6 * walls) * gust(t, sc.calm, sc.night));
+  // (At the ring the air is still: the wind falls away as the camera comes to it, and the whistle with it.)
+  const ringN = ringNear(sc);
+  const wind = sat((windBase + 0.55 * cN + 0.25 * sN) * (1 - 0.75 * hush) * (1 - 0.6 * walls) * (1 - 0.7 * ringN) * gust(t, sc.calm, sc.night));
   const windHz = (260 + 240 * exposure + 520 * cN + 200 * sc.ice - 120 * walls) * (1 - 0.28 * sc.night);
-  const whistle = sat(0.2 * sc.ice + 0.5 * cN - 0.1) * (1 - hush) * (1 - walls) * (1 - 0.5 * sc.night);
+  const whistle = sat(0.2 * sc.ice + 0.5 * cN - 0.1) * (1 - hush) * (1 - walls) * (1 - ringN) * (1 - 0.5 * sc.night);
 
   // The pointer's wake, as air: faster is louder and brighter; farther is softer and duller.
   const pN = sat(sc.pv / 2.4);
@@ -328,6 +354,8 @@ export function mixOf(sc: Scene, t: number): Mix {
     worldSend: sat((0.1 + 0.25 * walls + 0.1 * sc.ice) * (1 - 0.35 * sc.night)),
     cracks: 9 * Math.pow(act, 1.1),
     groans: sc.home && !sc.calm ? 0.07 * sc.ice * (1 - sat(sc.meltRate * 4)) : 0,
+    // (One stone every three seconds or so at the ring itself, fewer from further off, none from a station away.)
+    rings: ringN > 0.15 ? 0.32 * ringN : 0,
   };
 }
 

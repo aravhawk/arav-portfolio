@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import type { PlayerHandle } from '@/flight/player';
 import type { Plan } from '@/flight/types';
+import { mountSoundControl } from '@/lib/sound-control';
 
 declare global {
   interface Window {
@@ -62,6 +63,9 @@ export function FlightPlayer({ plan }: { plan: Plan }) {
       delete window.__flight;
     };
   }, [plan]);
+
+  // The sound control in the nav (sound is on unless muted): its behaviour lives with the home page, the one page with sound.
+  useEffect(mountSoundControl, []);
 
   return (
     <div ref={root} className="flight-root" aria-hidden="true">

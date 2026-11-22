@@ -20,8 +20,15 @@ import { type Crack, chirpAt, chirpLen } from './mapping';
 import { type Rng, hz } from './theory';
 import { type Water, makeWater } from './water';
 
+/**
+ * The whole mix's level, ahead of the compressor. Sound is on unless the reader mutes it, so the site has one
+ * loudness and it is measured: a walk through the page (scripts/audio-check.mjs, the `walk` scene) comes to about
+ * -23 LUFS integrated, the level broadcast speech is set at, and the ceiling keeps every peak under -3 dBTP.
+ */
+const MASTER = 1.6;
+
 /** How loud each bus is in the mix. The bed sits well under the effects' peaks. */
-export const LEVEL = { pad: 0.034, bell: 0.45, bass: 0.03, aurora: 0.011, world: 0.85, water: 0.3, fx: 0.62, ui: 0.16, verb: 0.5, ceiling: 0.84 };
+export const LEVEL = { pad: 0.034, bell: 0.45, bass: 0.03, aurora: 0.011, world: 0.85, water: 0.3, fx: 0.62, ui: 0.16, verb: 0.5, ceiling: 0.68, master: MASTER };
 /** The compressor adds this much of its own below its threshold (measured: +4.1 dB at these settings); it is taken back after it. */
 const MAKEUP = 0.624;
 
@@ -258,6 +265,17 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
     b.Q.value = q;
     return b;
   };
+  /**
+   * A filter on a bus: always two channels. Voices placed across the field come and go on a bus, so what reaches its
+   * filter is now one channel and now two, and a filter whose channels change under it can glitch (Firefox says so
+   * in the console each time). Held at two, a single channel is simply heard on both sides, as it would be anyway.
+   */
+  const busFilter = (type: BiquadFilterType, f: number, q: number) => {
+    const b = filter(type, f, q);
+    b.channelCount = 2;
+    b.channelCountMode = 'explicit';
+    return b;
+  };
   const panner = (p = 0) => {
     const n = ctx.createStereoPanner();
     n.pan.value = p;
@@ -273,6 +291,7 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
 
   // The way out: the sum, the on/off fade, a gentle compressor, the ceiling.
   const mix = gain(1);
+  const master = gain(LEVEL.master);
   const onGain = gain(0);
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -10;
@@ -282,11 +301,11 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
   comp.release.value = 0.25;
   const level = gain(MAKEUP);
   // (Nothing below hearing goes out: no standing offset, no sub-bass a small speaker would only rattle at.)
-  const floor = filter('highpass', 24, 0.7);
+  const floor = busFilter('highpass', 24, 0.7);
   const ceiling = ctx.createWaveShaper();
   ceiling.curve = ceilingCurve(LEVEL.ceiling);
   const out = gain(1);
-  mix.connect(floor).connect(onGain).connect(comp).connect(level).connect(ceiling).connect(out).connect(ctx.destination);
+  mix.connect(floor).connect(master).connect(onGain).connect(comp).connect(level).connect(ceiling).connect(out).connect(ctx.destination);
 
   // The water model, and the live noise that comes with it.
   const water = await makeWater(ctx, Math.floor(rng() * 4294967295) + 1, tier.bubbles);
@@ -353,7 +372,7 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
   const bedBus = gain(1);
   bedBus.connect(mix);
   const padIn = gain(1);
-  const padLP = filter('lowpass', 1800, 0.5);
+  const padLP = busFilter('lowpass', 1800, 0.5);
   const padOut = gain(LEVEL.pad);
   const air = gain(0.3);
   padIn.connect(padLP).connect(padOut).connect(bedBus);
@@ -393,7 +412,7 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
 
   // The world, heard through the place it is in.
   const worldBus = gain(LEVEL.world);
-  const worldLP = filter('lowpass', 18000, 0.5);
+  const worldLP = busFilter('lowpass', 18000, 0.5);
   worldBus.connect(worldLP).connect(mix);
   const worldSend = gain(0.1);
   worldLP.connect(worldSend).connect(sends.world);
@@ -403,7 +422,7 @@ export async function buildGraph(ctx: BaseAudioContext, rng: Rng, tier: Tier = F
   const echo = ctx.createDelay(0.5);
   echo.delayTime.value = 0.127;
   const echoBack = gain(0.34);
-  const echoLP = filter('lowpass', 1900, 0.5);
+  const echoLP = busFilter('lowpass', 1900, 0.5);
   worldLP.connect(echoSend).connect(echo);
   echo.connect(echoLP).connect(echoBack).connect(echo);
   echoLP.connect(mix);
@@ -518,6 +537,19 @@ function sine(g: Graph, f: number, t: number, stop: number, type: OscillatorType
   return o;
 }
 
+/**
+ * A voice's own low-pass. Its sources are single oscillators, and it is held at the one channel they have: a filter
+ * left to count its channels sees them change as its sources start and stop, which can glitch (and Firefox says so
+ * in the console each time).
+ */
+function voiceFilter(g: Graph): BiquadFilterNode {
+  const lp = g.ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.channelCount = 1;
+  lp.channelCountMode = 'explicit';
+  return lp;
+}
+
 /** A burst of noise through a filter. */
 function burst(g: Graph, t: number, dur: number, type: BiquadFilterType, f: number, q: number): BiquadFilterNode {
   const src = g.ctx.createBufferSource();
@@ -526,6 +558,10 @@ function burst(g: Graph, t: number, dur: number, type: BiquadFilterType, f: numb
   b.type = type;
   b.frequency.setValueAtTime(f, t);
   b.Q.value = q;
+  // (The noise is two channels, but only while it plays: before and after, its source is one channel of silence.
+  // The filter is held at two, so its channels do not change under it as the burst starts and stops.)
+  b.channelCount = 2;
+  b.channelCountMode = 'explicit';
   src.connect(b);
   src.start(t, g.rng() * (g.noise.duration - dur - 0.05), dur + 0.05);
   return b;
@@ -650,8 +686,7 @@ export function drop(g: Graph, t: number, f: number, gainV: number, pan: number,
   o.frequency.exponentialRampToValueAtTime(f * 1.06, t + 0.3);
   const e = g.ctx.createGain();
   pluckEnv(e.gain, t, 1, 0.006, 0.075);
-  const lp = g.ctx.createBiquadFilter();
-  lp.type = 'lowpass';
+  const lp = voiceFilter(g);
   lp.frequency.value = cut;
   o.connect(e).connect(lp).connect(head);
   // The ring it leaves: an octave and a fifth up, shorter.
@@ -779,8 +814,7 @@ export function pluck(g: Graph, midi: number, t: number, gainV: number, pan: num
   const f = hz(midi);
   const head = route(g, g.fx, pan, send);
   head.gain.value = 0.2 * gainV;
-  const lp = g.ctx.createBiquadFilter();
-  lp.type = 'lowpass';
+  const lp = voiceFilter(g);
   lp.frequency.value = cut;
   lp.connect(head);
   const o = sine(g, f, t, t + 1.4, 'triangle');
@@ -827,8 +861,7 @@ export function tick(g: Graph, t: number, midi: number, gainV: number, pan: numb
   const f = hz(midi);
   const head = route(g, g.ui, pan, send);
   head.gain.value = (press ? 0.34 : 0.24) * gainV;
-  const lp = g.ctx.createBiquadFilter();
-  lp.type = 'lowpass';
+  const lp = voiceFilter(g);
   lp.frequency.value = cut;
   lp.connect(head);
   const o = sine(g, f, t, t + 0.6);

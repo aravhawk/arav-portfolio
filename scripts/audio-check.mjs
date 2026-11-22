@@ -280,6 +280,22 @@ export function rmsOf(chs, sr, t0, t1) {
   return db(Math.sqrt(sq / Math.max(1, (b - a) * chs.length)));
 }
 
+/** The largest jump from one sample to the next in a stretch of a render, seconds. */
+export function stepOf(chs, sr, t0, t1) {
+  const a = Math.max(1, Math.round(t0 * sr));
+  const b = Math.min(chs[0].length, Math.round(t1 * sr));
+  let worst = 0;
+  for (const c of chs) for (let i = a; i < b; i++) worst = Math.max(worst, Math.abs(c[i] - c[i - 1]));
+  return worst;
+}
+
+/** The loudness (BS.1770, gated) of a stretch of a render, seconds. */
+export function loudnessOf(chs, sr, t0, t1) {
+  const a = Math.max(0, Math.round(t0 * sr));
+  const b = Math.min(chs[0].length, Math.round(t1 * sr));
+  return loudness(chs.map((c) => c.subarray(a, b)), sr);
+}
+
 /** Everything about a render. Peak, DC and clicks are over all of it; the rest is from `from` seconds on. */
 export function analyze(all, sr, from = 0) {
   const start = Math.min(all[0].length - 1, Math.round(from * sr));
@@ -559,8 +575,12 @@ const jumpCheck = (n) => (meta) => {
 };
 
 function scenes(K) {
-  const [, say, view, up, bench, bridge, models, fork, lattice, canyon, delta] = K.starts;
-  const stop = K.stops;
+  // The places by name, in whatever order the flight has them (the registry's): a scene is written for a place, not
+  // for a number in the order. `stop[i]` is kept for the scenes below, as the order the sound was first scored in.
+  const { say, bridge, canyon } = K.startOf;
+  const S = K.stopOf;
+  const stop = [S.hero, S.say, S.infiniview, S.upstream, S.bench, S.bridge, S.models, S.fork, S.lattice, S.canyon, S.delta];
+  const ORDER = Object.entries(S).sort((a, b) => a[1] - b[1]);
   const arrival = arrivalCheck(K);
   // Arrive at a station's composed frame from a little before it, and hold.
   const station = (i, night = 0) => ({ seconds: 18, scroll: [[0, stop[i] - 0.8], [3.2, stop[i]]], night: [[0, night]], clock0: 2.2 });
@@ -581,6 +601,25 @@ function scenes(K) {
     'station-7-lattice': { ...station(8), seconds: 24, transients: true },
     'station-8-canyon': { seconds: 22, scroll: [[0, canyon - 0.4], [3, canyon - 0.4], [9, stop[9]]], clock0: 2.2 },
     'station-9-delta': station(10),
+    // Ask Around's ring: still air, the pool, and the stones that ring.
+    'station-ring': {
+      seconds: 26,
+      scroll: [[0, S.around - 0.8], [3.2, S.around]],
+      clock0: 2.2,
+      transients: true,
+      check: (m) => {
+        const bad = [];
+        const n = of(m, 'stone').length;
+        if (n < 4 || n > 14) bad.push(`${n} stones rang in 26 s at the ring`);
+        const last = m.series[m.series.length - 1];
+        if (!(last.mix.rooms[2] > 0.6)) bad.push(`the still room at the ring is ${last.mix.rooms[2]}`);
+        if (!(last.mix.wind < 0.2)) bad.push(`the wind at the ring is ${last.mix.wind}`);
+        return bad;
+      },
+    },
+    'station-ring-night': { seconds: 26, scroll: [[0, S.around - 0.8], [3.2, S.around]], night: [[0, 1]], clock0: 2.2, transients: true },
+    'water-ring': { seconds: 20, scroll: [[0, S.around - 0.8], [3.2, S.around]], solo: 'world', clock0: 2.2 },
+    'ring-stones': { seconds: 26, scroll: [[0, S.around - 0.8], [3.2, S.around]], solo: 'fx', clock0: 2.2, transients: true },
     // The basin: the pointer crosses the water slowly, then fast, then rests; three presses, near, middle and far.
     'wake-press': {
       seconds: 16,
@@ -603,6 +642,49 @@ function scenes(K) {
     'reduced-motion': { seconds: 22, calm: true, scroll: [[0, 0], [3, 0], [10, 5.5]] },
     // Sound turned on a second in, turned off at eight: silence before and after.
     silence: { seconds: 14, scroll: [[0, stop[1]]], power: [[1, 1, 2], [8, 0, 0.5]], silent: [[0, 0.98], [10.5, 14]] },
+    // ---- sound on by default: the levels a reader gets, and no click where the mix is turned ----
+    // A walk through the page as it is read: the first screen, then each place in the flight's own order, come to
+    // in a second and a half and read for six, and the ending held through its light. The start is the page's own
+    // (the mix fades in from silence over a second and a half at the reader's first gesture, here a second in).
+    // Its loudness is the site's: about -23 LUFS, no peak over -3 dBTP.
+    walk: (() => {
+      const scroll = [[0, 0], [5, 0]];
+      let t = 5;
+      for (const [, at] of ORDER.slice(1)) {
+        scroll.push([t + 1.6, at], [t + 7.6, at]);
+        t += 7.6;
+      }
+      return { seconds: Math.ceil(t + 16), scroll, power: [[1, 1, 1.5]], transients: true, loud: [-23, 1], top: -3, places: ORDER.map(([id], i) => [id, i ? 5 + (i - 1) * 7.6 + 1.6 : 0, i ? 5 + i * 7.6 : 5]) };
+    })(),
+    'walk-night': (() => {
+      const scroll = [[0, 0], [5, 0]];
+      let t = 5;
+      for (const [, at] of ORDER.slice(1)) {
+        scroll.push([t + 1.6, at], [t + 7.6, at]);
+        t += 7.6;
+      }
+      return { seconds: Math.ceil(t + 16), scroll, night: [[0, 1]], power: [[1, 1, 1.5]], transients: true, loud: [-23, 1.5], top: -3 };
+    })(),
+    'walk-lean': (() => {
+      const scroll = [[0, 0], [5, 0]];
+      let t = 5;
+      for (const [, at] of ORDER.slice(1)) {
+        scroll.push([t + 1.6, at], [t + 7.6, at]);
+        t += 7.6;
+      }
+      return { seconds: Math.ceil(t + 16), scroll, lean: true, power: [[1, 1, 1.5]], transients: true, loud: [-23, 2], top: -3 };
+    })(),
+    // The start, in a place with water running (the loudest steady place to start in): from silence, no step.
+    'power-start': { seconds: 10, scroll: [[0, S.upstream]], power: [[2, 1, 1.5]], silent: [[0, 1.98]], edges: [[2, 1.5]], top: -3, clock0: 2.2 },
+    // Muted (200 ms), brought back (400 ms), muted again while it is still coming back, and back.
+    'power-mute': { seconds: 16, scroll: [[0, S.upstream]], power: [[0, 1, 1.5], [5, 0, 0.2], [8, 1, 0.4], [11, 0, 0.2], [11.1, 1, 0.4], [11.25, 0, 0.2], [13, 1, 0.4]], silent: [[5.21, 7.98], [11.46, 12.98]], edges: [[5, 0.2], [8, 0.4], [11, 0.2], [11.1, 0.4], [11.25, 0.2], [13, 0.4]], top: -3, clock0: 2.2 },
+    // Muted on the first screen, where the bed and its bells are all there is.
+    'power-mute-hero': { seconds: 14, scroll: [[0, 0]], power: [[0, 1, 1.5], [6, 0, 0.2], [9, 1, 0.4]], silent: [[6.21, 8.98]], edges: [[6, 0.2], [9, 0.4]], top: -3 },
+    // A jump across the page by the rail: the lake to the canyon, the canyon to the ring, the ring to the ending.
+    'power-jump': { seconds: 26, scroll: [[0, 0]], events: [[5, 'tap', 0.985, 8, 13], [5.09, 'jump', 1], [12, 'tap', 0.985, 7, 13], [12.09, 'jump', -1], [18, 'tap', 0.985, 12, 13], [18.09, 'jump', 1]], jumps: [[5.1, S.canyon], [12.1, S.around], [18.1, K.END_AT]], power: [[0, 1, 1.5]], edges: [[5.1, 0.4], [12.1, 0.4], [18.1, 0.4]], top: -3, transients: true, clock0: 2.2, check: jumpCheck(3) },
+    // A hidden tab and back: out in 300 ms, silence, in over 800 ms.
+    'power-hidden': { seconds: 16, scroll: [[0, S.upstream]], power: [[0, 1, 1.5], [6, 0, 0.3], [10, 1, 0.8]], silent: [[6.31, 9.98]], edges: [[6, 0.3], [10, 0.8]], top: -3, clock0: 2.2 },
+
     // The whole flight at a reading pace, and the ending held.
     flight: { seconds: 86, scroll: [[0, 0], [3, 0], [3 + K.END_AT / 0.45, K.END_AT]], transients: true },
 
@@ -698,15 +780,18 @@ function scenes(K) {
     'aurora-curtains': { seconds: 70, scroll: [[0, 0]], night: [[0, 1]], solo: 'bed', transients: true, clock0: 12 },
     'aurora-thins': {
       seconds: 44,
-      scroll: [[0, delta + 1.1], [3, delta + 1.1], [40, K.SETTLE_AT - 0.08]],
+      // (Since the places took the owner's order each keeps the hour it was lit for, so the night no longer thins once
+      // down the whole flight: the aurora stands over the lake and over the rock pool. This is the way out of the rock
+      // pool toward the ring, where the hour loses it.)
+      scroll: [[0, S.bench], [3, S.bench], [40, S.around]],
       night: [[0, 1]],
       solo: 'bed',
       transients: true,
       check: (m) => {
         const bad = [];
         const a = m.series.map((x) => x.mix.aurora);
-        if (!(a[4] > 0.4)) bad.push(`the aurora's voice at the delta is ${a[4]}`);
-        if (!(a[a.length - 2] < 0.05)) bad.push(`the aurora's voice as the sun is about to rise is ${a[a.length - 2]}`);
+        if (!(a[4] > 0.15)) bad.push(`the aurora's voice at the rock pool is ${a[4]}`);
+        if (!(a[a.length - 2] < 0.05)) bad.push(`the aurora's voice at the ring is ${a[a.length - 2]}`);
         // It thins from the top: when the highest partial has gone the lowest is still there.
         const hour = m.series.map((x) => x.scene.aurora);
         const i = hour.findIndex((h) => h < 0.7);
@@ -768,9 +853,12 @@ async function renders() {
     const m = await import('https://audio.check/src/audio/mapping');
     const t = await import('https://audio.check/src/audio/theory');
     const w = await import('https://audio.check/src/water/moments');
+    const r = await import('https://audio.check/src/water/registry');
     return {
       stops: c.stillStops(),
       starts: c.sectionStarts(),
+      stopOf: r.composed,
+      startOf: r.starts,
       END_AT: c.END_AT,
       SETTLE_AT: c.SETTLE_AT,
       DAWN: w.DAWN,
@@ -787,7 +875,7 @@ async function renders() {
   const rows = [];
   let failed = 0;
   for (const name of names) {
-    const { transients, silent, disturbedMin, period, check, ...spec } = all[name];
+    const { transients, silent, disturbedMin, period, check, loud, top, edges, places, ...spec } = all[name];
     // (--solo bed|world|fx|ui: hear one bus alone, to set its level.)
     if (arg('solo', '')) spec.solo = arg('solo', '');
     const t0 = Date.now();
@@ -824,10 +912,29 @@ async function renders() {
     if (m.peakDb > -1) problems.push(`peak ${m.peakDb} dBFS`);
     if (m.truePeakDb > -1) problems.push(`true peak ${m.truePeakDb} dBFS`);
     if (Math.abs(+m.dc) > 1e-3) problems.push(`DC ${m.dc}`);
-    if (m.maxJump > 0.25) problems.push(`jump ${m.maxJump}`);
+    // (The guard on the sharpest transient, an ice crack on the phone's tier: 0.25 at the level the sound was first
+    // set at, and the whole mix is 4 dB up since sound is on by default.)
+    if (m.maxJump > 0.32) problems.push(`jump ${m.maxJump}`);
     if (!transients && m.clicks > 0) problems.push(`${m.clicks} clicks at ${m.clickAt.join(', ')} s`);
     if (m.above6k > 0.12) problems.push(`harsh: ${(m.above6k * 100).toFixed(1)}% above 6 kHz`);
     if (!meta.water) problems.push('the water model did not run');
+    // The site's loudness, where a scene is the measure of it; and its ceiling.
+    if (loud && Math.abs(m.lufs - loud[0]) > loud[1]) problems.push(`${m.lufs} LUFS, not ${loud[0]} within ${loud[1]}`);
+    if (top !== undefined && m.truePeakDb > top) problems.push(`true peak ${m.truePeakDb} dBTP, over ${top}`);
+    // Where the mix is turned (on, off, a jump): nothing steps. The largest jump from one sample to the next inside
+    // each turn is held against the largest in the steady second before or after it: a fade adds none of its own.
+    const turns = (edges ?? []).map(([at, len]) => {
+      const inside = stepOf(chs, meta.sr, at - 0.01, at + len + 0.03);
+      const beside = Math.max(stepOf(chs, meta.sr, at - 1.1, at - 0.05), stepOf(chs, meta.sr, at + len + 0.05, at + len + 1.1));
+      const ck = chs.map((c) => clicks(c.subarray(Math.max(0, Math.round((at - 0.02) * meta.sr)), Math.round((at + len + 0.05) * meta.sr)), meta.sr).count).reduce((a, b) => a + b, 0);
+      return { at, len, step: +inside.toFixed(4), beside: +beside.toFixed(4), clicks: ck };
+    });
+    for (const e of turns) {
+      if (!transients && e.clicks > 0) problems.push(`${e.clicks} click(s) in the turn at ${e.at} s`);
+      if (!transients && e.step > Math.max(0.012, e.beside * 1.5)) problems.push(`a step of ${e.step} in the turn at ${e.at} s (${e.beside} beside it)`);
+    }
+    // Each place of a walk: its own loudness (short-term, over its hold), so no place stands out of the piece.
+    const held = (places ?? []).map(([id, a, b]) => [id, +loudnessOf(chs, meta.sr, Math.max(a, power[0][0] + power[0][2] + 0.2), b).toFixed(1)]);
     // (Where the world is heard alone, nothing may come round again. With the bed in, the bells' own beat is a period and is not a loop.)
     // (And where the picture itself does something on a period, the splash that goes with it comes round on that period: that is the picture's, and is said.)
     const own = (period ?? []).some((p) => Math.abs(m.loopAt / p - Math.round(m.loopAt / p)) * p < 0.12 && m.loopAt > p / 2);
@@ -850,9 +957,9 @@ async function renders() {
     if (problems.length) failed++;
     writeFileSync(join(out, `${name}.wav`), wav(chs, meta.sr));
     writeFileSync(join(out, `${name}.png`), spectrogram(chs, meta.sr));
-    writeFileSync(join(out, `${name}.json`), JSON.stringify({ spec, metrics: m, quiet, chords: meta.chords, phrases: meta.phrases, trace: meta.trace, series: meta.series, disturbed: meta.disturbed }));
+    writeFileSync(join(out, `${name}.json`), JSON.stringify({ spec, metrics: m, quiet, turns, places: held, chords: meta.chords, phrases: meta.phrases, trace: meta.trace, series: meta.series, disturbed: meta.disturbed }));
     rows.push({ name, ...m, quiet, problems });
-    console.log(`${problems.length ? 'FAIL' : 'ok  '} ${name.padEnd(22)} ${String(m.seconds).padStart(5)} s  peak ${String(m.peakDb).padStart(7)}  true ${String(m.truePeakDb).padStart(7)}  rms ${String(m.rmsDb).padStart(6)}  ${String(m.lufs).padStart(6)} LUFS  crest ${String(m.crestDb).padStart(5)}  centroid ${String(m.centroidHz).padStart(5)} Hz  >6k ${(m.above6k * 100).toFixed(2).padStart(5)}%  300-4k ${(m.mid * 100).toFixed(0).padStart(3)}% ${String(m.midDb).padStart(6)} dB  loop ${m.loop}@${m.loopAt}  dc ${m.dc}  clicks ${m.clicks}${transients ? '*' : ''}  jump ${m.maxJump}  corr ${m.corr}${quiet.length ? `  silence ${quiet.join(', ')} dBFS` : ''}  (${((Date.now() - t0) / 1000).toFixed(1)} s)${problems.length ? `\n     ${problems.join('; ')}` : ''}`);
+    console.log(`${problems.length ? 'FAIL' : 'ok  '} ${name.padEnd(22)} ${String(m.seconds).padStart(5)} s  peak ${String(m.peakDb).padStart(7)}  true ${String(m.truePeakDb).padStart(7)}  rms ${String(m.rmsDb).padStart(6)}  ${String(m.lufs).padStart(6)} LUFS  crest ${String(m.crestDb).padStart(5)}  centroid ${String(m.centroidHz).padStart(5)} Hz  >6k ${(m.above6k * 100).toFixed(2).padStart(5)}%  300-4k ${(m.mid * 100).toFixed(0).padStart(3)}% ${String(m.midDb).padStart(6)} dB  loop ${m.loop}@${m.loopAt}  dc ${m.dc}  clicks ${m.clicks}${transients ? '*' : ''}  jump ${m.maxJump}  corr ${m.corr}${quiet.length ? `  silence ${quiet.join(', ')} dBFS` : ''}${turns.length ? `  turns ${turns.map((e) => `${e.at}s step ${e.step} (beside ${e.beside}) clicks ${e.clicks}`).join('; ')}` : ''}${held.length ? `\n     places (LUFS over each hold): ${held.map(([id, l]) => `${id} ${l}`).join(', ')}` : ''}  (${((Date.now() - t0) / 1000).toFixed(1)} s)${problems.length ? `\n     ${problems.join('; ')}` : ''}`);
   }
   await browser.close();
   const head = '| scene | seconds | peak dBFS | true peak | RMS | LUFS | crest dB | centroid Hz | above 6 kHz | 300 Hz to 4 kHz (share, level dBFS) | loop (r at s) | DC | clicks | largest jump | L/R corr | silence dBFS | result |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |';

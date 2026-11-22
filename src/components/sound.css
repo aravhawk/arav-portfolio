@@ -1,9 +1,189 @@
-/* The sound control: a small speaker and, beside it, the level. Off, the
-   level is a flat line; on, it stands and moves like a wave. The speaker
-   says what the control is, the level says its state; its name is given to
-   assistive tech and shown on hover. */
+/* The sound control. Sound is on unless the reader mutes it, so this is a mute: a speaker, and beside it what the
+   sound is doing. Three states, each true from the first paint (they are read from <html>, which the page's first
+   script marks before anything is drawn: `data-sound` is the reader's choice, `data-sound-live` is there only while
+   sound is really coming out):
 
-.nav-sound,
+     on, waiting   the speaker and three standing bars, faint and still. The browser has not yet let sound start
+                   (it waits for a press or a key), so nothing here moves or claims to play.
+     on, playing   the same bars at full strength, each rising and falling in its own time: the sign of life.
+     muted         the speaker and a cross where the bars were, the whole mark set back.
+
+   In the manner of the theme switch beside it: every edge that can be is on a whole pixel (the speaker is 8 by 12,
+   the bars 2 wide and 2 apart, 6, 12 and 8 tall about one middle line, the cross 8 square), the button is the 44 px
+   target and the ring stands round the mark. Only opacity and transform change, in 180 ms, ease-out; from the
+   keyboard nothing is in transition (`data-instant`); the press is the button's scale.
+
+   The markup is the button, the mark and three bars. The speaker and the cross are the mark's two pseudo-elements,
+   cut to shape; the ground that comes under the pointer is the button's. */
+
+.nav-sound {
+  --t-sound: 180ms;
+  position: relative;
+  /* (Never squeezed: its width is its target.) */
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-pill);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+  /* (The colour is the theme's ink: it turns with the theme, as the links' does. Nothing of the control's own changes colour.) */
+  transition:
+    transform var(--t-press) var(--ease-out),
+    color var(--t-fast) ease;
+}
+/* Without scripts there is no sound and no choice to show. */
+html:not([data-scripted]) .nav-sound {
+  display: none;
+}
+.nav-sound:active:not(:focus-visible) {
+  transform: scale(0.97);
+}
+.nav-sound:focus-visible {
+  outline: none;
+}
+.nav-sound:focus-visible .nav-sound-mark {
+  outline: 2px solid var(--focus);
+  outline-offset: 5px;
+}
+
+/* The ground under the pointer: the theme switch's resting track, without its edge. */
+.nav-sound::before {
+  content: '';
+  position: absolute;
+  top: calc(50% - 13px);
+  left: calc(50% - 17px);
+  width: 34px;
+  height: 26px;
+  border-radius: 8px;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--t-sound) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .nav-sound:hover::before {
+    opacity: 0.08;
+  }
+}
+
+.nav-sound-mark {
+  position: relative;
+  display: block;
+  /* (An even width in an even button: the mark starts on a whole pixel. The bars end a pixel short of it.) */
+  width: 22px;
+  height: 14px;
+  border-radius: 3px;
+  transition: opacity var(--t-sound) var(--ease-out);
+}
+/* The speaker: a 3 by 4 body and a cone that opens to the mark's full 12. */
+.nav-sound-mark::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 0;
+  width: 8px;
+  height: 12px;
+  background: currentColor;
+  clip-path: polygon(0 4px, 3px 4px, 8px 0, 8px 12px, 3px 8px, 0 8px);
+}
+/* The cross: two strokes a pixel and a half wide, in the bars' place. */
+.nav-sound-mark::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  clip-path: polygon(0 1.1px, 1.1px 0, 4px 2.9px, 6.9px 0, 8px 1.1px, 5.1px 4px, 8px 6.9px, 6.9px 8px, 4px 5.1px, 1.1px 8px, 0 6.9px, 2.9px 4px);
+  opacity: 0;
+  transition: opacity var(--t-sound) var(--ease-out);
+}
+/* The bars. Waiting, they stand faint and still. */
+.nav-sound-mark i {
+  position: absolute;
+  width: 2px;
+  background: currentColor;
+  opacity: 0.42;
+  transition: opacity var(--t-sound) var(--ease-out);
+}
+.nav-sound-mark i:nth-child(1) {
+  left: 11px;
+  top: 4px;
+  height: 6px;
+  --lo: 0.5;
+  animation-duration: 0.9s;
+}
+.nav-sound-mark i:nth-child(2) {
+  left: 15px;
+  top: 1px;
+  height: 12px;
+  --lo: 0.42;
+  animation-duration: 1.25s;
+  animation-delay: -0.4s;
+}
+.nav-sound-mark i:nth-child(3) {
+  left: 19px;
+  top: 3px;
+  height: 8px;
+  --lo: 0.38;
+  animation-duration: 1.05s;
+  animation-delay: -0.7s;
+}
+
+/* Playing: full strength, and each bar breathes about its middle in its own time. */
+html[data-sound-live] .nav-sound-mark i {
+  opacity: 1;
+  animation-name: nav-sound-level;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+@keyframes nav-sound-level {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(var(--lo));
+  }
+}
+
+/* Muted: the cross for the bars, and the mark set back. Pointed at, it comes forward: a press will turn it on. */
+html[data-sound='off'] .nav-sound-mark {
+  opacity: 0.6;
+}
+html[data-sound='off'] .nav-sound-mark i {
+  opacity: 0;
+}
+html[data-sound='off'] .nav-sound-mark::after {
+  opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  html[data-sound='off'] .nav-sound:hover .nav-sound-mark {
+    opacity: 1;
+  }
+}
+
+/* Changed from the keyboard, it is simply in its new state. */
+.nav-sound[data-instant],
+.nav-sound[data-instant]::before,
+.nav-sound[data-instant] .nav-sound-mark,
+.nav-sound[data-instant] .nav-sound-mark::after,
+.nav-sound[data-instant] .nav-sound-mark i {
+  transition: none;
+}
+
+/* Where the system draws its own colours the mark is the button's text colour, and the states are the same shapes. */
+@media (forced-colors: active) {
+  .nav-sound-mark::before,
+  .nav-sound-mark::after,
+  .nav-sound-mark i {
+    background: ButtonText;
+  }
+}
+
 .nav-haptics {
   display: inline-flex;
   align-items: center;
@@ -14,76 +194,11 @@
   color: var(--ink-2);
   transition: color var(--t-fast) ease;
 }
-.nav-sound[data-on],
 .nav-haptics[aria-checked='true'] {
   color: var(--ink);
 }
-.nav-sound:active .nav-sound-mark,
 .nav-haptics:active svg {
   transform: scale(0.9);
-}
-@media (hover: hover) and (pointer: fine) {
-  .nav-sound:hover {
-    color: var(--ink);
-  }
-}
-
-.nav-sound-mark {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  transition: transform var(--t-fast) var(--ease-out);
-}
-.nav-sound-cone {
-  display: block;
-}
-.nav-sound-bars {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  height: 14px;
-}
-/* Off: three dashes on one line, a level at rest. */
-.nav-sound-bars span {
-  width: 2.5px;
-  height: 14px;
-  border-radius: 1.25px;
-  background: currentColor;
-  transform: scaleY(0.12);
-  transition: transform var(--t-ui) var(--ease-out);
-}
-
-/* On: each bar keeps its own height and its own time. */
-.nav-sound[data-on] .nav-sound-bars span {
-  animation: nav-sound-level 1.15s ease-in-out infinite alternate;
-}
-.nav-sound[data-on] .nav-sound-bars span:nth-child(1) {
-  transform: scaleY(0.5);
-  --lo: 0.3;
-  --hi: 0.66;
-  animation-duration: 0.9s;
-}
-.nav-sound[data-on] .nav-sound-bars span:nth-child(2) {
-  transform: scaleY(1);
-  --lo: 0.55;
-  --hi: 1;
-  animation-duration: 1.25s;
-  animation-delay: -0.4s;
-}
-.nav-sound[data-on] .nav-sound-bars span:nth-child(3) {
-  transform: scaleY(0.7);
-  --lo: 0.36;
-  --hi: 0.82;
-  animation-duration: 1.05s;
-  animation-delay: -0.7s;
-}
-@keyframes nav-sound-level {
-  from {
-    transform: scaleY(var(--lo));
-  }
-  to {
-    transform: scaleY(var(--hi));
-  }
 }
 
 /* The haptics switch: shown only where a device can buzz. A phone, and the
@@ -106,16 +221,20 @@
   opacity: 0;
 }
 
-/* Reduced motion: on is three standing bars, still. */
+/* Reduced motion: nothing is pressed in and no bar moves. Playing is the bars at full strength, waiting is the bars
+   faint: the difference is still there to see. A change of state is a short cross-fade. */
 @media (prefers-reduced-motion: reduce) {
-  .nav-sound-mark,
-  .nav-sound-bars span,
+  .nav-sound,
+  .nav-sound:active:not(:focus-visible) {
+    transform: none;
+    transition: color var(--t-fast) ease;
+  }
+  html[data-sound-live] .nav-sound-mark i {
+    animation: none;
+  }
   .nav-haptics svg,
   .nav-haptics .nav-haptics-waves,
   .nav-haptics .nav-haptics-off {
     transition: none;
-  }
-  .nav-sound[data-on] .nav-sound-bars span {
-    animation: none;
   }
 }
