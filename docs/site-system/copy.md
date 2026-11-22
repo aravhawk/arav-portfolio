@@ -15,7 +15,14 @@ Status: **as built** (K1, 2026-11-20).
   capture tools counts them; adding a word means removing one.
 - Every number is real and sourced
   (`docs/redesign-v4/content-sources.md`); numbers that change are
-  read live (`src/lib/metrics`) and said with when they were read.
+  read live (`src/lib/metrics`). **When they were read is said once a
+  page, small, at its foot**: "Numbers read Nov 21, 2026, 8:34 PM CT"
+  under the name in an inner page's footer (`note` on `PageShell`, on
+  the pages that show numbers) and under the contact row in the home
+  page's ending (`.fl-end-note`). No block, caption, recognition line
+  or footnote repeats it; a caption may name the source ("Read from
+  GitHub."). The tip a number shows when pointed at, and its name for
+  assistive technology, keep their "as of".
   Merged pull requests count only repositories he does not own, less
   the repositories in `EXCLUDED_REPOS`
   (`src/lib/metrics/config.ts`). What is left out is never written
@@ -68,7 +75,7 @@ keeps the order its world was built in.
 Recognition is lines, never cards (`RECOGNITION`): "Selected for
 OpenAI DevDay 2026" (about him, never under Infiniview); the
 Business Insider story of May 2026, without his age, city or grade;
-his GitHub contributions in 2026, read live and said with the date.
+his GitHub contributions in 2026, read live (the date is the footer's).
 
 Nothing else is shown: no archive, no "also" list, no project the
 owner holds back or has dropped, no bot name beyond the two above.
@@ -86,4 +93,5 @@ own writing and is not edited.
 Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1:
 the definitive list, recognition, the story's rules. 2026-11-20 K2: the
 public pull request link names only counted repositories. 2026-11-21 R1:
-no email address anywhere.
+no email address anywhere; when the numbers were read is said once, at
+the foot.

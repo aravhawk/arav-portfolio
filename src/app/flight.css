@@ -956,6 +956,7 @@ html[data-picture] .flight-root > .fl-poster {
   color: var(--end-ink);
 }
 .fl-end-block {
+  position: relative;
   display: grid;
   gap: clamp(10px, 1.4vw, 20px);
   justify-items: start;
@@ -972,6 +973,22 @@ html[data-picture] .flight-root > .fl-poster {
   margin-top: 0;
   align-items: center;
 }
+/* The foot's small print: when the page's numbers were read, said here and nowhere else on the page. It hangs
+   under the block, in the margin the block keeps over the frame's edge, so every line over it stands where it stood
+   without it. A date is set in the text face with tabular figures, as the inner pages' footer sets it. */
+.fl-end-note {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: clamp(4px, 1vh, 10px);
+  font-size: var(--fl-cap);
+  line-height: 1.35;
+  font-weight: 480;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--end-ink-2);
+}
 /* The entrance. The small line leads, alone, as the camera comes down to the sea (the block is on from then);
    when the camera rests the block sets (`data-set`): the headline wipes in and the links follow. It leaves fast. */
 .fl-end-words .ending-line {
@@ -983,7 +1000,8 @@ html[data-picture] .flight-root > .fl-poster {
   transition: clip-path 900ms var(--ease-in-out);
 }
 .fl-end-words .ending-kicker,
-.fl-end-words .ending-links {
+.fl-end-words .ending-links,
+.fl-end-words .fl-end-note {
   opacity: 0;
   transform: translate3d(0, 14px, 0);
   transition:
@@ -1003,6 +1021,14 @@ html[data-picture] .flight-root > .fl-poster {
   transition:
     opacity 700ms var(--ease-out) 420ms,
     transform 700ms var(--ease-out) 420ms;
+}
+/* (The small print comes last, a moment after the row it stands under.) */
+.fl-end-words[data-set] .fl-end-note {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 700ms var(--ease-out) 520ms,
+    transform 700ms var(--ease-out) 520ms;
 }
 /* A section takes no pointer events (`.fl-sec`), and what stands in it inherits that. A station's pieces are given
    them back as each one sets (`[data-at][data-in]`). The ending's pieces are not steps: the block sets them, so the
@@ -1033,7 +1059,8 @@ html[data-picture] .flight-root > .fl-poster {
 @media (prefers-reduced-motion: reduce) {
   .fl-end-words .ending-line,
   .fl-end-words .ending-kicker,
-  .fl-end-words .ending-links {
+  .fl-end-words .ending-links,
+  .fl-end-words .fl-end-note {
     clip-path: none;
     transform: none;
     transition: opacity 200ms linear;
@@ -1205,7 +1232,8 @@ html[data-picture] .flight-root > .fl-poster {
   clip-path: none;
 }
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-kicker,
-:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-links {
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-links,
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .fl-end-note {
   opacity: 1;
   transform: none;
 }

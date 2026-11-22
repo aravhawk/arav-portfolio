@@ -178,7 +178,7 @@ function Upstream({ p, m }: { p: Project; m: SiteMetrics }) {
             <span className="fig-unit">{m.contributions.label}</span>
           </li>
         </ul>
-        <p className="cap">Read from GitHub {formatAsOf(m.mergedPrs.upstream.asOf)}.</p>
+        <p className="cap">Read from GitHub.</p>
       </Sec>
       <Sec className="up-open" label="What it is">
         <p className="sum">{p.summary}</p>
@@ -462,7 +462,7 @@ function OpenModels({ p, m }: { p: Project; m: SiteMetrics }) {
               <Live metric={m.ollama.total} what="pulls of my open models on Ollama" />
             </span>
             <span className="fig-unit">
-              pulls, {m.ollama.models.length} models, read from Ollama {formatAsOf(m.ollama.total.asOf)}
+              pulls, {m.ollama.models.length} models, read from Ollama
             </span>
           </p>
         </div>

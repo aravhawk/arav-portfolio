@@ -11,9 +11,10 @@ const inline = (x: string) => (/^[A-Z][a-z]/.test(x) ? x[0].toLowerCase() + x.sl
 /**
  * The delta's block: what he is recognised for (lines, never cards), what he
  * is into, and what comes next. `year` is the live count of the year's
- * contributions (already a readout), `read` the day it was read.
+ * contributions (already a readout). When it was read is not said here: that
+ * is said once, in the small line at the ending's foot.
  */
-export function Interests({ timing: delta, year, read, recogUntil }: { timing: Timing; year?: React.ReactNode; read?: string; /** Where, in screens, the label and the recognition lines leave, when that is before the block does. */ recogUntil?: number }) {
+export function Interests({ timing: delta, year, recogUntil }: { timing: Timing; year?: React.ReactNode; /** Where, in screens, the label and the recognition lines leave, when that is before the block does. */ recogUntil?: number }) {
   const until = recogUntil == null ? {} : { 'data-fl-until': recogUntil };
   return (
     <>
@@ -31,7 +32,7 @@ export function Interests({ timing: delta, year, read, recogUntil }: { timing: T
         </li>
         {year ? (
           <li>
-            {year} GitHub contributions in {RECOGNITION.year}, read {read}.
+            {year} GitHub contributions in {RECOGNITION.year}.
           </li>
         ) : null}
       </ul>

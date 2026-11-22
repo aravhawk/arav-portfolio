@@ -1,6 +1,7 @@
 import { Contact } from '@/components/ending/Ending';
 
-export function EndingWords() {
+/** `note`: when the page's numbers were read, e.g. "Numbers read Nov 15, 2026, 4:40 AM CT". The one place the home page says it. */
+export function EndingWords({ note }: { note?: string }) {
   return (
     <div className="fl-end-block">
       <h2 className="ending-head">
@@ -11,6 +12,8 @@ export function EndingWords() {
       <div className="fl-end-row">
         <Contact feed />
       </div>
+      {/* The foot's small print, under the block and clear of it: nothing over it moves to make room. */}
+      {note ? <p className="fl-end-note">{note}</p> : null}
     </div>
   );
 }

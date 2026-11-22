@@ -460,7 +460,6 @@ export default async function Home() {
             <Interests
               timing={delta}
               recogUntil={+(section.stop + (section.steps?.leave ?? STEPS.leave) - RECOG_EARLY).toFixed(3)}
-              read={day(m.contributions.total.asOf)}
               year={
                 yearCount ? (
                   <LiveNumber
@@ -497,7 +496,8 @@ export default async function Home() {
       <section className="fl-sec fl-sea ending" data-fl style={len(section.length, true)} aria-label="Contact">
         <div className="fl-pin">
           <div className="fl-words fl-end-words" data-fl-from={+(SETTLE_AT - END_LEAD).toFixed(3)} data-fl-to={1e6} data-fl-set={+(SETTLE_AT - 0.04).toFixed(3)}>
-            <EndingWords />
+            {/* When the page's numbers were read: said once, here, in the small line at the foot. */}
+            <EndingWords note={`Numbers read ${formatAsOf(m.retrievedAt)}`} />
           </div>
         </div>
       </section>

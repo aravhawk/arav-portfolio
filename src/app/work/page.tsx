@@ -8,7 +8,6 @@ import { PageShell } from '@/components/PageShell';
 import { sceneOf } from '@/water/registry';
 import { FeatStill } from '@/components/work/still-pictures';
 import { PROJECTS, RECOGNITION } from '@/content/projects';
-import { formatPostDate } from '@/lib/dates';
 import { pageMeta } from '@/lib/meta';
 import { formatAsOf, formatCount, getMetrics } from '@/lib/metrics';
 
@@ -97,7 +96,7 @@ export default async function Work() {
                 asOf={formatAsOf(m.contributions.total.asOf)}
                 what={`GitHub contributions in ${RECOGNITION.year}`}
               />{' '}
-              GitHub contributions in {RECOGNITION.year}, read {formatPostDate(m.contributions.total.asOf, 'short')}.
+              GitHub contributions in {RECOGNITION.year}.
             </li>
           ) : null}
         </ul>
@@ -114,7 +113,7 @@ export default async function Work() {
           <a href={m.ollama.total.source} target="_blank" rel="noopener noreferrer">
             Ollama
           </a>{' '}
-          about once an hour. Last read {formatAsOf(m.retrievedAt)}.
+          about once an hour.
         </p>
       </section>
     </PageShell>
