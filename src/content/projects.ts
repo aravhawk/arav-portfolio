@@ -476,16 +476,6 @@ export const RECOGNITION = {
   year: '2026',
 };
 
-export const INTERESTS = [
-  'Agents and evals',
-  'ML',
-  'Security',
-  'GPUs',
-  'Flight computers',
-  'Spaceflight',
-  'Robotics',
-];
-
 /**
  * The ways to reach him: X, LinkedIn and GitHub, and his resume. There is no email address on this site, in any form
  * (his decision, 21 November 2026: an address in a page is harvested). `tests/content/address.test.ts` and

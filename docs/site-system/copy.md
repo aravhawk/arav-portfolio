@@ -85,7 +85,7 @@ Ask the owner before adding a tenth.
 ## Where copy lives
 
 `src/content/projects.ts` (every project's name, line, page copy and
-links; recognition; interests; contact), `src/content/kinds.ts` (the
+links; recognition; contact), `src/content/kinds.ts` (the
 small labels), `src/components/work/case-data.ts` (what the project
 pages' designed pieces say), `src/components/flight/` (the home
 page's own sentences), `src/lib/subscribe/messages.ts` (what the

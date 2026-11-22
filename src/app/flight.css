@@ -925,9 +925,6 @@ html[data-picture] .flight-root > .fl-poster {
 .fl-recog .fl-count {
   font: inherit;
 }
-.fl-block > .fl-into-line {
-  max-width: 34ch;
-}
 
 /* The block stands on the west bank, lower left; the channels keep the right. */
 .fl .fl-into-list {
