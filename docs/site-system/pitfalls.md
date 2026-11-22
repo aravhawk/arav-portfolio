@@ -51,5 +51,20 @@ Each of these cost time on this build.
 - **zsh does not split unquoted variables into words**, and a
   `git cherry-pick --continue` finishes the whole sequence: rerunning
   the remaining hashes duplicates commits.
+- **A link that nothing gives pointer events back to.** A section of
+  the flight takes no pointer events (`.fl-sec`), and everything in it
+  inherits that. A station's pieces get them back as each one sets
+  (`[data-at][data-in]`); the ending's row is set by its block, had no
+  such rule, and so every contact link on the home page was dead while
+  looking right (the element under each was `main.fl`). Anything
+  pressable added to the flight must be given `pointer-events: auto`
+  by the rule that shows it, and the same again in the page without
+  scripts, where a rule that holds a piece until its block sets can
+  outweigh the one that frees it. `scripts/click-test.mjs` presses
+  every link and control for real, with scripts and without, and fails
+  on one that does not answer.
+- **A synthetic click proves nothing.** `element.click()` and
+  `dispatchEvent` reach an element whatever covers it. Test a link by
+  putting the pointer at its place on the screen.
 
-Change log: 2026-11-18 first version (orchestrator).
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links.

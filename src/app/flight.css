@@ -1004,6 +1004,13 @@ html[data-picture] .flight-root > .fl-poster {
     opacity 700ms var(--ease-out) 420ms,
     transform 700ms var(--ease-out) 420ms;
 }
+/* A section takes no pointer events (`.fl-sec`), and what stands in it inherits that. A station's pieces are given
+   them back as each one sets (`[data-at][data-in]`). The ending's pieces are not steps: the block sets them, so the
+   block gives them back, from the moment it is on. Without this every link of the contact row was dead: the press
+   fell through to the page. (`scripts/click-test.mjs` presses each of them.) */
+.fl-end-words[data-on] .fl-end-block {
+  pointer-events: auto;
+}
 .fl-end-words:not([data-set]) .ending-links *,
 .fl-end-words:not([data-set]) .ending-head * {
   pointer-events: none;
@@ -1116,6 +1123,11 @@ html[data-picture] .flight-root > .fl-poster {
   width: 100%;
   margin: 0;
 }
+/* (Where the basin holds the project's picture, the picture names it: a caption there would lie under the picture,
+   a link no one could see that still took the keyboard's focus. `scripts/click-test.mjs --noscript` found it.) */
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-pin:has(.fl-still .slab) .fl-calls {
+  display: none;
+}
 /* Captions become a plain list in the basin. */
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-calls {
   display: flex;
@@ -1198,6 +1210,11 @@ html[data-picture] .flight-root > .fl-poster {
   transform: none;
 }
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words * {
+  pointer-events: auto;
+}
+/* (The block never sets here, and the rule that holds its row until it sets outweighs the one above: without this
+   the contact row took no presses on the page without scripts or without the picture.) */
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words:not([data-set]) :is(.ending-links, .ending-head) * {
   pointer-events: auto;
 }
 @media (max-width: 859px) {
