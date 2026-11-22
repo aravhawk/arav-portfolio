@@ -81,7 +81,7 @@ writes what the keys do.
 
 ## Starting, exactly
 
-The head script listens in capture phase while React loads. On the first
+A small script of its own (`public/sound-gesture.js`, fetched beside every page's HTML; it was in the HTML until that cost the work page its first round) listens in capture phase while React loads. On the first
 accepted mouse press, tap, or key, it creates or resumes one audio
 context inside the handler. A press on the sound control saves the
 reader’s choice even during this interval. On hydration,

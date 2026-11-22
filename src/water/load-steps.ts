@@ -2,8 +2,8 @@
  * What a visit to the home page waits for before its picture is live, as the reader is told it: the steps the
  * flight really takes behind its still (`prepare` and `mountFlight` in flight.ts), in order, each with the words
  * it is named by and what it was measured to take on a first visit (ms, an Apple M4, a 1440 by 900 window:
- * `.tools/out/l1/REPORT.md` of the L1 task). The page draws one stratum of its ice core to a step, as wide as
- * the step is long (page.tsx, `.fl-load` in flight.css); load.ts fills them as the engine reports.
+ * `.tools/out/l1/REPORT.md` of the L1 task). A step's measure sets how much of the blue hour lifts
+ * when it is done (page.tsx, `.fl-load` and the grade in flight.css; load.ts).
  *
  * This file is in the page's first script, so it holds no more than the table and the few lines that arm the
  * sequence before the first paint.

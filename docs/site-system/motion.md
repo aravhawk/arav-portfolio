@@ -153,7 +153,7 @@ rest:
 | When | What | How |
 | --- | --- | --- |
 | first paint | on a first visit the still under the blue-hour grade, the name, the first words, and the readout over them | no entrance: it is the first paint |
-| each piece of a step done | that stratum freezes from its left to the share that is done; the large figure and the label name the step in hand | one 220 ms transition a report, nothing between reports |
+| each piece of a step done | the large figure and the label name the step in hand | text only, nothing between reports |
 | each step done (and each of the long step's six pieces) | the grade lifts by that share of the wait; at the last it is nothing | its opacity set once, eased over 700 ms by CSS: about a dozen states |
 | the picture is up | the core, whole, sinks 10 px and fades (300 ms, after 160 ms) while the canvas dissolves in (420 ms); the page can be scrolled | `data-load='over'` |
 | 440 ms later | the eye settles and the light arrives (2.4 s, `ENTER`) | the engine |
@@ -166,8 +166,7 @@ loops, pulses, spins or creeps (a fill that crept between reports cost
 two points of Lighthouse on a phone: `load.ts`). A returning reader sees none of it (one whose wait runs long sees the
 readout alone, never the grade). Reduced motion: the same states with
 nothing between them: the grade is set lower at each step without
-easing, a stratum is there when its step is done, and the readout
-fades.
+easing, and the readout fades.
 
 ## Haptics
 

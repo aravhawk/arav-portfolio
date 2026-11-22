@@ -15,6 +15,7 @@ import { PROJECTS, RECOGNITION, type Project, type ProjectMedia } from '@/conten
 import { KIND } from '@/content/kinds';
 import { formatAsOf, formatCount, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
+import { SITE_LD } from '@/lib/site-ld';
 import { MOVE, SETTLE_AT } from '@/water/camera';
 import { byId, timeline } from '@/water/registry';
 import { posterBoot } from '@/water/poster';
@@ -187,8 +188,8 @@ export default async function Home() {
           <div className="fl-words fl-hero-words" data-fl-from={-1} data-fl-to={SAY_FROM} data-hero data-on>
             <p className="statement fl-role">
               {/* The loading sequence's readout: which step of what the flight builds before its picture is live, set large,
-                  with the step's name beside it and an ice core as its rule, one stratum to a step, as wide as the step is
-                  long (load-steps.ts). It is shown only while that work runs, and only by the page's own script
+                  with the step's name beside it (load-steps.ts). No rule or bar under it: the picture coming up out
+                  of the blue hour is the measure. It is shown only while that work runs, and only by the page's own script
                   (flight.css, load.ts). */}
               <span className="fl-load" aria-hidden="true">
                 <span className="fl-load-head">
@@ -200,13 +201,6 @@ export default async function Home() {
                     <span className="fl-load-says">{LOAD_STEPS[0].says}</span>
                     <span className="fl-load-piece" />
                   </span>
-                </span>
-                <span className="fl-load-core">
-                  {LOAD_STEPS.map((step) => (
-                    <span key={step.id} className="fl-load-seg" style={{ flexGrow: step.ms }}>
-                      <span className="fl-load-fill" />
-                    </span>
-                  ))}
                 </span>
               </span>
               <span className="fl-rise" data-at={-1}>
@@ -586,6 +580,7 @@ export default async function Home() {
           );
         })}
       </main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(SITE_LD) }} />
     </>
   );
 }

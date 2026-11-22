@@ -103,9 +103,11 @@ light, told twice by the same reports:
   nothing at the last: the still is then the picture's first frame, and
   the entrance's light is the end of the same story.
 - **The readout.** Over the first line: which step this is, set large in
-  the display face, the step's name beside it in the small mono label,
-  and under both an ice core as their rule, one stratum to a step, as
-  wide as the step was measured to take.
+  the display face, the step's name beside it in the small mono label.
+  Nothing is drawn under it (a rule that filled read as a progress
+  bar): the picture coming up is the measure. By day the nav's plates
+  are tinted by the same grade, so they do not stand white against the
+  blue hour.
 
 - `src/water/load-steps.ts`: the steps in order, the words each is named
   by, what each was measured to take, and `armLoad`, which the page's
@@ -119,7 +121,7 @@ light, told twice by the same reports:
 - `src/water/load.ts`: `loadStep(id, k, n)`, called by `prepare`, `stand`
   and `mountFlight` as each piece of a step is done, and `loadOver`,
   called in the frame that sets `data-picture`. One report is one style
-  write (one short transition on that stratum); nothing runs per frame
+  write (eased by CSS); nothing runs per frame
   and nothing moves between reports. It is in
   the flight's own script. `__flight.loadLog` keeps every report.
 - `.fl-load` and the grade in `flight.css`: their rules, the hold (the page cannot

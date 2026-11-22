@@ -152,7 +152,8 @@ const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isConte
 
 function gesture(e: Event) {
   if (e.type === 'wheel' && !navigator.userActivation?.isActive) return;
-  if (e.target instanceof Element && e.target.closest('.nav-sound')) return;
+  // (The control's own press and its own keys are its to answer. Any other key while it has the focus is a gesture like any.)
+  if (e.target instanceof Element && e.target.closest('.nav-sound') && (!(e instanceof KeyboardEvent) || e.key === 'Enter' || e.key === ' ')) return;
   if (e instanceof KeyboardEvent && e.key.toLowerCase() === 'm' && !typing(e.target)) return;
   if (choice() && state() !== 'playing') start();
 }
@@ -182,7 +183,10 @@ export function SoundToggle() {
   useEffect(() => {
     on = document.documentElement.dataset.sound !== 'off';
     read = true;
-    const early = (window as Window & { takeFlightAudio?: () => AudioContext | undefined }).takeFlightAudio?.();
+    const w = window as Window & { takeFlightAudio?: () => AudioContext | undefined; flightAudioTaken?: boolean };
+    const early = w.takeFlightAudio?.();
+    // (Should public/sound-gesture.js arrive after this, it does nothing.)
+    w.flightAudioTaken = true;
     if (!ctx && early) {
       ctx = early;
       ctx.addEventListener('statechange', sync);

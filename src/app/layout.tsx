@@ -6,7 +6,6 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Nav } from '@/components/Nav';
 import { Runtime } from '@/components/Runtime';
 import { WaterStage } from '@/components/WaterStage';
-import { CONTACT } from '@/content/projects';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL, THEME_COLOR } from '@/lib/site';
 import './globals.css';
 
@@ -94,32 +93,6 @@ export const metadata: Metadata = {
   },
 };
 
-/* Structured data: who this is and which address is the real one. */
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'Person',
-      '@id': `${SITE_URL}/#person`,
-      name: SITE_NAME,
-      url: SITE_URL,
-      description: SITE_TAGLINE,
-      jobTitle: 'Co-founder, Infiniflop Labs',
-      worksFor: { '@type': 'Organization', name: 'Infiniflop Labs', url: 'https://infiniflop.com' },
-      sameAs: [CONTACT.github, CONTACT.x, CONTACT.linkedin],
-    },
-    {
-      '@type': 'WebSite',
-      '@id': `${SITE_URL}/#website`,
-      url: SITE_URL,
-      name: SITE_NAME,
-      description: SITE_DESCRIPTION,
-      inLanguage: 'en',
-      publisher: { '@id': `${SITE_URL}/#person` },
-    },
-  ],
-};
-
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -139,44 +112,6 @@ export const viewport: Viewport = {
    they turn it on); or, where they have never chosen, unless the system asks
    for less data (Save-Data, prefers-reduced-data) or the device says it has
    a gigabyte of memory or less. */
-// Capture activation even while the client bundle is still in flight. The control
-// takes ownership of this context and removes these temporary listeners at hydration.
-const earlyAudio = `(() => {
-  const events = ['pointerdown','pointerup','mousedown','touchend','click','keydown','wheel'];
-  function unlock(e) {
-    if (e.type === 'wheel' && !navigator.userActivation?.isActive) return;
-    if (document.documentElement.dataset.sound === 'off' || e.target.closest?.('.nav-sound') ||
-        (e.key || '').toLowerCase() === 'm' || navigator.userActivation?.isActive === false) return;
-    activate();
-  }
-  function activate() {
-    try {
-      const ctx = window.flightAudioContext ||= new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state !== 'running') ctx.resume().catch(() => {});
-      if (ctx.state === 'running') remove();
-    } catch {}
-  }
-  function remove() { for (const event of events) removeEventListener(event, unlock, true); }
-  function earlyToggle(e) {
-    if (!e.target.closest?.('.nav-sound')) return;
-    // Hydration must not replay a click already handled here.
-    e.stopImmediatePropagation();
-    const button = e.target.closest('.nav-sound');
-    const on = document.documentElement.dataset.sound === 'off';
-    document.documentElement.dataset.sound = on ? 'on' : 'off';
-    button.setAttribute('aria-checked', String(on));
-    try { localStorage.setItem('sound', on ? 'on' : 'off'); } catch {}
-    if (on) activate();
-  }
-  addEventListener('click', earlyToggle, true);
-  window.takeFlightAudio = () => {
-    remove();
-    removeEventListener('click', earlyToggle, true);
-    return window.flightAudioContext;
-  };
-  for (const event of events) addEventListener(event, unlock, {capture:true, passive:true});
-})()`;
-
 const boot = `(function(){history.scrollRestoration='manual';function top(){if(!location.hash)scrollTo({top:0,behavior:'instant'})}top();addEventListener('pageshow',top);var d=document.documentElement;d.setAttribute('data-scripted','');try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}var n=navigator,o='on';try{var m=localStorage.getItem('sound');if(m=='off'||m!='on'&&((n.connection||0).saveData||n.deviceMemory<=1||matchMedia('(prefers-reduced-data:reduce)').matches))o='off'}catch(e){}d.dataset.sound=o})()`;
 
 const fontVars = [orbiter, mono, accent, ice].map((f) => f.variable).join(' ');
@@ -185,8 +120,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={fontVars} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: boot + ';' + earlyAudio }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script dangerouslySetInnerHTML={{ __html: boot }} />
+        {/* The sound's first gesture, before hydration: public/sound-gesture.js (a file of its own, so it is not in every page's HTML). */}
+        <script async src="/sound-gesture.js" />
       </head>
       <body>
         <a className="skip" href="#main">

@@ -203,9 +203,11 @@ html[data-hero-words] .fl-hero-words .fl-rise > .fl-rise-in {
    sun clearing the ranges, the aurora coming up) is the end of the same story. It is thinner toward the foot, so
    the first words keep their ground.
 
-   The readout. Over the first line: which step this is, set large, with the step's name beside it, and under both an
-   ice core as their rule, one stratum to a step, as wide as the step was measured to take, each freezing from its
-   left as its step is done.
+   The readout. Over the first line: which step this is, set large, with the step's name beside it. Nothing is
+   drawn under it: a rule that filled read as a progress bar, and the picture coming up is the measure.
+
+   The nav's plates stand in the same hour by day (packed snow before the light, not white against it): tinted under
+   their words by the same amount, and up with the still.
 
    Both are shown by `data-load`, which only the page's first script sets: `cold` is in the first paint; `warm` (a
    reader who has been here, whose wait is about a second) has no grade ever, and the readout only if the wait runs
@@ -226,6 +228,17 @@ html:is([data-load='cold'], [data-load='over']) .flight-root > .fl-poster::after
 }
 :root[data-theme='dark']:is([data-load='cold'], [data-load='over']) .flight-root > .fl-poster::after {
   background: linear-gradient(to bottom, rgba(2, 4, 12, 0.84) 0%, rgba(3, 6, 16, 0.8) 50%, rgba(4, 8, 20, 0.62) 100%);
+}
+html:is([data-load='cold'], [data-load='over']):not([data-theme='dark']) .plate {
+  box-shadow:
+    var(--chrome-shadow),
+    inset 0 0 0 1px var(--chrome-edge),
+    inset 0 0 0 100vmax rgb(19 33 62 / calc(0.55 * var(--fl-grade, 1)));
+}
+/* (Eased only once the engine has reported, which is when the grade is first written on the root: the tint itself
+   is there in the first paint, not faded in over a white plate.) */
+html[data-load][style*='--fl-grade']:not([data-theme='dark']) .plate {
+  transition: box-shadow 700ms cubic-bezier(0.3, 0, 0.2, 1);
 }
 .fl-role {
   position: relative;
@@ -281,31 +294,6 @@ html[data-load] .fl-load {
   min-height: 1.2em;
   opacity: 0.56;
 }
-.fl-load-core {
-  display: flex;
-  gap: 2px;
-  height: 3px;
-}
-.fl-load-seg {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 3px;
-}
-/* (Unfrozen: the stratum's place, faint. Frozen: ink.) */
-.fl-load-seg::before,
-.fl-load-fill {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: currentColor;
-}
-.fl-load-seg::before {
-  opacity: 0.24;
-}
-.fl-load-fill {
-  transform: scaleX(0);
-  transform-origin: 0 50%;
-}
 /* A reader who has been here: the readout comes only if the wait is longer than a returning visit's, and alone. (A
    grade that came late would darken a page already seen bright.) */
 html[data-load='warm'] .fl-load {
@@ -351,20 +339,12 @@ html[data-flight='on'] .fl-rail {
     font-size: 2.125rem;
   }
 }
-/* Reduced motion: the same states with nothing between them. The grade is set lower at each step without easing; a
-   stratum is there when its step is done; the readout fades. */
+/* Reduced motion: the same states with nothing between them. The grade is set lower at each step without easing; the
+   readout fades. */
 @media (prefers-reduced-motion: reduce) {
-  html[data-load] .flight-root > .fl-poster::after {
+  html[data-load] .flight-root > .fl-poster::after,
+  html[data-load] .plate {
     transition: none;
-  }
-  .fl .fl-load-fill {
-    transform: none !important;
-    animation: none !important;
-    opacity: 0;
-    transition: opacity 200ms linear !important;
-  }
-  .fl .fl-load-seg[data-done] > .fl-load-fill {
-    opacity: 1;
   }
   html[data-load='over'] .fl-load {
     transform: none;

@@ -1,27 +1,25 @@
 /**
- * The loading sequence's progress: what the flight reports as it makes itself ready, written to the ice core the
- * page drew in its first paint (`.fl-load`: page.tsx, flight.css; the steps: load-steps.ts).
+ * The loading sequence's progress: what the flight reports as it makes itself ready, written to the readout the
+ * page drew in its first paint (`.fl-load`: page.tsx, flight.css; the steps: load-steps.ts) and to the grade that
+ * holds the first frame in the blue hour.
  *
  * The page is busy while this runs: the driver holds the main thread for a tenth to four tenths of a second at
  * a time, and while it builds a program nothing on the page is presented at all (up to 1.7 s: pitfalls.md). So
- * nothing here runs per frame and nothing creeps: each report is one write, a stratum set to the share of its step
- * that is done, through one short transition. (A long transition that crept between reports was tried. It kept the
- * compositor presenting frames beside the engine's own GL calls, which then waited on it: one more task of 30 ms
- * in most Lighthouse runs, 98 to 96 on a phone.) Progress never goes back, a stratum is whole only when its step
- * is, and the sequence ends the moment the picture is up (`loadOver`).
+ * nothing here runs per frame and nothing creeps: each report is one write, eased by CSS. (A long transition that crept
+ * between reports was tried. It kept the compositor presenting frames beside the engine's own GL calls, which then
+ * waited on it: one more task of 30 ms in most Lighthouse runs, 98 to 96 on a phone.) Progress never goes back, and
+ * the sequence ends the moment the picture is up (`loadOver`). (A rule under the readout, one stratum to a step,
+ * was drawn at first and taken out: it read as a progress bar. The picture coming up is the measure.)
  *
  * This module is in the flight's own script, not the page's first.
  */
 
 import { LOAD_KEY, LOAD_STEPS, type LoadId } from './load-steps';
 
-const SET = 'cubic-bezier(0.23, 1, 0.32, 1)';
-
 let at = -1;
 let part = 0;
 let over = true;
 let dog = 0;
-let fills: HTMLElement[] = [];
 let says: HTMLElement | null = null;
 let count: HTMLElement | null = null;
 let piece: HTMLElement | null = null;
@@ -35,23 +33,19 @@ export const loadLog: { t: number; id: string; k: number; n: number }[] = [];
 
 const html = () => document.documentElement;
 
-function fill(el: HTMLElement | undefined, to: number, ms: number, ease: string) {
-  if (!el) return;
-  el.style.animation = 'none';
-  el.style.transition = `transform ${Math.round(ms)}ms ${ease}, opacity 200ms linear`;
-  el.style.transform = `scaleX(${to.toFixed(4)})`;
-  if (to >= 1) el.parentElement?.setAttribute('data-done', '');
-}
-
 /** The grade over the still, 1 (the hour before the light) to 0 (the still as the picture's first frame). */
 function grade(to: number) {
-  still?.style.setProperty('--fl-grade', Math.max(0, to).toFixed(3));
+  const v = Math.max(0, to).toFixed(3);
+  still?.style.setProperty('--fl-grade', v);
+  // (And for the nav's plates, which stand in the same hour: flight.css.)
+  html().style.setProperty('--fl-grade', v);
 }
 
 /** Let the page go: the sequence is not shown and the page scrolls. */
 function release() {
   window.clearTimeout(dog);
   html().removeAttribute('data-load');
+  html().style.removeProperty('--fl-grade');
 }
 
 /** The flight's script has arrived and begins its work. */
@@ -62,7 +56,6 @@ export function loadBegin() {
   over = html().dataset.load === undefined;
   loadLog.length = 0;
   const root = document.querySelector<HTMLElement>('.fl-load');
-  fills = Array.from(root?.querySelectorAll<HTMLElement>('.fl-load-fill') ?? []);
   says = root?.querySelector<HTMLElement>('.fl-load-says') ?? null;
   count = root?.querySelector<HTMLElement>('.fl-load-at') ?? null;
   piece = root?.querySelector<HTMLElement>('.fl-load-piece') ?? null;
@@ -76,9 +69,6 @@ export function loadStep(id: LoadId, k = 0, n = 1) {
   const done = n > 0 ? Math.min(1, k / n) : 1;
   if (i < at || (i === at && done <= part)) return;
   loadLog.push({ t: Math.round(performance.now()), id, k, n });
-  for (let j = Math.max(at, 0); j < i; j++) fill(fills[j], 1, 220, SET);
-  if (done >= 1) fill(fills[i], 1, 220, SET);
-  else fill(fills[i], k / n, 220, SET);
   // (The long step, the river's programs, says which of them is in hand.)
   const pieces = id === 'build' && n > 1 && done < 1 ? `${k + 1} of ${n}` : '';
   if (piece && piece.textContent !== pieces) piece.textContent = pieces;
@@ -96,12 +86,11 @@ export function loadStep(id: LoadId, k = 0, n = 1) {
   dog = window.setTimeout(release, 15000);
 }
 
-/** The picture is up: the core is whole and leaves with the still, and the page is the reader's. */
+/** The picture is up: the grade is gone, the readout leaves with the still, and the page is the reader's. */
 export function loadOver() {
   if (over) return;
   over = true;
   window.clearTimeout(dog);
-  for (const el of fills) fill(el, 1, 160, SET);
   grade(0);
   html().setAttribute('data-load', 'over');
   try {
@@ -111,6 +100,7 @@ export function loadOver() {
   }
   window.setTimeout(() => {
     if (html().dataset.load === 'over') html().removeAttribute('data-load');
+    html().style.removeProperty('--fl-grade');
   }, 900);
 }
 
