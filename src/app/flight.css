@@ -415,6 +415,10 @@ html[data-hero-words] .fl-hero-words .fl-intro {
 .fl-block > .fl-meta {
   margin-top: clamp(8px, 1.2vh, 12px);
 }
+/* (envfetch's line would leave two words alone on a fourth line: its lines are evened.) */
+.fl-vault-words > .fl-line {
+  text-wrap: balance;
+}
 .fl-block > .fl-more,
 .fl-block > .fl-film,
 .fl-block > .fl-fork,
