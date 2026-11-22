@@ -4,7 +4,7 @@
 # complement) and CORE in tests/content/fonts.test.ts say the same thing: change one, change all three.
 set -e
 cd "$(dirname "$0")/../src/fonts"
-RANGES="U+0020-007E,U+00A0-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-209F,U+20A0-20BF,U+2100-214F,U+2190-23FF,U+25A0-27BF,U+FB00-FB06,U+FEFF,U+FFFD"
+RANGES="U+0020-007E,U+00A0-00BF,U+2010-202F,U+2190-2199,U+2212,U+2713,U+FEFF,U+FFFD"
 # What the browser applies by default, and what the site's CSS asks for (tabular and lining figures, the slashed zero).
 FEATURES="calt,ccmp,clig,curs,dnom,frac,kern,liga,locl,mark,mkmk,numr,rclt,rlig,rvrn,tnum,lnum,pnum,onum,zero,case,ordn,sups,subs,sinf"
 for f in TASAOrbiter SplineSansMono; do

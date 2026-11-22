@@ -15,7 +15,7 @@ import './globals.css';
 
    The display face and the mono are each two files. The one named here is
    the Latin cut: every character the site sets today, with the whole
-   weight axis and the same metrics, about 37 kB each. The whole font
+   weight axis and the same metrics, about 26 kB each. The whole font
    (`-VF`, 53 and 59 kB) is declared in globals.css as a second face with
    a `unicode-range` of everything the cut leaves out, so a browser fetches
    it only when a page really sets such a character (a name with a caron,

@@ -102,7 +102,7 @@
   font-weight: 400 800;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02D9, U+02DB, U+02DD-0303, U+0305-0307, U+0309-0328, U+032A-1FFF, U+20C0-20FF, U+2150-218F, U+2400-259F, U+27C0-FAFF, U+FB07-FEFE, U+FF00-FFFC;
+  unicode-range: U+00C0-200F, U+2030-218F, U+219A-2211, U+2213-2712, U+2714-FEFE, U+FF00-FFFC;
 }
 @font-face {
   font-family: 'Spline Wide';
@@ -110,7 +110,7 @@
   font-weight: 300 700;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02D9, U+02DB, U+02DD-0303, U+0305-0307, U+0309-0328, U+032A-1FFF, U+20C0-20FF, U+2150-218F, U+2400-259F, U+27C0-FAFF, U+FB07-FEFE, U+FF00-FFFC;
+  unicode-range: U+00C0-200F, U+2030-218F, U+219A-2211, U+2213-2712, U+2714-FEFE, U+FF00-FFFC;
 }
 
 :root {
