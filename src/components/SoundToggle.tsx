@@ -202,7 +202,9 @@ export function SoundToggle() {
         off = whenCalm(() => {
           if (!on) return;
           warmUp();
-          void load().catch(() => (mod = null));
+          // A flight can use the synth throughout its trip. On an inner page the
+          // first accepted gesture loads it through make(), with the context already awake.
+          if (window.location.pathname === '/') void load().catch(() => (mod = null));
         });
       }, 1000);
     };
