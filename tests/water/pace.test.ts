@@ -53,7 +53,7 @@ describe('the pace', () => {
     for (let c = 0.4; c <= 3.6; c += 0.1) expect(travelPace(M5(c)).scale).toBeCloseTo(travelPace(M4(c)).scale, 6);
   });
 
-  it('steps a slow device down in order: leaner shading, a lower resolution at rest, then half the rate', () => {
+  it('steps a slow device down in order: leaner shading, half the rate at rest, and only then a lower resolution', () => {
     const light = restPace(PHONE(1.0));
     expect(light).toMatchObject({ scale: 1, every: 1, lean: 0 });
     let last = { lean: 0, scale: 1, every: 1 };
@@ -63,9 +63,9 @@ describe('the pace', () => {
       expect(p.scale).toBeLessThanOrEqual(last.scale);
       expect(p.every).toBeGreaterThanOrEqual(last.every);
       expect(p.scale).toBeGreaterThanOrEqual(REST_FLOOR.phone);
-      // (The resolution is not lowered while leaner shading is left to try, nor the rate while resolution is.)
-      if (p.scale < 1) expect(p.lean).toBe(2);
-      if (p.every > 1) expect(p.scale).toBe(REST_FLOOR.phone);
+      // (The rate is not halved while leaner shading is left to try, nor the resolution lowered while the rate is.)
+      if (p.every > 1) expect(p.lean).toBe(2);
+      if (p.scale < 1) expect(p.every).toBe(2);
       last = p;
     }
     expect(travelPace(PHONE(12)).scale).toBe(FLOOR.phone);

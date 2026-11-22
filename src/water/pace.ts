@@ -25,8 +25,9 @@
  * that only missed frames correct it.
  *
  * A device that still cannot hold its frame is given, in this order: the
- * leaner shading (the engine's own steps), a lower resolution at rest (never
- * under REST_FLOOR), then the scene at half the rate again at rest.
+ * leaner shading (the engine's own steps), the scene at half the rate again
+ * at rest (30 a second), and only then a lower resolution at rest (never
+ * under REST_FLOOR): a soft resting picture is the last thing given up.
  *
  * Everything here is a pure function of its arguments, so it can be run at
  * any display rate (tests/water/pace.test.ts).
@@ -44,7 +45,7 @@ export const TRAVEL_AIM = 0.6;
 export const REST_SHARE = 0.85;
 /** The lowest resolution on the move, as a share of the screen's, a side: a desktop's, a phone's. */
 export const FLOOR = { desktop: 0.7, phone: 0.6 } as const;
-/** The lowest at rest, for a device that cannot hold a full frame even at half the rate. */
+/** The lowest at rest, for a device that cannot hold a full frame even at 30 a second with the leanest shading. */
 export const REST_FLOOR = { desktop: 0.8, phone: 0.6 } as const;
 /**
  * What each step of leaner shading leaves of a frame's cost. Measured at ten stops of the flight (3456 by 2234, M4):
@@ -152,17 +153,16 @@ export function restPace(i: PaceInput): Pace {
   const room = (every: number) => (every === 1 && slowest > 1 ? TRAVEL_SHARE : REST_SHARE) * i.base * every;
   for (let every = 1; every <= slowest; every++) if (expect(i, 1, 0) <= room(every)) return { scale: 1, every, lean: 0, ms: expect(i, 1, 0) };
   for (const lean of [1, 2]) if (expect(i, 1, lean) <= room(slowest)) return { scale: 1, every: slowest, lean, ms: expect(i, 1, lean) };
+  // Before any resolution is given up: the leanest shading at half the rate again (30 a second). A resting picture
+  // that is soft is seen; slow water drawn half as often is not.
+  const half = slowest * 2;
+  if (expect(i, 1, 2) <= room(half)) return { scale: 1, every: half, lean: 2, ms: expect(i, 1, 2) };
+  // (Only a device that cannot hold a full frame even so is drawn lower at rest, never under the floor.)
   const p = parts(i, 2);
   const over = i.speed * RECONSTRUCT_MS * i.mpx;
-  let scale = Math.sqrt(Math.max(room(slowest) - over - p.fixed, 0.1 * room(slowest)) / p.scene);
-  let every = slowest;
-  if (scale < floor) {
-    scale = floor;
-    // (Half the rate again: 30 a second, where nothing less will hold.)
-    if (expect(i, floor, 2) > room(slowest)) every = slowest * 2;
-  }
-  scale = Math.min(NEAR_FULL - 0.02, scale);
-  return { scale, every, lean: 2, ms: expect(i, scale, 2) };
+  let scale = Math.sqrt(Math.max(room(half) - over - p.fixed, 0.1 * room(half)) / p.scene);
+  scale = Math.min(NEAR_FULL - 0.02, Math.max(floor, scale));
+  return { scale, every: half, lean: 2, ms: expect(i, scale, 2) };
 }
 
 /** How fast the picture is moving, in screen heights a second, above which the camera is travelling; and under which, held for SETTLE_MS, it has come to rest. */

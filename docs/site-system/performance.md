@@ -39,9 +39,10 @@ M4 at a 3456 by 2234 output (one drained frame: see "how to measure"):
   does not ask a GPU timer while it runs (see `pitfalls.md`). Only
   missed frames on the move correct the measured speed.
 - **A slower device** is given, in order: a lower resolution on the
-  move (to the floor), leaner shading, a lower resolution at rest
-  (floor 0.8, a phone 0.6), then the scene at half the rate again at
-  rest. The leaner shading saves little (0 to 2 percent the first
+  move (to the floor), leaner shading, the scene at half the rate
+  again at rest (30 a second), and only then a lower resolution at
+  rest (floor 0.8, a phone 0.6): a soft resting picture is the last
+  thing given up. The leaner shading saves little (0 to 2 percent the first
   step, 7 the second), so in practice that tier is resolution.
 - **Programs.** A variant of the pass costs the driver 0.15 to 1.6 s at
   its first draw on a first visit. The page builds, behind the still,
