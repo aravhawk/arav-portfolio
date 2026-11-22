@@ -34,7 +34,7 @@ export function Interests({ timing: delta, year, recogUntil }: { timing: Timing;
           </li>
         ) : null}
       </ul>
-      <p className="fl-line fl-into-next" {...delta.line}>
+      <p className="fl-line fl-into-next" {...(delta.meta ?? delta.line)}>
         Next: a company, a research paper, and code in tools you open daily.
       </p>
       <Link className="btn fl-into-btn" href="/work" {...delta.act}>
