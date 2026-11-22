@@ -23,6 +23,7 @@
 import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { deflateSync, inflateSync } from 'node:zlib';
 
 const [mode, ...rest] = process.argv.slice(2);
@@ -201,16 +202,21 @@ async function capture() {
           // The words set, and the lee behind them comes in: a frame depends on both.
           await page.waitForTimeout(1300);
           await page.waitForFunction(
-            () => {
-              const e = window.__flight.engine;
+            (s) => {
+              const f = window.__flight;
+              const e = f.engine;
               const a = e.lastArgs;
-              if (!a || !e.standsReady(a.cam, a.aspect, e.needs(a.cam, a.aspect))) return false;
-              const now = JSON.stringify([a.at.box, a.at.boxK, a.at.cap, a.at.capK]);
+              // (A frame has been drawn from this position's own camera: while the driver builds a program none is.)
+              const want = f.poseAt(s).pos;
+              if (!a || a.cam.pos.some((v, i) => Math.abs(v - want[i]) > 1e-6)) return false;
+              if (!e.standsReady(a.cam, a.aspect, e.needs(a.cam, a.aspect))) return false;
+              // (And the bare ice before the first frame's words follows them over a moment: that has settled too.)
+              const now = JSON.stringify([a.at.box, a.at.boxK, a.at.cap, a.at.capK, Array.from(e.nameWords)]);
               const same = now === window.__was && (a.at.boxK === 0 || a.at.boxK === 1) && ((a.at.capK ?? 0) === 0 || a.at.capK === 1);
               window.__was = now;
               return same;
             },
-            null,
+            s,
             { timeout: 120000, polling: 200 },
           );
           const url = await page.evaluate(() => {
@@ -279,9 +285,12 @@ ${items.map((s) => `<figure><figcaption>${s} <span></span></figcaption><img data
   if (under.length) process.exitCode = 1;
 }
 
-if (mode === 'capture') await capture();
-else if (mode === 'compare') compare();
-else {
-  console.error('usage: flight-picture.mjs capture <base> <out> | compare <a> <b>');
-  process.exit(2);
+// (Run as a script; its PNG and similarity helpers can also be imported.)
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  if (mode === 'capture') await capture();
+  else if (mode === 'compare') compare();
+  else {
+    console.error('usage: flight-picture.mjs capture <base> <out> | compare <a> <b>');
+    process.exit(2);
+  }
 }

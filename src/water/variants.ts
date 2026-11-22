@@ -284,3 +284,53 @@ export function bits(mask: number): number {
   for (let m = mask; m; m &= m - 1) n++;
   return n;
 }
+
+/** The subjects that are dear to carry where they are not seen: the lake's ice with all that stands on it, and the block. */
+const LAKE_BITS = F.ICE | F.NAME | F.FIELD;
+const DEAR = [LAKE_BITS, F.SLAB];
+/** How many subjects a mask carries, the lake's ice and what stands on it taken as one. */
+const subjectsIn = (mask: number) => bits(mask & ~LAKE_BITS) + (mask & LAKE_BITS ? 1 : 0);
+
+/** A stretch of the flight, and a variant of the pass that can draw every piece of every frame in it. */
+export interface Cover {
+  from: number;
+  to: number;
+  mask: number;
+}
+/**
+ * The flight, cut into a few stretches that each have one variant of the pass able to draw all of it.
+ *
+ * A piece of a frame is drawn by a variant of its own, and there are some thirty of those along the flight, each a
+ * fresh build for the driver on a first visit. These few are built before the picture is shown, so that every piece
+ * of every frame has something that has drawn before to draw it, and the thirty can wait for the reader to stop.
+ *
+ * What a broader variant costs was measured (3456 by 2234, M4, a first build). A frame: five neighbouring stations
+ * in one program cost 5 to 10 percent more than the frame's own variant, all eight of the river's with the sea 15 to
+ * 75 percent more; the block costs 5 ms more wherever it is carried; the lake's ice 3 to 5 ms more, and with the
+ * stations as well, three to eight times the frame. The wait behind the still: a program's first draw takes about
+ * 0.15 s and 0.1 to 0.4 s more for each subject it carries, so five stretches of five subjects each took 4.9 s
+ * where three stretches take 3.2. So a stretch takes in stations until it has `most` subjects (all of the river's,
+ * as it stands), and always ends where the lake's ice, or the block, has left the frame.
+ * @param needs what the whole frame needs (passNeeds) at evenly spaced positions down the scroll, in order
+ */
+export function coverFlight(needs: { s: number; need: number }[], most = 8): Cover[] {
+  const out: Cover[] = [];
+  let cur: Cover | null = null;
+  let last = 0;
+  for (const { s, need } of needs) {
+    const held: number = cur ? cur.mask : 0;
+    const gone: boolean = DEAR.some((d) => (held & d) !== 0 && (need & d) === 0);
+    if (cur && !gone && subjectsIn(held | need) <= most) {
+      cur.mask |= need;
+      cur.to = s;
+    } else {
+      // (A piece met between this position and the last may need something of both: where a dear subject has just
+      // left, the stretch behind takes in what has come; otherwise the new stretch begins with what was there.)
+      if (cur && gone) cur.mask |= need;
+      cur = { from: s, to: s, mask: gone ? need : need | last };
+      out.push(cur);
+    }
+    last = need;
+  }
+  return out;
+}

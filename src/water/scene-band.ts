@@ -169,9 +169,9 @@ function start(first: BandOpts, aspect: number): Promise<Shared | null> {
     try {
       // Throws when WebGL2 or float targets are missing: the still stays.
       engine = new FlightEngine(canvas, { theme: themeNow(), still: mqStill.matches, coarse });
-      // The one variant of the pass this start waits for is the first scene's own: its station and nothing else.
+      // The variants of the pass this start waits for are the first scene's own: its station and nothing else.
       const pose0 = basisOf(firstPose(first.scene, aspect));
-      engine.firstNeed = engine.firstPiece(pose0, aspect, passNeeds(pose0, aspect, first.scene === 'lake' ? LAKE_ICE : NO_ICE, false));
+      engine.firstNeeds = engine.firstPieces(pose0, aspect, passNeeds(pose0, aspect, first.scene === 'lake' ? LAKE_ICE : NO_ICE, false));
       await engine.prepare();
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') console.warn(err);
