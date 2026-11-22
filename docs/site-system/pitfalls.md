@@ -7,6 +7,24 @@ Each of these cost time on this build.
   GPUs (0.1 to 1.6 s each), and the driver keeps it between visits.
   A harness that has run before will not see the stall; a first
   visit will. Every new variant is a new stall.
+- **A live GPU timer reads long on a light frame.** The GPU slows its
+  clock when it has little to do: a frame that takes 5.5 ms flat out
+  read 12.5 ms from a timer query on a running page. A governor that
+  trusts it lowers the resolution for nothing. Time a frame with the
+  queue drained (`scripts/flight-frame-cost.mjs`), and let the running
+  page work its pace out from the measured map (`pace.ts`).
+- **One program that carries every subject is not a fallback.** It
+  costs 70 to 100 ms a frame, ten times a stretch's own variant.
+  Carrying the lake's ice or the block where they are not seen is what
+  costs; four or five neighbouring stations in one program cost 5 to 10
+  percent (`coverFlight`).
+- **A program is built again for every kind of target.** Its first
+  draw into a texture took 75 to 90 percent as long again after its
+  first draw to the screen. The scene has one kind of target, the
+  screen's own buffer, at rest and on the move.
+- **A quick link does not mean the driver has the program.** One that
+  linked in 70 ms still held the picture 0.4 s at its first draw. No
+  program is built while the page moves, on a returning visit either.
 - **A second draw into the same target is culled.** To weigh a shader
   term, draw into a target of its own.
 - **A frame time read from a one-pixel read-back** is only right near
@@ -99,4 +117,4 @@ Each of these cost time on this build.
   (`aria-checked`) comes with React, so the sound control has a
   one-line script after it for a reader who had muted.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links; three from the newsletter's field; three from the sound.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links; three from the newsletter's field; three from the sound. 2026-11-22 R2: four from the frame's cost and the driver's builds.

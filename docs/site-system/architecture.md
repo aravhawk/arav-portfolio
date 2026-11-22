@@ -47,9 +47,9 @@ of the same world.
   simulation the pointer and the events disturb), `finish.ts`.
 - `src/water/variants.ts`: the main pass is compiled in a variant per
   stretch of the flight and per theme (`#define`s), and a frame is
-  drawn in pieces, each by the leanest variant that carries what
-  stands in that piece. A station's code runs only where the station
-  stands.
+  drawn in pieces, each by the leanest variant that has drawn before
+  and carries what stands in that piece. A station's code runs only
+  where the station stands.
 
 ## The render loop
 
@@ -57,11 +57,28 @@ of the same world.
   owner for the page: it reads scroll, poses the camera, steps the
   simulation, sets the words' steps, draws. `window.__flight` exposes
   `engine`, `state()`, `holds`, `poseAt(s)`, `holdPose(pose)`,
-  `holdEntrance(t)`, and `engine.holdLean(0)` (pin full shading for
-  captures).
-- A quality governor steps shading in discrete tiers per stretch. It
-  never changes resolution. The device pixel ratio is capped at 2
-  (`src/water/engine.ts`).
+  `holdEntrance(t)`, `engine.holdLean(0)` (pin full shading for
+  captures), `engine.holdPace({ scale, every, travel })` (pin the
+  pace), `engine.info` (what drew the last frame and at what pace) and
+  `engine.buildLog` (when each program was built).
+- **The pace** (`src/water/pace.ts`, R2). At rest every frame is drawn
+  at the screen's own resolution with full shading; where that does not
+  fit one interval of a 120 Hz display the scene is drawn every other
+  interval. While the camera travels the scene is drawn smaller (never
+  under 0.7 of the screen a side on a desktop, 0.6 on a phone) and
+  brought to size by one sharpening pass with the grain at the screen's
+  resolution (`RECONSTRUCT` in `shaders/finish.ts`); it comes back over
+  a fifth of a second once the picture has been still 150 ms. How small
+  is worked out from a measured map of what a frame costs at each
+  quarter screen (`cost-map.json`) and from this device's speed, measured
+  once behind the still (`calibrate`). The device pixel ratio is capped
+  at 2 (`src/water/engine.ts`). An inner page's band is not paced.
+- **Programs** (`variants.ts`, `coverFlight`). Behind the still the page
+  builds the variants for the frame it opens on and three broad ones
+  that between them can draw any piece of any frame. A piece's own
+  variant is built only while the reader has left the page alone for
+  450 ms; until then the stretch's broad one draws it. Nothing is built
+  while the page moves.
 - `src/water/opening.ts`: the seam for the first visit's opening
   (`holdOpening`, `whenOpened`). `src/water/poster.ts`: the first
   paint is a still of the first frame, chosen by window shape and
@@ -111,3 +128,5 @@ A newly allocated simulation window starts with a fresh zero field.
 The shared clock stops in hidden tabs. An intersection observer also gates the
 flight's draw callback when the canvas has left the viewport, and marks the
 picture dirty on re-entry so reduced-motion readers get a fresh frame.
+
+Change log: 2026-11-22 R2: the pace; programs built behind the still and at rest only.

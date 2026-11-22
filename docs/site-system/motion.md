@@ -23,7 +23,11 @@ module are **planned** (the motion system task).
    transition begins at what was touched.
 5. **No trick twice in a row.** Each station's event is a different
    mechanism. Do not reuse one reveal between every beat.
-6. **Crisp at rest.** No blur, ever; no resolution change.
+6. **Crisp at rest.** Whenever the camera is still the picture is at
+   the screen's own resolution with full shading. No blur, ever. Only
+   while the camera travels may the scene be drawn smaller and
+   sharpened back to size (`performance.md`, R2); it returns over a
+   fifth of a second when the camera settles.
 
 ## Easing (tokens in `src/app/globals.css`)
 
@@ -146,4 +150,4 @@ stations, and a new station must not add one.
 Only as the direct consequence of a meaningful action; never on load,
 hover or continuous scroll; in the picture, only at discrete beats.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the theme switch.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the theme switch. 2026-11-22 R2: principle 6, resolution on the move.
