@@ -35,6 +35,9 @@ interface Call {
   w: number;
   h: number;
   on: boolean | null;
+  /** when it last went out (ms): it is kept on its point until its fade is done */
+  offAt: number;
+  cut: boolean;
   /** its place among its station's captions, and (narrow screens) whether it is one of the line */
   n: number;
   group: HTMLElement | null;
@@ -47,6 +50,8 @@ export interface Callouts {
   frame(cam: Basis, aspect: number, viewW: number, viewH: number, s: number): [number, number, number, number] | null;
 }
 
+/** How long a caption takes to fade out (flight.css, `.fl-call`), and a frame or two more. */
+const FADE_MS = 300;
 /** The most captions a narrow screen ties to their points; a station with more sets them all as one list. */
 const MANY = 4;
 
@@ -67,6 +72,8 @@ export function makeCallouts(): Callouts {
     w: 0,
     h: 0,
     on: null,
+    offAt: -1e9,
+    cut: false,
     n: el.parentElement ? Array.prototype.indexOf.call(el.parentElement.children, el) : 0,
     group: el.parentElement,
     loose: null,
@@ -99,8 +106,14 @@ export function makeCallouts(): Callouts {
     const narrow = viewW < 720 || (viewW < 900 && !wide);
     // (The rail keeps the frame's right edge on a wide screen.)
     const edge = narrow ? 18 : 48;
-    const live: { c: Call; x: number; y: number }[] = [];
+    // Every caption whose point is before the camera in its stretch of scroll is laid out, whether or not its point is
+    // in the frame just now: a caption keeps its place in its station's row as its neighbours come and go, and one
+    // that is going out (its point has left the frame, or its stretch has ended) stays on its point while it fades.
+    // (Laid out among only those in the frame, the row was set again each time one left: the others jumped.)
+    const placed: { c: Call; x: number; y: number }[] = [];
+    let shown = 0;
     const lists = new Map<HTMLElement, Call[]>();
+    const clock = performance.now();
     for (const c of calls) {
       const inStretch = s >= c.from && s < c.to;
       // A station with more captions than a narrow frame can tie to their points sets them all as one list.
@@ -112,25 +125,38 @@ export function makeCallouts(): Callouts {
       let on = inStretch;
       let x = 0;
       let y = 0;
-      if (on && !loose) {
+      let front = false;
+      if (!loose && (inStretch || clock - c.offAt < FADE_MS)) {
         const p = projectPoint(cam, wide && c.atWide ? c.atWide : c.at, aspect);
         x = p[0] * viewW;
         y = p[1] * viewH;
-        on = p[2] > 1 && x > 24 && x < viewW - 24 && y > NAV_CLEAR + 30 && y < viewH - 24;
+        // (A point behind the camera, or far outside the frame, has no place on the screen to fade at.)
+        front = p[2] > 1 && x > -viewW && x < 2 * viewW && y > -viewH && y < 2 * viewH;
+        on = on && front && x > 24 && x < viewW - 24 && y > NAV_CLEAR + 30 && y < viewH - 24;
+      }
+      // One that cannot be kept on its point goes out at once, not at the place it last stood.
+      const cut = !on && !loose && !front;
+      if (cut !== c.cut) {
+        c.cut = cut;
+        c.el.toggleAttribute('data-cut', cut);
       }
       if (on !== c.on) {
+        if (c.on && !on) c.offAt = clock;
         c.on = on;
         c.el.toggleAttribute('data-on', on);
       }
-      if (!on) continue;
-      if (!c.w) measure();
       if (loose) {
+        if (!on) continue;
+        if (!c.w) measure();
         const list = lists.get(c.group!) ?? [];
         list.push(c);
         lists.set(c.group!, list);
         continue;
       }
-      live.push({ c, x, y });
+      if (!front) continue;
+      if (!c.w) measure();
+      placed.push({ c, x, y });
+      if (on) shown++;
     }
     // The list: a name to a line, in the streams' own order, in the room the station's block keeps for it.
     // (The streams run right to left in the page's order: the list reads as they stand in the frame, left to right.)
@@ -142,7 +168,7 @@ export function makeCallouts(): Callouts {
         c.label.style.transform = `translate3d(${at[i].lx.toFixed(1)}px,${at[i].ly.toFixed(1)}px,0)`;
       });
     }
-    if (!live.length) return null;
+    if (!placed.length) return null;
     const draw = (c: Call, x: number, y: number, p: { lx: number; ly: number; fx: number; fy: number }) => {
       const len = Math.hypot(p.fx - x, p.fy - y);
       const ang = Math.atan2(p.fy - y, p.fx - x);
@@ -150,12 +176,14 @@ export function makeCallouts(): Callouts {
       c.line.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${ang.toFixed(4)}rad) scaleX(${Math.max(0, len - 5).toFixed(1)})`;
       c.label.style.transform = `translate3d(${p.lx.toFixed(1)}px,${p.ly.toFixed(1)}px,0)`;
     };
-    const caps = live.map(({ c, x, y }) => ({ x, y, w: c.w, h: c.h, lift: wide && c.atWide ? c.liftWide : c.lift, side: c.side }));
+    const caps = placed.map(({ c, x, y }) => ({ x, y, w: c.w, h: c.h, lift: wide && c.atWide ? c.liftWide : c.lift, side: c.side }));
     const at = narrow ? layoutStepped(caps, viewW, edge) : layoutCaptions(caps, viewW, edge);
-    live.forEach(({ c, x, y }, i) => draw(c, x, y, at[i]));
+    placed.forEach(({ c, x, y }, i) => draw(c, x, y, at[i]));
+    if (!shown) return null;
     // Where the captions stand, taken together: the picture keeps itself readable behind them, as it does behind the words.
     const span: [number, number, number, number] = [1e9, 1e9, -1e9, -1e9];
-    live.forEach(({ c }, i) => {
+    placed.forEach(({ c }, i) => {
+      if (!c.on) return;
       span[0] = Math.min(span[0], at[i].lx);
       span[1] = Math.min(span[1], at[i].ly);
       span[2] = Math.max(span[2], at[i].lx + c.w);

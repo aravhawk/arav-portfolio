@@ -628,7 +628,11 @@ html[data-picture] .flight-root > .fl-poster {
 .fl-call {
   color: var(--ink);
   opacity: 0;
-  /* Once its anchor is culled its last transform is no longer valid. */
+  /* (Going out, it is kept on its point until this is done: see callouts.ts, FADE_MS.) */
+  transition: opacity 260ms var(--ease-out);
+}
+.fl-call[data-cut] {
+  transition: none;
 }
 .fl-call[data-on] {
   opacity: 1;
