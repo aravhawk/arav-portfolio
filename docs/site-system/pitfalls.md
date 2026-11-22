@@ -47,6 +47,12 @@ Each of these cost time on this build.
 - **One change, half applied.** Lighting, material or motion changed
   for one stretch only makes the page incoherent. Change the whole
   flight together or stage the work and land it at once.
+- **The light is keyed to scroll, and a longer flight moves it.** The
+  hours are positions down the page (`sky.ts`, `dayAt`, the valley's
+  air in `flight.ts`). A station laid in without `added: true` shifts
+  every later station's light, and the pinned comparison fails on all
+  of them. Any new number that is a scroll position and is about light
+  goes through `lightAt`.
 - **A helper stopped part way** loses its report even when its code
   is committed. Let a task reach its end.
 - **The file `_tmp_331_893442adcee2e4a63d7a6f1b4b38a471`** at the
@@ -116,5 +122,7 @@ Each of these cost time on this build.
   which the page's first script sets. What assistive technology is told
   (`aria-checked`) comes with React, so the sound control has a
   one-line script after it for a reader who had muted.
+
+Change log: 2026-11-22 R3: the light's clock.
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links; three from the newsletter's field; three from the sound. 2026-11-22 R2: four from the frame's cost and the driver's builds.

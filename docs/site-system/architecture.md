@@ -25,7 +25,12 @@ of the same world.
   own keys. `poseAt(keys, s)` gives the pose at scroll `s`.
 - `dayAt(s)` is a scalar along the flight that the sound reads. Keep
   its meaning.
-- Composed stops today (screens): hero 0, statement 3.10, Infiniview
+- `lightAt(s)` is the light's own clock: the scroll without the
+  stations marked `added` in the registry. The sky, `dayAt` and the
+  valley's air read the scroll through it, so a station laid in later
+  moves no other station's hour (R3).
+- Composed stops at the first version (screens; read `composed` in the
+  registry for today's): hero 0, statement 3.10, Infiniview
   5.60, Upstream 8.45, Kilo Bench 11.15, Agent Bridge 13.80, Open
   models 16.60, cc-switch 19.40, TensorPoW 22.15, RydAR 25.80, delta
   28.30, ending 31.10. (Planned: about 24 screens after the pacing
@@ -128,5 +133,7 @@ A newly allocated simulation window starts with a fresh zero field.
 The shared clock stops in hidden tabs. An intersection observer also gates the
 flight's draw callback when the canvas has left the viewport, and marks the
 picture dirty on re-entry so reduced-motion readers get a fresh frame.
+
+Change log: 2026-11-22 R3: `lightAt`; a registered subject with no pass of its own is in use (the vault).
 
 Change log: 2026-11-22 R2: the pace; programs built behind the still and at rest only.

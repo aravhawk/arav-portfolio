@@ -148,5 +148,22 @@ scripts/audio-check.mjs --out <dir>`). What must hold:
   upright screen, the aurora at the delta). They are not this task's
   and are listed in its report.
 
+## A station's cue (R3)
+
+Each station has one sound of its own, set from what its picture does:
+the tarn's shards call and answer on the pulse's clock, the lattice
+plays a note as the light reaches each cube, the sluices knock as a
+gate comes home. The vault's five slivers each say the next note of
+the theme (`MOTIF`) as the reader's arrival lights them, in the shards'
+voice at half its level (`moments` in `src/audio/sound.ts`). Its
+numbers are the picture's (`VAULT_LIT`, read through `vaultLitAt`), so
+the note and the light cannot drift apart. It is scroll that lights
+them, so nothing sounds for a sliver scrolled back past, passed in a
+jump of the rail, or shown with motion reduced. A new station's cue
+follows that pattern: one voice from `graph.ts`, pitched from
+`theory.ts`, timed by a number the picture exports.
+
+Change log: 2026-11-22 R3: a station's cue.
+
 Change log: 2026-11-21 R1: sound on by default, the mute control, the
 measured level, on yesterday's live engine.

@@ -65,6 +65,17 @@ After any change to what a frame costs, or to the flight's length,
 `tests/water/pace.test.ts` fails when the map and the flight's length
 disagree.
 
+**A station laid in is a whole number of quarter screens long.** The
+map is sampled every quarter screen, and the pace's choices at a steep
+place (the canyon's mouth, the delta's first light) were settled on
+those samples. A station 2.6 screens long moved every later sample a
+tenth of a screen, and one stop past the lattice then read 11.6 ms at
+rest against 11; at 2.5 every later station meets the samples where it
+did (R3).
+
+**A row added to `/work` is paid for in its HTML** (the last section of
+this file): count the gzipped bytes before and after.
+
 ## How to measure
 
 All against a production build (`pnpm build && pnpm exec next start -p
@@ -184,10 +195,52 @@ times it then takes here read against the M4 budgets above.
   the phone preset, 100 on desktop; CLS 0.003. The inner pages' phone
   LCP is still 3.1 s (their loading order was not part of R2).
 
+### With the vault laid in (R3, 2026-11-22)
+
+Measured the same way on the same M4, the build before (`e9123c8`) and
+the build after, side by side.
+
+- **The flight is 2.5 screens longer** (34.9 of scroll). Every other
+  station's pinned frame at its own stop against the build before: 52
+  pairs (13 stops, both themes, wide and tall), least similarity
+  0.999881, none under the 0.99 floor, 21 identical to the pixel; the
+  least are in the first screens' moving water, far upstream of the
+  change. The lattice differs by 6 of 255 at its worst pixel.
+- **The cost map** was made again. Before the vault it moved by +0.03
+  ms per megapixel at the median (wide) and -0.09 (tall): the run's
+  own noise. After the vault every station meets the same samples as
+  before (the vault is ten of them long): median 0.00 to +0.01 (wide),
+  -0.03 to 0.00 (tall).
+- **The vault's stretch**, full resolution and full shading at rest:
+  0.83 to 1.04 ms per megapixel (6.4 to 8.0 ms at 3456 by 2234), under
+  both neighbours' stops (the dam 1.15, the lattice 1.3). As his machine would
+  choose (22 stops, both themes): full resolution, every interval, full
+  shading; 9.2 ms at most at rest and 10.0 ms travelling (medians 7.3
+  and 9.0); 4.1 ms at 780 by 1688. The dam's and the lattice's
+  stretches read as before (medians 8.9 and 10.1 at rest against 8.9
+  and 10.0; 9.9 and 10.2 travelling against 9.8 and 10.2). No stop of
+  the three stretches is over budget, before or after.
+- **Programs.** The lower river's broad program carries nine subjects
+  where it carried eight (`coverFlight`); there are still three broad
+  programs and 21 builds on a first visit.
+- **A first visit**: the live picture at 5.90 s by day (5.77 before)
+  and 6.43 s by night (6.34): the ninth subject's share of one broad
+  program's first draw. No task over 50 ms after it, no program built
+  while the reader moves, in either build.
+- **Lighthouse** (median of three, the two builds in turn): `/` 98 on
+  the phone preset and 100 on desktop, before and after; `/work` 93
+  and 100, before and after; `/work/cc-switch` 92 and 100 before, 91
+  and 100 after (runs of 82 to 93 in both); `/work/envfetch` 99 and
+  100. `/work`'s HTML is 14,013 bytes gzipped with ten rows (14,026 to
+  14,036 with nine): three of a row picture's eight widths are no
+  longer offered (`FEAT_SKIP` in `still-pictures.tsx`).
+
 What only the owner's machine and a real phone can settle is in
 `.tools/out/r2/REPORT.md` of the R2 task: chiefly whether the first two
 screens hold 120 on the move, and how long a first visit's wait is on a
 phone's driver.
+
+Change log: 2026-11-22 R3: the vault; a station's length in quarter screens.
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-22 R2: the
 budget for the owner's 120 Hz display, the pace, the programs, the

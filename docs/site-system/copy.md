@@ -11,8 +11,11 @@ Status: **as built** (K1, 2026-11-20).
 - No em dashes or en dashes. Sentence case.
 - First person for him ("I co-founded"), third person for a project
   ("It switches"). One voice from the first screen to the ending.
-- The home page holds 260 to 300 visible words, and one more: the
-  newsletter field's "Subscribe" (301 as built). `checks.js` in the
+- The home page holds 260 to 300 visible words for the first nine
+  projects with the newsletter field's "Subscribe" (290 as `checks.js`
+  counts them), and a station's own block for each project added since
+  (envfetch: 34, so 324 as built). A new station adds its block and
+  shortens no other station's words. `checks.js` in the
   capture tools counts them; adding a word means removing one.
 - Every number is real and sourced
   (`docs/redesign-v4/content-sources.md`); numbers that change are
@@ -55,9 +58,9 @@ Status: **as built** (K1, 2026-11-20).
 - The ending is exactly "This was the warm-up." with "The next
   station isn't built yet." under it.
 
-## What may appear (the owner's list, 2026-11-20)
+## What may appear (the owner's list, 2026-11-20, and envfetch, 2026-11-22)
 
-Nine projects, in this order everywhere a list shows them
+Ten projects, in this order everywhere a list shows them
 (`PROJECTS` in `src/content/projects.ts`). The home page's flight
 keeps the order its world was built in.
 
@@ -72,6 +75,7 @@ keeps the order its world was built in.
 | RydAR | On the App Store as "RydAR: Safe Driving" since Nov 11, 2026. 2 collaborators. No competition result, no seller's name. No store link until the owner gives its address. |
 | Agent Bridge | "Grok Bot" and "OpenAI agent" are the only product names for the two peers. No adoption numbers. Only the GitHub repository and the launch post are linked. |
 | TensorPoW | A research implementation. No speed claim. |
+| envfetch | Only what its repository says (README, languages, the v1.1.0 release of June 4, 2026). No star count, no praise. Its commands are set as text from the README. |
 
 Recognition is lines, never cards (`RECOGNITION`): "Selected for
 OpenAI DevDay 2026" (about him, never under Infiniview); the
@@ -80,7 +84,8 @@ his GitHub contributions in 2026, read live (the date is the footer's).
 
 Nothing else is shown: no archive, no "also" list, no project the
 owner holds back or has dropped, no bot name beyond the two above.
-Ask the owner before adding a tenth.
+Ask the owner before adding an eleventh. A project he adds becomes a
+station of the flight (`recipes.md`), never a list entry.
 
 ## Where copy lives
 
@@ -91,6 +96,8 @@ pages' designed pieces say), `src/components/flight/` (the home
 page's own sentences), `src/lib/subscribe/messages.ts` (what the
 newsletter's field says). The post in `content/posts/` is the owner's
 own writing and is not edited.
+
+Change log: 2026-11-22 R3: envfetch, the tenth; a project added becomes a station; the count.
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1:
 the definitive list, recognition, the story's rules. 2026-11-20 K2: the

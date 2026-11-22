@@ -280,6 +280,31 @@ Caution for the writer: the repo's GitHub "homepage" URL, its first commit messa
 Personal details in that article (age, city, school, grade) were deliberately not recorded here and must not appear on the site.
 
 
+### 3.11 envfetch (R3, 2026-11-22)
+
+Read from the copy of the repository's README, metadata, languages and releases kept in
+`~/.t3/portfolio-redesign-v4/repos/envfetch/` (https://github.com/aravhawk/envfetch). Every sentence the site
+says about it is one of these.
+
+| Claim | Supporting text | Source | Status |
+|---|---|---|---|
+| A macOS command-line tool that keeps environment variables in an encrypted local vault and activates them with Touch ID | "`envfetch` is a native macOS CLI for storing environment variables in an encrypted local vault and activating them with Touch ID." | README, first paragraph | OK |
+| Written in Swift | `{"Swift": 144188, "Makefile": 1232}`; "Swift 5.9+" | languages.json; README, Requirements | OK |
+| The private key lives in the Secure Enclave | "The private key lives in the Secure Enclave"; "Encrypts the vault with a Secure Enclave-backed key" | README, Security Notes; What It Does | OK |
+| `~/.envfetch/vault.enc` (the callout on the block) | "Stores profiles of environment variables in `~/.envfetch/vault.enc`" | README, What It Does | OK |
+| Touch ID or the password; into the current shell; zsh, bash and fish; an interactive terminal interface | "Uses Touch ID or password for decrypting and mutating the vault"; "Activates variables into your current shell through generated shell integration"; "Supports `zsh`, `bash`, and `fish`"; "Provides both direct CLI commands and an interactive terminal UI" | README, What It Does | OK |
+| The vault directory is 0700; data and key material 0600 | "The vault directory is `0700`; encrypted data and key material are written `0600`" | README, Security Notes | OK |
+| Ephemeral P-256 key agreement plus HKDF plus AES-GCM | "Encryption uses an ephemeral P-256 key agreement plus HKDF plus AES-GCM" | README, Security Notes | OK |
+| SSH and remote sessions are blocked | "SSH / remote sessions are intentionally blocked because the tool expects local authentication" | README, Security Notes | OK |
+| activate prints statements a wrapper evaluates; export for zsh and bash, set -gx for fish | "`envfetch activate` prints shell statements to stdout; a small wrapper function evaluates them into your **current** shell"; "(`export` for zsh/bash, `set -gx` for fish)" | README, Shell Setup | OK |
+| macOS 13 or later, on a Mac with a Secure Enclave | "macOS 13+ on a Mac with a Secure Enclave (Apple Silicon, or Intel with a T2 chip)" | README, Requirements | OK |
+| v1.1.0, June 4, 2026 | `"tag_name": "v1.1.0"`, `"published_at": "2026-06-04T08:58:44Z"`; it is the only release | releases.json | OK |
+| The session's commands and what each does | "Build And Install", "Shell Setup" and "Typical Usage", command for command; "builds the release binary, code-signs it ... and copies it to `/usr/local/bin/envfetch`"; "No Apple Developer account needed"; "prompts with echo disabled"; "Activating multiple profiles stacks their variables: `ENVFETCH_ACTIVE` tracks every key exported in the session so `deactivate` clears them all"; "Run a single command with injected variables without changing the current shell" | README | OK |
+| The interface's keys | "TUI Controls", profile list and profile detail | README | OK |
+| Advisory lock; echo disabled; a lost key cannot be recovered; update rebuilds from the tagged source | "Mutations are protected by an advisory lock to avoid concurrent write races"; "Interactive secret entry disables terminal echo (CLI and TUI)"; "If `vault.enc` is corrupted or the original key material is lost, the vault cannot be recovered"; "rebuilds from the tagged source, signs locally, replaces the binary in place"; "Your vault in `~/.envfetch/` is left untouched" | README, Security Notes; Updating | OK |
+
+Not used: the star count, the test count in the release notes, anything about how it compares with other tools.
+
 ## 4. What the v4 build did with these findings
 
 Added by the build thread on 2026-11-15 after reading this file.

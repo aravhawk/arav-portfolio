@@ -2,6 +2,54 @@
 
 Read the consistency checklist before editing a station.
 
+## The standing rule: a new project becomes a station
+
+The owner's words (2026-11-22): "Whatever new projects and stuff I get,
+they should be fully seamlessly added in there." A project is never
+added as a row of `/work` alone. It gets a place in the flight, made of
+the world's own ice, water and light, and everything else follows from
+its registration. envfetch (R3) is the worked example; the files to
+read are `src/water/shaders/vault.ts` and the `vault` entry of `FLIGHT`.
+
+What that took, in order:
+
+1. **A place by the river that neither neighbour's frame holds.** Work
+   it out from the neighbours' composed cameras (position, heading,
+   half the field of view at the widest window) before writing
+   anything. The kettle lies on the west bank the flight already
+   crosses between the dam and the lattice: behind the lattice's
+   camera and off the side of the dam's.
+2. **Its water**, as a painter (`paintKettle` in `geography.ts`). The
+   bed's distance field reaches 360 units from a shore, so new water
+   further than that from every shore a neighbour shows changes none of
+   their pixels.
+3. **Its subject**, a registered subject with no pass of its own: one
+   GLSL function over the finished ground and water, shaded by
+   `iceGlacier`, with its shade, its image in its water and its light,
+   and one event on `progress` (the scroll through `event`).
+4. **A length that is a whole number of quarter screens**
+   (`performance.md`), and **`added: true` on its definition.** The light's hours were set
+   station by station on the flight as it was; `lightAt` (camera.ts)
+   takes an added station's length out of the light's clock, so every
+   later station keeps its hour. Without it every later frame changes.
+5. **Its words** (a layout in `src/app/page.tsx` in the others' measure:
+   label, name, one line, small print, a callout that names the object
+   with a fact), **its project** (`projects.ts`, `kinds.ts`, a page in
+   `cases.tsx` from the repository's own facts), its line in
+   `PICTURES` (`src/lib/og.tsx`).
+6. **Its sound** (`sound.md`): a cue in the manner of its neighbours,
+   from numbers the picture owns (`VAULT_LIT`).
+7. **Its subject in `SUBJECTS`** of `tests/water/camera.test.ts`.
+8. **The proof and the measurements**: the pinned picture of every
+   other station at its own stop against the build before
+   (`scripts/flight-picture.mjs`; later stops are that station's length
+   further down); the cost map made again (`flight-frame-cost.mjs
+   --map`); a first visit; `coverFlight`'s limit if the lower river
+   would otherwise need one more broad program.
+9. **Its stills and its share card**: `public/media/scenes/<slug>-*`
+   (four shapes, two themes) and `public/og/<slug>.jpg` with its line
+   in the manifest (`scripts/capture-og.mjs --only <slug>`).
+
 ## Add a station
 
 Insert a definition in `FLIGHT` in `src/water/registry.ts`. The list runs upstream to downstream. This example fits between the lattice and the canyon. It raises a block of ice in the water already painted there.
@@ -70,5 +118,7 @@ on a next band, on `.pg-ground`, with type from the tokens in
 `src/app/pages.css`. No screenful under a third filled
 (`scripts/fill-test.mjs`); every line against its ground
 (`scripts/overlap-test.mjs`).
+
+Change log: 2026-11-22 R3: the standing rule and its worked example (envfetch).
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1: a project without a station, no archive.
