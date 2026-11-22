@@ -236,6 +236,31 @@ the build after, side by side.
   14,036 with nine): three of a row picture's eight widths are no
   longer offered (`FEAT_SKIP` in `still-pictures.tsx`).
 
+### With the loading sequence (L1, 2026-11-22)
+
+The same M4, the build before (`2b0f757`) and the build after, in turn,
+with other work running on the machine (so read the pairs, not the
+absolutes).
+
+- **The time to the live picture is unchanged**: a first visit 6.4 to
+  6.7 s after against 6.8 to 7.0 s before (`flight-first-visit.mjs`,
+  day and night); a returning visit 0.91 to 0.93 s against 0.88 to 0.93.
+  After it: no task over 50 ms and no program built while the reader
+  moves, in either build.
+- **The picture at rest is unchanged**: 48 pinned pairs, least
+  similarity 0.999998.
+- **Lighthouse** on `/`, phone preset, six runs in turn: 98 every run in
+  both builds (blocking time 160 ms against 155, largest paint 1.05 s,
+  CLS 0.003); desktop 100 in both.
+- **The first load** is 1.1 kB heavier gzipped (HTML 516 bytes, the
+  stylesheet 394, script 232), with the same 13 scripts and 4
+  stylesheets; the flight's own script, fetched after the first paint,
+  is 0.8 kB heavier. `/work`'s HTML is 13,931 bytes (13,915).
+- **What the sequence costs is in how it moves, not in its code.** A
+  fill that crept between the engine's reports read 96 to 98 on the
+  phone preset (one more 30 ms task in most runs); set in steps it reads
+  98. See `pitfalls.md` and `load.ts` before adding motion to it.
+
 What only the owner's machine and a real phone can settle is in
 `.tools/out/r2/REPORT.md` of the R2 task: chiefly whether the first two
 screens hold 120 on the move, and how long a first visit's wait is on a
@@ -352,3 +377,4 @@ to every page. Count the gzipped HTML of `/work` before and after
 (`curl -s -o /dev/null -w '%{size_download}' -H 'Accept-Encoding: gzip'
 <base>/work`), and put shapes in CSS, not in markup.
 
+Change log: 2026-11-22 L1: the loading sequence's numbers.

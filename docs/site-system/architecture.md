@@ -89,6 +89,41 @@ of the same world.
   paint is a still of the first frame, chosen by window shape and
   theme before paint.
 
+## The loading sequence (L1)
+
+A first visit waits about six seconds behind the still while the driver
+builds the programs (`performance.md`). What it waits for is shown over
+the first line of the first screen: an ice core, one stratum to a step,
+as wide as the step was measured to take, with the step's name in the
+small mono label.
+
+- `src/water/load-steps.ts`: the steps in order, the words each is named
+  by, what each was measured to take, and `armLoad`, which the page's
+  first script runs before the first paint (`posterBoot`). It sets
+  `data-load` on the document: `cold` for a first visit (the core is in
+  the first paint), `warm` for a reader whose driver has built the
+  programs before (remembered in `localStorage`; the core stays out
+  unless the wait passes 1.7 s). This file is in the page's first script.
+- `src/water/load.ts`: `loadStep(id, k, n)`, called by `prepare`, `stand`
+  and `mountFlight` as each piece of a step is done, and `loadOver`,
+  called in the frame that sets `data-picture`. One report is one style
+  write (one short transition on that stratum); nothing runs per frame
+  and nothing moves between reports. It is in
+  the flight's own script. `__flight.loadLog` keeps every report.
+- `.fl-load` in `flight.css`: the core's rules, the hold (the page cannot
+  be scrolled while `data-load` is `cold` or `warm`, so the picture
+  always comes up at the top; `Runtime.tsx` tells the smooth scrolling
+  not to gather a wheel meanwhile), the hand-off (`over`: the core sinks
+  out as the live picture dissolves in, then the entrance runs) and the
+  rail's arrival.
+- A step added to `prepare` or `mountFlight` that takes a tenth of a
+  second or more gets a row in `LOAD_STEPS` and its reports. If the
+  flight cannot mount, `loadDrop` lets the page go; if its script never
+  arrives, `armLoad`'s own timer does; if a step never reports again,
+  the timer in `loadStep` does.
+- `scripts/loader-film.mjs` films it (cold, `--warm`, `--reduced`,
+  `--scroll`, `--noscript`).
+
 ## The words
 
 - `src/app/page.tsx`: one `<section class="fl-sec">` per stretch,
@@ -139,3 +174,5 @@ Change log: 2026-11-22 R3: `lightAt`; a registered subject with no pass of its o
 Change log: 2026-11-22 R2: the pace; programs built behind the still and at rest only.
 
 Measure projected callout rings and label intersections against the camera uniforms submitted to WebGL with `NODE_PATH=<Playwright node_modules> node scripts/callout-check.mjs http://localhost:3189 .tools/out/b3/callouts`.
+
+Change log: 2026-11-22 L1: the loading sequence.

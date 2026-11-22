@@ -18,6 +18,7 @@ import { THEME_COLOR } from '@/lib/site';
 import { MOVE, SETTLE_AT } from '@/water/camera';
 import { byId, timeline } from '@/water/registry';
 import { posterBoot } from '@/water/poster';
+import { LOAD_STEPS } from '@/water/load-steps';
 import { streamAnchors } from '@/water/words';
 import { COLS, FACE, SHARDS, SLAB, TRIBS, VAULT, colHeights, colApex } from '@/water/world';
 import './home.css';
@@ -185,6 +186,22 @@ export default async function Home() {
           </div>
           <div className="fl-words fl-hero-words" data-fl-from={-1} data-fl-to={SAY_FROM} data-hero data-on>
             <p className="statement fl-role">
+              {/* The loading sequence: an ice core, one stratum to a step of what the flight builds before its picture is
+                  live, as wide as the step is long (load-steps.ts). It is shown only while that work runs, and only by the
+                  page's own script (flight.css, load.ts). */}
+              <span className="fl-load" aria-hidden="true">
+                <span className="fl-load-head">
+                  <span className="fl-load-n">1/{LOAD_STEPS.length}</span>
+                  <span className="fl-load-says">{LOAD_STEPS[0].says}</span>
+                </span>
+                <span className="fl-load-core">
+                  {LOAD_STEPS.map((step) => (
+                    <span key={step.id} className="fl-load-seg" style={{ flexGrow: step.ms }}>
+                      <span className="fl-load-fill" />
+                    </span>
+                  ))}
+                </span>
+              </span>
               <span className="fl-rise" data-at={-1}>
                 <span className="fl-rise-in">AI and developer</span>
               </span>

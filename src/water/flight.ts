@@ -22,6 +22,8 @@ import { type Pending, type Program, type Target, bindTex, compileBegin, compile
 import { DAWN, ENTER, GATE, LAP, PULSE, RIBBON, breathAt, dawnLight, enterAt, firstLight, heroLight, heroLightAt, nextDrip, stationsNear, stepGates } from './moments';
 import { iceInclusions } from './ice-inclusions';
 import { opening } from './opening';
+import { loadBegin, loadDrop, loadLog, loadOver, loadStep } from './load';
+import type { LoadId } from './load-steps';
 import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP, RECONSTRUCT } from './shaders/finish';
 import { NEAR_FULL, type Pace, costAt, easeScale, restPace, travelPace, travelling } from './pace';
 import { FLIGHT_FREEBOARD, flightSource, freeboardAt, snowShadowBearing } from './shaders/flight';
@@ -176,6 +178,9 @@ export class FlightEngine extends WaterEngine {
    * that between them can draw any stretch (`cover`), are built and have
    * drawn their first pixel before this is over (see `stand`).
    */
+  /** The home page is told how far the start-up has come (load.ts): `k` of a step's `n` pieces are done. Nothing else listens. */
+  onStep: (id: LoadId, k: number, n: number) => void = () => {};
+
   async prepare(): Promise<void> {
     const gl = this.gl;
     const tick = () => new Promise<void>((r) => setTimeout(r, 0));
@@ -183,14 +188,19 @@ export class FlightEngine extends WaterEngine {
     const pending = Object.keys(src).map((k) => [k, compileBegin(gl, src[k], k)] as const);
     const firsts = [...new Set([...this.firstNeeds, ...this.cover.map((c) => c.mask)])];
     for (const mask of firsts) this.begin(mask, this.firstMode);
+    this.onStep('shaders', 0, pending.length);
     await tick();
+    let linked = 0;
     for (const [k, p] of pending) {
       for (let n = 0; n < 400 && !compileDone(gl, p); n++) await new Promise<void>((r) => setTimeout(r, 8));
       this.p[k] = compileEnd(gl, p);
+      this.onStep('shaders', ++linked, pending.length);
       await tick();
     }
+    this.onStep('bake', 0, 5);
     super.bake();
     this.inclusions = iceInclusions(gl);
+    this.onStep('bake', 1, 5);
     await tick();
     // The snow: its cut forms first, then (a task later) its slope and the shade those forms throw.
     // Half floats: an edge is cut from these values in the picture, and eight bits would show as steps along it.
@@ -205,11 +215,14 @@ export class FlightEngine extends WaterEngine {
     drawTo(gl, this.ground);
     freeTarget(gl, cutH);
     this.filterGround(this.ground);
+    this.onStep('bake', 2, 5);
     await tick();
     this.filterGround(this.grain);
     this.filterGround(this.detail);
+    this.onStep('bake', 3, 5);
     await tick();
     await this.bakeRanges(tick);
+    this.onStep('bake', 4, 5);
     await tick();
     // The pointer's own passes are not run until it first moves the water, and a pass's first draw is the driver's
     // build of it (0.6 to 0.9 s for the four, measured on a first visit: the picture held as the pointer first
@@ -225,19 +238,22 @@ export class FlightEngine extends WaterEngine {
       }
       freeTarget(gl, scratch);
     }
-    await this.stand(firsts);
+    await this.stand(firsts, true);
   }
 
   /**
    * Build these variants of the pass for the theme the picture is in, and wait for each to have drawn its first
    * pixel: what the page does behind its still. One at a time; the driver cannot be hurried.
    */
-  async stand(masks: number[]): Promise<void> {
+  async stand(masks: number[], report = false): Promise<void> {
     const gl = this.gl;
     const wait = () => new Promise<void>((r) => setTimeout(r, 8));
     const mode = this.variants.size ? this.mode() : this.firstMode;
     for (const mask of masks) this.begin(mask, mode);
+    let stood = 0;
     for (const mask of masks) {
+      if (report) this.onStep('build', stood, masks.length);
+      stood++;
       const v = this.variants.get(`${mask}:${mode}`);
       if (!v || v.live || v.failed) continue;
       for (let n = 0; n < 1500 && v.pending && !compileDone(gl, v.pending) && !gl.isContextLost(); n++) await wait();
@@ -247,6 +263,7 @@ export class FlightEngine extends WaterEngine {
       this.warmOne(v);
       for (let n = 0; n < 1500 && this.warming(); n++) await wait();
     }
+    if (report) this.onStep('build', 1, 1);
   }
 
   /**
@@ -2183,6 +2200,8 @@ export interface FlightHandle {
   holds: ReturnType<typeof HOLDS>;
   /** For the checks and the stills: hold the entrance at `t` seconds into it (0: its first frame; null lets it run from where it is). */
   holdEntrance(t: number | null): void;
+  /** For the checks: every report the loading sequence was given (load.ts). */
+  loadLog: typeof loadLog;
 }
 
 /**
@@ -2202,6 +2221,9 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   const themeNow = () => (html.dataset.theme === 'dark' ? 1 : 0);
 
   const engine = new FlightEngine(canvas, { theme: themeNow(), still: mqStill.matches, coarse });
+  // The loading sequence (load.ts): the engine and this mount report each step of what follows, up to the live picture.
+  loadBegin();
+  engine.onStep = loadStep;
   {
     // The variants of the pass the first frame waits for are those for where the page now is (a reload may open it
     // anywhere), and the one that can draw any stretch.
@@ -2233,6 +2255,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   if (isCancelled()) {
     offBeat();
     engine.destroy();
+    loadDrop();
     return null;
   }
   root.appendChild(canvas);
@@ -2599,6 +2622,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   };
 
   measureView();
+  loadStep('bed', 0, 2);
   if (document.fonts?.status !== 'loaded') {
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
   }
@@ -2610,14 +2634,18 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   } catch {
     // The fallback face is drawn instead.
   }
+  loadStep('bed', 1, 2);
   if (isCancelled() || !(await buildBed())) {
     solver.dispose();
     engine.destroy();
     canvas.remove();
+    loadDrop();
     return null;
   }
+  loadStep('name', 0, 1);
   cutFor = aspect;
   await buildName();
+  loadStep('first', 0, 2);
   measureView();
   /**
    * Each stretch's pieces, each with the scroll position it is first needed at: what the engine builds, nearest first,
@@ -2653,6 +2681,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const planning = planFlight();
     await engine.stand(engine.firstPieces(pose0, aspect, passNeeds(pose0, aspect, iceParts((at0 - MELT.from) / (MELT.to - MELT.from), themeNow(), true), false)));
     await planning;
+    loadStep('first', 1, 2);
     // And how fast this device draws the scene is measured, on the frame the page opens on: the pace is set by it.
     if (!mqStill.matches && !isCancelled() && !destroyed) {
       await engine.calibrate(pose0, aspect, { melt: (at0 - MELT.from) / (MELT.to - MELT.from), day: dayAt(at0), hour: at0, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, at0), rest: at0 >= SETTLE_AT - 0.02, calm, near: nearV, box, boxK: 0, boxLight: false });
@@ -2661,8 +2690,10 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       solver.dispose();
       engine.destroy();
       canvas.remove();
+      loadDrop();
       return null;
     }
+    loadStep('first', 2, 2);
   }
   built = true;
   html.dataset.flight = 'on';
@@ -2915,6 +2946,8 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     if (!pictureUp && engine.drew) {
       pictureUp = true;
       html.dataset.picture = '';
+      // (The loading sequence ends here: its core leaves with the still, and the page may be scrolled.)
+      loadOver();
       void gate.ready.then(() => {
         enterT0 = performance.now() + (mqStill.matches ? 0 : 440);
       });
@@ -2926,6 +2959,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     rebuild: onResize,
     state: () => ({ s: sNow, pos: cam.pos, unit, day: dayNow }),
     holds: HOLDS(),
+    loadLog,
     holdEntrance(t) {
       enterHeld = t;
       engine.touch();
@@ -2937,6 +2971,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     },
     destroy() {
       destroyed = true;
+      loadDrop();
       off();
       offBeat();
       ro.disconnect();

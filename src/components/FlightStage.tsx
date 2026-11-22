@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { pickPoster } from '@/water/poster';
+import { LOAD_KEY, armLoad } from '@/water/load-steps';
 import type { FlightHandle } from '@/water/flight';
 
 declare global {
@@ -21,6 +22,8 @@ export function FlightStage({ slab, sheet, tribs, cols, face }: { slab: string; 
   // The first paint's still. The page's own first script chooses it on a fresh load; coming here from another page
   // nothing has, so it is chosen now, before the paint. It follows the theme for as long as it may be seen.
   useLayoutEffect(() => {
+    // (And the loading sequence, armed by that same script on a fresh load: here when the page is come to from another.)
+    if (document.documentElement.dataset.load === undefined && document.documentElement.dataset.picture === undefined) armLoad(LOAD_KEY);
     pickPoster();
     window.addEventListener('themechange', pickPoster);
     window.addEventListener('resize', pickPoster);
@@ -52,6 +55,7 @@ export function FlightStage({ slab, sheet, tribs, cols, face }: { slab: string; 
         .catch((err) => {
           if (process.env.NODE_ENV !== 'production') console.warn(err);
           document.documentElement.dataset.flight = 'off';
+          document.documentElement.removeAttribute('data-load');
         });
     };
     const idle = window.requestIdleCallback ? window.requestIdleCallback(start, { timeout: 600 }) : window.setTimeout(start, 60);
@@ -63,6 +67,7 @@ export function FlightStage({ slab, sheet, tribs, cols, face }: { slab: string; 
       delete window.__flight;
       delete window.__water;
       delete document.documentElement.dataset.flight;
+      document.documentElement.removeAttribute('data-load');
     };
   }, []);
 

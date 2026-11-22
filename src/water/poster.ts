@@ -10,6 +10,7 @@
  */
 
 import { posterBands } from './camera';
+import { LOAD_KEY, armLoad } from './load-steps';
 
 const DIR = '/media/poster';
 
@@ -46,7 +47,8 @@ export function pickPoster() {
 /**
  * The page's own first script, as text: it chooses the still before the first paint, and sets the first frame's
  * words in that same paint. (What the page is for is read in its first frame, not after the picture's entrance.)
+ * It also arms the loading sequence, so a first visit's ice core is in that paint too (load-steps.ts).
  */
 export function posterBoot(): string {
-  return `(function(){try{(${choose.toString()})(${JSON.stringify(table())},${JSON.stringify(DIR)})}catch(e){}document.documentElement.setAttribute('data-hero-words','')})()`;
+  return `(function(){try{(${choose.toString()})(${JSON.stringify(table())},${JSON.stringify(DIR)})}catch(e){}document.documentElement.setAttribute('data-hero-words','');try{(${armLoad.toString()})(${JSON.stringify(LOAD_KEY)})}catch(e){}})()`;
 }

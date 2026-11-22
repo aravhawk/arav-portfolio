@@ -145,9 +145,29 @@ light moves with scroll, the outgoing block leaves before the
 incoming eyebrow stands. There is no wipe, fade or scene cut between
 stations, and a new station must not add one.
 
+## The first seconds (L1)
+
+One piece of choreography from the first paint to the first screen at
+rest:
+
+| When | What | How |
+| --- | --- | --- |
+| first paint | the still, the name, the first words, and on a first visit the ice core over them | no entrance: it is the first paint |
+| each piece of a step done | that stratum freezes from its left to the share that is done; the label names the step in hand | one 220 ms transition a report, nothing between reports |
+| the picture is up | the core, whole, sinks 10 px and fades (300 ms, after 160 ms) while the canvas dissolves in (420 ms); the page can be scrolled | `data-load='over'` |
+| 440 ms later | the eye settles and the light arrives (2.4 s, `ENTER`) | the engine |
+| 520 ms after the flight is on | the rail comes in from its edge (520 ms) | `fl-rail-in` |
+
+Rules: the sequence is made of discrete states that are right whenever
+they are shown, because the driver stops every animation on the page for
+up to 1.7 s while it builds a program (`pitfalls.md`); nothing in it
+loops, pulses, spins or creeps (a fill that crept between reports cost
+two points of Lighthouse on a phone: `load.ts`). A returning reader sees none of it. Reduced
+motion: a stratum is there when its step is done, and the core fades.
+
 ## Haptics
 
 Only as the direct consequence of a meaningful action; never on load,
 hover or continuous scroll; in the picture, only at discrete beats.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the theme switch. 2026-11-22 R2: principle 6, resolution on the move.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the theme switch. 2026-11-22 R2: principle 6, resolution on the move. 2026-11-22 L1: the first seconds.

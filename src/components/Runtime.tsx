@@ -27,7 +27,8 @@ export function Runtime() {
       if (!fine.matches || reduced.matches || lenis) return;
       const { default: Lenis } = await import('lenis');
       if (cancelled) return;
-      lenis = new Lenis({ autoRaf: false, lerp: 0.115, wheelMultiplier: 1, anchors: true });
+      // (While the home page's loading sequence holds the page at its top, a wheel is not gathered up to be spent later.)
+      lenis = new Lenis({ autoRaf: false, lerp: 0.115, wheelMultiplier: 1, anchors: true, prevent: () => /^(cold|warm)$/.test(document.documentElement.dataset.load ?? '') });
       off = onFrame((now) => lenis?.raf(now), 0);
     };
     const stop = () => {

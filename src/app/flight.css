@@ -192,6 +192,138 @@ html[data-hero-words] .fl-hero-words .fl-rise > .fl-rise-in {
   transition: transform var(--fl-rise) var(--fl-ease);
 }
 
+/* ---------- the loading sequence ----------
+   A first visit waits some seconds for the driver to build the flight's programs. What it waits for is said here, over
+   the first line: an ice core, one stratum to a step, as wide as the step was measured to take, with the step's name
+   in the small mono label. Each stratum freezes from its left as its step is done (load.ts writes one short
+   transition a report, and nothing moves between reports: while the driver builds a program no frame is shown). It is shown by `data-load`, which only the
+   page's first script sets: `cold` is in the first paint; `warm` (a reader who has been here, whose wait is about a
+   second) stays out unless the wait runs long; `over` is the hand-off. While it stands the page is held at its top,
+   where the picture comes up. Transform and opacity only; no layout of the words depends on it. */
+html:is([data-load='cold'], [data-load='warm']) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+.fl-role {
+  position: relative;
+}
+.fl-load {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + clamp(12px, 1.8vh, 18px));
+  display: none;
+  flex-direction: column;
+  gap: 9px;
+  width: clamp(196px, 15vw, 248px);
+  pointer-events: none;
+  color: var(--ink);
+}
+html[data-load] .fl-load {
+  display: flex;
+}
+.fl-load-head {
+  display: flex;
+  gap: 0.9em;
+  font-family: var(--font-mono);
+  font-size: var(--fl-cap);
+  font-weight: 520;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums slashed-zero;
+  white-space: nowrap;
+}
+.fl-load-n {
+  opacity: 0.56;
+}
+.fl-load-core {
+  display: flex;
+  gap: 2px;
+  height: 3px;
+}
+.fl-load-seg {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 3px;
+}
+/* (Unfrozen: the stratum's place, faint. Frozen: ink.) */
+.fl-load-seg::before,
+.fl-load-fill {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+}
+.fl-load-seg::before {
+  opacity: 0.24;
+}
+.fl-load-fill {
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+/* A reader who has been here: the core comes only if the wait is longer than a returning visit's. */
+html[data-load='warm'] .fl-load {
+  opacity: 0;
+  animation: fl-load-late 420ms var(--ease-out) 1700ms forwards;
+}
+@keyframes fl-load-late {
+  to {
+    opacity: 1;
+  }
+}
+/* The hand-off: the core is whole; it sinks out as the sentence under it does when it leaves, while the live picture
+   comes up over the still (420 ms, above). The eye's settle and the light follow (ENTER in moments.ts). */
+html[data-load='over'] .fl-load {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
+  animation: none;
+  transition:
+    opacity 300ms var(--ease-out) 160ms,
+    transform 300ms var(--ease-out) 160ms;
+}
+/* (The rail arrives with the picture, from its own edge: the page can be flown from here.) */
+html[data-flight='on'] .fl-rail {
+  animation: fl-rail-in 520ms var(--ease-out) 520ms backwards;
+}
+@keyframes fl-rail-in {
+  from {
+    opacity: 0;
+    transform: translate3d(8px, -50%, 0);
+  }
+}
+@media (max-width: 720px) {
+  .fl-load {
+    bottom: calc(100% + 12px);
+    gap: 8px;
+    width: 196px;
+  }
+}
+/* Reduced motion: a still core. A stratum is there when its step is done; nothing creeps, nothing travels. */
+@media (prefers-reduced-motion: reduce) {
+  .fl .fl-load-fill {
+    transform: none !important;
+    animation: none !important;
+    opacity: 0;
+    transition: opacity 200ms linear !important;
+  }
+  .fl .fl-load-seg[data-done] > .fl-load-fill {
+    opacity: 1;
+  }
+  html[data-load='over'] .fl-load {
+    transform: none;
+    transition: opacity 300ms linear;
+  }
+  html[data-flight='on'] .fl-rail {
+    animation: none;
+  }
+}
+/* Where the picture is not shown at all, or the page is printed, there is nothing to wait for. */
+@media print, (forced-colors: active) {
+  html[data-load] .fl-load {
+    display: none;
+  }
+}
+
 /* A line that leaves before its block does (the first frame's sentence: the line over it stays through the melt). */
 .fl .fl-words [data-at][data-gone] {
   opacity: 0;

@@ -116,6 +116,19 @@ Each of these cost time on this build.
   browser (`navigator.userActivation`) and hold the page to its answer,
   as `scripts/sound-visit.mjs` does; do not write the test to a rule
   the test browser does not keep.
+- **Nothing on the page moves while the driver builds a program.** A
+  CSS animation of `transform` or `opacity` is carried by the
+  compositor through a busy main thread, but not through a program's
+  first draw: the GPU process itself is held, and no frame is presented
+  for 0.3 to 1.7 s (`scripts/loader-film.mjs`, `shown`: about 100 frames
+  presented in a first visit's 6.7 s, the longest gap 1.7 s). So what
+  stands during a first visit's wait is made of states, not of motion: a
+  spinner, a shimmer or a pulse would be seen to stick.
+- **Smooth scrolling gathers a wheel it cannot spend.** With the page
+  held (`overflow: hidden`), Lenis still added each wheel to its target
+  and spent it all when the page was let go. Its `prevent` is given the
+  hold (`Runtime.tsx`). An attribute on `<html>` does not do it: Lenis
+  looks only below its root.
 - **A state drawn from `<html>` is right at the first paint; a state
   React writes is right after hydration.** The theme switch and the
   sound control are drawn by CSS from `data-theme` and `data-sound`,
@@ -125,4 +138,4 @@ Each of these cost time on this build.
 
 Change log: 2026-11-22 R3: the light's clock.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links; three from the newsletter's field; three from the sound. 2026-11-22 R2: four from the frame's cost and the driver's builds.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links; three from the newsletter's field; three from the sound. 2026-11-22 R2: four from the frame's cost and the driver's builds. 2026-11-22 L1: two from the loading sequence.

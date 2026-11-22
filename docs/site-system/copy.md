@@ -17,6 +17,10 @@ Status: **as built** (K1, 2026-11-20).
   (envfetch: 34, so 324 as built). A new station adds its block and
   shortens no other station's words. `checks.js` in the
   capture tools counts them; adding a word means removing one.
+- The loading sequence's labels (`LOAD_STEPS` in
+  `src/water/load-steps.ts`) each name what the engine is doing in two
+  to four plain words ("Compiling shaders", "Cutting the name"). They
+  are shown only while that work runs and are not in the count above.
 - Every number is real and sourced
   (`docs/redesign-v4/content-sources.md`); numbers that change are
   read live (`src/lib/metrics`). **When they were read is said once a
