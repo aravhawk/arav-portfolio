@@ -398,9 +398,9 @@ export class FlightEngine extends WaterEngine {
    * long as the driver takes over it; with the page at rest that is a still frame held a moment, where on the move it
    * would be a jolt. The moment the reader scrolls, moves the pointer or presses a key, nothing more is begun.
    *
-   * In order: the pieces now on the screen; the pieces of the stretches within three screens of here, nearest first;
-   * once the page has rested a while, the other theme's for the pieces on the screen and its broad ones (the switch is
-   * under the reader's hand); then the rest of the flight, nearest first.
+   * In order: the pieces now on the screen; this theme's broad variants if any is missing (after the theme has
+   * turned); the pieces of the stretches within three screens of here, nearest first; and once the page has rested a
+   * while, the other theme's for the pieces on the screen (the switch is under the reader's hand).
    */
   private build(now: number) {
     if (this.warming()) return;
@@ -429,11 +429,11 @@ export class FlightEngine extends WaterEngine {
     for (const c of this.coverNear()) if (next(c.mask, mode)) return;
     const near = this.plan.slice().sort((a, b) => Math.abs(a.s - this.here) - Math.abs(b.s - this.here));
     for (const p of near) if (Math.abs(p.s - this.here) <= 3 && next(p.mask, mode)) return;
-    if (THEMED && quiet > 1500) {
-      for (const t of this.drawnTiles) if (t.area >= 0.04 && next(t.mask, other)) return;
-      for (const c of this.coverNear()) if (next(c.mask, other)) return;
-    }
-    for (const p of near) if (next(p.mask, mode)) return;
+    // (The other theme's broad ones are not built ahead: each holds a resting picture a second or more on a first
+    // visit, for a switch most readers never press. They are built when it is pressed: see `turnTheme`. Nor is the
+    // far flight's every piece built from here: each is a held frame, and the broad variants draw those stretches
+    // until the reader rests nearer them.)
+    if (THEMED && quiet > 1500) for (const t of this.drawnTiles) if (t.area >= 0.04 && next(t.mask, other)) return;
   }
   /** The flight's stretches, the one the page is in first, then outward. */
   private coverNear(): Cover[] {
@@ -556,9 +556,10 @@ export class FlightEngine extends WaterEngine {
     const other: Mode = this.themeWant >= 0.5 ? 'night' : 'day';
     let ready = this.drawnTiles.length > 0;
     const busy = this.warming();
-    // (The other theme's broad variants for the stretches within reach too, on the home page: once the theme has
-    // turned the reader may scroll on at once, and every piece must have something that has drawn before to draw it.)
-    const reach = this.cover.filter((c) => c.from - this.here < 6 && this.here - c.to < 6).map((c) => c.mask);
+    // (The other theme's broad variant for the stretch the page is in too, on the home page: once the theme has turned
+    // the reader may scroll on at once, and the pieces he meets must have something that has drawn before to draw
+    // them. The other stretches' are built as soon as the page is left alone after the turn: see `build`.)
+    const reach = this.cover.filter((c) => c.from - this.here < 0.5 && this.here - c.to < 0.5).map((c) => c.mask);
     for (const mask of [...this.drawnTiles.map((t) => t.mask), ...reach]) {
       const v = this.variants.get(`${mask}:${other}`);
       if (!v) this.begin(mask, other);
