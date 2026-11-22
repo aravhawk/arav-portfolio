@@ -1,0 +1,2071 @@
+# aravjain.dev v4: progress log
+
+Branch `redesign/fable-v4b-20261115`, from origin/main `9a487fb`. Worktree
+`~/.t3/worktrees/arav-portfolio/redesign-fable-v4b-20261115`. Evidence (never
+committed) lives in `~/.t3/portfolio-redesign-v4/`.
+
+If you are resuming: read this file top to bottom, then continue at the first
+unchecked item. Do not restart.
+
+## Standing rules (short form)
+
+- Push only this branch, over SSH. No PR, no merge, no force-push.
+- Signed commits only; `git verify-commit` each one.
+- Never touch main, PRs #18/#19/#20 or their branches, the backup tag, or
+  `content/posts` and `blog-editor` (diff against 9a487fb must stay empty).
+- Captures, traces, specimens and reference material stay outside git.
+
+## Working rules (orchestrator, corrected 2026-11-15 evening; these replace the earlier guardrail)
+
+At 2:30 PM CT the limit auto-resume restarted this thread and all seven
+helpers at once, and eight agents in parallel spent the whole 5-hour window
+in 23 minutes. Arav's rule: never cut quality or depth, just do not be
+wasteful.
+
+1. Work serially, one task at a time, no parallel helpers. A helper is fine
+   only if it runs alone while the main thread waits or stays light.
+2. The failed helper "v4 refs: new SOTD sites + Apple" is cancelled and must
+   not be restarted (its queued notice is stale). `task_status` on all seven
+   showed none running. The SOTD and Apple study is NOT skipped: I redo it
+   myself, serially, before design decisions lock, reusing the captures and
+   measurements that helper left in `references/` and `tools/refs-b`.
+3. Reuse the six finished helpers' outputs on disk; take a second look only
+   where it adds value.
+4. Full review depth as the brief says: five rounds, an independent critic,
+   and full browser coverage. Avoid pure waste (duplicate captures,
+   re-running unchanged checks).
+5. Push signed checkpoints at each milestone
+   (`git push -u origin redesign/fable-v4b-20261115`, SSH, that branch only,
+   no force-push, no PR, no merge).
+6. Do not change model or effort.
+7. New scope, section I of the brief: **arav.pro is the primary canonical
+   domain.** One config constant for the site URL; every canonical, sitemap,
+   robots, JSON-LD, feed and OG URL points at https://arav.pro; host-based
+   308s from aravjain.dev, www.aravjain.dev and www.arav.pro as a backup;
+   per-page Open Graph images with `next/og` in the v4 language with real
+   fonts; favicon, apple-touch-icon, theme-color for both themes. Verify
+   rendered OG images and built meta tags, and grep for leftover
+   aravjain.dev. Do not touch Vercel domain settings; list dashboard steps
+   in the final report.
+
+## Work split (Arav, t256u, 2026-11-15 about 10:10 PM CT; this overrides who does what above)
+
+Arav's weekly Fable allowance on the Claude subscription was down to 11%.
+The work is not paused; it is split.
+
+1. **This thread (Claude Code, Fable 5.2) orchestrates, studies, tests and
+   reviews only:** planning, the reference studies, reading and judging
+   diffs, browser, performance and contrast checks, cross-browser runs,
+   haptics checks, review rounds, docs and the final write-up. Full depth
+   and rounds still apply. It does not write core implementation code. A
+   one-line tweak is the limit.
+2. **All core implementation goes to Kilo Code:** components, scene and
+   shader code, page builds, section I work, refactors, and any bug fix
+   bigger than a one-line tweak.
+3. How to delegate, exactly:
+   `delegate_task` with `target: {providerInstanceId: 'acpRegistry_kilo',
+   model: 'kilo/anthropic/claude-fable-5.2', options: {mode: 'code'}}`,
+   `runtimeMode: 'full-access'`, `isolation: 'shared'` (this worktree).
+   Never Kilo's orchestrator mode; a Kilo task never spawns subtasks. It
+   stays inside the worktree: no outside paths, no global installs.
+4. **One Kilo task at a time.** Wait, review its diff, run the tests and
+   visual checks, then send the next. No parallel helpers on any provider.
+5. Every brief stands alone (Kilo gets no history): spec sections, exact
+   files, Arav's rules and bans, acceptance tests, commands. Kilo commits
+   locally, SSH-signed under the owner's identity, and never pushes. This thread
+   pushes the signed checkpoint after review.
+6. If a Kilo task shows `waiting` or looks idle for about 10 minutes, check
+   `task_status` and `t3_pending_request` for it at once and unblock it. Two
+   stalls on the same task: cancel, note why here, do that piece in this
+   thread at the smallest scope.
+7. A result below the bar goes back to Kilo with specific notes. It is not
+   rewritten here.
+
+8. Effort tiers on the Claude side (t257u, 2026-11-16 12:00 AM CT): this
+   thread stays at High for thinking, planning and review. Non-critical
+   Claude work (running through the app, routine testing, screenshot
+   passes) goes to one Fable 5.2 Medium helper at a time, never more;
+   trivially easy steps may use Low. Kilo is unchanged.
+
+Unchanged: same branch, signed SSH pushes only, no merge, no deploy,
+section I, haptics.
+
+## Checklist
+
+### 0. Setup
+- [x] Preconditions verified (origin/main 9a487fb, clean tree, identity, SSH signing)
+- [x] Scrapped attempt removed: worktree `redesign-fable-v4-20261115` and local
+      branch `redesign/fable-v4-20261115` (never pushed; `git ls-remote` empty)
+- [x] Scrapped attempt's evidence set aside, not reused:
+      `~/.t3/portfolio-redesign-v4/_scrapped-kilo-attempt/`
+- [x] Tooling outside git: `~/.t3/portfolio-redesign-v4/tools` (Playwright 1.65.1,
+      Lighthouse 13)
+- [x] Dependencies: lenis, web-haptics 0.0.6, vitest
+
+### 1. Study
+- [x] Skills loaded and recorded in `skills-evidence.md`
+- [x] Reference study: parts 01 and 03 by helpers, part 02 by me, `reference-study.md` index and decision map
+- [x] v2/v3 carry-over, `carry-over.md`
+- [x] v3 lag root cause in `perf.md` (v4 measurements: numbers taken, write-up owed)
+
+### 2. Design
+- [x] `concept.md`, `motion-system.md` (both need the deep water pass written in)
+- [~] `typography.md`: blind ranking done (X, Y, Z); the pick changed to X plus
+      a serif accent; the doc and `font-licenses.md` must be rewritten to match
+
+### 3. Content and metrics
+- [x] `content-sources.md`, `lib/metrics`, snapshot, refresh script, weekly workflow, tests, `metrics.md`
+- [ ] Refresh the snapshot on ship (`node scripts/refresh-metrics.mjs`)
+
+### 4. Build
+- [x] Water engine, home, /work, project pages, blog shell, states, theme, haptics, reduced motion
+- [~] Deep water pass after the critic (commit 24a276c): done in this thread
+      before the split. What is left goes to Kilo (list in the log below).
+
+### 4b. Domains and sharing (section I)
+- [x] Site URL constant, canonical, sitemap, robots, feed, JSON-LD on arav.pro; host redirects; OG images; icons; theme-color
+- [ ] Re-verify on the final build: OG images now use the new faces (render
+      each, check meta for home, one project, one post, grep aravjain.dev)
+
+### 5. Gates (final build, 2026-11-16)
+- [x] lint, typecheck, build, 196 unit tests
+- [x] Overlap test with the ending's measured contrast: Chromium, six pages,
+      seven widths, 0 overlaps after every Kilo task; the full three-browser
+      run on the final build is recorded in the last log line
+- [x] Perf traces: p95 16.7 to 16.8 ms on all four profiles, tier 0 on
+      desktop, one backing size each (`perf.md`, `traces/v4-final`)
+- [x] Lighthouse: desktop 95 to 100, mobile 88 to 94, others 100
+- [x] Cross-browser matrix: 92 loads, 0 problems; touch emulation
+- [x] Greps (dashes, banned words), 197 words on home, one file over 2 MB
+      (the Agent Bridge film, 4.36 MB), blog and editor diff empty
+
+### 6. Review
+- [x] Rounds 1 to 5, `design-review.md`
+- [x] Independent critics: 5.5, 5.8, 5.5, 5.8, 5.8. Target 8.5 not met
+- [x] Rounds 6 to 9 on their findings (K1 to K6 by Kilo, reviewed here)
+
+### 7. Finish
+- [x] Final screenshots (`screenshots/<browser>-<page>-<width>.png`) and
+      videos (`home-scroll-1440.webm`, `home-touch-390.webm`)
+- [x] Snapshot refreshed; pushed; production server on 3133; final report
+
+## Log
+
+- 2026-11-15 11:30 CT. Session start. Cleanup done, tooling installed.
+- 2026-11-15 14:30 CT. Concept chosen and prototyped: "Meltwater" (see
+  concept.md when written). Engine works in `src/water/` (bed from DOM, wave +
+  velocity + dye simulation, one shading pass, ice name with scroll melt).
+  Lab page at `/lab` (delete before ship). Dev server: `pnpm exec next dev -p 3140`.
+- 2026-11-15 14:30 CT. Seven background agents were started for research and
+  the metrics library; all seven died on the shared Claude rate limit. What
+  they left, and what is still owed:
+  - Metrics library: DONE on disk (`src/lib/metrics`, snapshot, refresh
+    script, weekly workflow, 191 passing tests). Owed: `metrics.md`, wiring
+    into pages, a re-run of the refresh on ship day.
+  - `carry-over.md`: draft on disk (large). Owed: review, trim, `perf.md`
+    root cause (traces are in `~/.t3/portfolio-redesign-v4/traces/v3`,
+    scripts in `tools/v2v3`).
+  - Reference captures: `~/.t3/portfolio-redesign-v4/references/<site>/`
+    for 24 sites, probe scripts and logs in `tools/refs-a|b|c`
+    (`tools/refs-c/draft-water.md` has water notes). Owed: the written
+    `reference-study.md`.
+  - Fonts: about 100 OFL families downloaded to
+    `~/.t3/portfolio-redesign-v4/fonts/` with `_meta/fonts.json`; five
+    audition specimens in `specimens/pre/audition`. Owed: `typography.md`,
+    bake-off, pick, licences.
+  - Content: link checks in `sources/links/results.tsv`, raw pulls in
+    `sources/raw`, media in `sources/assets/<project>`. Owed:
+    `content-sources.md`, project fact sheets.
+  - Rule from here: no more than one background agent at a time.
+- 2026-11-15 15:10 CT. Correction: six of the seven helpers did finish
+  (2:33 to 2:53 PM). On disk and reused: `reference-study/01-...` and
+  `03-...`, `typography.md` (three sections left for me), `metrics.md`,
+  `content-sources.md`, `carry-over.md`, `perf.md` (v4 measurements owed),
+  plus `sources/project-facts.md` outside git. Home page, ending screen and
+  all eight project beds are built; inner pages in progress.
+- 2026-11-15 20:10 CT. Independent critic (one fresh agent, medium effort,
+  captures only): 5.5 of 10. Blind type ranking X, Y, Z, and the build had
+  shipped Z. Full text in `~/.t3/portfolio-redesign-v4/critic/review-1.md`.
+  Worst findings: the name was not ice, the melt was a weight slider, most
+  of the page was flat grey, the water read as a texture, the type looked
+  default, empty pools on inner pages, the ending was a step down from v2.
+- 2026-11-15 22:05 CT. Round 6, the deep water pass, pushed as 24a276c
+  (signed). Oblique camera (walls, waterline and bed read as depth), summed
+  curvature caustics, rivers about twice as wide, a lake from bank to bank,
+  the name as a standing block of ice, a melt that sinks and clears, TASA
+  Orbiter with Spline Sans Mono and a Newsreader accent, the ending with
+  words set in the picture, a plain footer on inner pages, no empty pools.
+  The overlap test's ending check turned out to be vacuous (it skipped
+  `data-chrome`); it now photographs the picture behind every line and
+  measures contrast. That failed the light ending at 1.6 to 1, so the light
+  ending was regraded as a blue-hour dawn; it passes at five widths.
+- 2026-11-15 22:10 CT. Work split (t256u, section above). From here this
+  thread reviews and tests; Kilo implements. Uncommitted at the split: one
+  line in `globals.css` (display tracking -0.036em, leading 0.94).
+- Open items for Kilo, from round 6 review (to be sent one task at a time):
+  1. Home word count back to 200 or under after the copy changes; check.
+  2. Reduced motion, no WebGL, forced colours and print after the layout
+     changes (full-bleed lake, new ending, footer).
+  3. Whatever the second critic finds.
+- 2026-11-16 00:50 CT. Second independent critic (fresh agent, run through
+  Kilo on Fable 5.2 to spare the Claude allowance, captures only): 5.8 of
+  10 (`critic/review-2.md`). Up on type (6.5), ending (7), legibility (7),
+  phone (7); still low on the name as ice, the water reading as a pool
+  texture in tubes, the flat ground, the melt reading as a fade, and craft
+  against the references (5). Its project sheet was a broken capture (my
+  script, a zsh word-split), so project pages were judged from three.
+- Kilo task K1, "the water world", brief at `.tools/briefs/K1-water-world.md`
+  (git-ignored): ice as clear glacier ice, erosion melt with visible
+  meltwater, natural deep water without terraces, a dark theme lit for
+  night, a lit stone ground with a wet shore, fewer and wider bodies of
+  water with real media on Kilo Bench and RydAR, a wake that bends light
+  instead of a grey veil, antialiased edges. Capture tooling for Kilo is
+  copied into `.tools/` inside the worktree so it never needs an outside path.
+- Next after K1: K2 (ending: mountains, sun, the top-down phase using the
+  page's own caustics; body copy scale; inner pages; small fixes), then a
+  third score.
+- 2026-11-16 03:35 CT. Kilo tasks K1, K2 and K3 done, each reviewed here
+  from its captures and pushed as a signed checkpoint (K1 `314c747`, K2
+  `d3914fb`, K3 `0fb181c`; all Kilo commits verify as signed). K1: clear
+  ice, erosion melt, natural deep water without terraces, lit stone, wider
+  streams, real media on Kilo Bench and RydAR, a wake of real ripples,
+  antialiased edges. K2: meltwater without fog, luminous night water, the
+  ending rebuilt (seamless handover, sculpted ranges, sun behind the ridge,
+  the clipped full stop), body copy scale, small fixes. K3: a melt that
+  never breaks into fragments, night caustics as a filled net, live water
+  before the ending. Gates after each: lint, typecheck, 196 tests, overlap
+  test 0 overlaps at seven widths, 197 words on home, p95 16.7 to 16.8 ms.
+- 2026-11-16 03:54 CT. Third independent critic (fresh, through Kilo):
+  5.5 of 10 (`critic/review-3.md`). Ending 7.5 ("the dark ending is the
+  best frame in the build and beats v2"), five-second read 7.5; water 4.5,
+  project pages 4, craft 5. Its project score rests partly on my capture
+  (first and last screen only, so the pages looked like stubs): the next
+  package shows whole pages. Its top finding is the same as the other two
+  critics' in three different builds: the name as raised letters reads as
+  a text effect whatever the material.
+- Decision: stop tuning raised letters. Kilo task K4
+  (`.tools/briefs/K4-frozen-lake.md`): the lake is covered by a sheet of
+  lake ice and the name is cut through it, so the letters are live water
+  seen through the ice; the melt is the sheet breaking up into floes that
+  drift to the outlet. Also in K4: visible flow and a difference between
+  runs and pools, a lit dark ground, a larger Kilo Bench image, the light
+  ending's glints and colour handover, the gutter look on inner pages, a
+  nav that leaves when the page scrolls down, a wake drawn by shading.
+- After K4: review, a fourth and final independent score, then the final
+  gates, the remaining docs and the report, whatever the score is. The
+  report states the scores as they are.
+- 2026-11-16 04:33 CT. K4 done, reviewed and pushed (`c630b1d`): the frozen
+  lake (the name cut through a sheet of lake ice as live water; the melt
+  is the sheet breaking into floes), runs and pools as different water, a
+  lit dark ground, a larger Kilo Bench image, the light ending's sun path
+  and colour handover, a wandering stream on inner pages, a nav that
+  leaves on scroll down, a wake by shading.
+- 2026-11-16 06:36 CT. K5 done, reviewed and pushed (`5d4be01`): night ice
+  in dark theme (mean ice luminance 0.25, name 3.3 to 1), crisp drifted
+  snow over clear ice in light with a lead of open water at the north
+  shore (name 5.2 to 1), whole round floes that go largest last, no crease
+  or terracing in the stream bed. Kilo caught a frame-time regression of
+  its own (the fracture field cost 33 ms p95 under GPU contention) and
+  fixed it before handing back.
+- 2026-11-16 07:00 CT. Final gates on the K5 build (production, port 3141):
+  perf p95 16.7 to 16.8 ms on all four profiles, tier 0 desktop, one
+  backing size each; Lighthouse desktop 99, 100, 100, 100 and mobile 90,
+  94, 88, 93 (home, /work, project, post), accessibility, best practices
+  and SEO 100 everywhere; cross-browser matrix 92 loads, 0 problems; home
+  197 words; states and haptics wiring pass. Section I re-verified: every
+  canonical and OG URL on arav.pro, no stray aravjain.dev. The OG cards
+  rendered but still drew the first build's look: sent to Kilo in K6.
+- 2026-11-16 07:05 CT. Fourth independent critic: 5.8 of 10
+  (`critic/review-4.md`). Four fresh critics, four builds: 5.5, 5.8, 5.5,
+  5.8. The target of 8.5 is not met and the report says so. Its real,
+  specific findings went to Kilo as K6 (`.tools/briefs/K6-last-fixes.md`):
+  the dark hero's legibility, stepped edges on the ice at 2x, cracks
+  cutting the name, a wake that had become too faint, a screen of plain
+  water after the melt, the dark colour handover into the ending, halos,
+  an empty spinner image, and the OG cards.
+- After K6: review, final build, the full gate set once more (three-browser
+  overlap run, perf, Lighthouse, matrix), a closing score for the record,
+  final screenshots and videos, snapshot refresh, production server on
+  3133, the report.
+- 2026-11-16 07:48 CT. K6 done, reviewed and pushed (`e04fcd1`): dark hero
+  with the name as lit water (4.5 to 1), crisp ice edges at 2x, cracks that
+  route round the name, a stronger wake, a shorter lake, a graded dark
+  handover into the ending, the empty spinner image dropped from the Kilo
+  Bench page, the five OG cards redrawn.
+- 2026-11-16 08:09 CT. Final build. Snapshot refreshed (`0a374c8`). Gates
+  re-run on it (checklist above). Closing independent score 5.8
+  (`critic/review-5.md`). No further passes: five scores in a row within
+  0.3 of each other say another pass of the same kind will not move it.
+- 2026-11-16 10:25 CT. Full overlap run on the final build finished: 189
+  page runs (Chromium, WebKit, Firefox x seven widths x nine pages), 7,749
+  scroll positions, 0 overlaps; worst ending contrast 3.32 at 320 wide
+  (large type, bar 3). All 36 commits on the branch verify as signed.
+
+## New bar (Arav, t260u and t261u, 2026-11-16 10:22 AM CT)
+
+Do not close out at 5.5 to 5.8. Push v4 until a fresh panel of independent
+critics gives a **median of 9.5 or more with no critic under 9**, same
+rubric, no softening. Rounds: this thread plans, briefs, reviews and tests;
+Kilo implements, one task at a time (same delegate settings as above);
+after each round the full gates, then a fresh panel. Standing rules all
+hold. If the usage limit comes again: push a signed checkpoint and write
+exactly where things stand here first.
+
+## Ranked gap list (from all five reviews, restudied against the references)
+
+Scores so far: 5.5, 5.8, 5.5, 5.8, 5.8. Ranked by how much each theme
+holds the score down, with what the critics said and what the references
+do instead.
+
+### 1. Art direction and identity: it is a relief, the references are worlds (craft 4.5 to 5, water 4.5 to 5.5)
+- "No camera, no lighting change, no depth, no moment of spectacle after
+  the first screen" (1). "A 2D pipe diagram" (4). "Flat next to Igloo's
+  lit 3D scene and Lando's density" (5). "A flat grey page with a tube
+  drawn on it" (2).
+- References: every screen of Igloo, Lusion and Lando has **one large, lit,
+  three-dimensional subject** seen through a real camera, with atmosphere
+  (haze, sky, reflections), and small confident type around it. Igloo puts
+  each portfolio item in the scene as an object with HUD callouts on
+  leader lines. Lusion's pages are led by large rendered media.
+- The one part of this build the critics put at reference level is the
+  ending ("the best frame in the build", "beats v2"): a perspective scene
+  with a sky, ranges, a sun and water. The second is the Infiniview beat:
+  one large real product image standing in water beside one large title.
+- Conclusion: the page has to become what its ending already is. One
+  world seen through a camera that travels, with a horizon and weather,
+  and one large subject per screen.
+
+### 2. Hero and melt craft (the top finding in every review)
+- Three builds of raised letters: "embossed plastic", "2000s 3D text",
+  "WordArt". The ice sheet with the name cut through it: "flat posterised
+  ice", "pixel-stepped", dark "camouflage" then "dated neon".
+- The melt: "font-weight slider" (1), "cross-fade" (2, 3), "cartoon round
+  floes; keep the name legible and break the ice into angular drifting
+  plates" (5). A smudge where the lake meets its outlet.
+- Needed: ice as one lit, refractive surface with real depth, seen at an
+  angle under a sky so it has reflections and a horizon; angular plates;
+  the name legible until the sheet goes; the meltwater visibly becoming
+  the river.
+
+### 3. Water character (4.5 to 5.5)
+- "Uniform pipe", "gel hose", "one repeating caustic texture", "plumbing".
+  The wake and click "nearly invisible" in stills (4, 5).
+- Needed: water as bodies in a landscape (a lake, rapids, pools, a
+  delta), with reflections of the sky and ranges, visible current, and a
+  wake you can see in one frame.
+
+### 4. Project pages and inner pages (4 to 6.5)
+- "A stub template: title, one paragraph, a facts row and NEXT" (3);
+  "narrow column with an empty right half" (5); Kilo Bench "empty teal
+  placeholder", "unreadable screenshot" (4, 5); "the same pipe on every
+  inner page" (3).
+- References: Lusion's case pages are led by large media, full width, with
+  dense, composed sections.
+- Needed: case pages led by large readable media, using the full width, a
+  different composition per project, no placeholder anywhere.
+
+### 5. Typography, spacing and density (5 to 7)
+- The system is now right ("good serif, mono and grotesk system", 5).
+  What is left: "under-scaled at 1440 and 1920", "too much empty space and
+  tiny type", "footer text is tiny", "body small on inner pages".
+- References: Lusion sets 140 px headings against 13 px labels and fills
+  the frame; Lando is dense.
+- Needed: screens composed to the frame, not columns in a tall page.
+
+### 6. Light and dark as two designs (4.5 to 6.5)
+- "Dark is a palette swap" (2); "dark hero reads as camouflage" (4);
+  "light hero reads as camouflage, dark hero as dated neon" (5).
+- Needed: two times of day in one world, each lit on purpose.
+
+### 7. Ending (5.5 to 7.5: the strongest part, still short of 9)
+- "Lost v2's signature element (the falling light stream, the bokeh
+  waterline)" (4, 5); "aliased glitter", "smeared ripples bottom right",
+  "melted-looking mountains", "orphaned RSS" (5); light dawn "purple/pink".
+- Needed: one signature light event, cleaner glitter, firmer ranges, the
+  footer row composed.
+
+### 8. Polish (softness 5 to 7; phone 6 to 7)
+- Stepped or soft edges at 2x; halos; smudges; labels crowding channel
+  ends on phones; dev badge in a capture (mine); a spinner screenshot.
+- Process: critics 4 and 5 could not open four reference images and had
+  the brief cut short by their tools. The next packages use smaller
+  images and shorter files, the same rubric, a panel of three, and finer
+  motion strips. Nothing about the scoring is softened.
+
+### Decision for round 10
+Stop improving the relief. Rebuild the home page as **one flight**: a fixed
+full-screen scene seen through a perspective camera that travels down the
+meltwater river as the page scrolls, from the frozen lake (the name cut
+through the ice, under a sky, ranges on the horizon) through one composed
+station per project (real media standing in the world, data as callouts
+on leader lines) to the sea at dawn, which is the existing ending. The
+engine's planes, distance fields, simulation and materials carry over: a
+pitched camera is a different mapping from pixel to ray, not a different
+renderer. Text is overlaid in composed zones and its contrast is measured
+at every scroll position, as the ending's already is. Built first at a
+temporary route so the shipped home page is not broken while it is judged.
+
+## Final phase, after the design reaches the bar: music and sound (Arav, t262u, 2026-11-16 10:46 AM CT)
+
+Not before the critics' median is 9.5 or more. It must not distract from
+the design rounds. v4 gets properly made and composed music and sound
+effects, as igloo.inc and other award sites have.
+
+1. **Study first.** How Igloo and two or three other Site of the Day
+   winners handle audio: the ambient score, UI and interaction sounds tied
+   to motion, the sound toggle, and the default-muted start browsers
+   require. Written up next to the reference study.
+2. **One sound design for the ice-to-water idea.** An ambient bed, plus
+   effects for the melt, scroll, hovers and the moments that already have
+   haptics. Mixed and level-balanced, nothing harsh.
+3. **Sources.** Original, synthesised (Web Audio) or properly licensed
+   only (CC0 or royalty-free with the licence recorded in the repo, as
+   the fonts' are). Never unlicensed audio.
+4. **Control.** A clear, elegant sound on/off control. Off by default
+   until the visitor turns it on; the choice is remembered; reduced
+   motion and the user's choice are respected.
+5. **Weight.** Audio loads lazily after the first interaction; the
+   performance budget and the Lighthouse gates still hold.
+6. **Who does what.** Kilo implements, one task at a time. This thread
+   reviews by measurement (waveform and loudness analysis, clipping,
+   level balance between bed and effects) and adds sound to the critics'
+   rubric.
+7. **Sync and fit (Arav, t263u): the sound is not a background layer.**
+   igloo.inc is the primary audio benchmark: study its audio behaviour in
+   detail and match its level of integration. Every effect is driven by
+   the same interaction and animation state as the picture (scroll
+   velocity, melt progress, hover and press, transitions, the pointer's
+   wake), timed to the frame, with its parameters modulated live (pitch,
+   filter, gain, stereo position) instead of fixed one-shots. The
+   critics score **sync and fit** as their own line in the rubric.
+
+## Round 10 log
+- 2026-11-16 10:30 CT. Kilo task K7 started
+  (`.tools/briefs/K7-the-flight.md`): a prototype at `/flight` of the home
+  page as one world seen through a travelling perspective camera (frozen
+  lake under a sky, melt and descent, the statement on the bank, the
+  Infiniview slab in its basin with its reflection, hand-over to the
+  existing ending), plus `scripts/legibility-test.mjs` (contrast behind
+  every line of text at 40 or more scroll positions, both themes). The
+  shipped home page is untouched until the prototype is judged.
+- 2026-11-16 11:40 CT. K7 done and pushed (`222d41c`, signed). Its run sat
+  idle for 17 minutes after it had committed and written its report, with
+  nothing pending, so the run was closed (first stall of a Kilo task;
+  nothing lost). The prototype works: `/flight` is one world through a
+  travelling camera, legibility test passes at 390 and 1440 in both
+  themes, existing pages untouched. It drops frames at 1728 wide (6
+  percent) and under contention (p95 33 ms): a gate for the next task.
+- 2026-11-16 11:48 CT. Interim independent read on the prototype (one
+  critic, all 29 images opened this time): **6.0**, the highest so far.
+  "The idea is at reference level; the rendering looks like a real-time
+  demo scene." (`critic/review-6.md`). Worst: the hero name pale on pale
+  and stepped; the ground "one striped noise texture"; the object "a flat
+  screenshot rectangle on a snow disc"; dark "reads as neon"; the river
+  "a uniform band"; smeared mountains.
+- Kilo task K8 (`.tools/briefs/K8-from-demo-to-film.md`): render quality.
+  Baked, mip-mapped, anisotropically filtered ground; real ranges; a sun,
+  an aurora at night that open water mirrors (in place of water that
+  glows by itself), a film finish; the hero as a binding composition with
+  the name cut anamorphically and 4.5 to 1 measured in both themes; a
+  river with visible current and angular plates; the object as a thing
+  with a body, light and a clean reflection; frame rate as a hard gate
+  (p95 16.7 ms or under and under 1 percent of frames over 25 ms on every
+  profile).
+- Then: K9 (the other seven stations, the ending inside the same world,
+  time of day that moves with the scroll, swap into the home page,
+  fallbacks, phone), K10 (project and inner pages led by large media),
+  then a panel of three critics.
+- 2026-11-16 12:29 CT. K8 failed before changing anything: the Kilo
+  gateway stops any single response at 600 seconds, and its first big
+  edit ran past that. Nothing lost (tree clean at `0b4ec0d`). Relaunched
+  as two smaller tasks with an instruction to edit in small steps and
+  commit per part. **K8a (running):** ground, ranges, sky, aurora, film
+  finish, frame rate. **K8b (next):** the hero's composition and
+  anamorphic name, the river and the melt's plates, the project object,
+  the small named faults. Briefs for Kilo from here on always carry the
+  small-steps instruction.
+- 2026-11-16 14:35 CT. K8a done, reviewed and pushed (`b84354f`, seven
+  signed commits): baked snow with form, real ranges from a marched
+  height field baked to a panorama, a sun in frame, an aurora and stars
+  that open water mirrors, a film finish on a float target, no world
+  edge in the run-out, legibility passing at 390, 768, 1440 and 2560 in
+  both themes. Frame rate: the two desktop profiles and the throttled
+  phone hold p95 16.7 to 16.8 ms with 0.1 to 0.3 percent slow frames on
+  tier 0; the contended profile does not (7 percent of scroll frames).
+  My review of the frames: the world now reads as a film; the hero's
+  composition, the river's surface and the object are still the
+  prototype's.
+- 2026-11-16 14:40 CT. K8b started (`.tools/briefs/K8b-hero-water-object.md`):
+  the hero as a poster with the name cut anamorphically, water that reads
+  as water in both themes, angular plates, the object as a monolith in a
+  walled basin, and a governor that drops a shading tier under contention
+  (never resolution) so the fourth profile passes.
+- 2026-11-16 15:30 CT. K8b done, reviewed and pushed (`9a96439`, five
+  signed commits): the hero as a poster (a vast lake to the far shore,
+  the name cut anamorphically, measured 5.6 to 6.9 to 1 by day and 4.7 to
+  5.9 at night), a river with current and wet banks, a night reflection
+  that reads as water, the object as a monolith on rock, a governor that
+  drops shading and never resolution. Gates: legibility passes at four
+  widths in both themes, existing pages untouched. Frame rate: three
+  profiles pass; the contended one still misses (8.4 percent of scroll
+  frames) even at the leanest step. Kilo measured the cause: fill at
+  full size with two windows on the GPU, not the shading maths.
+- 2026-11-16 15:54 CT. Second interim independent read: **6.7**
+  (`critic/review-7.md`). Sub-scores: water 6, legibility 7.5, sharpness
+  6.5, type 7.5, five-second read 8.5, ending 7, light and dark 7.5,
+  project pages 7, phone 6.5, craft 6.5. Series so far: 5.5, 5.8, 5.5,
+  5.8, 5.8 (the relief), 6.0, 6.7 (the flight). Top findings: the name
+  squashes as the camera descends and still reads as extruded lettering;
+  the object is "a stock floating monitor"; hexagon lines in the ice;
+  saw-toothed shorelines; the unbuilt stretches are empty; inner pages
+  are "white paper with a gel tube ... a different world from the home".
+- Next, one Kilo task at a time:
+  K8c (`.tools/briefs/K8c-name-object-polish.md`): the name as open water
+  that mirrors the scene with a bright recessed rim; the camera holds the
+  hero's view until the name's ice has gone; cracks and shorelines; the
+  first object as a block of ice with the product frozen inside; one
+  full-size pass (bloom from the previous frame) for the contended
+  profile; the start-up long task.
+  K9a (`.tools/briefs/K9a-stations-2-4.md`): callouts on leader lines;
+  Upstream as a confluence of seven streams; Kilo Bench; Agent Bridge as
+  two lights across still water.
+  K9b: Open models, cc-switch, TensorPoW, RydAR.
+  K9c: interests, the ending inside the same world (no top-down caustic
+  screens), the swap into the home page, fallbacks, phone paths.
+  K10: project and inner pages in the home's world, led by large real
+  media (staged in `.tools/assets/` with their sources).
+  Then a panel of three critics; rounds continue until the median is 9.5
+  with none under 9. Then the sound phase.
+- 2026-11-16 17:00 CT. K8c done, reviewed and pushed (`30f77ee`, eight
+  signed commits): the name as open water with a bright recessed rim on
+  the far side only (no dark wall), the camera holding the hero's view
+  until the name's ice has gone, wandering fractures into plates of
+  different sizes, shorelines with a shelf and a foam line, the first
+  object as a block of glacier ice with the product frozen inside it,
+  one full-size pass straight to the screen with last frame's glow,
+  start-up in short tasks (0 long tasks on desktop), the statement
+  larger on phones. Gates: legibility passes at four widths in both
+  themes, existing pages untouched, three perf profiles pass on tier 0.
+  **Open gate:** the two-windows stress profile still drops 8.8 percent
+  of scroll frames (p95 33 ms). One pass did not fix it; the real GPU
+  time per frame at 2880 x 1800 is close to the budget on this machine.
+  A later task must find a leaner tier that is a real saving. Not
+  relaxed, not hidden.
+- 2026-11-16 17:02 CT. K9a started (`.tools/briefs/K9a-stations-2-4.md`).
+- Note on times: until 2026-11-16 17:30 CT the times in this log from
+  round 6 on were written from memory and had drifted by up to six
+  hours. They are now corrected from the commit timestamps (central
+  time). From here each entry's time is read from the clock.
+- 2026-11-16 18:42 CT. K9a done, reviewed and pushed (`f23dbbd`, five signed
+  commits): world-anchored callouts on leader lines; station 2, the
+  Upstream confluence of seven streams with the live figure; station 3,
+  Kilo Bench's results on the bed of a clear pool; station 4, Agent
+  Bridge's two lit shards across a still tarn with a crossing pulse;
+  phone paths; legibility passing at four widths in both themes; three
+  perf profiles pass on tier 0; contended still open (6 percent).
+  Kilo's own shortfalls, kept for the polish pass after the journey is
+  whole: the falls are short white bars; plumes merge; two captions off
+  frame on phones; the results picture's own text is small; no stones on
+  the pool's bed; shards cast no shadow; fewer capture rounds than asked;
+  no 2x frames, no motion strips, no WebKit or Firefox captures.
+- 2026-11-16 18:42 CT. K9b started (`.tools/briefs/K9b-stations-5-8.md`):
+  Open models as four columns of ice sized by pulls, cc-switch as a dam
+  with three sluices the switch really opens, TensorPoW as a lattice of
+  ice, RydAR as a canyon the camera banks through.
+- 2026-11-16 21:35 CT. K9b done and reviewed (`4e8f21e`, six signed commits): station
+  5, four columns of ice as tall as each model's pulls with callouts;
+  station 6, a dam of ice with three sluices the home page's real switch
+  opens; station 7, a four by four lattice of ice; station 8, a canyon of
+  blue ice the camera banks through with the app seen in the ice wall.
+  The flight now runs lake, statement, eight stations, run-out, old
+  ending. Legibility passes at 390, 768, 1440 and 2560 in both themes;
+  existing pages untouched. **Frame rate regressed and is open:** 1440
+  passes on tier 0; 1728 holds p95 16.8 ms but drops to the leanest tier
+  with 2.4 percent slow frames; contended 13 percent. Kilo's own
+  shortfalls per station are in `.tools/out/k9b/REPORT.md` (the ice is
+  flat-lit, the dam is blocky, meltwater reads as lines).
+
+## Change of hands (Arav, t266u, 2026-11-16 about 9:21 PM CT)
+
+Arav's Claude plan is now Ultra (no 5-hour session limit, about double
+the weekly limit). **Kilo is stopped.** K9b was the last Kilo task; its
+committed work is kept; nothing more is sent to Kilo. From here all core
+implementation happens in Claude Code on Fable 5.2: this thread
+implements directly, or uses a single Claude helper where that is
+genuinely useful, never more than one at a time. Effort: High for
+thinking, planning, design decisions and review; Medium for run-throughs
+and testing; Low for trivial steps. No need to pace work around a
+session window. Unchanged: the 9.5 bar with the critic panel, the sound
+phase after it, signed SSH commits and pushed checkpoints, no PR, no
+merge. The briefs written for Kilo (`.tools/briefs/K9c-*.md` onward) are
+still the specifications; the "gateway kills a response at 600 seconds"
+rule in them was Kilo's and no longer applies. Independent critics now
+run as a single Claude helper at Medium effort, captures only, as the
+first one did.
+
+## What is left, in order
+1. The delta, the ending inside the flight, the flight becomes the home
+   page (`.tools/briefs/K9c-ending-and-swap.md`).
+2. Frame rate: every profile back inside the gate with eight stations
+   (tier 0 at 1440 and 1728; the contended profile).
+3. A polish pass over all eight stations and the hero from the reports'
+   own shortfalls and critic 7's findings.
+4. Project and inner pages in the home's world, led by large real media
+   (assets staged in `.tools/assets/`, facts in `project-facts.md`).
+5. Full gates, then a panel of three independent critics. Rounds until
+   the median is 9.5 with none under 9.
+6. The sound phase.
+
+
+## All in, in parallel (Arav, t268u, 2026-11-16 11:38 PM CT)
+
+Arav's direction, which replaces the one-helper limit above: finish v4
+completely tonight. The weekly limit is at 93 percent remaining and
+resets on Nov 17 at 1 PM CT, so use it fully. As many parallel Claude
+helpers as genuinely speed the work up, on any model tier; **Fable 5.2
+never above High effort** (High for critical design, planning and
+review; Medium and Low for testing and trivial steps). Each helper gets
+a disjoint area so no two duplicate or clash; this thread stays
+responsible for integration and clean commits. No Kilo. To finish:
+frame rate at large screens, polish on the stations and the hero,
+project pages in the new style, per-page sharing cards with the
+arav.pro canonical, WebHaptics, the metrics, full gates, then the
+composed sound phase (igloo.inc as the benchmark), then fresh
+independent critic rounds until the median is 9.5 with none under 9.
+Commits SSH-signed and pushed as frequent checkpoints. No PR and no
+merge from this thread: Arav opens the PR when this file says DONE.
+
+### K9c (the last single helper), reviewed and pushed, 23:59
+
+Five signed commits, `8e81133` to `7ebccf1`, pushed. **The flight is
+now the home page at `/`**: the old relief page, `/flight`, the
+separate `Ending` canvas and its shader are gone. New: the delta (the
+river parts into three arms and six braids; the interests stand
+there); time passes along the flight (cold morning to low sun; polar
+night to first light); the ending is the flight's last frame, with one
+light event per visit (the sun's edge clears the lowest saddle of the
+ranges, found per device, and a line of light runs in across the sea);
+the "words' lee" (the picture keeps itself calm behind whichever words
+are up); reduced motion as composed stills; a plain stacked page
+without WebGL; the home sharing card redrawn as the hero.
+
+Gates at `7ebccf1`: lint, typecheck clean; 196 tests; build; legibility
+on `/` at seven widths in both themes, 9,286 lines, 0 failures; overlap
+on eight pages at seven widths, 2,583 positions, 0 overlaps; 197 words,
+0 dashes, 0 console errors; protected paths diff empty.
+
+**Frame rate is the open gate.** Fixed harness (every profile now
+scrolls the whole page):
+
+| profile | slow frames | p95 | tier |
+| --- | --- | --- | --- |
+| desktop-1440-dpr2 | 1 / 2,443 | 16.7 | 0 |
+| desktop-1728-dpr2 | 93 / 2,350 (4.0%) | 16.8 | one step lean |
+| phone-390-dpr3-cpu4x | 0 / 2,406 | 16.7 | 1 |
+| desktop-1440-dpr2-contended | 331 / 2,109 | 33.4 | two steps lean |
+
+The useful finding: the GPU driver's cost follows the whole shader's
+shape, so code that never runs still slows the frame. The pass is now
+compiled in two variants (the sea's code only from the canyon on).
+The next step is a variant per stretch of the flight.
+
+### The wave (launched 2026-11-17 about 00:05)
+
+Six helpers, each in its own worktree and branch, its own ports, its
+own files, briefs in `.tools/briefs/W*.md` (rules common to all in
+`W-common.md`). None pushes; this thread cherry-picks their commits
+onto the branch, re-runs the gates and pushes.
+
+| helper | area | ports |
+| --- | --- | --- |
+| W1 | the hero: the name as open water, lake ice, the melt, ranges, the river between stations | 3151 / 3161 |
+| W2 | stations 1 to 4 (Infiniview, Upstream, Kilo Bench, Agent Bridge) and callouts | 3152 / 3162 |
+| W3 | stations 5 to 8 (Open models, cc-switch, TensorPoW, RydAR), the delta, the sea, the ending | 3153 / 3163 |
+| W4 | every inner page in the home page's world: project pages as case studies, work, blog, 404 | 3154 / 3164 |
+| W5 | sound: study of igloo.inc, a composed generative bed and effects driven by the picture's state | 3155 / 3165 |
+| W6 | sharing cards from the real picture on every route, arav.pro canonical, icons (Medium effort) | 3156 / 3166 |
+
+After the wave, in order: integrate; the frame-rate task alone on the
+GPU (a compiled variant per stretch); haptics and metrics checks; full
+gates; a panel of three fresh critics; rounds until the bar.
+
+### The wave, first passes integrated (2026-11-17, 00:20 to 01:45)
+
+Each helper worked in its own worktree; this thread cherry-picked its
+commits onto the branch (every one re-signed and verified), resolved
+the overlaps in `src/water/shaders/flight.ts` by hand, re-ran lint,
+typecheck and tests, ran the merged build in a browser, and pushed.
+
+| helper | commits on the branch | what landed | what its author says is still short |
+| --- | --- | --- | --- |
+| W6 cards | `e3f6792` to `a52c801` | every route's sharing card is its words over the real picture (photographed by `scripts/capture-og.mjs`); arav.pro in every canonical, `og:url`, sitemap, robots, feed and JSON-LD through one constant; 308s from the old domains; favicon, apple-touch-icon, `theme-color` | cards must be re-photographed after the picture settles; two cards set words over their subject |
+| W1 hero | `b6bbabe` to `0c951d5` | the name's water mirrors sky and ranges with a glitter path and plates afloat; thicker sheet; swept ice toward the far shore; a bent far coast; the sheet breaks along wandering fractures into plates of every size; torn foam and white water on the river | at 320 px the name can still be read as lettering; the name's pool becomes a clean capsule in the melt; square shallows at the outlet |
+| W5 sound | `103ee05` to `e3b23af` | a study of igloo.inc, lusion.co, activetheory.net and unseen.co by instrumenting Web Audio; a generative piece in one key (B minor to D major at the dawn) with voice-leading; wind, water, cracks, drips, the shards' call and answer, the lattice's arpeggio, the gates and the dawn bells all steered from the picture's state each frame through `src/lib/signals.ts`; no audio files; nothing loads until turned on; 26 rendered scenes measured; 41 new tests | nobody has listened; 16 of 235 frame-driven moments later than one frame; a long task at turn-on; water is a loop |
+| W2 stations 1 to 4 | `3a27146` to `8819d8d` | the block stands in its basin's water with an interior and breaking waves; seven falls over an ice cliff sized by merged pull requests; the leaderboard cropped and larger in a pool with stones and an ice rim; shards in real ice with a bent mirror image | the block is a clean box; the cliff is one plane; Kilo Bench's table text is 9 px; day shards are pastel |
+| W3 stations 5 to 8, delta, ending | `6d3a664` to `903429e`, then `71debe9` | one ice material for all four; columns whose volume is the pulls; a dam seen from downstream, with no hitch on a switch change (it was 74 to 94 ms); a wider canyon with a hall for the app; more braids and drift ice; the ending's hard sun limb, true line of light, a sun pillar, the foot row joined to the links | prisms, not seracs; the canyon's first bend is one wall and a third dearer per frame; the delta is not a blaze |
+| W4 inner pages | `07d11ab`'s picks to `106d403` | every inner page opens on a live frame of the home page's world (`src/water/scene-band.ts`) and continues over lit snow; project pages are case studies led by large real media, with numbers at scale; work index, blog, post, 404, error, loading in the same world; the footer as one row; 22,516 lines of text measured for contrast, 0 failures; no horizontal scroll on 12 pages at 11 widths | 44 scene stills to retake after the picture settles; the ground "good, not great"; blog pages now revalidate hourly |
+
+State at `106d403`: lint and typecheck clean, 237 tests, production
+build, 197 visible words on the home page, 0 dashes, 0 console errors.
+
+### Second passes (running) and critic panel 8
+
+Launched as each first pass landed, each from the merged head:
+**W7** hero pass 2 (the name as a melt pond: a pale shallow margin
+deepening to dark water, no wall or bevel, one sky mirrored across all
+the letters; the outlet's square shallows; the capsule; the empty
+frames), **W8** sound pass 2 (clocked moments scheduled ahead on the
+audio clock so they cannot be late; a live bubble model for water; ice
+that sings; a returning motif; three rooms; a phone tier), **W9**
+stations 1 to 4 pass 2 (Kilo Bench as a real rock pool with readable
+results first), **W10** stations 5 to 8 and delta pass 2.
+
+**Critic panel 8** (three fresh critics, Medium effort, captures only,
+same rubric a to j, proofs required) is judging `106d403`: package at
+`~/.t3/portfolio-redesign-v4/critic/package8/` (58 images: the home
+page in 24 positions at 1440 and 390 in both themes, 13 full frames a
+theme at 2x, phone frames, every inner page top to bottom, three
+project pages' first screens). Sound is not judged this round.
+
+### Critic panel 8: 6.6, 7.2, 6.8 (median 6.8), about 02:20
+
+Scores and the shared findings are in `design-review.md` ("Panel 8").
+The reviews are at `~/.t3/portfolio-redesign-v4/critic/review-8a.md`,
+`-8b.md`, `-8c.md`. Not at the bar. Started the same hour, each from
+the merged head and each in its own area: **W11** inner pages pass 2
+(the ground; one skeleton eight times), **W12** the home page's words
+(held through every station, a progress rail, the nav, layouts, type),
+**W13** the ending (v2's ribbon of light and its mirror), **W14** the
+name as standing letters of glacier ice (an alternative to W7's pool
+of meltwater; one of the two is kept). Still to assign once the
+running passes on the shaders land: the snow's sharpness, the dark
+theme, the pictures set in ice. Then the frame-rate task, alone.
+
+### Second passes integrated; panel 9 under way (2026-11-17, about 02:30 to 05:35)
+
+Everything panel 8 found was answered by a helper and merged the same
+way as the first wave (cherry-picked, re-signed, conflicts resolved by
+hand, gates re-run, the merged build looked at, pushed).
+
+| helper | what landed |
+| --- | --- |
+| W7 hero pass 2 | the lake's far mirror of the ranges, plates through the melt, the outlet without square shallows (its pond version of the name was then replaced) |
+| W9 stations 1 to 4, pass 2 | Kilo Bench as a rock pool with a horizon, boulders and the results as readable plates (digits 15 to 24 px at 1440); a rough-hewn block; a bent cliff with falls that have volume; darker shards |
+| W8 sound pass 2 | clocked moments scheduled ahead on the audio clock; a live bubble model for water; ice that sings; a returning five-note theme; three rooms; a phone tier; inner pages sound under the pointer |
+| W11 inner pages pass 2 | eight project pages with eight structures; a ground of drawn wind ridges, grain and glints; clean pictures; the archive reordered; the blog index as its newest post in full |
+| W14 then W17 the name | **the name stands on the lake as letters of pale glacier ice on a swept field of black lake ice, mirrored in it**; through the melt it reads "Arav Jain" or nothing at every position in both themes. (Decision: standing ice over W7's pond, which smeared mid-melt; all three critics and the owner's own words asked for ice. The name is held to the large-text contrast of 3 to 1 against the ice round it; it measures 4.25 to 5.79 except by day at 320 wide and at 2560 x 900, 2.92 and 2.52, where the hero's copy stands under the letters' feet.) |
+| W13 the ending | v2's signature back as this site's own: the river's line of light runs out across a mirror-still sea and rises as a ribbon out of the frame; deep blue and gold; no scrim; RSS in the contact row |
+| W10 stations 5 to 8, pass 2 | seracs for the four models; one dam with three cuts, a dark pond and dry beds; sixteen melted cubes askew; a crevasse opening the canyon's first reach, the app in rimed ice; a late-day delta |
+| W15 snow and air | wind-cut drifts and sastrugi with cast shade at three sizes, sparkle fixed to the ground; banks with an ice shelf; finer ranges; no ghost stations in the haze |
+| W12 words, nav, type | every station named for its whole stretch (22 of 24 strip positions carry copy; it was 6); a wordless rail of ticks; the nav back at rest and on any upward scroll; varied layouts; phone captions at 11 px or more; display tracking opened. The home page is at exactly 200 visible words |
+| W16 night | aurora as tall drifting curtains that never clip; night water dark with mirrors; blue-grey snow with first light growing along the flight; the rust rings and the tarn's dimming found and removed |
+| W18 pictures and night ice | real larger sources, mip-mapped: Infiniview's own sharing card in the block (1.72 source px per device px at 1440 at 2x), RydAR's page (about 1.4), Kilo Bench's results at 2324 px (0.26 to 0.36: the largest real source); one night ice on all eight subjects |
+
+Also: the 44 scene stills and the 11 card pictures were retaken from
+this picture and the cards' alt text rewritten (`3f0f3f7`).
+
+State at `3f0f3f7`: lint and typecheck clean, 293 tests, production
+build, 200 visible words, 0 dashes, 0 console errors.
+
+Running: **P1** (frame rate, alone on the GPU: a compiled shader
+variant per stretch of the flight; nothing has been measured cleanly
+since the picture was rebuilt, and every helper reports its cost as
+unproven), **W19** (the sound brought into line with the picture as it
+now is: the arrival recomposed for the line running out and the ribbon
+climbing, the name's melt, each station's water), and **critic panel
+9** on `3f0f3f7` (package at `~/.t3/portfolio-redesign-v4/critic/package9/`,
+58 images, same rubric; captures pin the engine's full shading, which
+the frame-rate task must make the real behaviour on an idle machine).
+
+### Critic panel 9: 7.1, 7.0, 7.3 (median 7.1), about 05:50
+
+Up from 6.8; not at the bar. Scores and shared findings are in
+`design-review.md` ("Panel 9"); reviews at
+`~/.t3/portfolio-redesign-v4/critic/review-9a.md`, `-9b.md`, `-9c.md`.
+A third round was started on what the three share, each helper in its
+own area, while the frame-rate task (P1) restructures the shader: the
+words' layer (overlaps in transit, titles crossing scene edges,
+captions), inner pages, the stations' materials (RydAR, Kilo Bench,
+cc-switch first), the melt, the night's snow, the delta and the
+ending's air. A final clean frame-rate measurement follows when
+nothing else is on the GPU.
+
+## Kilo R3a/R3b (Nov 17, 2026, morning CT)
+
+Done by Kilo in code mode while the orchestrator thread was paused. Briefs: `.tools/briefs/R3a-words.md`, `R3b-inner.md`. Branch `redesign/fable-v4b-20261115`, pushed over SSH, both commits SSH-signed (the owner's identity, verified with `git log --show-signature -1`). No PR, no merge.
+
+### Commits
+
+- `d4d450e` feat(v4): R3a the home page's words
+- `bccb701` feat(v4): R3b inner pages
+
+### Tests
+
+- `pnpm lint`, `pnpm typecheck`: clean after each task. `pnpm test`: 15 files, 296 tests pass (3 new in `tests/water/words.test.ts`). `pnpm build`: passes after each task.
+- New `scripts/words-test.mjs` (rendered page, 80 scroll positions, each looked at in transit and at rest): 0 faults at 1440, 768 and 390 in both themes on the production build. Before the change: 41 faults at 1440 light, 58 at 390 dark (intersections, captions cut short, the nav at nine different heights).
+- R3b: all 11 inner routes at 320, 390, 768, 1440, 1920: status 200, no sideways scroll, no console errors, no visible text under 12 px in the page body.
+
+### R3a: what was done
+
+- A station's words have two states only (a small tag, the composed block). Between them the block goes out, changes unseen, and comes back in, so no line can meet another in transit ("18,302" over its caption is gone). `src/water/words.ts` holds the rule and the captions' geometry.
+- Station placements cut to three: lower left (the rule), upper left under the nav (Agent Bridge, RydAR), a figure across the top (Open models). TensorPoW's oversized name under its line is gone: one type scale, one order.
+- Captions: whole names, no ellipsis, one treatment in both themes (the dark theme's blurred chips are removed). Wide frames: a fan whose leaders land on the streams. Phones: the seven repositories as one list in the streams' order, inside the words' lee; the four models stepped over their columns. All 84 px or more from the top.
+- The nav no longer leaves on the home page: one fixed place (y 14) at every position. The rail names its ticks on hover and focus and is dropped on phones.
+
+### R3b: what was done
+
+- Type: body about 20 px at 1440 and growing to 24; captions, labels, table text 15 px or more at 1440. Section gap cut from up to 150 px to up to 104 px.
+- Ground: a page-length layer of light that changes down the page in both themes; each page's drifts at their own offset and light angle; a soft shade under each section's groove.
+- Charts: Upstream's bars and Open models' columns are flat, mono figures, teal on the leading one only.
+- Upstream: T3 Code changes lead, larger; then the rest by repository; the full ledger kept, smaller, grouped by repository with counts.
+- Open models: each build has what it is and a fact list (builds, context, input, capabilities, licence, updated), all from `.tools/assets/project-facts.md`.
+- Kilo Bench: the leaderboard rows cut from the 2324 px capture column by column and shown large (two columns on phones); the alternating black and grey modes are one colour, smaller.
+- Blog: index scene shortened (54svh); the post is about 21 px on a centred 33em measure with tags in the left margin.
+
+### R3b remaining (Kilo)
+
+Not done from the brief:
+
+- Item 1: the count of screens less than a third filled at 1440 and 1920 was not run; Infiniview, Agent Bridge, cc-switch, TensorPoW and RydAR got only the shared type and rhythm changes, no per-page layout work ("right column starts 300 px below the terminal", the small dialog in a wide column).
+- Item 2: no band of the page's scene returns lower down the page; the per-page difference is offset and light angle only.
+- Item 6: the post's margin has tags only (no date or contents list there).
+- Item 7: light pictures on dark pages are unchanged (existing mount and 0.84 dimming).
+- Item 8: pill buttons and the glass nav are unchanged.
+- Checks not run: inner-page text contrast after the ground change, the twelve-backdrop thumbnail sheet, WebKit and Firefox, `checks.js`.
+
+### R3a not done or not verified
+
+- Item 2 (titles on one calm surface): placements were moved, but the luminance-spread measurement behind each title was not written or run. By eye at 1440 light, Infiniview's last letters and arrow still touch the pool rim and Agent Bridge's line still runs over the far ridge.
+- Item 6 (the dead frame in the melt): tried pinning the statement early, it sat over the breaking ice and was reverted. Positions without copy at rest: 11 of 80 (brief asks for 3 or fewer).
+- Item 7 (3,202 against 3,203 between captures): not investigated.
+- Legibility test (`scripts/legibility-test.mjs`): 1440 and 390 light pass. Dark still fails on captions over the lit river: at 1440 "XcodeBenchmark" 3.82 and "openbridge" 3.94 (Upstream), "gemma4" 4.24 and once "qwen3.5-opus-4.6" 2.31 (Open models); at 390 "llama4" 4.37 once. These were measured before the last halo and caption-window changes and not rerun at 1440 dark. The brief forbids a chip, so this needs the scene to supply the calm.
+- Not run: 320, 768, 2560 legibility; reduced motion beyond one capture; no-WebGL page; keyboard order; WebKit and Firefox; `checks.js` word count.
+
+### For Fable review
+
+1. The tag-to-composed swap is a 240 ms fade out and in: check it reads as deliberate, not as a flicker, while scrolling slowly through a boundary.
+2. The fixed nav on the home page reverses W12's "nav leaves on scroll down": confirm that is wanted.
+3. Dark-theme caption contrast above (the one known failing gate).
+4. The Kilo Bench crop is upscaled past 1x of its source on wide screens; check sharpness at 2x density.
+5. The Open models copy is new wording of facts from the fact sheet: check tone and that "Claude Opus 4.6" in a model's own name is allowed.
+6. The ground's light down the page is subtle; judge whether it answers "a tinted flat".
+
+## After the outage (2026-11-17, 1:05 PM CT)
+
+At about 5:50 AM every helper then running (round 3's six, the
+frame-rate task, the sound's reconciliation) stopped on "Claude API
+rate limit reached", and this thread with them, until the limit reset
+at 1 PM. The night's parallel work had used the week's allowance.
+In between, Kilo did round 3's words and inner pages on the branch
+(the section above). State on resuming:
+
+- The sound's reconciliation (W19) had finished before it stopped:
+  five signed commits, merged as `cb081af` (the arrival recomposed for
+  the line running out and the ribbon climbing; the name's melt; each
+  station's water; the aurora's voice; the rail). 308 tests.
+- The frame-rate task (P1) stopped with a large restructuring
+  uncommitted in its own checkout (`t3-667442ba`: the shader compiled
+  in variants per stretch). Kept; to be resumed and rebased once the
+  shader's round 3 work is in.
+- Round 3's four shader helpers had committed nothing; relaunched at
+  1:08 PM from `cb081af`: stations 5 to 8 (RydAR first), stations 1 to
+  4 (Kilo Bench first), the melt, and the night's snow with the delta
+  and the ending's air.
+- From here at most four helpers run at once.
+
+## Serial from here (Arav, Nov 17, about 1:20 PM CT)
+
+The overnight fan-out burned the week's Fable allowance. New standing
+rules: **one helper at a time**, each result integrated before the next
+starts; Kilo allowed for well-scoped mechanical work only (one task at
+a time, tight brief; about $300 already spent on this site); Fable High
+for design, planning, integration review and the critic panels, never
+above High, Medium for run-throughs and testing, Low for trivial steps;
+a critic panel only after a full round of fixes, its three critics run
+one after another; signed checkpoints often; if the limit hits again,
+commit, push and stop cleanly. The target is unchanged.
+
+When this thread resumed, the stopped helpers from the outage had been
+restarted by auto-resume alongside four relaunches. All were cancelled
+except one: R3c (stations 5 to 8, RydAR first), which is running.
+
+### Review of Kilo's R3a and R3b (this thread, Fable High)
+
+Looked at every composed frame and the 24-position strips in both
+themes, and at the inner pages top to bottom. Kept as built: the two
+states of a station's words (a small tag in transit, the composed
+block at rest, nothing between), the three placements, whole captions
+in one treatment, the nav in one fixed place, the rail's names on
+hover; on inner pages the larger type, tighter rhythm, flat charts,
+Upstream led by T3 Code, the post's measure.
+
+Fixed here:
+
+| commit | what |
+| --- | --- |
+| `e48c87d` | the one failing gate: before dawn the captions tied to their points (Upstream's seven, Open models' four) measured 3.9 to 4.3 to 1. They now have a lee of their own (the picture keeps itself readable behind them, tighter and softer than the words' lee). Worst at 1440 before dawn: 5.81 and 4.76 |
+| `755bbe5` | "3,202" on one page and "3,203" on another: each page is rebuilt on its own schedule, so two pages a few minutes apart could show a count that had ticked between. One reading an hour is now held for the whole server process; a test holds it |
+| `e2c61a6` | `scripts/titles-test.mjs`: at each station's composed frame it hides the words and measures the picture behind each title, lightest against darkest as a ratio. At 1440 by day: Infiniview 2.34, Kilo Bench 2.26, TensorPoW 2.70, RydAR 1.78 cross an edge; Upstream, Agent Bridge, Open models, cc-switch stand on one surface (1.15 to 1.28). The cure is in the picture (the bank and the wide frame's camera), so it goes to R3c and R3d, each held to this test |
+| `9360b6a` and the one before | inner pages: captions a shade stronger (two on the Infiniview page measured 4.45 over the new ground); light screenshots on dark pages held to 70 percent so they sit in the night |
+
+Gates after these: lint and typecheck clean; 309 tests; the home page's
+legibility over the whole page at 1440 and 390 in both themes, 3,666
+lines, 0 failures; all twelve inner pages at 1440 and 390 in both
+themes, 0 failures; 200 visible words; 0 console errors.
+
+Still open from the two briefs, with where each goes:
+
+- R3a item 2, titles on one calm surface: R3c (TensorPoW, RydAR) and
+  R3d (Infiniview, Kilo Bench, Agent Bridge), measured by the new test.
+- R3a item 6, the dead frame in the melt (11 of 80 positions without
+  copy at rest; the brief asks 6 or fewer): R3e, which owns the melt.
+- R3a: the swap between a tag and the composed block takes about half
+  a second on an idle machine and longer under load; it has not been
+  seen at real speed. To be looked at in the run-through before the
+  next panel. Captures now wait 2.4 s at each stop for it.
+- R3b item 2 (a band of the page's own scene returning lower down the
+  page), item 6 (the post's margin holds tags only: no date or
+  contents), item 8 (pill buttons and the glass nav unchanged), and
+  item 1's per-page layout work on Infiniview, Agent Bridge,
+  TensorPoW and RydAR: a small task of their own after R3f.
+
+Order from here, one at a time: R3c (running), R3e (the melt), R3d
+(stations 1 to 4), R3f (night snow, delta, ending), the rest of R3b,
+the frame-rate task (resumed from the work left in its checkout),
+stills and cards retaken, full gates, then panel 10.
+
+### R3c (stations 5 to 8, round 3), integrated 4:50 PM CT
+
+Five signed commits, `749d395` to `5028e35` in its checkout, on the
+branch as the five ending at `8e730cc`; then this thread's review
+commit `cae66f6`.
+
+- **RydAR's canyon**, the weakest frame in panel 9: the white smears
+  and torn snow were a bug in the march (a long step could end inside a
+  wall and be painted as snow). Fixed; the walls are glacier ice drawn
+  at every size (strata, ledges, fracture planes, melt cups, threads of
+  meltwater), one clean cornice with icicles; the app's page lies under
+  a pane of clear ice, at full contrast by day and as a lamp before
+  dawn; the walls stand mirrored in the water.
+- **One glacier ice for all four stations** by day and before dawn.
+  cc-switch's shut channels are bare wet ice with washed stones and one
+  thread of water (no stipple); the open one is clear fast water with
+  depth, standing waves and foam in lines; the approach clears the
+  dam's end. The seracs are clear ice and their pool has depth. The
+  brown patch at the lattice's horizon was the glacier's front seen
+  from far off: fixed at its cause.
+- Review here: the titles test still had TensorPoW at 2.66 and RydAR
+  at 1.83 by day. The lattice's wide camera turns a little left and
+  the hall's words stand below the wall's crest: both now 1.15 to 1.35
+  at 1440, 1920 and 2560 in both themes.
+- Its own shortfalls: geometry not rebuilt (planes, a prism, chamfered
+  boxes: "low-poly" is answered by material only); cc-switch had three
+  fix rounds, not five; the canyon's march is dearer (for the
+  frame-rate task); the page before dawn is still the brightest thing
+  in its frame; the standing waves and the thread are drawn patterns.
+
+Gates at `cae66f6`: lint, typecheck, 309 tests; 200 words; 0 console
+errors; legibility over stations 7 and 8 at 1440 and 390, 0 failures.
+Next, alone: R3e (the melt), started 4:52 PM.
+
+### R3e (the melt), integrated 6:55 PM CT
+
+Seven signed commits on the branch ending at `6479beb`, merged without
+conflict; looked at in the merged build in both themes.
+
+- The letters keep their drawn weight to the end: they round into
+  humps and **sink into a pool that spreads from their own feet**; the
+  sunk part is seen through the water; one lead carries the water off
+  toward the outlet, with a visible current, rings and calved pieces.
+- Before dawn the pool mirrors the true sky: the hard-edged green patch
+  and the stipple are gone.
+- Every frame after the name has plates, the lead and the far shore;
+  the first frame's line stays until 1.2 screens and the statement is
+  in place from 1.9 (a new camera key), so the stretch without words
+  is 0.7 screens (it was 1.9).
+- The name's ice is frosted on top and clear deep blue toward the
+  foot, with a shorter, dimmer reflection; the near snow under the
+  first frame's words is crisp, not blurred.
+- The name's contrast against the ice by day: 4.39 at 320 wide (was
+  2.92), 3.31 at 2560 x 900 (was 2.52), 5.2 to 5.7 elsewhere; 6.5 to
+  6.9 before dawn.
+
+Its checks: lint, typecheck, 309 tests, build; 200 words; legibility at
+320, 390 and 1440 over screens 0 to 5, 1,104 lines, 0 failures; the
+words test, 0 faults, 7 of 80 positions without copy (was 11; the aim
+was 6). Its shortfalls: the last beat (1.11 to 1.15 screens) is humps
+and a ghost under water, not crisp letters; translucence is a gradient,
+not refraction; on a phone before dawn the pool's front shore breaks
+into several bays; the lead's mouth is a plain funnel.
+
+Next, alone: R3d (stations 1 to 4, Kilo Bench first).
+
+### R3d (stations 1 to 4, round 3), integrated 8:58 PM CT
+
+Nine signed commits on the branch ending at `c845c13`, merged without
+conflict; looked at in the merged build in both themes.
+
+- **Kilo Bench:** the results are set as real type in the site's mono
+  face on one dark slab on the pool's bed, crisp at every size (figures
+  15.5 to 21.5 px at 1440, 12.5 to 13.5 px at 390; the phone shows the
+  whole table). The transcription was checked by the helper three times
+  and by this thread against the published image
+  (`public/media/kilo-bench-results-2324.webp`): all fifteen cells
+  match (7.6, $0.7726, 719.9s, 53.3k; 7.4, $1.1007, 832.3s, 45.8k; 6.3,
+  $0.3207, 410.1s, 24.7k). The image stays the source on the project
+  page. The boulders are blocks of the shared glacier ice.
+- **Infiniview:** a bank under the whole name; the block's image in the
+  water is broken light; the red smear on the far falls is gone.
+- **Agent Bridge:** the wide frame recomposed so the name, its lines
+  and the film's control stand in clear sky; the shards rebuilt in the
+  shared ice with a mirror in a tarn that has depth.
+- **Upstream:** each caption's point is on its own stream; the cliff is
+  in the shared ice.
+- Titles test: Infiniview, Kilo Bench and Agent Bridge pass at 1440,
+  390, 1920 and 2560 in both themes (worst 1.39; they were 2.34, 2.29,
+  1.73). Six cases still fail, outside these stations: Open models'
+  figure before dawn at three widths (the sky behind it), cc-switch at
+  390 in both themes, RydAR at 390 before dawn.
+
+Its checks: lint, typecheck, 309 tests, build; 200 words; legibility
+over stations 1 to 4 at 390 and 1440, 3,227 lines, 0 failures; the
+words test, 0 faults. Its shortfalls: geometry is still convex solids
+cut by planes; Agent Bridge's camera moved a lot and the pulse's rings
+are now seen nearly edge on; the table's type is set for the composed
+camera and leans in transit; cost not measured.
+
+Next, alone: R3f (night snow, the delta, the ending's air).
+
+### R3f (night snow, the delta, the ending's air), integrated 11:05 PM CT
+
+Eight signed commits on the branch ending at `a50a9f4`, merged without
+conflict; looked at in the merged build in both themes.
+
+- **Night snow** has the day's wind-cut relief, lit by the night: cold
+  light with crisp shade, warm first light on faces turned to the dawn,
+  deep blue hollows (it was flat slate with gouges). From high cameras
+  the snow is a wind-lined plain, not hills.
+- **Ranges** along the flight: more bare rock, thin air in front of the
+  near ranges.
+- **The delta**: the light theme's day now comes down through
+  afternoon, golden hour and sunset across the canyon's exit, the
+  delta and the run to sea (no jump); the sun's light on the water is
+  glitter, not a column; the wedge on the horizon (the world's north
+  edge) is gone; the bars' faces are clean blue.
+- **The ending** is two different hours: the light theme ends in the
+  last gold of the day going to blue, the dark theme in the first rose
+  and pale gold of morning. Ranges with form, a soft waterline, v2's
+  band of soft discs along the far shore, living near water, a clean
+  ribbon image with finer dust.
+- The sky behind Open models' figure before dawn is one calm tone:
+  the titles test passes 48 of 48 at 1440, 1920 and 2560 in both
+  themes.
+
+Its checks: lint, typecheck, 309 tests, build; 200 words; legibility
+over the whole page at 390, 1440 and 2560 in both themes, 11,283 lines,
+0 failures; the words test, 0 faults. Its shortfalls: the titles test
+still fails at 390 for cc-switch (both themes) and RydAR before dawn
+(those stations' phone framing); the ending's ranges are paler than
+v2's dark silhouettes and the band of discs quieter; night ground is
+still slate violet-blue overall; the plain (no WebGL) ending's gradient
+no longer matches the dark theme's dawn; cost not measured.
+
+Round 3's picture work (R3a to R3f) is in. Next, alone: the rest of
+R3b (inner pages), then the frame-rate task.
+
+### R3g (the rest of the inner pages' round 3), integrated Nov 18, 1:20 AM CT
+
+Eight signed commits on the branch ending at `e7063e9`, merged without
+conflict; looked at in the merged build.
+
+- A new **fill test** (`scripts/fill-test.mjs`): no screenful of an
+  inner page may be under a third filled. 428 screens at 1440 and 1920
+  in both themes, 0 under (it began at 52 in the light theme alone).
+  Layout work on cc-switch (every command annotated, "what a switch
+  writes", the provider groups as a grid), TensorPoW (what the
+  reference implementation holds beside the gates before mainnet),
+  Kilo Bench, Open models and Agent Bridge.
+- **Each page ends in the world**: a full-bleed band of the next
+  project's own station (2880 x 1200, one picture a theme), the name
+  large over its calm zone, the whole band the link. The work index,
+  the blog and the post end the same way.
+- **All 44 scene stills retaken** from the current picture (wide ones
+  now 2400 x 1464).
+- The post's margin carries its date, tags and a contents list of its
+  headings; pills are kept for true controls only; the plain (no
+  WebGL) ending matches each theme's own hour.
+- Every new sentence on the project pages was checked here against
+  `.tools/assets/project-facts.md`: all are in it.
+
+Its checks: lint, typecheck, build, 312 tests; contrast over twelve
+pages at 390, 768, 1024 and 1440 in both themes, 15,362 lines, 0
+failures; no sideways scroll at eleven widths; 200 words. Its
+shortfalls: the indexes' bands were paired by where they link (work
+ends on the tarn, the blog on the delta) and not as the brief said;
+between head and foot the ground is still the drawn snow; the bands
+are stills, sharp up to 1440 at 2x; the pictures add about 13 MB to
+the repository.
+
+Round 3 is in. Next, alone: the frame-rate task; then the sharing
+cards, the two phone framings the titles test still fails, the full
+gates, and panel 10.
+
+### P1 (frame rate, first pass), integrated Nov 18, 5:05 AM CT
+
+Seven signed commits on the branch ending at `aa470bc`, merged without
+conflict; the merged build looked at (24 positions): the picture is as
+it was.
+
+As found, every desktop frame was over 25 ms (about 10 frames a second
+at 1440 at 2x, 6.7 at 1728) and the phone ran at 30: two nights of
+picture work on one shader. What P1 did: the pass is compiled in **a
+variant per stretch of the flight and per theme**
+(`src/water/variants.ts`: about 106 ms a frame down to about 13); a
+far-off subject costs only its own rectangle; the governor keeps its
+step per stretch and no longer flaps; the old top-down pass and what
+only it used are removed. Picture: 36 of 37 frames a theme have no
+pixel in ten thousand differing by more than 2 of 255.
+
+On an Apple M4 (10 GPU cores), production build, alone on the GPU:
+
+| profile | theme | as found p50 / p95 ms | now p50 / p95 ms | frames over 25 ms now |
+| --- | --- | --- | --- | --- |
+| desktop-1440-dpr2 | light | 100.0 / 133.4 | 16.7 / 16.8 | 2.91% |
+| desktop-1440-dpr2 | dark | 100.0 / 133.4 | 16.7 / 16.8 | 3.96% |
+| desktop-1728-dpr2 | light | 150.0 / 200.0 | 16.7 / 33.3 | 7.89% |
+| desktop-1728-dpr2 | dark | 150.0 / 200.1 | 16.7 / 33.4 | 13.21% |
+| phone-390-dpr3-cpu4x | both | 33.3 / 33.4 | 16.7 / 16.7 | 0 |
+| desktop-1440-dpr2-contended | light / dark | 166.6 / 400 | 16.8 to 33.3 / 50 | about 50% |
+| desktop-2560-dpr2 | light / dark | not run | 16.7 to 33.3 / 50 | 45% / 62% |
+
+**The gate is not met.** The phone holds 60 on full shading; 1440
+holds 60 on 26 of 32 screens (every slow frame is in the first frame
+and melt, or in the canyon); 1728 on about 20; the large and contended
+profiles are slow about half the time. What is left is real work on
+pixels: the name about 11 ms of an 18 ms first frame, the canyon's
+march 14 of 21. Also: the first theme switch of a visit can hold a
+frame for 1.0 to 1.4 s; one task of 50 to 74 ms at start-up.
+
+After it, this thread (GPU free): cc-switch's and RydAR's names on one
+calm surface on phones (`8a20ba9`; the titles test now passes at 390,
+1440, 1920 and 2560 in both themes; it still fails at 320 wide, where
+the short frame leaves the words over the subject); the eleven card
+pictures retaken and the cards given the stations' label system
+(`ce9da67`).
+
+Running, alone: **P2**, the frame rate's second pass (the name and its
+field baked so a pixel does lookups, the canyon's walls as a baked
+field, the 3 to 5 ms the stations need at 1728, leaner governor steps
+for large screens and a busy GPU that keep full resolution, no held
+frame on a theme switch). Then the full gates and panel 10.
+
+### P2 (frame rate, second pass), integrated Nov 18, 12:40 PM CT
+
+Nine signed commits on the branch ending at `b7e15c0`, merged without
+conflict; lint, typecheck and 312 tests pass; production build checked
+(every route 200, `/nope` 404, home 200 words, no dashes or banned
+words). The picture is unchanged: the tree as found against the final
+build at 2x, sixteen positions, both themes, mean difference 0.000 of
+255.
+
+What P2 did: the lake's variant split in three (sheet, swept field,
+letters), each kept only while it is there; **a frame is drawn in
+pieces**, each once, by the leanest variant that carries what stands
+in that piece (a station's code only where the station stands); the
+simulation reads the ice field from a target worked out once; the
+name's field asks nothing twice; the governor begins at a step the
+screen's size suggests and answers heavy overload at once; the theme
+turns under a 480 ms dissolve with no third set of programs.
+
+Same machine (Apple M4, 10 GPU cores), production build, three runs:
+
+| profile | theme | p50 / p95 ms | frames over 25 ms | as P1 left it |
+| --- | --- | --- | --- | --- |
+| desktop-1440-dpr2 | light | 16.7 / 16.8 | 1.58% to 1.79% | 3.04% |
+| desktop-1440-dpr2 | dark | 16.7 / 16.8 | 2.65% to 2.78% | 3.88% |
+| desktop-1728-dpr2 | light | 16.7 / 33.3 | 5.75% to 5.93% | 8.06% |
+| desktop-1728-dpr2 | dark | 16.7 / 33.3 | 9.50% to 9.74% | 13.22% |
+| phone-390-dpr3-cpu4x | both | 16.7 / 16.7 | 0 | 0 |
+| desktop-1440-dpr2-contended | light | 16.7 / 33 to 50 | 43% to 49% | 63% |
+| desktop-1440-dpr2-contended | dark | 33.3 / 33.4 | 67% to 68% | 52% (one run; P1's three gave 52, 85, 52) |
+| desktop-2560-dpr2 | light | 16.7 / 50.0 | 38.6% to 39.1% | 44.4% |
+| desktop-2560-dpr2 | dark | 33.3 / 50.0 | 53.7% to 54.3% | 62.3% |
+
+**The gate is still not met on any desktop profile.** At 1440 every
+slow frame is in screens 0 to 1 (the first frame and the melt) or 24
+to 27 (the canyon); screens 2 to 23 hold 60 on full shading in every
+run. No task over 50 ms after first paint on the uncontended profiles.
+Where the time is: the name is 9 to 10 ms of an 11 ms scene budget at
+1440 (swept field 4.3 to 5.4, the letters' blocks 3.8 to 4.0); the
+canyon 16.3 ms (the march to the wall 6.6, the wall's colour 5.6).
+The plain pass alone (snow, water, sky) is 5.8 ms at 1440, which is
+the whole budget at 2560 at 2x.
+
+**Found, and worse than anything the gate measures: a first visit
+holds frames.** On ANGLE Metal a program is really built at its first
+draw (0.1 s for the plain pass, 0.25 to 0.5 s with one subject, 1.0 to
+1.6 s with four), and the driver keeps it between visits, so the
+harness never saw it. With P1's twenty programs to a theme, one first
+scroll held 20 frames for 18.5 s in all. P2 brought that to 8 holds
+and 7.9 s by day (9.7 s before dawn; the worst 2 to 3 s at 1.6
+screens) by drawing each program's first pixel while the page rests,
+never drawing a piece with an unbuilt program if a built one can,
+and building fewer and smaller programs. It is not solved: a reader
+who scrolls a first visit without pausing still meets each subject's
+program as it comes on. A first visit's theme switch waits 1.4 to
+2.4 s.
+
+Not done by P2, and left to this thread to decide: the name's
+material made cheaper (it judged that this changes the picture's main
+subject); the canyon's plan distance baked (estimated 3 to 4 of 16.3
+ms); leaner governor steps (all of them together bring the melt to
+about 12 ms a draw for a picture with much of the melt's story gone);
+the governor still moves between steps at 1728 before dawn; on a 120
+Hz screen it would sit at the leanest step.
+
+This machine drives a 4K screen at 1920 by 1080 at 2x, which is the
+1728 profile's size: what the tables call 1728 is what the owner sees
+here. So the third pass is owed, and it has to make the name itself
+cheaper. Order decided: **panel 10 first** (round 3 is a full round;
+the frame rate work does not change the picture, and if the critics
+want the name's material changed the bake should follow that, not
+precede it), then the third frame rate pass with the first visit's
+opening, then the rest.
+
+### Panel 10 and the start of round 4 (Nov 18, about 1:35 PM CT)
+
+Panel 10 in the owner's format (nine fixed categories, ours beside
+Igloo, Lando Norris and Lusion at the same viewports, three critics
+one after another): **7.3, 7.0, 7.1, median 7.1**. The same critics
+put the references at 8.6 to 9.3. Table, shared findings and the
+round's plan are in `design-review.md`. Two content flags fixed at
+once (`9fd1a1b`): `merlin-control` leaves the archive; Kilo Bench's
+line names the hackathon instead of quoting the prize title.
+
+Page tests at `b7e15c0` before the round (stopped part way to free the
+GPU; all rerun after the round): titles fail only at 320 wide (the ten
+known cases); words pass at 390, 768 and 1440; fill passes; overlap
+found one real fault (320 wide, dark, `/work/open-source`: the "Next"
+label at 2.96 against 4.5), which goes to the inner pages' task.
+
+Round 4 runs one helper at a time. Running now: **R4a**, motion and
+words (no hold is still, the words build at full size with the
+eyebrow leading, the tagline carries to the statement, the first paint
+is a still of the scene's own first frame with a designed entrance,
+one anchor, the type scale's middle step, callouts in people's words,
+named controls).
+
+### R4a (motion and words), integrated Nov 18, 5:15 PM CT
+
+Twelve signed commits ending at `62317fd`, merged without conflict;
+lint, typecheck, 315 tests, build and the site checks pass (200
+visible words). I looked at a full motion run of the merged build (a
+frame every 450 px): no two consecutive frames are the same picture.
+
+What changed: each station is one authored camera move about the
+point where the words' ground meets the subject (a push, an arc or a
+rise: 17 to 20 percent of growth across a hold, tested on four screen
+shapes); the tag state is gone, and a block builds in steps at full
+size with its eyebrow leading; the first screen's line stays through
+the melt and hands over to the statement, which sets line by line;
+every station and the delta is anchored lower left on one scale
+(eyebrow 13 px, the line under a title 20 to 22); the first paint is
+a still of the scene's own first frame (one per band of window shape
+and theme) with a 420 ms dissolve and an entrance in which the eye
+comes forward and the light arrives; Upstream's callouts are the
+projects' own names; the sound and haptics controls are icons that
+say what they are; the rail has a lane.
+
+Its own shortfalls, kept: the eye slows to 2 to 14 percent of its
+travelling speed at a station, not a quarter (the growth cap was
+held instead); upright RydAR's title is still not on one calm surface
+(the station is rebuilt later this round); the stills are 92 files
+and 7.7 MB in the repository (a visit fetches one); the share cards
+were not retaken; WebKit, Firefox, 320 and 2560 not run.
+
+After it, this thread: with scripts off every page was a loading
+skeleton (a route-level loading boundary kept the HTML hidden until a
+script swapped it in). The boundary is removed (`0794e5e`); every
+page's HTML now arrives whole.
+
+Running, alone: **R4b**, the name and the melt (capitals as plates of
+clear lake ice lit from behind; the letters stay whole and founder as
+the sheet breaks, then ride on as bergs; no outline or glow anywhere).
+
+## The gate changes: PASS or FAIL, not a number (Arav, t296u, Nov 18, 5:43 PM CT)
+
+Replacing the numeric critic gate; not a lowered bar.
+
+- The explicit "median at least 9.5, none below 9" gate is dropped.
+  Critics no longer give numbers.
+- Each critic returns **PASS or FAIL** against the same standard as
+  before: Arav's words (section 0), Igloo-level quality, and the
+  Igloo, Lando Norris and Lusion references. A FAIL lists the specific
+  faults that make it fail. A PASS says why it holds up next to those
+  references.
+- Nobody (critics, helpers, this thread) is told to settle, aim lower
+  or wrap up early. The quality expectation is unchanged.
+- Completion is this thread's judgment, from the critics' verdicts and
+  reasons and from whether the remaining faults are real: no rounds
+  just to chase a number, and no stopping while real faults remain.
+- Everything else stays: round 4 finishes as planned, one helper at a
+  time, full review depth, signed checkpoints; the sound phase after
+  the build passes; **then push the branch and open the PR (never
+  merge)**.
+
+Applied: the round's common brief tells helpers of the change; panel
+11's package asks each critic for a verdict, its reasons, and the
+ranked faults, with no scores.
+
+### One parallel helper on API credits (Arav, t299u and t301u, Nov 18, 5:51 PM CT)
+
+Arav allowed one exception to "one helper at a time": while R4b runs
+on the subscription, the next brief whose files R4b does not touch
+runs as a command-line helper billed to his API credits, in its own
+worktree and branch (`t3/r4e-inner-ending-api`, cut from `3974696`),
+and is integrated after R4b like any other helper. I chose **R4e**
+(the inner pages and the ending) and not the light: the light edits
+the same shader and depends on the first screen's sun and moon that
+R4b is setting, while the inner pages and the ending share no file
+with R4b and are light on the GPU R4b is measuring on. R4e's last
+part (retaking the stills, bands, cards and posters) is taken out of
+it and done once at the end of the round, when the home page's
+picture is final. The key is kept in a private file outside the
+repository and is deleted when the helper finishes.
+
+### R4b (the name and the melt), integrated Nov 18, 7:50 PM CT
+
+Six signed commits ending at `6b0b212`, merged without conflict;
+lint, typecheck, 315 tests, build and the site checks pass (200
+words). I looked at the merged build's first frame in both themes and
+the melt at nine positions at 1440 and on a phone.
+
+The name is now **ARAV JAIN in capitals, eight plates of clear lake
+ice** (TASA Orbiter's capitals at weight 640, set wide), lit from
+behind by a low sun whose path glitters down the black ice, glowing
+blue-green from within, with one clean image in the ice and no snow
+caps. On an upright screen it stands in two rows of four. The melt
+has no outline or glow: leads open with a pale cut edge, and each
+plate stays whole and sharp, settles, tips and founders, then rides
+on flat as a berg among the floes. The name's contrast against its
+ground from 0 to 1.0 screens: 5.8 to 7.7 by day, 4.8 to 5.5 before
+dawn, at 390, 768, 1440 and 1920.
+
+What it did not do, kept honestly:
+
+- **Cost went up, not level.** One real frame at 1440 at 2x by day:
+  15.85 to 16.35 ms at rest, 19.06 to 20.33 at 0.7 screens, 14.77 to
+  23.43 at 1.2 and 13.50 to 23.31 at 1.5 (before dawn up to 28.96).
+  The third frame-rate pass now has to make the plates cheap; its
+  brief carries these numbers.
+- Before dawn the plates still read as blue glass; a forked lead
+  through the snow in front of the words reads as drawn; on a phone
+  the words' lee over open water shows as a pale plate. All three are
+  handed to the light task.
+- The letterforms are the face's own capitals, not redrawn; chips are
+  painted, not cut; nothing behind a plate is truly refracted.
+- The foundering is bunched between 1.00 and 1.29 screens (the
+  sound's own test caps the stretch).
+
+After it, this thread (`6e73631`): the first screen's line and
+sentence were hidden until the entrance's cue, up to 2.6 s after
+load. They are now in the first paint (checked at 250 ms on a desktop
+and a phone), and the page's first script asks for the still at once.
+
+**The parallel helper on API credits ended after 17 minutes** when the
+key ran out of credit, with no commit. Its unfinished start on the
+inner pages is kept as a patch for the task that will redo that work
+on the subscription, in the serial queue. The key file is deleted.
+
+Running, alone: **R4c**, the light (one day across the flight in the
+light theme, one night toward dawn in the dark theme, air, tone and
+grain, and the three leftovers above).
+
+## Direction change: Astra builds the 3D; the glass goes (Arav, t305u, Nov 18, about 9:20 PM CT)
+
+This overrides the earlier "never OpenAI for frontend" rule, for this
+scope only.
+
+1. **GPT-6.2 Astra takes over all 3D and animation production**: the
+   rendering, the shader, lighting and scene work, the station
+   objects, the hero's ice plates and the melt, motion and animation
+   curves, generated graphics and assets. It runs as T3 helper
+   threads (provider `codex`, model `gpt-6.2-astra`, reasoning effort
+   high), one at a time. Arav saw Astra as a real step forward for
+   animation and is worried the quality so far does not match the
+   time, tokens and money spent.
+   - This thread (Fable) stays the orchestrator and keeps the DOM and
+     layout, the copy, the integration, the reviews and the PASS or
+     FAIL judgement. Every Astra output is reviewed against the Igloo,
+     Lando Norris and Lusion bar before it is integrated, and sent
+     back if it misses.
+   - Astra is briefed with a goal, constraints, context and a concrete
+     definition of done (not steps), in tightly scoped tasks, with
+     explicit art direction and references, and is asked for frame
+     captures as evidence.
+   - R4c (the light) is allowed to reach its next safe commit and is
+     then stopped; what is left of the light goes to Astra with the
+     rest of the queued 3D work: the stations' events and objects
+     (R4d), the name's and melt's polish, and the 3D parts of the
+     frame rate pass, the inner pages and the ending. Committed
+     progress is kept; Astra raises the quality from there.
+   - Unchanged: serial helpers, signed SSH commits on
+     `redesign/fable-v4b-20261115`, the critics' PASS or FAIL gate,
+     no lag on Arav's display.
+2. **The heavy glassmorphism goes.** It reads as an AI-made look.
+   This thread goes through the whole site and removes or strongly
+   tones down frosted, blurred, translucent panels and cards, in
+   favour of solid surfaces, light and material. Clear ice as a
+   material inside the scene is fine; glass UI chrome is not.
+3. The final write-up lists which parts Astra built and which Fable
+   built.
+
+**Who built what, kept from here on** (for that line): everything up
+to and including R4b, and whatever R4c has committed when it is
+stopped, is Fable's (helpers and this thread; R3a and part of R3b by
+Kilo). From this point the 3D is Astra's, task by task, listed as it
+lands.
+
+### The hand-over to Astra (Nov 18, about 9:45 PM CT)
+
+- **R4c stopped at a clean commit** (its sixth, `62dcafb`), by the
+  owner's direction, and its six commits are integrated (ending
+  `6e78340`; lint, typecheck, 315 tests, build, 200 words). What it
+  built: the hours as keys along the flight (a day in the light
+  theme, a night in the dark theme with the moon as its key), the
+  aurora only at the first screen and at Kilo Bench, the afternoon's
+  raking light and the canyon's last light, a lee with no edge, the
+  lead ending at the snow, the night's code kept out of the day's
+  programs. I looked at the whole page in both themes: from Agent
+  Bridge on the day reads as hours (silver, cream, gold, rose); from
+  the statement to Kilo Bench it is still one white and one teal; the
+  night is one saturated cobalt wash with little form. It was stopped
+  before its own checks; the page tests on this head are owed and
+  are in the next task's definition of done.
+- **The glass is gone** (`296ad70`, this thread): the frosted
+  surfaces were the nav's two controls, the rail and the cc-switch
+  selector. They are solid plates now (packed snow by day, night ice
+  before dawn, a hairline edge, a close shadow, squarer corners);
+  nothing is blurred or seen through. There were no other glass
+  panels in the styles; the two glass-like panels inside the scene
+  (Kilo Bench's table and RydAR's card) are being replaced by the
+  station tasks.
+- **Astra's first task is running, alone: A1, the light**, briefed
+  with the goal, the state as reviewed, the hour-by-hour art
+  direction already written, references on disk and a definition of
+  done. Queue after it: the stations in five small tasks, the name's
+  polish and cost, the canyon, governor and first visit, the ending
+  and the inner pages' scenes.
+- Meanwhile this thread does the DOM work that was in the inner
+  pages' task.
+
+### The hand-over must be graceful (Arav, t308u, Nov 18, 9:33 PM CT)
+
+This reached this thread after R4c had been stopped. What it asks,
+and where each point stands:
+
+- **Nothing killed midway, no work lost.** R4c was stopped right
+  after its sixth commit with a clean working tree, so no code was
+  lost. Its own thread shows it had finished its picture work and
+  its checks (legibility 0 failures of 5,324 lines; titles 95 of 96,
+  the one being RydAR on a phone as before; words 0 faults) and was
+  measuring cost and writing its report. What was lost is that
+  report and its last cost measurement. I wrote its hand-over from
+  its thread (`.tools/out/r4c/HANDOVER.md`), kept its captures, and
+  gave both to Astra's task, which continues the light from R4c's
+  commits with that context. From here Astra takes over at brief
+  boundaries only; no task is stopped part way again.
+- **The page is always coherent.** No commit may leave one stretch in
+  a new light, motion or material while its neighbours are in the
+  old one, or make one part lag more than another. So from here:
+  work that changes one station at a time is gathered on a local
+  staging branch and reaches `redesign/fable-v4b-20261115` only as a
+  whole, after the consistency pass below; work that changes one
+  thing across the whole flight (the light; one ice for every
+  object) is briefed as one task. The task queue is reordered to
+  match: after the light, **one ice across every object on the page
+  in one task**, then the stations' subjects and events gathered on
+  staging.
+- **A whole-site consistency pass before any stage is called done**:
+  motion feel and easing, light, materials, the transition between
+  every pair of neighbouring sections, and frame pacing and input
+  latency section by section at this display's size. Any mismatch is
+  a FAIL.
+- **The glass comes back in one pass**: it was one commit across the
+  whole site (`296ad70`: the nav, the rail, the selector; no other
+  glass surface exists in the styles). The two glass-like panels
+  inside the scene go with the station work, together.
+- A detailed quality brief is coming; when it arrives it is reviewed
+  against the frontend skills installed on this machine and answered
+  with a plan.
+
+## The quality brief, the plan, and the maintainer pack (Arav, t306u, t307u, t309u; Nov 18, about 9:22 to 9:35 PM CT)
+
+- The quality brief (zero AI slop, extreme fluidity, never killing
+  the browser; Lando Norris as the main benchmark) was answered with
+  one plan after reading the source pack, the API critic's review and
+  the installed design and motion skills, and after studying
+  landonorris.com first-hand. The plan is kept in
+  `docs/redesign-v4/quality-plan.md`.
+- **A maintainer pack is a deliverable of V4 and builds up as the
+  work proceeds**: `docs/site-system/` (linked from a tracked root
+  `AGENTS.md`): the architecture map, the motion system, light and
+  materials, the performance budget, copy rules, recipes, the
+  consistency checklist with the critics' PASS criteria, and
+  pitfalls. Its first version is in. Every Astra task now has to make
+  its pages true for what it built. The code is brought to match it:
+  a typed station registry comes before the station work, so stations
+  are definitions, not one-offs. Before V4 is called done a fresh
+  helper adds a throwaway section from the pack alone on a scratch
+  branch.
+
+### The blog is part of V4 (Arav, t309u, Nov 18)
+
+The blog index and post pages are in scope as fully designed states
+with the site's motion, light, materials, transitions and frame
+budget; `content/posts` and `blog-editor/` stay untouched; no
+backend, CMS or newsletter work, but the UI is kept separable from
+the content's source and that seam is documented
+(`docs/site-system/blog.md`). Also from that note: bot names never
+appear on the public site. "Grok Bot" was in three lines of Agent
+Bridge's copy (the home line, the page's summary, the film's alt
+text); they now say "a second assistant". The project's own public
+README, repository description and launch film use that name; the
+site links to the repository and embeds the film as before, and that
+is flagged here for Arav's decision.
+
+### Astra's first task (the light), reviewed and integrated; the second pass sent back (Nov 19, about 12:50 AM CT)
+
+- **A1** (GPT-6.2 Astra, high) came back as one signed commit and
+  called itself short of acceptance. My review: the night from the
+  statement to Upstream is now silver moonlight with neutral shadows
+  and a glint on the river where it was one cobalt wash; the day
+  reads as hours; one tone curve and grain; nothing clips; the whole
+  flight changed together. Integrated as `4a8e50a` (lint, typecheck,
+  315 tests, build). On the merged build: legibility 5,312 lines at
+  390 and 1440 in both themes with only the ending's small line
+  failing; titles 192 of 192 at four widths; words 0 faults.
+- **What it missed is sent back as A1b**, cost first: it made 20 of
+  26 stops dearer by up to 1.96 ms, and the light may add no frame
+  time anywhere; the blue hour at Open models and cc-switch is one
+  flat blue; the middle distance has no layers of air; from the
+  statement at night the far Infiniview screen shows as words hanging
+  on the horizon; Upstream and Kilo Bench by day are told apart by
+  subject, not hour; pale shelf edges read as lines; the wind ridges
+  tile. Running now, alone, on codex / gpt-6.2-astra / high.
+- **The ending's small line** failed legibility where it led the
+  headline over bright water (1.9 to 3.7 against 4.5). It now leads
+  by 0.15 of a screen where it led by 0.4, is set bolder, and the
+  delta's words stay with their bank a little longer; legibility over
+  the last stretch has 0 failures of 1,012 lines and the longest run
+  without a word is still 0.6 screens (`02141be`). The headline
+  itself is unchanged: Arav asked to keep "It's still early." and to
+  see a shortlist first.
+- **This thread, same stretch**: the blog's post title at the size
+  the index shows it and its date marked as the publication date
+  (`952a720`; the contrast test passes on both blog pages at 320,
+  390, 768 and 1440 in both themes); the nav's surface tokens renamed
+  after a clash with the inner pages' media shadow, and that shadow
+  brought closer (`7ef5cdd`).
+- **A correction from the plan's review, now a rule**: every pushed
+  commit builds, typechecks and renders on its own. Two earlier
+  pushed commits (`523b910`, `f011a57`) did not (a deletion rode in
+  ahead of its replacement; `e405bdc` completes them). Typecheck and
+  build are run on the exact tree before each push from here on.
+- **Models**: A1 and A1b on codex / gpt-6.2-astra at high effort. No
+  other helper has run since the direction change.
+
+**Who built what, so far**: Astra: the light's second half (the
+moonlit night, the layered hours, the tone curve, grain and
+vignette, the lee without an edge). Fable (this thread and its
+helpers): everything else to date.
+
+### The ending Arav picked; the light's second pass integrated; one ice under way (Nov 19)
+
+- **The ending** now reads "This was the warm-up." with "The next
+  station isn't built yet." under it (Arav's pick, `18347cf`). The
+  headline is set at 5.7vw so the longer line ends short of the
+  ribbon of light at 1440 and 1920; a phone wraps it "This was the /
+  warm-up."; legibility over the ending has 0 failures at 1440, 1920
+  and 390 in both themes. The new lines are two words longer, so two
+  small labels became marks with their words kept for screen readers
+  (the copy control by Email, the film control at Agent Bridge): the
+  home page is at 200 words. **"Selected for OpenAI DevDay 2026" was
+  only in the ending, so it is no longer anywhere on the site**; Arav
+  has been told and decides whether it gets a new place.
+- **Standing guidance for UI layers and controls** (Arav, from his
+  notes on Emil Kowalski's work) is written into
+  `docs/site-system/motion.md` and the consistency checklist and is
+  applied in the next whole-site pass (`82ec80f`).
+- **A1b, the light's second pass** (codex / gpt-6.2-astra / high),
+  came back with six signed commits and is integrated (ending
+  `612f3ae`; each commit typechecked and built on its own before the
+  push; lint and 315 tests pass; on the merged build: 200 words, 0
+  console errors, legibility from 26 screens to the end 0 failures of
+  1,130 lines, titles 96 of 96). **Cost: every one of the 26 stops is
+  now at or under the cost before the light was added** (its table:
+  from +0.02 ms at Open models by day, inside the noise, to 3.25 ms
+  saved at the canyon before dawn; the first screen by day 14.96 ms
+  where it was 15.02 before the light and 16.66 after the first
+  pass). Picture: the far block's words no longer hang on the
+  horizon at night; the blue hour has a lit side, a paler horizon
+  and depth; Upstream and Kilo Bench differ in shadow length and
+  water. Its own remaining shortfalls (three depths of air hard to
+  read at cc-switch on a phone and against the canyon's close wall;
+  the pillars' shadowed faces lack relief; long wind marks on
+  cc-switch's banks; a bright edge on TensorPoW's near snow) are
+  handed on to the tasks that own those surfaces.
+- **Running now, alone: A2, one ice across the whole page** (codex /
+  gpt-6.2-astra / high): every ice object takes one shared material
+  in one pass, no stop dearer than A1b's table and the first two
+  screens cheaper.
+
+**Who built what, so far**: Astra: the light's second half and its
+second pass (moonlit night, layered hours and air, tone curve,
+grain, the blue hour, shelves and wind-cut snow, cost paid back).
+Fable (this thread and its helpers): everything else to date.
+
+### A2 (one ice) reviewed: not integrated, sent back cost first (Nov 19)
+
+A2 (codex / gpt-6.2-astra / high) came back as one signed commit
+(`e444bdd`, in its own worktree) and called itself partial. My
+review of its frames and its cost table:
+
+- **Good**: the name, the lake and every station's ice now call one
+  material from one function, with a small atlas made at start; the
+  plates' body is clear with pale fracture lips and bubbles; the
+  black ice mirrors the low sun as a real glare; before dawn the
+  first two screens are 1.3 and 3.0 ms cheaper and the canyon 1.7 to
+  2.7 ms cheaper.
+- **Misses**: several stops are dearer than the ceiling A1b set
+  (the first screen by day +0.78 ms, Infiniview by day +0.5 to +1.5,
+  cc-switch by day +2.3 to +4.0, TensorPoW +0.4 to +2.2 in both
+  themes), and its own repeats disagree by up to 3.8 ms at one stop;
+  by day the glare leaves the name with less separation from the
+  lake; Infiniview's block still shows broad cyan bands; the columns
+  lose all relief before dawn; the plates' long edges look machined.
+
+Because it makes sections slower, **it is not integrated**. The
+branch is unchanged by it. It is sent back as **A2b** (running now,
+alone, same model and effort), which starts by applying A2's commit
+in its own checkout, makes the cost measurement repeatable, brings
+every stop to its ceiling or under, restores the name's contrast (4.5
+to 1 by day, 3 to 1 before dawn) with the glare kept, and then gives
+the ice the depth it lacks.
+
+### A2b reviewed: cost paid back, the name's contrast not; third pass sent (Nov 19)
+
+A2b (codex / gpt-6.2-astra / high) applied A2 in its own checkout
+and worked on cost only. It called itself incomplete.
+
+- **Cost**: the first screen by day is 11.72 ms against a ceiling of
+  14.96, one screen in is 16.54 against 21.24; 32 of 38 cases are
+  under their ceilings and four inside the noise; two were over in
+  one sweep (Agent Bridge by day, 23.5 screens before dawn) and under
+  in a later window. It also showed that this machine's absolute
+  frame times drift by 2 to 3 ms between measuring windows on
+  unchanged shaders, so from here cost is judged by comparing two
+  builds alternately in one session. I accept its cost on that
+  evidence.
+- **The name**: its faces against the ground behind them measure
+  1.90 to 3.81 to 1 by day and 1.75 to 2.76 to 1 before dawn at every
+  width, against floors of 4.5 and 3. That is why none of the one-ice
+  work is integrated: the branch is unchanged by it. Whether the
+  pushed head already had lost some of the name's contrast to the
+  light passes is not yet measured; the third pass measures it first.
+- **Depth**: not started.
+
+Sent back as **A2c** (running now, alone, same model and effort): the
+name clear of the lake at the floors with the glare kept, then the
+block's, the columns' and the plates' depth, with cost judged by
+same-session comparison.
+
+### One ice integrated after three passes; the station registry under way (Nov 19)
+
+- **A2c, the third one-ice pass** (codex / gpt-6.2-astra / high),
+  met its definition of done on the points that held the work back.
+  The name's faces against the lake now measure 8.20 to 9.98 to 1 by
+  day and 3.70 to 5.40 to 1 before dawn in all 40 checks (four
+  widths, both themes, the first frame to one screen in; floors 4.5
+  and 3), with the sun's glare kept on the far ice; Infiniview's
+  block and the columns have a dark core and a deeper fracture
+  plane; no stop is repeatably dearer than the second pass in
+  same-session comparison.
+- **Its measurement of the pushed head answered an open question**:
+  before this work the name passed at rest but fell to about 3 to 1
+  by day and 2.4 to 2.7 before dawn from half a screen into the
+  melt. That fault is closed by this integration.
+- **Integrated**: the seven commits of the three passes (ending
+  `05aa680`), each typechecked and built on its own before the push;
+  lint and 315 tests pass. On the merged build: 200 words, 0 console
+  errors; legibility 5,410 lines at 390 and 1440 in both themes, 0
+  failures; titles 192 of 192 at four widths; words 0 faults with
+  the longest run without copy at 0.6 screens.
+- **Kept honestly, from its own report**: the columns' centres
+  before dawn still read as smooth flutes; the broad face round
+  Infiniview's display is flatter than the references; long
+  stretches of the plates still look machine-cut; the melt at 1.4
+  screens still costs 21 to 22 ms (the frame budget task's).
+- **Running now, alone: A3, the station registry** (same model and
+  effort): a station becomes one typed definition from which the
+  timeline, the variants, the DOM blocks, the rail and the sound's
+  plan are derived, with the picture, the HTML and the cost
+  unchanged; it rewrites the maintainer pack's recipes and proves
+  them by adding and deleting a throwaway station on a scratch
+  branch.
+
+**Who built what, so far**: Astra: the light's second half and its
+second pass; the one shared ice (the plates' sawn faces, the lake's
+glare, the dark core and fractures of thick ice) and the cost it
+paid back on the first two screens and the canyon. Fable (this
+thread and its helpers): everything else to date.
+
+### The station registry integrated; a fault in the canyon's walls found and sent for a fix (Nov 19)
+
+- **A3, the station registry** (codex / gpt-6.2-astra / high), three
+  signed commits, integrated (ending `2ba701f`; each typechecked and
+  built on its own; lint and 315 tests pass; on the merged build 200
+  words, 0 console errors, words test 0 faults at 390 and 1440). A
+  station is now one typed definition in `FLIGHT`
+  (`src/water/registry.ts`) from which the timeline, the camera's
+  joins, the shader variants and pieces, the scroll-event uniform,
+  the home section and rail tick, the inner page's band and the
+  project order are derived; its water painting also feeds the
+  sound's plan. Its proof: 200 frame pairs within 0.02 of 255 (limit
+  0.5), 24,888 camera poses and 88 shader sources identical, cost
+  unchanged by paired A/B, and a throwaway station added and deleted
+  on a scratch branch by its own recipe (`docs/site-system/recipes.md`
+  is rewritten for the registry).
+  **Not complete, by its own report**: the original eight stations
+  still keep some rendering, sound and page behaviour outside their
+  definitions (ground, water and reflection calls for four of them;
+  texture bindings and stateful effects; named audio voices; bespoke
+  metrics, captions and media). Those move into the definitions as
+  each station is rebuilt.
+- **A fault I let through, found while checking the registry's
+  merge**: the one-ice work left **the canyon's walls covered in
+  blotchy yellow highlights and smeared swirls**, from about 23.8 to
+  27.2 screens, in both themes and on phones. I had reviewed the
+  composed stops and not the frames between them. It is on the
+  pushed head now. Sent to Astra as **A2d** (running, alone, same
+  model and effort): find the cause, make the walls read as clean
+  layered glacier ice in the one shared material, change nothing
+  else, cost not dearer. The rule is in the pack's pitfalls: look at
+  24 frames of the whole page in both themes and on a phone before
+  integrating any change to the picture.
+
+### The canyon's walls fixed; motion and pacing under way (Nov 19)
+
+- **A2d** (codex / gpt-6.2-astra / high), one signed commit,
+  integrated as `fcb8a6c` (typecheck, lint, 315 tests, build; 200
+  words, 0 console errors). The cause: the canyon handed nearly full
+  broken-face relief to the shared ice over its whole vertical cut,
+  the shell map swung the shading normal across the key's direction,
+  and the key's specular ignored the wall's own shadow. The walls are
+  now layered ice lit at their exposed edges; the blotches, the
+  swirls and the green band are gone in both themes and on a phone,
+  and all eight paired comparisons are faster (0.18 to 1.29 ms a
+  frame). I looked at the canyon every half screen from 23.8 to 27.2
+  in both themes, and then at 24 frames of the whole page in both
+  themes at 1440 and at 390, before pushing. Its own shortfalls:
+  warm haze still flattens the exit walls by day; some fractures
+  repeat a tapered shape; before dawn the rose rim is faint; 24.3
+  before dawn is 16.77 ms, just over budget.
+- **Seen in that whole-page look, for the tasks that own them**: on a
+  phone the Kilo Bench table is still tilted and cut by the screen's
+  edge in transit (its rebuild is queued); on a phone before dawn the
+  far block's screen text is readable at the statement (the block is
+  replaced in the stations' work); the lee under the canyon's leading
+  eyebrow shows as a pale patch on the wall.
+- **Running now, alone: A4, the motion system and pacing** (same
+  model and effort): inertia in Lando Norris's class from the
+  engine's one frame loop, the camera on a critically damped spring,
+  the flight re-timed on the registry to about 24 screens with the
+  eye never under a quarter of travel speed at a station, velocity
+  and the pointer felt in the picture, no blur, no bounce.
+
+## Direction change: quiet pages, one line, no 3D (Arav, Nov 19, 12:18 PM CT)
+
+Arav looked at the latest preview: "still very laggy and nowhere near
+as clean + fluid + super fast and quick loading as lando norris,
+lusion, or igloo"; the scene reads as "the current ai slop blender
+animation"; build it to be phenomenal and "super clean + minimalist
+in many ways/pages", then make it "50x more performant", because it
+is sluggish on his M5 Pro. This overrides the plan.
+
+- **Stopped**: the Astra motion helper (A4b) is cancelled; no more
+  ice, light or motion polish. A4's motion commit was never pushed
+  and is dropped from this branch (it remains on its helper branch).
+  The pushed head before this change is `5ef6d8e`.
+- **Phase 1, the design**: the direction is written in
+  `docs/redesign-v4/direction-nov19.md` and built without waiting
+  for approval. In short: the whole 3D scene, the sound and the
+  animation libraries go; the site becomes type on a strict grid
+  with one accent and one signature, **the line** (the river reduced
+  to a single SVG stroke that does one true thing at each project,
+  drawn from that project's real numbers); most pages are quiet.
+- **Phase 2, performance, a hard gate**: Lighthouse 95 or more on a
+  throttled phone and 100 on a desktop for every page; LCP under 1.2
+  s on a desktop and 2.0 s on a phone; CLS under 0.02; INP under 100
+  ms; under about 120 KB of JavaScript on the home page's first
+  load; no WebGL in the initial bundle; 120 fps scrolling with no
+  task over 50 ms; before and after numbers in the maintainer pack.
+- **Who**: Fable owns the design and the frontend. Nothing 3D
+  survives in the direction, so nothing goes to Astra unless that
+  changes. One helper at a time; signed commits on this branch; no
+  PR; PRs #18 to #20 untouched.
+- Standing rules restated by Arav: layers scale from their trigger;
+  no em dashes in new copy; plain specific copy; no fleet names;
+  public work only plus Infiniview and his business work; DevDay is
+  about him; the ending stays "This was the warm-up." / "The next
+  station isn't built yet."; the blog's content and editor are
+  untouched.
+
+**Who built what, to this point** (for the final write-up): Astra
+built the second half of the flight's light, the one shared ice, the
+canyon's fix and the station registry, all of which leave with the
+scene. Fable built everything else, and builds the new site.
+
+## Correction: the 3D stays, and is overhauled (Arav, Nov 19, afternoon)
+
+Arav corrected the direction above about half an hour after it was
+written. **The 3D is not to be removed or cut.** The river, canyon
+and ice scene stays the core of the site. His complaint is its
+quality and its speed, and both get a full overhaul.
+
+His words: "The performance and quality both need an overhaul and it
+needs to be Igloo-level depth and clarity and extreme resolution and
+smoothness... ours looks like a starter Roblox game."
+
+What that means, as given:
+
+- **Depth:** atmospheric perspective, fog, layered parallax, depth of
+  field where it is earned.
+- **Clarity:** physically based materials, high-resolution detail
+  normals and textures, proper tone mapping, colour grading,
+  anti-aliasing. Nothing muddy, low-poly, flat, blocky or
+  toy-like.
+- **Resolution:** the full device pixel ratio on capable machines,
+  sharp on Retina and 4K, adaptive only when the frame budget
+  demands it.
+- **Smoothness:** a locked 120 fps on his M5 Pro MacBook Pro, 60 on
+  phones, an eased camera, no jank.
+- Study igloo.inc's real rendering techniques and match that craft.
+  A clean, minimal UI around the scene.
+
+The performance gate is unchanged (Lighthouse 95 or more on a phone
+and 100 on a desktop for every page; LCP under 1.2 s and 2.0 s; CLS
+under 0.02; INP under 100 ms; no task over 50 ms) and is reached by
+optimising the 3D (loaded after first paint, compressed assets,
+instancing, levels of detail, adaptive resolution, paused off
+screen, efficient shaders), never by removing it.
+
+What the withdrawn direction changed: one docs commit (`a8d6721`,
+the note and its entry here). No scene code was removed; the branch
+still holds everything up to the canyon's fix (`fcb8a6c`). A helper
+that had started the type-only build in its own worktree was
+cancelled and none of its work was taken. The unpushed motion and
+pacing commit is on the helper branch `t3/smooth-scroll-flight`.
+
+Numbers taken before the overhaul (the site at `a8d6721`, local
+production build, Lighthouse 12): phone scores home 74, work 54, a
+project 56, writing 85, a post 85; desktop 100, 92, 98, 99, 99;
+about 360 to 380 KB of JavaScript on every page; the home page
+blocked the main thread for 1.5 s on a phone; the work page's LCP on
+a phone was 12.7 s.
+
+### How igloo.inc is made, and what the overhaul does about it
+
+A first-hand study of igloo.inc's pipeline (its network, its shaders,
+its render targets and its frame pacing, measured in a real browser)
+found that its look does not come from heavier real-time graphics
+than ours. It comes from the opposite:
+
+- Its lighting is **baked offline** into 2048 px colour textures on
+  light, authored meshes. It has no real-time lights and no shadow
+  maps. 88 of its 90 shader programs are a texture read and a few
+  terms. A whole landscape is about 105,000 triangles in 49 draws.
+- It spends on **one material at a time**: the ice block (reflections
+  from a prefiltered HDR environment, a 2048 px normal map, and a
+  refraction of the scene behind it).
+- Its depth is cheap layers: fog by height and distance that fades
+  to the sky's own gradient, faded world edges, drifting haze, 1,200
+  snow sprites, pre-blurred art in place of depth of field.
+- Its finish is a short HDR chain: a 16-bit float target, a colour
+  LUT, a wide soft bloom, SMAA.
+- Its restraint is measurable: one hue, a mean saturation near 0.12,
+  white only where something emits, one subject a frame, up to three
+  quarters of a frame fog.
+- It pays for everything before the first frame, then never compiles
+  or uploads while scrolling: 0.7 to 2 ms of main thread a frame, no
+  dropped frame over a long scroll at 60 Hz.
+- It renders at a third of the device's pixels (pixel ratio capped
+  at 1.15). Its sharpness is baked detail, not resolution.
+
+Our scene is the reverse: about 9,000 lines of procedural shader
+compute the world for every pixel at twice the device's pixels. That
+is why it is both slow and synthetic.
+
+**The decision: bake, do not compute.** The picture is rebuilt as
+authored meshes with offline-baked lighting and real surface detail
+(Blender driven by scripts, with CC0 photoscans and HDR environments
+from Poly Haven and ambientCG), compressed and drawn by tiny shaders,
+with one physically based hero material a frame and a short HDR
+chain (grade, bloom, anti-aliasing). Because shading becomes almost
+free, the drawing buffer can hold the **full device pixel ratio** on
+a capable machine, which is more than the reference does, and adapt
+only when measured frame time demands it. The page's words and a
+still of the same frame paint first; the 3D loads after.
+
+The first task is a proof on one frame: the hero (the lake at first
+light, the name as clear lake ice), on a lab route beside the live
+site, with its cost measured at the owner's screen size. If that
+frame does not stand beside Igloo's, the approach is rethought
+before anything else is built on it. An Astra helper (gpt-6.2-astra,
+high) is building it.
+
+The risk, stated plainly: Igloo's assets were made by 3D artists in
+Houdini. Ours will be made by scripts and scans. The proof frame is
+there to find out early whether that is enough.
+
+### The proof frame (Nov 19): the pipeline holds; the art is not yet there
+
+The hero was rebuilt on a lab route, `/lab/hero` (not indexed, not
+linked; the home page still runs the old scene), by an Astra helper
+(gpt-6.2-astra, high) in three passes that Fable reviewed and sent
+back twice.
+
+- **Authoring.** Blender driven by scripts (`tools/scene/`), with
+  CC0 elevation data, scans and an HDR sky (every source and licence
+  in `tools/scene/SOURCES.md`). The name is TASA Orbiter Bold as
+  slabs of pale lake ice on black ice with a white crack network;
+  the far shore has real eroded relief; the snow is wind-packed. 95
+  numbered studies against photographs of Lake Baikal. One command
+  rebuilds everything shipped (6 min 18 s).
+- **Runtime.** The baked scene is 6 draw calls and 242,560
+  triangles, drawn by a renderer of 7.7 KB gzipped that loads after
+  first paint. A still of the same frame paints first and the live
+  picture takes over in 0.43 to 0.48 s with no jump. The browser's
+  frame matches the offline render (SSIM 0.964).
+- **Cost, measured on an Apple M4 (10 GPU cores):** 1.9 ms of GPU
+  time a frame at a 2880 by 1800 backing, **2.8 ms at 3456 by 2234**
+  (the owner's screen at its full pixel ratio; the 120 Hz frame is
+  8.3 ms), 4.4 ms at 5120 by 2880, 0.8 ms on the phone profile. No
+  frame over 20 ms in a ten second scroll. The old scene could not
+  hold 16.7 ms at smaller sizes.
+- **Loading.** Lighthouse 100 on a desktop (LCP 0.24 s, CLS 0) and
+  100 on a throttled phone (LCP 0.90 s, CLS 0.004) for the lab
+  route. 2.4 MB shipped for the scene in both themes, with its four
+  stills and codecs.
+
+What is not there yet, plainly: the picture is far from the old one
+and still short of igloo.inc's first frame. The broad faces of the
+letters read flat under the backlight, several letters meet the ice
+along one straight seam, there is a hard dark band behind the name,
+and the night theme and the phone composition are provisional (a
+regrade and a reframing of the day scene). The scroll move is small.
+Next: revise the hero's art, then take the stations through the same
+pipeline one at a time.
+
+Who built what: Astra built the authoring scripts, the bake and the
+lake renderer. Fable set the direction, gathered the references,
+reviewed each pass, integrated and measured.
+
+### The hero's art, second and third revisions (Nov 19, night)
+
+Two more Astra passes on the lab hero, the first sent back by Fable
+(still a stack of grey bands, an overcast, and a night that had gone
+charcoal), the second taken:
+
+- **Composition.** A monument shot: the camera low and close, the
+  row of slabs receding at about 30 degrees so "Arav" is near and
+  large and "Jain" farther, the frame built on that diagonal.
+- **Light.** The sun low behind the far end of the name. The slabs
+  are lit through, with bright rims, long shadows toward the camera
+  and the sun's broken path on the black ice.
+- **Night.** Its own bake: a blue hour in colour (mean saturation
+  about 0.26), the name 4.8 to 1 or more over its ground.
+- **The move.** Two screens of scroll travel along the row.
+- **Cost.** 2.9 ms of GPU time a frame at a 3456 by 2234 backing at
+  worst, across both themes (Apple M4). 2.46 MB shipped. Lighthouse
+  on the merged build: lab route 100 and 100 (LCP 0.24 s desktop,
+  0.90 s phone).
+
+Still wrong, and next: on a phone the end of the move stretches the
+projected snow into streaks; the snow's margin on the ice is
+saw-toothed; the green shafts of light are too hard and regular; the
+cracks near the end of the move are straight polygon lines; the sun
+is a hard disc. The home page still runs the old scene (phone 97,
+with 177 ms of blocking time).
+
+The fix pass that followed (O2c) is in: the surfaces the move
+reveals have their own bakes, so nothing stretches at any scroll
+position on either profile; the snow's margin is scalloped; the
+light through the slabs is soft; the sun is a soft source; and the
+phone has its own composition, the two words on two rows of slabs.
+Lighthouse on the merged build stays 100 and 100 for the lab route
+(LCP 0.24 s and 0.90 s). The dearest frame of the move costs 4.2 ms
+of GPU time at a 3456 by 2234 backing on the M4 (budget 5 ms).
+Largest remaining gap against the reference: depth inside the slabs
+at close range.
+
+### From one frame to a sequence (Nov 19 to 20)
+
+The new home page will be a sequence of composed scenes with
+transitions (the way the reference is built), not one continuous
+flight: the renderer projects a baked picture onto simple geometry,
+which is what makes it cheap and true to the offline render, and
+that holds for a composed scene with a modest camera move.
+
+An Astra pass (sent back once for stopping at seven studies) built
+the system on a second lab route, `/lab/flight`:
+
+- **Scenes are typed definitions** in one registry (`src/scene/`):
+  assets, camera move in both orientations, both themes, length,
+  transitions. One renderer, one context, one frame loop.
+- **Streaming.** Only the first scene loads at the start. The next
+  is fetched, decoded in a worker, uploaded and drawn once off
+  screen while the visitor is in the scene before it (ready 3.6 s
+  before its transition at a normal scroll). If the visitor outruns
+  it, the current scene keeps moving until the next is ready. A
+  scene left behind is released and reloads on the way back.
+- **The transition** is a whiteout of blown snow, driven by scroll
+  and reversible.
+- **The first station, Infiniview:** a pressure ridge of slab ice
+  across the river with a breach where water runs through.
+- **Measured (helper, Apple M4, 3456 by 2234 backing):** lake
+  4.1 ms, Infiniview 3.7 ms, the whiteout's dearest frame 4.5 ms of
+  GPU time. Infiniview ships 1.06 MB for both themes and both
+  compositions. No task over 50 ms in five cold traces of a full
+  scroll. Fable's Lighthouse on the merged build: 100 and 100,
+  LCP 0.24 s desktop and 0.90 s phone, CLS 0 and 0.004.
+
+Not met or not good yet: the hero ships 2.44 MB against 1.3 MB a
+scene; the Infiniview picture is below the hero (the ridge reads as
+a pile of grey planks more than as ice, the breach is a wide gap,
+the camera barely moves, and on a phone at night it is small and
+dark); Lighthouse's throttled phone still shows a 66 to 73 ms
+hydration task from the shared React chunk, with or without the
+renderer.
+
+The first station's picture was redone twice and is taken: a wall
+of standing slabs of lake ice across the river with one missing,
+fallen in front of the gap, the low sun in the gap and its path on
+the water; the camera pushes to the gap. It reads at thumbnail
+size, which the heaped ridge never did. What was learned: this
+pipeline makes a few large, simple, upright solids in a clear
+silhouette well, and heaps of small tilted pieces badly, so every
+remaining scene is one readable idea in the hero's camera grammar,
+blocked in grey and checked small before any material. Measured:
+Infiniview at most 5.0 ms of GPU time a frame at a 3456 by 2234
+backing (Apple M4), 1.16 MB shipped; Lighthouse on the merged build
+100 and 100 (LCP 0.24 s and 0.91 s). Known faults kept for the
+consistency pass: its night is greyer than the hero's blue hour,
+the fallen pieces are too cleanly sawn and streak in the close-up.
+
+Arav's effort rule (Nov 19, 7:58 PM CT): helpers run on medium
+effort from here; high only for final reviews or faults that stay
+unfixed. Remaining order: the stations, the home page onto the new
+renderer, the minimal UI pass, the inner pages' performance gate,
+sound, the pull request.
+

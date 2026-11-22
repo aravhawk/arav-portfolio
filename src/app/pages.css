@@ -1,0 +1,3112 @@
+/* Inner pages: /work, project pages, the blog, the 404. Each opens on a live
+   frame of the home page's world and goes on over the snow that frame ends
+   in. Everything here is scoped to .pg-ground or .band, so none of it
+   reaches the home page when it is opened after an inner page. */
+
+/* ---------- the ground ---------- */
+
+/* Packed snow by day, night snow before dawn, lit from the upper left.
+   Three layers with three different periods, so the pattern never lines up
+   with itself twice on a page: the drifts (opaque), a broad swell of shade
+   and light over them, and the wind crust with its glints, drawn at two
+   texels to the pixel. Two more, the size of the page, are the light
+   itself: brighter toward the side it comes from, and changing down the
+   page as the day does (by day toward a low warm afternoon and the blue
+   shade after it; before dawn through the deep of the night toward the
+   first warmth at the foot). */
+.pg-ground {
+  /* Small labels stand on a textured ground: the third ink is a shade stronger here than on the home page's plates. */
+  --ink-3: #323a40;
+  --ink-dim: #6a7379;
+  --pg-body: clamp(1.0625rem, 0.46vw + 0.86rem, 1.5rem);
+  --pg-lead: clamp(1.25rem, 0.9vw + 0.95rem, 2rem);
+  --pg-say: clamp(1.75rem, 2.5vw + 0.9rem, 3.4rem);
+  --pg-num: clamp(3.4rem, 7.2vw + 0.6rem, 8.4rem);
+  --pg-gap: clamp(48px, 6.4vh, 84px);
+  /* (A close shadow: a plate of media stands on the snow, it does not float over it.) */
+  --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 24px 40px -32px rgba(16, 38, 58, 0.45), 0 10px 18px -16px rgba(16, 38, 58, 0.3);
+  --panel: rgba(255, 255, 255, 0.5);
+  --panel-edge: rgba(255, 255, 255, 0.9);
+  --bar: #0c5567;
+  --bar-2: #6fb3c4;
+  --veil: rgba(232, 237, 241, 0.86);
+  /* A groove cut in the snow: its far wall in shade, its near lip in light. */
+  --groove: rgba(36, 58, 84, 0.2);
+  --groove-lip: rgba(255, 255, 255, 0.85);
+  position: relative;
+  background-color: #e3e8ec;
+  background-image:
+    url('/media/ground/glint-day.webp'),
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0) 22%, rgba(255, 222, 184, 0.16) 58%, rgba(74, 98, 140, 0.2) 100%),
+    linear-gradient(var(--g-a, 101deg), rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 44%, rgba(92, 124, 160, 0.2) 100%),
+    url('/media/ground/drifts-b-day.svg'),
+    url('/media/ground/drifts-a-day.svg');
+  background-size:
+    509px 509px,
+    100% 100%,
+    100% 100%,
+    1130px 1490px,
+    1560px 1180px;
+  /* (Each page's drifts lie at a place of their own, so no two pages stand on the same snow.) */
+  background-position:
+    0 0,
+    0 0,
+    0 0,
+    calc(-260px - var(--g-x, 0px)) calc(340px + var(--g-y, 0px)),
+    var(--g-x, 0px) var(--g-y, 0px);
+  background-repeat: repeat, no-repeat, no-repeat, repeat, repeat;
+}
+:root[data-theme='dark'] .pg-ground {
+  --ink-3: #c1c9ce;
+  --ink-dim: #8a949a;
+  --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 24px 40px -30px rgba(0, 0, 0, 0.8), 0 10px 18px -16px rgba(0, 0, 0, 0.55);
+  --panel: rgba(12, 18, 25, 0.42);
+  --panel-edge: rgba(255, 255, 255, 0.1);
+  --bar: #7fd6e2;
+  --bar-2: #2f6f80;
+  --veil: rgba(18, 24, 32, 0.84);
+  --groove: rgba(0, 0, 0, 0.5);
+  --groove-lip: rgba(190, 212, 238, 0.13);
+  background-color: #1a222d;
+  background-image:
+    url('/media/ground/glint-night.webp'),
+    linear-gradient(180deg, rgba(2, 5, 10, 0) 0%, rgba(2, 5, 10, 0.2) 46%, rgba(2, 5, 10, 0.06) 78%, rgba(236, 160, 110, 0.09) 100%),
+    linear-gradient(var(--g-a, 101deg), rgba(150, 178, 214, 0.1) 0%, rgba(150, 178, 214, 0) 40%, rgba(2, 5, 10, 0.34) 100%),
+    url('/media/ground/drifts-b-night.svg'),
+    url('/media/ground/drifts-a-night.svg');
+}
+
+/* ---------- the scene band ---------- */
+
+.band {
+  position: relative;
+  height: clamp(480px, 82svh, 68rem);
+  overflow: hidden;
+}
+.band-short {
+  height: clamp(440px, 62svh, 50rem);
+}
+.band-full {
+  height: max(100svh, 560px);
+}
+.band-index {
+  height: clamp(400px, 54svh, 46rem);
+}
+/* The frame ends by going over into the snow the page stands on. */
+.band-view {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: 50% 50%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - clamp(56px, 11svh, 120px)), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - clamp(56px, 11svh, 120px)), transparent);
+}
+/* The still is a picture in the HTML (BandStill): the size the screen needs, found before any style is read. It
+   covers the band exactly as a background set to cover would. */
+.band-still {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+/* The picture is chosen by the system's scheme. A reader who has set the other theme gets the right still as the
+   band's ground instead, and the picture stands down. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='dark']) .band-still {
+    display: none;
+  }
+  :root:not([data-theme='dark']) .band-view {
+    background-image: var(--still-wide-light);
+  }
+}
+@media (prefers-color-scheme: dark) and (max-aspect-ratio: 9/10) {
+  :root:not([data-theme='dark']) .band-view {
+    background-image: var(--still-tall-light);
+  }
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme='dark'] .band-still {
+    display: none;
+  }
+  :root[data-theme='dark'] .band-view {
+    background-image: var(--still-wide-dark);
+  }
+}
+@media (prefers-color-scheme: light) and (max-aspect-ratio: 9/10) {
+  :root[data-theme='dark'] .band-view {
+    background-image: var(--still-tall-dark);
+  }
+}
+/* Until the engine is drawing (and for good where it cannot), the still has
+   no calm made for the words: a soft veil of the ground's own tone stands
+   behind them instead. The engine keeps its own picture readable, so the
+   veil leaves as the canvas arrives. */
+.band-view::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 78% 92% at 0% 100%, var(--veil) 0%, var(--veil) 34%, transparent 72%);
+  transition: opacity 900ms var(--ease-out);
+  pointer-events: none;
+}
+.band-view[data-band='on']::after {
+  opacity: 0;
+}
+.band-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out);
+}
+.band-view[data-band='on'] .band-canvas {
+  opacity: 1;
+}
+
+/* A page with no scene of its own yet opens on its words alone: the same block, lower left, on the page's snow. */
+.band-type {
+  height: clamp(360px, 52svh, 40rem);
+  overflow: visible;
+}
+.band-type .band-words {
+  padding-bottom: clamp(28px, 5svh, 56px);
+}
+.band-type .band-lead {
+  max-width: 34ch;
+}
+.band-type::after {
+  content: '';
+  position: absolute;
+  left: var(--gutter, 0);
+  right: var(--gutter, 0);
+  bottom: 0;
+  height: 1px;
+  background: var(--line);
+}
+
+/* The words stand lower left, over the near bank, as on the home page. */
+.band-words {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--s-4);
+  padding-bottom: clamp(44px, 10svh, 112px);
+  pointer-events: none;
+}
+.band-words > * {
+  pointer-events: auto;
+}
+.band-label,
+.band-words .back {
+  color: var(--ink);
+}
+.band-title {
+  padding-bottom: 0.06em;
+  max-width: 12ch;
+}
+/* A post's title on its own page: at the size the index shows it, so it arrives as the same line. */
+.band-title-long {
+  font-size: clamp(2.1rem, 3.9vw + 0.5rem, 4.9rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  max-width: 20ch;
+}
+.band-lead {
+  max-width: 27ch;
+  color: var(--ink);
+  font-weight: 480;
+}
+.band-title-long + .band-lead {
+  max-width: 44ch;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-bottom: calc(-1 * var(--s-3));
+  transition: opacity var(--t-fast) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .back:hover span {
+    transform: translateX(-3px);
+  }
+}
+.back span {
+  display: inline-block;
+  transition: transform var(--t-ui) var(--ease-out);
+}
+
+/* ---------- the page under the scene ---------- */
+
+.pg-body {
+  position: relative;
+  padding-top: clamp(28px, 5vh, 64px);
+  padding-bottom: var(--pg-gap);
+  font-size: var(--pg-body);
+}
+.pg-body .body {
+  font-size: var(--pg-body);
+  line-height: 1.52;
+}
+.pg-body .lead {
+  font-size: var(--pg-lead);
+  line-height: 1.34;
+}
+
+.state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px clamp(22px, 3vw, 48px);
+  margin-top: var(--s-2);
+}
+/* A way out of a page that has nothing on it is a link: words and an arrow. (A pill is for a control: the one
+   thing here that acts, trying again, keeps it.) */
+.way {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 0.9vw + 1rem, 1.75rem);
+  font-weight: 660;
+  letter-spacing: -0.024em;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, var(--ink) 40%, transparent);
+  transition: text-decoration-color var(--t-fast) ease;
+}
+.way .arrow {
+  width: 0.72em;
+  height: 0.72em;
+  transition: transform var(--t-ui) var(--ease-out);
+}
+.way:active {
+  transform: scale(0.985);
+}
+@media (hover: hover) and (pointer: fine) {
+  .way:hover {
+    text-decoration-color: var(--ink);
+  }
+  .way:hover .arrow {
+    transform: translateX(3px);
+  }
+}
+.band-fork {
+  margin-top: var(--s-2);
+}
+/* A page that is loading has the scene's shape and the ground's material. */
+.skeleton {
+  display: block;
+  border-radius: var(--r-1);
+  background: var(--line);
+}
+
+/* ---------- type on the ground ---------- */
+
+/* One system for the small mono capitals: they name a category or head a
+   column (the way back, a row's kind and year on the index, a table's
+   columns, a post's date). They are never an eyebrow over a heading. Where a
+   thing comes from is said in a sentence (.cap), and a section that needs a
+   name has a heading (.sec-h). Never under 12px. */
+.pg-ground .label {
+  font-size: clamp(0.8125rem, 0.3vw + 0.675rem, 1.0625rem);
+  letter-spacing: 0.06em;
+}
+/* The smallest things a page shares with the home page (a live number's note, the film's control, the switch's
+   three names) are a step larger on a page that is read. */
+.pg-ground .metric-tip {
+  font-size: 0.875rem;
+}
+.pg-ground .slab-play,
+.pg-ground .switch-opt {
+  font-size: 0.8125rem;
+}
+/* At display sizes the tracking is open enough that no pair of letters touches. */
+.pg-ground .display {
+  letter-spacing: 0;
+}
+/* A rule is a groove cut in the snow. */
+.pg-ground {
+  --rule: linear-gradient(var(--groove), var(--groove)) 0 0 / 100% 1px no-repeat, linear-gradient(var(--groove-lip), var(--groove-lip)) 0 1px / 100% 1px no-repeat;
+  --seq-bg: #e9edf0;
+}
+:root[data-theme='dark'] .pg-ground {
+  --seq-bg: #1b232e;
+}
+/* A date is set in the text face with tabular figures: in the mono, its comma stands in a cell of its own. */
+.pg-ground .post-when,
+.pg-ground .band-short .band-label {
+  font-family: var(--font-text);
+  font-size: clamp(0.9375rem, 0.2vw + 0.9rem, 1.0625rem);
+  font-weight: 520;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+.cap {
+  margin-top: 18px;
+  max-width: 64ch;
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+/* ---------- sections ---------- */
+
+.sec {
+  margin-top: var(--pg-gap);
+}
+.pg-body > .sec:first-child,
+.pg-body > script + .sec {
+  margin-top: clamp(20px, 4vh, 56px);
+}
+/* On an index the list begins at the foot of the scene, inside the first screen. */
+.pg-index {
+  padding-top: clamp(14px, 2.4vh, 24px);
+}
+.pg-index > .sec:first-child {
+  margin-top: 0;
+}
+/* (An index is lists: its parts stand closer.) */
+.pg-index > .sec + .sec {
+  margin-top: clamp(36px, 5vh, 64px);
+}
+/* A section's name: a heading, under the groove that opens the section. */
+.sec-h {
+  margin-bottom: clamp(22px, 2.8vw, 46px);
+  padding-top: clamp(18px, 2vw, 30px);
+  /* (The rule alone. A band of shade under it read as a seam behind the heading.) */
+  background: var(--rule);
+  font-family: var(--font-display);
+  font-size: clamp(1.625rem, 1.5vw + 1.1rem, 2.75rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.022em;
+  grid-column: 1 / -1;
+}
+
+/* ---------- pictures ---------- */
+
+.plate {
+  margin: 0;
+  min-width: 0;
+}
+.plate-frame {
+  overflow: hidden;
+  border-radius: clamp(10px, 1.1vw, 18px);
+  background: var(--land-2);
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px var(--line);
+}
+.plate-media {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* A light capture is mounted: a mat round it by day, and before dawn a dark
+   frame with the picture itself turned down, so it does not glare. */
+.plate-light .plate-frame {
+  padding: clamp(5px, 0.55vw, 9px);
+  background: #f8fafb;
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px rgba(24, 44, 66, 0.2);
+}
+.plate-light .plate-media {
+  border-radius: clamp(6px, 0.7vw, 11px);
+  box-shadow: 0 0 0 1px rgba(24, 44, 66, 0.1);
+}
+:root[data-theme='dark'] .plate-light .plate-frame {
+  background: #0a0f15;
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+:root[data-theme='dark'] .plate-light .plate-media {
+  /* A light capture sits in the night: held well under the page's own lights, a little cooler, still read with ease. */
+  filter: brightness(0.7) contrast(1.05) saturate(0.84);
+  box-shadow: none;
+}
+/* The film: the home page's slab, at the page's scale. */
+.pg-ground .slab {
+  border-radius: clamp(10px, 1.1vw, 18px);
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px var(--line);
+}
+
+/* ---------- the pieces pages share ---------- */
+
+/* What it is, at reading scale. */
+.sum {
+  max-width: 33ch;
+  font-size: clamp(1.375rem, 1.3vw + 0.95rem, 2.25rem);
+  font-weight: 520;
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.sum-s {
+  max-width: 38ch;
+  font-size: clamp(1.25rem, 0.8vw + 1rem, 1.75rem);
+  font-weight: 500;
+  line-height: 1.26;
+  letter-spacing: -0.018em;
+}
+/* The facts: a quiet list in the text face, a name and what it is. */
+.spec {
+  display: grid;
+  align-content: start;
+}
+.spec-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 11rem) minmax(0, 1fr);
+  column-gap: var(--s-4);
+  align-items: baseline;
+  padding: 10px 0 11px;
+  background: var(--rule);
+}
+.spec dt {
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+.spec dd {
+  font-size: clamp(1.0625rem, 0.4vw + 0.95rem, 1.5rem);
+  font-weight: 540;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+.spec dd.mono {
+  font-size: clamp(0.875rem, 0.3vw + 0.8rem, 1.0625rem);
+  font-weight: 500;
+}
+/* A point made in a paragraph that opens with its own name. */
+.notes {
+  display: grid;
+  gap: clamp(14px, 1.5vw, 24px);
+  align-content: start;
+}
+.note {
+  max-width: 48ch;
+  font-size: var(--pg-body);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.note strong {
+  font-weight: 640;
+  color: var(--ink);
+}
+/* Words taken from a source, in the display face, with the source under them. */
+.said {
+  display: grid;
+  align-content: center;
+  margin: 0;
+  min-width: 0;
+}
+.say {
+  max-width: 15ch;
+  padding-bottom: 0.06em;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.4vw + 0.8rem, 4.9rem);
+  font-weight: 720;
+  line-height: 0.99;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+.say-s {
+  max-width: 32ch;
+  font-size: clamp(1.375rem, 1.5vw + 0.95rem, 3rem);
+  font-weight: 620;
+  line-height: 1.12;
+  letter-spacing: -0.026em;
+}
+/* Short facts set as lines. */
+.limits {
+  display: grid;
+  gap: 0.28em;
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 1.4vw + 0.95rem, 2.4rem);
+  font-weight: 660;
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+}
+/* A result: a number set large. One row of these on a page, at most. */
+.figs {
+  --cols: var(--n);
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: var(--s-7) var(--s-5);
+}
+.fig {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+.fig-value {
+  font-family: var(--font-display);
+  /* As large as the row allows: a seven figure number still fits its column. */
+  font-size: min(var(--pg-num), calc((100vw - 2 * var(--gutter)) / var(--cols, 1) / 4.3));
+  font-weight: var(--display-wght);
+  line-height: 0.86;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+.fig-unit {
+  max-width: 22ch;
+  font-size: var(--pg-body);
+  font-weight: 520;
+  line-height: 1.25;
+  color: var(--ink);
+}
+.figs-side {
+  --cols: 2;
+}
+.figs-side .fig-value {
+  font-size: clamp(2.6rem, 4.4vw + 0.4rem, 5.4rem);
+}
+
+/* The foot of a project's page, on one line under one groove: the ways out at the left, set as links; the way
+   round the set at the right, the nine by name. */
+.ways {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px clamp(24px, 2.6vw, 96px);
+  padding-top: clamp(14px, 1.6vw, 24px);
+  background: var(--rule);
+}
+.outs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px clamp(24px, 3vw, 52px);
+}
+.out {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 1.2vw + 1rem, 2.1rem);
+  font-weight: 660;
+  letter-spacing: -0.026em;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, var(--ink) 34%, transparent);
+  transition: text-decoration-color var(--t-fast) ease;
+}
+.out .arrow {
+  width: 0.6em;
+  height: 0.6em;
+  transition: transform var(--t-ui) var(--ease-out);
+}
+.out:active {
+  transform: scale(0.985);
+}
+@media (hover: hover) and (pointer: fine) {
+  .out:hover {
+    text-decoration-color: var(--ink);
+  }
+  .out:hover .arrow {
+    transform: translate(2px, -2px);
+  }
+}
+.strip-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 clamp(14px, 1.3vw, 30px);
+}
+.strip-name {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: clamp(1.0625rem, 0.4vw + 0.95rem, 1.3125rem);
+  font-weight: 560;
+  letter-spacing: -0.014em;
+  color: var(--ink-3);
+  transition: color var(--t-fast) ease;
+}
+.strip-name[aria-current] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.3em;
+}
+@media (hover: hover) and (pointer: fine) {
+  a.strip-name:hover {
+    color: var(--ink);
+  }
+}
+
+/* ---------- the way on: a band of the place the page leads to ---------- */
+
+/* The page returns to the world before its footer. The picture is the next
+   page's own scene, photographed with the calm its words stand in, and the
+   words are set as they are at the head of that page: lower left, over the
+   near bank. The whole band is the link. A wide picture is 2.4 to 1 and an
+   upright one 13 to 16; the band keeps the picture's shape wherever the
+   screen lets it, and where it cannot, the picture is cut from the top (the
+   sky), so the bank stays under the words. */
+.next {
+  position: relative;
+  /* (Under the content, clear of the last section by the page's own rhythm.) */
+  margin-top: 0;
+}
+.pg-body:has(+ .next) {
+  padding-bottom: clamp(28px, 4vh, 48px);
+}
+.next-link {
+  position: relative;
+  display: block;
+  height: clamp(380px, 41.667vw, 800px);
+  overflow: hidden;
+  color: var(--ink);
+}
+.next-view {
+  position: absolute;
+  inset: 0;
+  /* The picture rises out of the snow the page stands on. */
+  -webkit-mask-image: linear-gradient(to top, #000 calc(100% - clamp(48px, 7vw, 120px)), transparent);
+  mask-image: linear-gradient(to top, #000 calc(100% - clamp(48px, 7vw, 120px)), transparent);
+}
+.next-pic {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 0% 100%;
+  transition: transform 900ms var(--ease-out);
+}
+.next-dark,
+.next-bandtall,
+:root[data-theme='dark'] .next-light {
+  display: none;
+}
+:root[data-theme='dark'] .next-band.next-dark {
+  display: block;
+}
+.next-words {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--s-4);
+  /* (A share of the band's own height, as in the photograph.) */
+  padding-bottom: clamp(46px, 5vw, 96px);
+}
+/* The way on to a page with no scene: its words alone, on the snow, under a line. */
+.next-type .next-link {
+  height: auto;
+  border-top: 1px solid var(--line);
+}
+.next-type .next-words {
+  position: static;
+  padding-top: clamp(40px, 6vw, 96px);
+}
+.next-type .next-line {
+  max-width: 34ch;
+}
+.next-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-bottom: calc(-1 * var(--s-3));
+  color: var(--ink);
+}
+.next-label .arrow {
+  width: 1.05em;
+  height: 1.05em;
+  transition: transform var(--t-ui) var(--ease-out);
+}
+.next-title {
+  display: block;
+}
+.next-line {
+  display: block;
+}
+.next-link:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: -6px;
+}
+.next-link:active .next-pic {
+  transform: scale(1.01);
+}
+@media (hover: hover) and (pointer: fine) {
+  .next-link:hover .next-pic {
+    transform: scale(1.018);
+  }
+  .next-link:hover .next-label .arrow {
+    transform: translateX(4px);
+  }
+}
+/* Between a phone and a desk the words are large against the picture and no longer stand wholly inside the calm
+   it was photographed with: a soft veil of the ground's own tone stands behind them, as at the head of a page
+   before its engine arrives. */
+@media (min-width: 720px) and (max-width: 1100px) {
+  .next-view::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 78% 125% at 0% 100%, var(--veil) 0%, var(--veil) 44%, transparent 78%);
+    opacity: 0.78;
+    pointer-events: none;
+  }
+}
+@media (max-width: 719px) {
+  .next-link {
+    height: min(123.08vw, 560px);
+  }
+  .next-band,
+  :root[data-theme='dark'] .next-band.next-dark {
+    display: none;
+  }
+  .next-bandtall.next-light,
+  :root[data-theme='dark'] .next-bandtall.next-dark {
+    display: block;
+  }
+  :root[data-theme='dark'] .next-bandtall.next-light {
+    display: none;
+  }
+  .next-words {
+    padding-bottom: clamp(36px, 12vw, 56px);
+  }
+}
+/* On a phone a block with a long line stands taller than the calm its picture was taken with, and its top line
+   ("Next") would stand on the scene: the same soft veil of the ground's tone, from the foot. */
+@media (max-width: 719px) {
+  .next-view::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--veil) 0%, var(--veil) 42%, transparent 74%);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+}
+
+/* ---------- 01 Infiniview: one run, drawn as the pipeline it is ---------- */
+
+.iv-open,
+.up-open,
+.om-open,
+.cs-open {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 7vw, 140px);
+  row-gap: var(--s-7);
+  align-items: start;
+}
+/* The pipe runs down the left; each stage hangs from it, its pictures beside
+   it. A stage's words stay in view while its pictures pass, so its joint
+   travels down the pipe. */
+.run {
+  --run-gap: clamp(44px, 6vw, 104px);
+  --run-in: calc(16px + clamp(18px, 2.4vw, 44px));
+  display: grid;
+  row-gap: var(--run-gap);
+}
+.run-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 9fr);
+  column-gap: clamp(18px, 2.4vw, 44px);
+  padding-left: var(--run-in);
+}
+.run-stage::before {
+  content: '';
+  position: absolute;
+  top: 0.62rem;
+  bottom: calc(-0.62rem - var(--run-gap));
+  left: 7px;
+  width: 2px;
+  background: var(--ink);
+}
+.run-stage:last-child::before {
+  bottom: 0;
+}
+.run-copy {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+  display: grid;
+  gap: clamp(36px, 5vw, 80px);
+}
+.run-block {
+  position: relative;
+  display: grid;
+  gap: 14px;
+}
+.run-block::before {
+  content: '';
+  position: absolute;
+  top: 0.62rem;
+  left: calc(-1 * var(--run-in));
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 0 5px var(--seq-bg);
+}
+/* Where the run forks into its three passes the joint is the water's colour; where it ends, it is square. */
+.run-block-fork::before {
+  background: var(--bar);
+}
+.run-block-end::before {
+  border-radius: 4px;
+}
+.run-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.875rem, 2.2vw + 1rem, 3.5rem);
+  font-weight: 740;
+  line-height: 1;
+  letter-spacing: -0.022em;
+}
+.run-copy .body {
+  max-width: 34ch;
+}
+.run-show {
+  display: grid;
+  gap: clamp(22px, 2.6vw, 44px);
+  min-width: 0;
+}
+.run-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--s-5);
+}
+.run-pair .cap {
+  grid-column: 1 / -1;
+}
+/* The three passes run side by side, off one trunk. */
+.lanes {
+  display: grid;
+  border-left: 2px solid var(--ink);
+}
+.lane {
+  display: grid;
+  grid-template-columns: minmax(0, 11.5rem) minmax(28px, 1fr) minmax(0, max-content);
+  align-items: center;
+  column-gap: 16px;
+  padding: clamp(10px, 1.2vw, 18px) 0;
+}
+.lane-pass {
+  position: relative;
+  padding-left: 30px;
+  font-family: var(--font-display);
+  font-size: clamp(1.125rem, 0.7vw + 0.98rem, 1.625rem);
+  font-weight: 680;
+  letter-spacing: -0.024em;
+}
+.lane-pass::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 20px;
+  height: 2px;
+  background: var(--ink);
+}
+.lane-line {
+  position: relative;
+  height: 2px;
+  background: var(--ink-3);
+}
+.lane-line::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  border-left: 9px solid var(--ink-3);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+.lane-what {
+  font-size: var(--pg-body);
+  line-height: 1.2;
+  color: var(--ink-2);
+}
+.lane-what strong {
+  margin-right: 0.18em;
+  font-family: var(--font-display);
+  font-size: 1.7em;
+  font-weight: 740;
+  letter-spacing: -0.022em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* ---------- 02 Upstream: bars, changes, the ledger ---------- */
+
+.up-figs .cap {
+  margin-top: clamp(20px, 2.4vw, 36px);
+}
+.bars > :first-child,
+.changes > :first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 22rem) minmax(0, 1fr) 4rem;
+  align-items: center;
+  gap: var(--s-5);
+  padding: 4px 0;
+  border-top: 1px solid var(--line-2);
+}
+/* The owner stands small over the repository's name; neither breaks inside a word. */
+.bar-name {
+  display: grid;
+  align-content: center;
+  min-height: 48px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.bar-owner {
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.125rem);
+  line-height: 1.3;
+  color: var(--ink-3);
+}
+.bar-project {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(1.0625rem, 0.4vw + 0.95rem, 1.3125rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.016em;
+}
+/* A hairline, and on it a flat bar as long as the count. Only the leading repository's is in the water's colour. */
+.bar-track {
+  height: 1px;
+  background: var(--line);
+}
+.bar-fill {
+  display: block;
+  width: max(calc(var(--w) * 100%), 3px);
+  height: 7px;
+  margin-top: -3px;
+  background: color-mix(in srgb, var(--ink) 46%, transparent);
+}
+.bar-row:first-child .bar-fill {
+  background: var(--bar);
+}
+.bar-n {
+  font-family: var(--font-mono);
+  font-size: clamp(1.0625rem, 0.5vw + 0.9rem, 1.5rem);
+  font-weight: 520;
+  letter-spacing: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) and (pointer: fine) {
+  .bar-name:hover .bar-project,
+  .change-n:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+.change {
+  display: grid;
+  grid-template-columns: clamp(4.6rem, 9vw, 9rem) minmax(0, 1fr) 9rem;
+  gap: var(--s-5);
+  align-items: baseline;
+  padding: clamp(16px, 1.7vw, 26px) 0;
+  border-top: 1px solid var(--line);
+}
+.change-n {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 1.0625rem;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+.change-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 1.3vw + 1rem, 2.5rem);
+  font-weight: 680;
+  line-height: 1.08;
+  letter-spacing: -0.026em;
+}
+.change-main .body {
+  margin-top: 8px;
+  max-width: 64ch;
+}
+/* Dates are set in the text face with tabular figures: the mono's comma stands in a cell of its own. */
+.change-meta {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  font-size: clamp(1rem, 0.3vw + 0.78rem, 1.1875rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.diff {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.diff-n {
+  font-family: var(--font-mono);
+  font-size: clamp(0.9375rem, 0.25vw + 0.72rem, 1.0625rem);
+}
+.diff-cells {
+  display: inline-flex;
+  gap: 2px;
+}
+.diff-cells i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+.diff-add {
+  background: var(--bar);
+}
+.diff-del {
+  background: color-mix(in srgb, var(--ink) 26%, transparent);
+}
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.125rem);
+}
+/* The record, whole: grouped by repository, a repository's name once, at the head of its group. */
+.ledger tbody + tbody tr:first-child td {
+  border-top-color: var(--line);
+}
+.ledger-all {
+  max-width: 76rem;
+}
+.sec-rest .bars {
+  max-width: 64rem;
+}
+.sec-rest .sec-h {
+  font-size: clamp(1.375rem, 0.9vw + 1.05rem, 1.875rem);
+}
+.ledger th {
+  text-align: left;
+  padding: 0 12px 12px 0;
+  font-weight: inherit;
+}
+.ledger td {
+  padding: 9px 12px 9px 0;
+  border-top: 1px solid var(--line-2);
+  vertical-align: baseline;
+  color: var(--ink-2);
+}
+.ledger td:first-child {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--ink);
+}
+.ledger td:last-child {
+  white-space: nowrap;
+  text-align: right;
+  padding-right: 0;
+  font-variant-numeric: tabular-nums;
+}
+.ledger th:last-child {
+  text-align: right;
+}
+.ledger a {
+  color: var(--ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ledger a:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- 03 Kilo Bench: the result, then three things, each beside what it makes ---------- */
+
+.kb-open {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-7);
+  align-items: end;
+}
+.kb-side,
+.ab-side,
+.cs-side {
+  display: grid;
+  gap: var(--s-7);
+  min-width: 0;
+}
+/* What it does, in two halves: how it begins, beside the screen it begins on; then every mode against what a
+   run is judged on, as one table. */
+.acts {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-7);
+  align-items: start;
+  padding-top: clamp(26px, 3.2vw, 52px);
+  background: var(--rule);
+}
+.act {
+  display: grid;
+  gap: clamp(22px, 2.6vw, 40px);
+  align-content: start;
+  min-width: 0;
+}
+.act-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5) clamp(24px, 3vw, 56px);
+}
+.act-copy,
+.paper-cap {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.act-title,
+.paper-h {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.6vw + 0.9rem, 2.6rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.022em;
+}
+.act-copy .body,
+.paper-cap .body {
+  max-width: 40ch;
+}
+/* (The capture of the start screen is 800 px wide: it is not shown wider than it stays crisp.) */
+.act-plate {
+  max-width: 35rem;
+}
+/* The leaderboard's own rows, cut from the capture column by column and set side by side, so they are read at
+   the page's scale. The capture is dark in both themes: it is mounted. */
+.board {
+  margin: 0;
+}
+.board-rows {
+  display: flex;
+  gap: clamp(8px, 1.6vw, 28px);
+  max-width: 68rem;
+  padding: clamp(14px, 2vw, 32px) clamp(16px, 2.4vw, 40px);
+  border-radius: clamp(10px, 1.1vw, 18px);
+  background: #0d0d0d;
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px var(--line);
+}
+.board-col {
+  flex: var(--w) 1 0;
+  aspect-ratio: var(--w) / var(--h);
+  background-image: url('/media/kilo-bench-results-2324.webp');
+  background-repeat: no-repeat;
+  background-size: calc(100% * 2000 / var(--w)) calc(100% * 1088 / var(--h));
+  background-position: calc(100% * var(--x) / (2000 - var(--w))) calc(100% * var(--y) / (1088 - var(--h)));
+}
+/* Every mode, against the four things a run is judged on. */
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.matrix thead td {
+  width: 34%;
+}
+.matrix thead th {
+  padding: 0 0 14px;
+  font-size: clamp(0.875rem, 0.3vw + 0.82rem, 1.0625rem);
+  font-weight: 600;
+  text-align: center;
+  color: var(--ink-2);
+}
+.matrix tbody th {
+  padding: clamp(12px, 1.3vw, 20px) 12px clamp(12px, 1.3vw, 20px) 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.125rem, 0.8vw + 0.98rem, 1.75rem);
+  font-weight: 680;
+  letter-spacing: -0.026em;
+  text-align: left;
+}
+.matrix tbody th,
+.matrix tbody td {
+  border-top: 1px solid var(--line);
+}
+.matrix td {
+  text-align: center;
+  vertical-align: middle;
+}
+.mark {
+  display: inline-block;
+  width: clamp(14px, 1.2vw, 20px);
+  height: clamp(14px, 1.2vw, 20px);
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.mark-judge {
+  background: var(--ink);
+}
+.mark-meter {
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.matrix-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+}
+.matrix-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.matrix-key .mark {
+  width: 12px;
+  height: 12px;
+}
+/* What it gives you, in its own words, and beside that the five views of its dashboard, as a list. */
+.kb-views {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: start;
+  padding-top: clamp(26px, 3.2vw, 52px);
+  background: var(--rule);
+}
+.say-m {
+  max-width: 19ch;
+  font-size: clamp(1.875rem, 2.6vw + 0.8rem, 4rem);
+  line-height: 1.02;
+}
+.views {
+  display: grid;
+  gap: clamp(12px, 1.4vw, 20px);
+  align-content: start;
+}
+.views-h {
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
+  font-weight: 520;
+  color: var(--ink-3);
+}
+
+/* ---------- 04 Agent Bridge: the film, the message flow as a sequence diagram ---------- */
+
+.ab-film {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: center;
+}
+.film {
+  min-width: 0;
+}
+.ab-open,
+.ab-limits {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 7vw, 140px);
+  row-gap: var(--s-7);
+  align-items: start;
+}
+/* Three lifelines; time runs down the page. An arrow is a message, a box is
+   something the bridge does on its own. */
+.seq {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) minmax(0, 23rem);
+  row-gap: clamp(20px, 2.2vw, 34px);
+  align-items: center;
+}
+.seq-head {
+  grid-row: 1;
+  justify-self: center;
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--land);
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 0.5vw + 0.9rem, 1.375rem);
+  font-weight: 680;
+  letter-spacing: -0.02em;
+}
+.seq-at-sender {
+  grid-column: 1 / 3;
+}
+.seq-at-bridge {
+  grid-column: 3 / 5;
+}
+.seq-at-recipient {
+  grid-column: 5 / 7;
+}
+.seq-life {
+  grid-row: 2 / 8;
+  align-self: stretch;
+  justify-self: start;
+  width: 0;
+  margin-top: calc(-1 * clamp(20px, 2.2vw, 34px));
+  border-left: 2px dashed color-mix(in srgb, var(--ink) 42%, transparent);
+}
+.seq-life-sender {
+  grid-column: 2;
+}
+.seq-life-bridge {
+  grid-column: 4;
+}
+.seq-life-recipient {
+  grid-column: 6;
+}
+.seq-steps {
+  display: contents;
+}
+.seq-msg {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 0 16px;
+  text-align: center;
+}
+.seq-sender-bridge,
+.seq-bridge-sender {
+  grid-column: 2 / 4;
+}
+.seq-bridge-recipient,
+.seq-recipient-bridge {
+  grid-column: 4 / 6;
+}
+.seq-bridge-bridge {
+  grid-column: 3 / 5;
+  justify-self: center;
+  padding: 14px 20px 15px;
+  border-radius: 12px;
+  background: var(--seq-bg);
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+/* Who speaks to whom is drawn by the arrow here, and said in words for a reader who cannot see it (and on a phone, where there are no lifelines). */
+.pg-ground .seq-route {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  font-size: 0;
+}
+.seq-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.0625rem, 0.7vw + 0.94rem, 1.625rem);
+  font-weight: 680;
+  line-height: 1.1;
+  letter-spacing: -0.024em;
+}
+.seq-line {
+  position: relative;
+  justify-self: stretch;
+  height: 2px;
+  margin: 0 -16px;
+  background: var(--ink);
+}
+.seq-line::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 0;
+  border-left: 11px solid var(--ink);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+}
+.seq-recipient-bridge .seq-line::after,
+.seq-bridge-sender .seq-line::after {
+  right: auto;
+  left: 0;
+  border-left: 0;
+  border-right: 11px solid var(--ink);
+}
+.seq-bridge-bridge .seq-line {
+  display: none;
+}
+/* The acknowledgement comes back in the water's colour. */
+.seq-ack .seq-line {
+  background: var(--bar);
+}
+.seq-ack.seq-msg .seq-line::after {
+  border-left-color: var(--bar);
+  border-right-color: var(--bar);
+}
+.seq-note {
+  font-size: clamp(0.875rem, 0.3vw + 0.7rem, 1.125rem);
+  line-height: 1.35;
+  color: var(--ink-2);
+}
+.seq-aside {
+  grid-column: 7;
+  align-self: stretch;
+  display: grid;
+  align-content: center;
+  padding-left: clamp(20px, 2.6vw, 48px);
+  border-left: 1px solid var(--line);
+}
+
+/* ---------- 05 Open models: columns of ice, as tall as their pulls ---------- */
+
+.sec-chart {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  column-gap: clamp(28px, 5vw, 96px);
+  align-items: end;
+}
+.cols {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  gap: clamp(10px, 1.8vw, 30px);
+  height: clamp(260px, 40vh, 460px);
+}
+.col {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-width: 0;
+  position: relative;
+}
+/* A flat column, as tall as its pulls; only the tallest is in the water's colour. */
+.col-bar {
+  align-self: end;
+  height: max(8px, calc(var(--h) * (100% - 3.4rem)));
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.col:first-child .col-bar {
+  background: var(--bar);
+}
+/* The count stands on its column. */
+.col-n {
+  position: absolute;
+  left: 0;
+  bottom: calc(max(8px, var(--h) * (100% - 3.4rem - 44px)) + 44px + 12px);
+  font-family: var(--font-mono);
+  font-size: clamp(1rem, 0.9vw + 0.7rem, 1.75rem);
+  font-weight: 520;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+/* (A model's name breaks at its hyphens only.) */
+.col-name {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: clamp(0.75rem, 0.4vw + 0.68rem, 1.0625rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+}
+/* Each build: its name and its pulls, what it is, its facts, and the line that runs it. Two to a row. */
+.builds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(40px, 5vw, 88px) clamp(32px, 6vw, 120px);
+}
+.build {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: clamp(14px, 1.5vw, 24px);
+  align-content: start;
+  min-width: 0;
+  padding-top: clamp(18px, 2vw, 30px);
+  border-top: 1.5px solid var(--ink);
+}
+.build-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--s-5);
+}
+.build .body {
+  max-width: 56ch;
+  color: var(--ink);
+}
+.build .spec {
+  align-self: start;
+}
+.build-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.625rem, 1.9vw + 1rem, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.04;
+}
+.build-title a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  min-height: 44px;
+}
+.build-title .arrow {
+  width: 0.55em;
+  height: 0.55em;
+  flex: none;
+}
+/* The line that runs it, in a terminal's colours. */
+.build-run {
+  display: block;
+  padding: clamp(12px, 1.2vw, 18px) clamp(14px, 1.6vw, 24px);
+  border-radius: clamp(8px, 0.8vw, 12px);
+  background: #0b1117;
+  color: #f3f7fa;
+  font-size: clamp(0.875rem, 0.4vw + 0.74rem, 1.1875rem);
+  font-weight: 520;
+  overflow-wrap: anywhere;
+}
+.build-pulls {
+  font-family: var(--font-mono);
+  font-size: clamp(1rem, 0.4vw + 0.86rem, 1.3125rem);
+  font-weight: 500;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 06 cc-switch: a terminal session, each command with what it does beside it ---------- */
+
+/* One terminal, and beside every line of it what that line does. The lines
+   stand at one pitch, so the gaps between them are even; each note starts at
+   the top of its own line and is tied to it by a hairline. */
+.session {
+  --cmd: clamp(0.8125rem, 0.62vw + 0.7rem, 1.3125rem);
+  --row-pad: clamp(12px, 1.3vw, 20px);
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+  grid-template-rows: auto;
+  grid-auto-rows: minmax(clamp(84px, 7.4vw, 118px), auto);
+}
+.session::before {
+  content: '';
+  grid-column: 1;
+  grid-row: 1 / span calc(var(--n) + 1);
+  border-radius: clamp(12px, 1.1vw, 18px);
+  background: #0b1117;
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px var(--line);
+}
+.session-bar {
+  grid-column: 1;
+  grid-row: 1;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 13px clamp(16px, 2.4vw, 40px) 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.term-title {
+  font-size: 0.875rem;
+  color: #9aa7b3;
+}
+.session-row {
+  display: contents;
+}
+.session-cmd {
+  grid-column: 1;
+  z-index: 1;
+  align-self: start;
+  margin: 0;
+  padding: var(--row-pad) clamp(16px, 2.4vw, 40px);
+  overflow-x: auto;
+  color: #e6edf3;
+  font-size: var(--cmd);
+  line-height: 1.8;
+  white-space: pre;
+}
+.session-row:last-child .session-cmd {
+  padding-bottom: clamp(20px, 2.4vw, 38px);
+}
+.term-p {
+  color: #5fd3c4;
+}
+.term-cmd {
+  color: #f3f7fa;
+  font-weight: 520;
+}
+/* (The note's first line stands level with its command's.) */
+.session-note {
+  position: relative;
+  grid-column: 2;
+  align-self: start;
+  padding: calc(var(--row-pad) + 0.9 * var(--cmd) - 0.75 * var(--pg-body)) 0 var(--row-pad) clamp(28px, 4.4vw, 84px);
+}
+.session-note::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--row-pad) + 0.9 * var(--cmd));
+  left: 0;
+  width: clamp(16px, 3.2vw, 60px);
+  height: 1px;
+  background: var(--ink-3);
+}
+.session-note .note {
+  max-width: 54ch;
+}
+/* What one switch writes: three lines, each from somewhere to somewhere. */
+.cs-writes {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: start;
+}
+.writes {
+  display: grid;
+}
+.write {
+  display: grid;
+  gap: 8px;
+  padding: clamp(16px, 1.7vw, 26px) 0;
+  background: var(--rule);
+}
+.write-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px clamp(12px, 1.4vw, 22px);
+  font-size: clamp(0.9375rem, 0.5vw + 0.8rem, 1.375rem);
+  font-weight: 520;
+  color: var(--ink);
+}
+.write-to {
+  position: relative;
+  flex: 0 1 clamp(28px, 4vw, 72px);
+  min-width: 28px;
+  height: 2px;
+  background: var(--ink);
+}
+.write-to::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  border-left: 9px solid var(--ink);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+.write:nth-child(2) .write-to {
+  background: var(--bar);
+}
+.write:nth-child(2) .write-to::after {
+  border-left-color: var(--bar);
+}
+.write-what {
+  font-size: var(--pg-body);
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+/* 41 templates: a cell each, in their six groups, each group over its own name. */
+.prov {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 2.4vw, 40px) clamp(24px, 4vw, 80px);
+}
+.prov-group {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding-top: clamp(16px, 1.6vw, 24px);
+  background: var(--rule);
+}
+.prov-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(2px, 0.25vw, 4px);
+  margin-bottom: 6px;
+}
+.prov-cells i {
+  width: clamp(14px, 1.5vw, 36px);
+  height: clamp(14px, 1.5vw, 36px);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+/* (The water's colour once: the group cc-switch is named for.) */
+.prov-group:first-child .prov-cells i {
+  background: var(--bar);
+}
+.prov-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 1.1vw + 1rem, 2.75rem);
+  font-weight: 680;
+  letter-spacing: -0.022em;
+  line-height: 1.08;
+}
+.prov-n {
+  margin-left: 0.2em;
+  font-weight: 480;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.prov-group .body {
+  max-width: 44ch;
+  color: var(--ink-2);
+}
+.said-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6) clamp(32px, 6vw, 120px);
+  align-items: start;
+  margin-top: clamp(32px, 3.4vw, 56px);
+}
+.said-pair .said {
+  align-content: start;
+}
+.said-pair .said + .said .say-s {
+  max-width: 36ch;
+  font-size: clamp(1.25rem, 1vw + 0.95rem, 2.25rem);
+  font-weight: 560;
+  line-height: 1.2;
+}
+
+/* ---------- 07 TensorPoW: set as the paper it is becoming, in three figures ---------- */
+
+.tp-abs {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-7);
+  align-items: start;
+}
+.tp-abs .spec {
+  order: -1;
+}
+.tp-abs .sum {
+  max-width: 38ch;
+}
+.tp-figs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(44px, 6vw, 104px) clamp(28px, 5vw, 96px);
+}
+.paper-fig {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 36px);
+  align-content: start;
+  margin: 0;
+  min-width: 0;
+}
+.paper-fig-wide {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  column-gap: clamp(28px, 5vw, 96px);
+  align-items: center;
+}
+/* A figure is drawn on the snow itself, between two grooves. */
+.dia-art {
+  min-width: 0;
+  padding: clamp(24px, 3.2vw, 56px) 0;
+  background: var(--rule);
+  border-bottom: 1px solid var(--line);
+}
+.dia-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 clamp(10px, 1.4vw, 22px);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+  font-size: clamp(0.75rem, 0.4vw + 0.68rem, 1.0625rem);
+  font-weight: 520;
+  text-align: center;
+}
+.dia-node-in,
+.dia-node-out {
+  background: var(--ink);
+  color: var(--land);
+}
+/* One challenge fans out to three backends and comes back as one answer. */
+.dia-tensor {
+  --gap: clamp(20px, 4vw, 72px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--gap);
+}
+.dia-fan {
+  position: relative;
+  display: grid;
+  gap: 12px;
+}
+.dia-fan::before,
+.dia-fan::after {
+  content: '';
+  position: absolute;
+  top: 26px;
+  bottom: 26px;
+  width: 1.5px;
+  background: var(--ink-3);
+}
+.dia-fan::before {
+  left: calc(var(--gap) / -2);
+}
+.dia-fan::after {
+  right: calc(var(--gap) / -2);
+}
+.dia-node::before,
+.dia-node::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(var(--gap) / 2);
+  height: 1.5px;
+  background: var(--ink-3);
+}
+.dia-node::before {
+  right: 100%;
+}
+.dia-node::after {
+  left: 100%;
+}
+.dia-node-in::before,
+.dia-node-out::after {
+  display: none;
+}
+/* Anchor blocks, with fruit carried between them. */
+.dia-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 16px;
+}
+.dia-link {
+  display: inline-flex;
+  align-items: center;
+}
+.dia-anchor,
+.dia-fruit {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+.dia-anchor {
+  width: clamp(26px, 2.6vw, 44px);
+  height: clamp(26px, 2.6vw, 44px);
+  border-radius: clamp(6px, 0.7vw, 10px);
+  background: var(--ink);
+}
+.dia-fruit {
+  width: clamp(12px, 1.2vw, 20px);
+  height: clamp(12px, 1.2vw, 20px);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--bar);
+  background: color-mix(in srgb, var(--bar) 22%, transparent);
+}
+.dia-chain > .dia-link > * + *,
+.dia-chain > .dia-link + .dia-link > :first-child,
+.dia-chain > .dia-link + .dia-anchor {
+  margin-left: clamp(8px, 1vw, 18px);
+}
+.dia-chain > .dia-link > * + *::before,
+.dia-chain > .dia-link + .dia-link > :first-child::before,
+.dia-chain > .dia-link + .dia-anchor::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: clamp(8px, 1vw, 18px);
+  height: 1.5px;
+  background: var(--ink-3);
+}
+.dia-key {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin-top: clamp(6px, 1vw, 18px);
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+.dia-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.dia-key i {
+  width: 14px;
+  height: 14px;
+}
+.dia-key i.dia-anchor {
+  border-radius: 3px;
+}
+.dia-stack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.6rem), 1fr));
+  gap: clamp(14px, 2vw, 30px) var(--s-5);
+}
+.dia-part {
+  display: grid;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1.5px solid var(--ink);
+}
+.dia-part-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.125rem, 0.7vw + 0.95rem, 1.625rem);
+  font-weight: 680;
+  letter-spacing: -0.026em;
+}
+.dia-part-does {
+  font-size: 0.9375rem;
+  color: var(--ink-3);
+}
+/* What is built, and beside it what is still to do. */
+.tp-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--pg-gap);
+  align-items: start;
+}
+/* What the implementation holds: a table, a part to a row, what it holds read along the row. */
+.holds {
+  display: grid;
+}
+.hold {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 11rem) minmax(0, 1fr);
+  column-gap: var(--s-4);
+  align-items: baseline;
+  padding: clamp(14px, 1.4vw, 22px) 0 clamp(15px, 1.5vw, 24px);
+  background: var(--rule);
+}
+.holds > :first-child {
+  background: none;
+  padding-top: 0;
+}
+.hold-name {
+  font-size: clamp(0.9375rem, 0.3vw + 0.7rem, 1.1875rem);
+  font-weight: 520;
+  color: var(--ink-3);
+}
+.hold-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.08em 0.36em;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1vw + 0.9rem, 2.25rem);
+  font-weight: 660;
+  line-height: 1.14;
+  letter-spacing: -0.022em;
+}
+.hold-items li:not(:last-child)::after {
+  content: ',';
+}
+.hold-tools {
+  gap: 0.3em 1.4em;
+  font-family: var(--font-mono);
+  font-size: clamp(0.9375rem, 0.5vw + 0.78rem, 1.4375rem);
+  font-weight: 520;
+  letter-spacing: 0;
+}
+.hold-tools li:not(:last-child)::after {
+  content: none;
+}
+.hold-items .term-p {
+  color: var(--bar);
+}
+.hold .cap {
+  margin-top: 10px;
+}
+.tp-node > .cap {
+  margin-top: clamp(16px, 1.5vw, 24px);
+}
+/* What is still to do: four gates on the way to a live network, none of them passed. The way runs down
+   through every gate. */
+.tp-status .lead {
+  margin-bottom: clamp(18px, 2vw, 30px);
+  color: var(--ink-2);
+}
+.gates {
+  display: grid;
+}
+.gate {
+  position: relative;
+  min-height: 56px;
+  padding: 0 0 clamp(22px, 2.4vw, 40px) 46px;
+  font-size: clamp(1.125rem, 1.1vw + 0.65rem, 2.125rem);
+  font-weight: 560;
+  line-height: 1.22;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+.gate::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 12px;
+  width: 2px;
+  background: var(--ink);
+}
+.gate-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--seq-bg);
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.gate-end {
+  min-height: 0;
+  padding-bottom: 0;
+  color: var(--ink-3);
+}
+.gate-end::before {
+  display: none;
+}
+.gate-end .gate-box {
+  border-radius: 50%;
+  background: none;
+  box-shadow: none;
+  border: 2px dashed var(--ink-3);
+}
+
+/* ---------- 08 RydAR: the map, the phone, the two pages ---------- */
+
+.ry-count {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: clamp(32px, 7vw, 140px);
+  row-gap: var(--s-5);
+  align-items: end;
+  margin-top: clamp(26px, 3.4vw, 56px);
+}
+.ry-more {
+  padding-bottom: 0.2em;
+}
+.ry-phone {
+  display: grid;
+  grid-template-columns: minmax(0, 24.4rem) minmax(0, 1fr);
+  column-gap: clamp(32px, 8vw, 160px);
+  row-gap: var(--s-7);
+  align-items: center;
+}
+.plate-phone .plate-frame,
+:root[data-theme='dark'] .plate-phone .plate-frame {
+  padding: 9px;
+  border-radius: clamp(34px, 3.2vw, 50px);
+  background: #0c0f12;
+}
+.plate-phone .plate-media {
+  border-radius: clamp(26px, 2.6vw, 42px);
+}
+.phone-side {
+  display: grid;
+  gap: clamp(30px, 4vw, 64px);
+  min-width: 0;
+}
+.ry-pages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--s-5);
+  align-items: start;
+}
+.ry-pages .cap {
+  grid-column: 1 / -1;
+}
+
+/* ---------- the work index ---------- */
+
+/* Each project's picture is its own station: large, and hard by its name. */
+.row.feat-row {
+  display: grid;
+  grid-template-columns: 2.6rem clamp(13rem, 27vw, 30rem) minmax(0, 1fr) 56px;
+  align-items: center;
+  gap: var(--s-4) clamp(18px, 2.4vw, 44px);
+  padding: clamp(14px, 1.5vw, 24px) 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+.feats > :first-child .row.feat-row {
+  border-top: 0;
+  padding-top: 0;
+}
+.feat-n {
+  align-self: start;
+  padding-top: 0.5em;
+}
+.feat-name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 4.4vw + 0.5rem, 5.6rem);
+  font-weight: var(--display-wght);
+  line-height: 0.95;
+  letter-spacing: -0.012em;
+  padding-bottom: 0.06em;
+}
+.feat-line {
+  display: block;
+  margin-top: clamp(8px, 1vw, 16px);
+  max-width: 44ch;
+  font-size: var(--pg-body);
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.feat-line strong {
+  display: block;
+  margin-top: 6px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.feat-pic {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  border-radius: clamp(8px, 0.9vw, 14px);
+  background-color: var(--land-2);
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px var(--line);
+  transition: transform 520ms var(--ease-out);
+}
+/* The station's still, one for each theme (FeatStill): only the one shown is fetched, when its row is near. */
+.feat-still {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 60% 50%;
+}
+.feat-dark,
+:root[data-theme='dark'] .feat-light {
+  display: none;
+}
+:root[data-theme='dark'] .feat-dark {
+  display: block;
+}
+@media (hover: hover) and (pointer: fine) {
+  .feat-row:hover .feat-pic {
+    transform: scale(1.02);
+  }
+  .feat-row:hover .row-go .arrow,
+  .post-row:hover .row-go .arrow {
+    transform: translateX(5px);
+  }
+}
+.feat-row:active .row-go,
+.post-row:active .row-go {
+  transform: scale(0.94);
+}
+/* The way into a row is an arrow, not a button: the whole row is the link. */
+.row-go {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  transition: transform var(--t-press) var(--ease-out);
+}
+.row-go .arrow {
+  width: clamp(22px, 1.9vw, 32px);
+  height: clamp(22px, 1.9vw, 32px);
+  transition: transform var(--t-ui) var(--ease-out);
+}
+
+/* ---------- a row, and what he is recognised for: lines ---------- */
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1.05fr) minmax(0, 1.7fr) minmax(0, 15rem);
+  align-items: baseline;
+  gap: var(--s-5);
+  padding: clamp(16px, 1.6vw, 24px) 0;
+  border-top: 1px solid var(--line-2);
+  color: var(--ink);
+}
+.row > .label {
+  color: var(--ink-2);
+}
+/* A project the world has no place for yet: its name and line alone, set from the pictures' own left edge. */
+.row.feat-row-type {
+  grid-template-columns: 2.6rem minmax(0, 1fr) 56px;
+  padding: clamp(22px, 2.6vw, 44px) 0;
+}
+.recog {
+  display: grid;
+  gap: clamp(10px, 1vw, 16px);
+  max-width: 62ch;
+  font-size: var(--pg-lead);
+  line-height: 1.32;
+  color: var(--ink);
+}
+.recog .link {
+  font-size: 1rem;
+  white-space: nowrap;
+}
+.recog .metric {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.empty {
+  padding: var(--s-7) 0;
+  font-size: var(--pg-lead);
+  color: var(--ink-2);
+}
+.footnote {
+  margin-top: var(--s-7);
+  max-width: 70ch;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.footnote a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- writing ---------- */
+
+/* The newest post is the page: its title large, when it was written, what it
+   is about, and how it opens. */
+.post-row {
+  display: grid;
+  color: var(--ink);
+}
+.post-lead {
+  grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+  column-gap: clamp(32px, 6vw, 120px);
+  row-gap: var(--s-6);
+  align-items: start;
+}
+.post-when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  grid-column: 1 / -1;
+  color: var(--ink-2);
+}
+.post-title {
+  max-width: 17ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.4vw + 0.6rem, 5.6rem);
+  font-weight: 740;
+  line-height: 0.97;
+  letter-spacing: -0.02em;
+  padding-bottom: 0.06em;
+}
+.post-about {
+  display: grid;
+  gap: clamp(16px, 1.8vw, 28px);
+  align-content: start;
+  padding-top: 0.5em;
+}
+.post-desc {
+  max-width: 34ch;
+  font-size: clamp(1.25rem, 0.8vw + 1rem, 1.75rem);
+  font-weight: 520;
+  line-height: 1.26;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+}
+.post-open {
+  max-width: 58ch;
+  font-size: var(--pg-body);
+  line-height: 1.56;
+  color: var(--ink-2);
+}
+/* (The way in is words and an arrow: the whole block is the link.) */
+.post-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  justify-self: start;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 0.9vw + 1rem, 1.75rem);
+  font-weight: 660;
+  letter-spacing: -0.024em;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.post-go .row-go {
+  width: auto;
+  height: auto;
+}
+.post-go .row-go .arrow {
+  width: 0.72em;
+  height: 0.72em;
+}
+/* Earlier posts follow, one to a row. */
+.posts-more {
+  margin-top: clamp(48px, 7vh, 96px);
+}
+.post-item {
+  grid-template-columns: 11rem minmax(0, 1fr) 56px;
+  gap: var(--s-4) clamp(18px, 3vw, 56px);
+  align-items: start;
+  padding: clamp(22px, 2.8vw, 44px) 0;
+  background: var(--rule);
+}
+.post-item .post-when {
+  display: grid;
+  gap: 6px;
+  grid-column: auto;
+  padding-top: 0.6em;
+}
+.post-item .post-title {
+  max-width: 22ch;
+  font-size: clamp(1.75rem, 2.4vw + 0.8rem, 3.4rem);
+  line-height: 1;
+}
+.post-item .post-desc {
+  margin-top: clamp(10px, 1.2vw, 18px);
+  max-width: 52ch;
+  font-size: var(--pg-lead);
+  font-weight: 440;
+  color: var(--ink-2);
+}
+
+/* A post: the text in a reading measure at the middle of the page; in the
+   margin beside it, quiet, when it was written, what it is filed under and
+   its own headings, which stay in view while it is read. */
+.article {
+  --prose: clamp(1.125rem, 0.75vw + 0.64rem, 1.75rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: clamp(24px, 3vw, 64px);
+  padding-top: clamp(12px, 2vh, 28px);
+}
+.article-rail {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+  justify-self: end;
+  display: grid;
+  gap: clamp(16px, 1.6vw, 26px);
+  width: min(100%, 16em);
+  padding-top: 0.5em;
+  font-size: clamp(0.9375rem, 0.4vw + 0.6rem, 1.25rem);
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+.rail-when {
+  display: grid;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.rail-when time {
+  font-weight: 600;
+  color: var(--ink);
+}
+.tags {
+  display: grid;
+  gap: 2px;
+  padding-top: clamp(12px, 1.2vw, 18px);
+  background: var(--rule);
+}
+.toc {
+  padding-top: clamp(12px, 1.2vw, 18px);
+  background: var(--rule);
+}
+.toc-fold {
+  display: none;
+}
+.toc-h,
+.toc summary {
+  font-weight: 600;
+  color: var(--ink);
+}
+.toc ol {
+  display: grid;
+  margin-top: 6px;
+}
+.toc a {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 0;
+  line-height: 1.28;
+  color: var(--ink-3);
+  transition: color var(--t-fast) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .toc a:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+/* (A heading the contents opens stands clear of the nav.) */
+.prose :is(h2, h3, h4) {
+  scroll-margin-top: 96px;
+}
+.article-main {
+  min-width: 0;
+  /* About 70 characters to the line. */
+  width: calc(35 * var(--prose));
+  max-width: 100%;
+}
+.article-lead {
+  max-width: 26em;
+  margin-bottom: clamp(28px, 3.4vw, 52px);
+  font-size: clamp(1.375rem, 1.1vw + 1rem, 2rem);
+  font-weight: 520;
+  line-height: 1.24;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.prose {
+  font-size: var(--prose);
+  line-height: 1.6;
+  color: var(--ink-2);
+  font-weight: 420;
+  hanging-punctuation: first;
+}
+.prose > * + * {
+  margin-top: 1.1em;
+}
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  letter-spacing: -0.022em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+.prose h1,
+.prose h2 {
+  font-size: clamp(1.75rem, 1.8vw + 1rem, 2.75rem);
+  font-weight: 700;
+  margin-top: 1.8em;
+}
+.prose h3 {
+  font-size: clamp(1.375rem, 0.9vw + 1.05rem, 1.875rem);
+  font-weight: 660;
+  margin-top: 1.8em;
+}
+.prose h4 {
+  font-size: 1.25rem;
+  font-weight: 640;
+  margin-top: 1.6em;
+}
+.prose h2 + *,
+.prose h3 + *,
+.prose h4 + * {
+  margin-top: 0.7em;
+}
+.prose h2 a,
+.prose h3 a,
+.prose h4 a {
+  color: inherit;
+  text-decoration: none;
+}
+.prose a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.prose strong {
+  color: var(--ink);
+  font-weight: 620;
+}
+.prose ul,
+.prose ol {
+  padding-left: 1.3em;
+}
+.prose ul {
+  list-style: disc;
+}
+.prose ol {
+  list-style: decimal;
+}
+.prose li + li {
+  margin-top: 0.45em;
+}
+.prose li::marker {
+  color: var(--ink-3);
+}
+.prose blockquote {
+  padding-left: 1.1em;
+  border-left: 2px solid var(--ink);
+  color: var(--ink);
+  font-size: 1.2em;
+  line-height: 1.4;
+}
+.prose hr {
+  border: 0;
+  height: 2px;
+  background: var(--rule);
+  margin-block: 2.4em;
+}
+.prose :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  color: var(--ink);
+}
+.prose pre {
+  overflow-x: auto;
+  padding: 22px 24px;
+  border-radius: var(--r-2);
+  background: #0d1117 !important;
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  line-height: 1.6;
+  tab-size: 2;
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px var(--line);
+}
+.prose pre code {
+  font-family: inherit;
+}
+.prose img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-2);
+  box-shadow:
+    var(--plate-shadow),
+    0 0 0 1px var(--line);
+}
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.prose th {
+  text-align: left;
+  padding: 10px 12px 10px 0;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.prose td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--line-2);
+}
+.post-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6);
+  margin-top: clamp(56px, 9vh, 110px);
+  padding-top: var(--s-6);
+  background: var(--rule);
+}
+.post-nav a {
+  display: grid;
+  gap: 8px;
+  min-height: 44px;
+}
+.post-nav a:last-child {
+  text-align: right;
+}
+.post-nav strong {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 0.8vw + 1rem, 1.75rem);
+  font-weight: 660;
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+}
+
+/* ---------- narrow ---------- */
+
+@media (max-width: 1100px) {
+  /* The margin is folded above the text: the date and the tags on a line, the contents behind their name. */
+  .article {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .article-rail {
+    position: static;
+    justify-self: center;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 22px;
+    row-gap: 10px;
+    width: calc(35 * var(--prose));
+    max-width: 100%;
+    padding: 0 0 var(--s-5);
+  }
+  /* (The head of the page has just said when it was written.) */
+  .rail-when {
+    display: none;
+  }
+  .article-rail .tags {
+    grid-column: 1 / -1;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    padding-top: 0;
+    background: none;
+  }
+  .toc-wide {
+    display: none;
+  }
+  .toc-fold {
+    display: block;
+    grid-column: 1 / -1;
+  }
+  .toc summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .toc summary::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 12px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform var(--t-ui) var(--ease-out);
+  }
+  .toc[open] summary::after {
+    transform: translateY(4px) rotate(225deg);
+  }
+  .toc summary::-webkit-details-marker {
+    display: none;
+  }
+  .toc summary {
+    list-style: none;
+  }
+  .toc a {
+    min-height: 44px;
+  }
+  /* The diagram keeps its three lifelines; what the README says of them goes under it. */
+  .seq {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .seq-aside {
+    grid-column: 1 / -1;
+    grid-row: auto !important;
+    padding: 0;
+    border: 0;
+  }
+  .seq-aside:first-of-type {
+    margin-top: var(--s-5);
+  }
+  .run-stage {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 8fr);
+  }
+  .lane {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 4px;
+  }
+  .lane-line {
+    display: none;
+  }
+  .lane-what {
+    padding-left: 30px;
+  }
+}
+
+@media (max-width: 859px) {
+  .band {
+    height: clamp(460px, 78svh, 760px);
+  }
+  .band-short {
+    height: clamp(400px, 60svh, 620px);
+  }
+  .band-full {
+    height: max(100svh, 520px);
+  }
+  .band-words {
+    padding-bottom: clamp(36px, 7svh, 72px);
+  }
+  .band-view::after {
+    background: linear-gradient(to top, var(--veil) 0%, var(--veil) 46%, transparent 72%);
+  }
+  .iv-open,
+  .up-open,
+  .om-open,
+  .cs-open,
+  .kb-open,
+  .ab-film,
+  .ab-open,
+  .ab-limits,
+  .tp-abs,
+  .tp-figs,
+  .paper-fig-wide,
+  .acts,
+  .kb-views,
+  .sec-chart,
+  .builds,
+  .ry-phone,
+  .ry-count,
+  .cs-writes,
+  .said-pair,
+  .post-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .prov {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tp-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .figs {
+    --cols: 2;
+  }
+  /* A live number's note opens toward the page, not off its edge. */
+  .figs .fig:nth-child(even) .metric-tip {
+    left: auto;
+    right: 0;
+    transform-origin: 100% 100%;
+  }
+  /* The run on a phone: the pipe at the left, each stage and its pictures under one another. */
+  .run-stage {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--s-6);
+  }
+  .run-copy {
+    position: static;
+  }
+  .run-pair {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--s-5);
+  }
+  .bar-row {
+    grid-template-columns: minmax(0, 1fr) 3rem;
+    gap: 0 var(--s-4);
+    padding: 12px 0 16px;
+  }
+  .bar-track {
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: 9px;
+  }
+  /* On a phone the leaderboard keeps its first two columns (the models and their scores), so its rows stay large. */
+  .board-col:nth-child(n + 3) {
+    display: none;
+  }
+  .bar-n {
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+  .change {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px var(--s-4);
+  }
+  .change-main {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .change-meta {
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .diff-cells {
+    display: none;
+  }
+  /* The ledger on a phone: the repository and the date on one line, the change under them. */
+  .ledger thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  .ledger,
+  .ledger tbody {
+    display: block;
+  }
+  .ledger tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px var(--s-4);
+    padding: 13px 0;
+    border-top: 1px solid var(--line-2);
+  }
+  .ledger tbody tr:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .ledger td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+  .ledger td:first-child {
+    white-space: normal;
+  }
+  .ledger td:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    color: var(--ink);
+  }
+  .ledger td:last-child {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  /* The session on a phone: one terminal, what each command does written under it. */
+  .session {
+    display: block;
+    overflow: hidden;
+    border-radius: 14px;
+    background: #0b1117;
+    box-shadow:
+      var(--plate-shadow),
+      0 0 0 1px var(--line);
+  }
+  .session::before,
+  .session-note::before {
+    display: none !important;
+  }
+  .session-cmd {
+    padding: 14px 16px 4px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.7;
+  }
+  .session-row:last-child .session-cmd {
+    padding-bottom: 18px;
+  }
+  .session-note {
+    padding: 0 16px 12px;
+  }
+  .session-note .note {
+    font-size: 0.9375rem;
+    color: #a9b6c1;
+  }
+  .session-note .note strong {
+    color: #e6edf3;
+  }
+  .plate-phone {
+    max-width: 19.5rem;
+  }
+  .dia-tensor {
+    --gap: 22px;
+  }
+  .row.feat-row {
+    grid-template-columns: minmax(0, 1fr) 48px;
+    gap: 14px var(--s-4);
+  }
+  .feat-n {
+    display: none;
+  }
+  .feat-pic {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .feat-row .row-go {
+    width: 48px;
+    height: 48px;
+  }
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .row > .label:first-child {
+    order: -1;
+  }
+  .row.feat-row-type {
+    grid-template-columns: minmax(0, 1fr) 48px;
+  }
+  .post-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .post-item .row-go {
+    display: none;
+  }
+  .post-item .post-when {
+    display: flex;
+    padding-top: 0;
+  }
+  .post-about {
+    padding-top: 0;
+  }
+  .post-nav {
+    grid-template-columns: 1fr;
+  }
+  .post-nav a:last-child {
+    text-align: left;
+  }
+}
+
+/* On a phone the sequence is read down one line: who speaks to whom, then what happens. */
+@media (max-width: 700px) {
+  .seq {
+    display: block;
+    padding-left: 22px;
+    border-left: 2px solid var(--ink);
+  }
+  .seq-head,
+  .seq-life,
+  .seq-line {
+    display: none;
+  }
+  .seq-steps {
+    display: grid;
+    gap: 22px;
+  }
+  .seq-msg,
+  .seq-bridge-bridge {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    justify-items: start;
+    justify-self: stretch;
+    gap: 4px;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    text-align: left;
+  }
+  .seq-msg::before {
+    content: '';
+    position: absolute;
+    top: 0.2em;
+    left: -30px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ink);
+  }
+  .seq-ack::before {
+    background: var(--bar);
+  }
+  .pg-ground .seq-route {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    font-size: clamp(0.75rem, 0.1vw + 0.72rem, 0.8125rem);
+  }
+  .seq-aside {
+    margin-top: 22px;
+  }
+}
+
+/* On a phone the challenge, its three backends and the answer stand one under the other. */
+@media (max-width: 620px) {
+  .dia-tensor {
+    --gap: 26px;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--gap);
+  }
+  .dia-fan {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .dia-fan::before,
+  .dia-fan::after,
+  .dia-fan .dia-node::before,
+  .dia-fan .dia-node::after {
+    display: none;
+  }
+  .dia-fan .dia-node {
+    padding: 0 4px;
+    line-height: 1.15;
+  }
+  .dia-node-in::after,
+  .dia-node-out::before {
+    top: auto;
+    left: 50%;
+    right: auto;
+    width: 1.5px;
+    height: var(--gap);
+  }
+  .dia-node-in::after {
+    top: 100%;
+  }
+  .dia-node-out::before {
+    bottom: 100%;
+  }
+  .matrix thead th {
+    font-size: 0.75rem;
+  }
+  .ry-pages {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--s-5);
+  }
+  .prov {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .band-canvas,
+  .band-view::after,
+  .feat-pic,
+  .next-pic {
+    transition: none;
+  }
+  .next-link:hover .next-pic,
+  .next-link:active .next-pic {
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .band-view,
+  .next-view {
+    display: none;
+  }
+}
+
+@media print {
+  .band-view,
+  .next-view {
+    display: none !important;
+  }
+  .next-link {
+    height: auto !important;
+  }
+  .next-words {
+    position: static !important;
+    padding: 24px 0 !important;
+  }
+  .band {
+    height: auto !important;
+  }
+  .band-words {
+    position: static !important;
+    padding: 24px 0 !important;
+  }
+  .pg-ground {
+    background: #fff !important;
+  }
+}

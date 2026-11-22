@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="ice" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6fafc"/>
+      <stop offset="1" stop-color="#c4dde8"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#123247"/>
+      <stop offset="0.55" stop-color="#17617a"/>
+      <stop offset="1" stop-color="#1f9bb2"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#ice)"/>
+  <path d="M25.5 11h13L54 53H42.6l-2.7-8.2H24.1L21.4 53H10zM32 21.6l-5 14.6h10z" fill="#ffffff" fill-rule="evenodd" transform="translate(0 1.6)"/>
+  <path d="M25.5 11h13L54 53H42.6l-2.7-8.2H24.1L21.4 53H10zM32 21.6l-5 14.6h10z" fill="url(#water)" fill-rule="evenodd"/>
+</svg>

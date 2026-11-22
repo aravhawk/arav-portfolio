@@ -1,0 +1,320 @@
+/* The nav is two small solid plates on the frame, like a menu bar's
+   extras. It leaves when you scroll down and returns when you scroll up, so
+   it is never parked over what you are reading. */
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: max(14px, env(safe-area-inset-top)) max(var(--gutter), env(safe-area-inset-right)) 0
+    max(var(--gutter), env(safe-area-inset-left));
+  /* (The gutter is a share of the window's width, so it is rarely a whole pixel. Rounded, the plates and every
+     control in them stand on the pixel grid: the theme switch's hairline is one sharp pixel, not two soft ones.) */
+  padding-right: round(max(var(--gutter), env(safe-area-inset-right)), 1px);
+  padding-left: round(max(var(--gutter), env(safe-area-inset-left)), 1px);
+  pointer-events: none;
+  transition: transform 420ms var(--ease-out);
+}
+html[data-nav-hidden] .nav:not(:focus-within) {
+  transform: translate3d(0, -120%, 0);
+  transition: transform 260ms var(--ease-in);
+}
+
+.nav-mark,
+.nav-links {
+  pointer-events: auto;
+  border-radius: var(--r-2);
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-mark {
+  padding: 0 18px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  letter-spacing: -0.03em;
+  /* On the home page the name is the hero, so the mark waits until the ice
+     has melted and then takes over. */
+  opacity: 0;
+  transform: scale(0.96);
+  pointer-events: none;
+  transition:
+    opacity var(--t-ui) var(--ease-out),
+    transform var(--t-ui) var(--ease-out);
+}
+html[data-melted] .nav-mark,
+html:not([data-js]) .nav-mark,
+.nav-mark:focus-visible {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.nav-mark:active {
+  transform: scale(0.97);
+}
+
+.nav-links {
+  gap: 2px;
+  padding: 0 6px 0 8px;
+}
+.nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 12px;
+  font-size: 0.875rem;
+  font-weight: 560;
+  letter-spacing: -0.005em;
+  color: var(--ink-2);
+  transition: color var(--t-fast) ease;
+}
+.nav-link[aria-current='page'] {
+  color: var(--ink);
+}
+.nav-link[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 9px;
+  height: 1px;
+  background: currentColor;
+}
+.nav-link:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .nav-link:hover {
+    color: var(--ink);
+  }
+}
+
+/* The theme switch. Off is the light theme: an open track with a hairline edge and a full disc at its left. On is
+   the dark one: the track filled, the disc at its right, cut to a crescent. It is drawn to the nav's own scale: a
+   32 by 18 track (the links' capitals are 10 px tall, the speaker beside it 12), a 12 px disc 3 px in, 14 px of
+   travel, a 1 px edge like the rule under the current link. Every size is a whole pixel and the plate it stands
+   in is on the pixel grid (see `.nav`), so its edges are sharp at 1x and at 2x.
+
+   Only transform and opacity move, in 180 ms. The fill is a layer that fades over the open track. The crescent is
+   a second layer over the knob: a disc of the fill's own colour at the track's right end, which shows only where
+   the knob comes to lie under it, so the knob is bitten as it arrives. Their colours are the switch's own and do
+   not turn with the theme's tokens, so nothing flashes as the tokens change under them. The button is the target
+   (never under 44 px either way); the ring stands round the track. */
+.nav-toggle {
+  --switch-knob: #0d1013;
+  --switch-fill: #f1f4f5;
+  --switch-edge: #566067;
+  --switch-rest: rgba(10, 12, 14, 0.05);
+  --t-switch: 180ms;
+  position: relative;
+  /* (Never squeezed: its width is its target, and a squeezed one would leave the pixel grid.) */
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 44px;
+  border-radius: var(--r-pill);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease-out);
+}
+.nav-toggle-track {
+  position: relative;
+  display: block;
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--switch-rest);
+  box-shadow: inset 0 0 0 1px var(--switch-edge);
+}
+.nav-toggle:focus-visible {
+  outline: none;
+}
+.nav-toggle:focus-visible .nav-toggle-track {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+/* (A press with the pointer. From the keyboard nothing moves.) */
+.nav-toggle:active:not(:focus-visible) {
+  transform: scale(0.97);
+}
+/* The fill, over the open track and its edge. */
+.nav-toggle-track::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--switch-fill);
+  opacity: 0;
+  transition: opacity var(--t-switch) var(--ease-out);
+}
+.nav-toggle-knob {
+  position: absolute;
+  z-index: 1;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--switch-knob);
+  transition: transform var(--t-switch) var(--ease-out);
+}
+/* The crescent's bite: a 10 px disc of the fill, up and to the right of where the knob rests when on. It does not
+   travel: over the fill it cannot be seen, and the knob slides in under it. It comes in the second half of the
+   knob's travel, when the fill under it is whole (earlier, the two half-faded layers would show as a paler disc),
+   and it is the first thing to go on the way back. The track's round end cuts what would overhang it. */
+.nav-toggle-track::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: -1px;
+  left: 23px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--switch-fill);
+  opacity: 0;
+  transition: opacity 60ms var(--ease-out);
+}
+:root[data-theme='dark'] .nav-toggle-track::before {
+  opacity: 1;
+}
+:root[data-theme='dark'] .nav-toggle-knob {
+  transform: translate3d(14px, 0, 0);
+}
+:root[data-theme='dark'] .nav-toggle-track::after {
+  opacity: 1;
+  transition: opacity 90ms var(--ease-out) 90ms;
+}
+/* Pointed at, the disc leans a pixel the way a press would send it. */
+@media (hover: hover) and (pointer: fine) {
+  .nav-toggle:hover .nav-toggle-knob {
+    transform: translate3d(1px, 0, 0);
+  }
+  :root[data-theme='dark'] .nav-toggle:hover .nav-toggle-knob {
+    transform: translate3d(13px, 0, 0);
+  }
+}
+/* Changed from the keyboard, it is simply in its new state. */
+.nav-toggle[data-instant],
+.nav-toggle[data-instant] .nav-toggle-track::before,
+.nav-toggle[data-instant] .nav-toggle-track::after,
+.nav-toggle[data-instant] .nav-toggle-knob {
+  transition: none;
+}
+/* Reduced motion: nothing travels and nothing is pressed in. A disc stands at the left and a crescent at the right,
+   and one fades as the other comes, with the fill. The crescent is the button's own `::before`, placed from the
+   button's middle (where the track is centred): a ring of inset shadow that leaves the bite's 10 px disc open, so
+   it needs no layer over it. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-toggle,
+  .nav-toggle:active:not(:focus-visible) {
+    transform: none;
+    transition: none;
+  }
+  :root .nav-toggle .nav-toggle-knob {
+    transform: none;
+    transition: opacity var(--t-switch) linear;
+  }
+  .nav-toggle-track::before {
+    transition-timing-function: linear;
+  }
+  .nav-toggle-track::after {
+    display: none;
+  }
+  .nav-toggle::before {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    top: calc(50% - 6px);
+    left: calc(50% + 1px);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    box-shadow: inset 5px -5px 0 1px var(--switch-knob);
+    opacity: 0;
+    transition: opacity var(--t-switch) linear;
+  }
+  :root[data-theme='dark'] .nav-toggle .nav-toggle-knob {
+    opacity: 0;
+  }
+  :root[data-theme='dark'] .nav-toggle::before {
+    opacity: 1;
+  }
+  .nav-toggle[data-instant]::before {
+    transition: none;
+  }
+}
+/* Where the system draws its own colours, the two states are still an open and a filled track. */
+@media (forced-colors: active) {
+  .nav-toggle-track {
+    box-shadow: none;
+    border: 1px solid ButtonText;
+    box-sizing: border-box;
+  }
+  .nav-toggle-track::before,
+  .nav-toggle-track::after {
+    background: Canvas;
+  }
+  .nav-toggle-knob {
+    background: ButtonText;
+  }
+}
+
+/* On a narrow screen the group closes up. The sound control and the theme switch keep their 44 px targets; the
+   mark and the links give up some of their side padding for them. (Up to 420 px: at 412 and 414, with the haptics
+   switch showing, the two plates touched.) */
+@media (max-width: 420px) {
+  .nav-links {
+    gap: 0;
+    padding: 0 4px 0 6px;
+  }
+  .nav-mark {
+    padding: 0 12px;
+  }
+  .nav-link {
+    padding: 0 7px;
+  }
+  .nav-links .nav-haptics {
+    width: 30px;
+  }
+  .nav-toggle {
+    width: 46px;
+  }
+}
+
+/* On the narrowest phones the mark and the group still stand side by side on one line. */
+.nav-mark {
+  white-space: nowrap;
+}
+@media (max-width: 340px) {
+  .nav-mark {
+    padding: 0 6px;
+    font-size: 0.8125rem;
+  }
+  .nav-link {
+    padding: 0 4px;
+  }
+  .nav-links .nav-haptics {
+    width: 26px;
+  }
+  .nav-toggle {
+    width: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav,
+  .nav-mark {
+    transition: none;
+  }
+}

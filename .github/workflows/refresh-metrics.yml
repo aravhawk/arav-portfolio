@@ -1,0 +1,76 @@
+name: Refresh metrics snapshot
+
+# Rewrites content/metrics.snapshot.json once a week so the site's
+# last-known-good numbers (Ollama pulls, npm downloads, GitHub contributions,
+# merged PRs) stay close to the live ones. See docs/redesign-v4/metrics.md.
+#
+# Notes for whoever reads this later:
+# - This workflow only starts running once this branch is merged: GitHub runs
+#   scheduled workflows from the default branch (main) and nowhere else.
+# - The commit is made by github-actions[bot] with the built-in GITHUB_TOKEN.
+#   Commits made by this Action are bot commits and are exempt from the
+#   repo's SSH-signing rule. They are signed off instead (git commit -s).
+# - No extra secrets, no personal access tokens, and no third-party actions:
+#   only actions/checkout and actions/setup-node, pinned by full commit SHA.
+# - At most one commit per run, and only when the snapshot file changed.
+
+on:
+  schedule:
+    - cron: '0 11 * * 1' # Mondays at 11:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Runs never overlap: a second run waits for the first to finish.
+concurrency:
+  group: refresh-metrics
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # No install step: the script has no dependencies. The built-in token
+      # only lifts the GitHub search rate limit that shared runners hit; the
+      # search still asks for public repositories only.
+      - name: Refresh the snapshot from the live sources
+        id: refresh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/refresh-metrics.mjs
+
+      - name: Commit the snapshot if it changed
+        run: |
+          if git diff --quiet -- content/metrics.snapshot.json; then
+            echo "Snapshot unchanged, nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/metrics.snapshot.json
+          git commit -s -m "chore(metrics): weekly snapshot refresh"
+          git push origin HEAD:main
+
+      # Runs after the commit, so whatever did refresh is saved, and the run
+      # still shows up red when a source could not be read.
+      - name: Flag sources that could not be refreshed
+        if: steps.refresh.outputs.failed != ''
+        env:
+          FAILED: ${{ steps.refresh.outputs.failed }}
+        run: |
+          echo "::error::Kept the previous snapshot values for: ${FAILED}"
+          exit 1

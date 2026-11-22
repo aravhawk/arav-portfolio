@@ -1,0 +1,110 @@
+# Copy
+
+Status: **as built** (K1, 2026-11-20).
+
+## How the site speaks
+
+- Plain, specific sentences about what the thing does and what is
+  true of it. If a sentence would fit any AI product, rewrite it.
+- No slogans. No "X, not Y". No buzzword triads, no "revolutionize",
+  "supercharge", "seamless". No captions that explain the design.
+- No em dashes or en dashes. Sentence case.
+- First person for him ("I co-founded"), third person for a project
+  ("It switches"). One voice from the first screen to the ending.
+- The home page holds 260 to 300 visible words for the first nine
+  projects with the newsletter field's "Subscribe" (290 as `checks.js`
+  counts them), and a station's own block for each project added since
+  (envfetch: 34, so 324 as built). A new station adds its block and
+  shortens no other station's words. `checks.js` in the
+  capture tools counts them; adding a word means removing one.
+- The loading sequence's labels (`LOAD_STEPS` in
+  `src/water/load-steps.ts`) each name what the engine is doing in two
+  to four plain words ("Compiling shaders", "Cutting the name"). They
+  are shown only while that work runs and are not in the count above.
+- Every number is real and sourced
+  (`docs/redesign-v4/content-sources.md`); numbers that change are
+  read live (`src/lib/metrics`). **When they were read is said once a
+  page, small, at its foot**: "Numbers read Nov 21, 2026, 8:34 PM CT"
+  under the name in an inner page's footer (`note` on `PageShell`, on
+  the pages that show numbers) and under the contact row in the home
+  page's ending (`.fl-end-note`). No block, caption, recognition line
+  or footnote repeats it; a caption may name the source ("Read from
+  GitHub."). The tip a number shows when pointed at, and its name for
+  assistive technology, keep their "as of".
+  Merged pull requests count only repositories he does not own, less
+  the repositories in `EXCLUDED_REPOS`
+  (`src/lib/metrics/config.ts`). What is left out is never written
+  into a page: the link under the count is a GitHub search with one
+  `repo:` term for each counted repository (`buildCountedPrQuery`),
+  made from the same ledger as the count. The query with the
+  exclusions stays on the server.
+- arav.pro is canonical. No photo of him.
+- **No email address, anywhere** (his decision, 2026-11-21: an address
+  in a page is harvested). Not as a link, not as text, not in
+  structured data, the feed, a share card or a script. The ways to
+  reach him are X, LinkedIn, GitHub and his resume (`CONTACT`), in that
+  order; the feed is the row's quiet word. `tests/content/address.test.ts`
+  fails if an address or a mail link comes back into the source;
+  `scripts/address-search.mjs <base>` searches a production build
+  (`.next/`, `public/`) and every served route, and must find nothing
+  before a release. A post may link to pages, never to an address.
+
+## The words belong to the scenes
+
+- A block stands on calm ground and arrives with the thing it names
+  (the steps in `build`, `src/app/page.tsx`).
+- A figure sits on what it counts: each stream's caption is its
+  repository and its count, each column's its model and its pulls.
+- A small mono label with a hairline leader names an object in the
+  world (`Callout`): the block of ice, the two shards, the pane in
+  the canyon's wall. Its text is a fact (a site, a name), never a
+  comment on the picture.
+- The ending is exactly "This was the warm-up." with "The next
+  station isn't built yet." under it.
+
+## What may appear (the owner's list, 2026-11-20, and envfetch, 2026-11-22)
+
+Ten projects, in this order everywhere a list shows them
+(`PROJECTS` in `src/content/projects.ts`). The home page's flight
+keeps the order its world was built in.
+
+| Project | Limits |
+| --- | --- |
+| Infiniview | No user numbers. Daytona Startup Grid acceptance (Apr 9, 2026) without a dollar figure. Link infiniview.dev, docs.infiniview.dev and, on its own page only, infiniflop.com (label "Infiniflop Labs"). Never the private repository. |
+| Upstream | Counted live. XcodeBenchmark and openbridge are counted, not described. |
+| Open models | Pulls live. For llama4, the upload date only: no claim of being first. |
+| cc-switch | Downloads live, all time since Feb 1, 2026 and the last 30 days. |
+| Kilo Bench | "Winner of the 'Kilo - For Devs, By Devs' prize". Never "1st overall". |
+| Ask Around | "Winner" of Belweave's Notify Weekend 01 on justship.dev (Nov 7, 2026). No dollar figure. |
+| RydAR | On the App Store as "RydAR: Safe Driving" since Nov 11, 2026. 2 collaborators. No competition result, no seller's name. No store link until the owner gives its address. |
+| Agent Bridge | "Grok Bot" and "OpenAI agent" are the only product names for the two peers. No adoption numbers. Only the GitHub repository and the launch post are linked. |
+| TensorPoW | A research implementation. No speed claim. |
+| envfetch | Only what its repository says (README, languages, the v1.1.0 release of June 4, 2026). No star count, no praise. Its commands are set as text from the README. |
+
+Recognition is lines, never cards (`RECOGNITION`): "Selected for
+OpenAI DevDay 2026" (about him, never under Infiniview); the
+Business Insider story of May 2026, without his age, city or grade;
+his GitHub contributions in 2026, read live (the date is the footer's).
+
+Nothing else is shown: no archive, no "also" list, no project the
+owner holds back or has dropped, no bot name beyond the two above.
+Ask the owner before adding an eleventh. A project he adds becomes a
+station of the flight (`recipes.md`), never a list entry.
+
+## Where copy lives
+
+`src/content/projects.ts` (every project's name, line, page copy and
+links; recognition; contact), `src/content/kinds.ts` (the
+small labels), `src/components/work/case-data.ts` (what the project
+pages' designed pieces say), `src/components/flight/` (the home
+page's own sentences), `src/lib/subscribe/messages.ts` (what the
+newsletter's field says). The post in `content/posts/` is the owner's
+own writing and is not edited.
+
+Change log: 2026-11-22 R3: envfetch, the tenth; a project added becomes a station; the count.
+
+Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1:
+the definitive list, recognition, the story's rules. 2026-11-20 K2: the
+public pull request link names only counted repositories. 2026-11-21 R1:
+no email address anywhere; when the numbers were read is said once, at
+the foot; the newsletter's sentences, the count at 301.

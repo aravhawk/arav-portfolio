@@ -1,0 +1,484 @@
+# aravjain.dev v4: design review
+
+Five rounds by the build thread, then independent critics, each a fresh
+agent that saw only captures. Their scores were low, so the rounds went on:
+this file records every score as it was given. Captures for every round are
+outside git in `~/.t3/portfolio-redesign-v4/rounds/<n>/`, and the critics'
+full reviews in `~/.t3/portfolio-redesign-v4/critic/review-<n>.md`.
+Each round asked the same questions: is it water and not jelly, is anything
+covered, does anything lag or go soft, are the fonts premium, does a
+stranger get who he is in five seconds, is the ending at least as good as
+v2's, are both themes first class.
+
+## Round 1: does the whole page exist and hold together
+
+Captured: home at 1440 (light and dark), 390, 768 and 1920; /work, two
+project pages, a post and the 404, at 1440 and 390.
+
+| Finding | Fix |
+|---|---|
+| The ending's top-down water had a blotchy cell pattern that matched nothing above it | Replaced, then removed down to a faint fine shimmer, so the page's water hands over to the ending without a seam |
+| Dark theme ending: the land went brown, because horizon haze was being mixed into it from straight above | Haze on land now scales with the tilt |
+| "cc-switch" overflowed its column at display size | Project names are capped by their own column with a container query (`150cqw / longest word`), and the name uses a non-breaking hyphen |
+| The statement left one orphaned word, and on phones wrapped to eleven short lines | `text-wrap: balance`, and its own size on phones |
+| Inner pages ended on a pool sitting above a horizon, which read as two unrelated pictures | Inner pages drop the pool; the stream runs under the band, and the band's horizon is raised so its words stand on land |
+| On project pages the stream crossed the row of live numbers to reach the project's bed | The bed gets a row of its own between the head and the body |
+| Blog titles were set at full display width and weight and filled five lines | Long titles use width 100, weight 680 and a 20ch measure |
+| The phone lake was a screen and a half of empty water | Shortened to 134svh |
+
+## Round 2: material, close up
+
+Captured at 2x device pixel ratio so the surfaces could be judged at the
+size the owner will see them.
+
+| Finding | Fix |
+|---|---|
+| The ice had a stitched, quilted bevel and read as inflated metal | The distance field is smoothed before normals are taken; the letter became a flat frosted face with a narrow clear bevel, a lit rim on the light side and a shaded one opposite |
+| Mid-melt, the name left a grey blurred ghost of itself in the water. Blur is the one thing that must never appear | The melt no longer fogs the water. Meltwater lifts the water's own colour slightly where it runs and nothing else |
+| The name went thin in the first third of the melt and was gone by 60% | Erosion is eased (`m^2.3`) and calibrated to the thickest stroke, so the name stays bold through the first half and the last slivers go at the very end |
+| A hard-edged pale patch sat in the top left of every pool (the overhead light's reflection) | Softened to a wide, faint sheen |
+| Land read as a flat pale ground in thumbnails, which is the complaint about v3 | A relief line milled parallel to every bank (inside the margin text keeps from water, so it never runs under a word), water colour thrown onto the bank beside it, stronger falloff from the key light, more grain |
+| Dark theme: water was a milky grey blue and the slab had no visible material | Darker bed and bluer scatter so depth reads, stronger caustics, and the relief line's lit lip is added, since a multiply is invisible on a dark slab |
+| Bank edges stair-stepped on diagonals | The bed field went from one texel per 4px to as fine as a memory budget allows (about 2.3px on a desktop) |
+| Lighthouse desktop performance was 82: 400 ms of blocking at startup | Shaders compile one per task, the bed is carved once after fonts load, distance transforms moved to a worker: 100, with 0 ms blocking |
+| Unlit statement words were at 26% opacity, 2.2 to 1 | A dim ink token that passes 3 to 1 as large text in both themes |
+| At 200% text size the hero copy ran under the nav | The hero header has a minimum height, not a fixed one |
+
+States checked this round: no WebGL (the static design: name in type on a
+still basin, basins as CSS, sky as a gradient), reduced motion (two
+screenshots 1.2 s apart are byte identical; every statement word lit; the
+ending is one screen at its final pose), keyboard (skip link first, 2px ring
+on every stop), forced colours, print.
+
+## Round 3: motion and touch
+
+Recorded: `home-scroll-1440.webm` and `home-touch-390.webm` with real touch
+events (tap, drag, flick), plus a frame strip of the pointer crossing the
+lake.
+
+| Finding | Fix |
+|---|---|
+| The pointer's wake was almost invisible, which fails "a real fluid simulation reacting to the cursor" | Stronger displacement, the pointer treated as a moving body (trough ahead, bulge behind), more refraction and caustic focusing from the simulated surface, idle shimmer roughly doubled |
+| Wake highlights broke into blocky dashes | Wider, softer threshold on the crest highlight |
+| Raising the surface viscosity to remove grain turned the water into a checkerboard on the next build | That was a real stability failure in the explicit wave scheme. The constants are back inside the limit with margin, the result is clamped, and a unit test runs the same update on the CPU and fails if the limit is crossed |
+| Home was at about 260 words by a strict count (every label, numeral and nav item) | Cut to 200 without losing a required fact; the "as of" stamp lives in each number's tooltip and on /work |
+| Route changes were a hard cut | View transitions: the page lifts away and the next settles in while the water keeps running underneath; a project's name travels from its row to its page |
+
+Touch results in emulation: tap splashes, drag and flick scroll natively,
+the profile switch re-carves the bed on tap, the theme switch works, in
+both mobile WebKit and Chromium profiles.
+
+## Round 4: project pages
+
+v3's project pages were its weakest part, and v2's were redirects.
+
+| Finding | Fix |
+|---|---|
+| Only three project pages (the data-driven ones) had a bed of their own | Every project page now carries its own: Kilo Bench the flumes, Agent Bridge the two pools and the canal with the launch video on the bank, TensorPoW the grid, RydAR the bends, Infiniview the product on its island |
+| The video used native controls, which look different in every browser | One control of our own; the video is not fetched until asked for and stops when it leaves the view |
+
+Each project page is: way back, label, name, a statement-size summary, the
+project's bed, live figures where they exist, titled steps for how it
+works, real media, a ledger or table where there is data, facts, links out,
+and the next project.
+
+## Round 5: every browser, every width
+
+92 page loads: Chromium, WebKit and Firefox at 320, 390, 768, 1024, 1440,
+1920 and 2560, plus an iPhone profile in WebKit and a Pixel profile in
+Chromium with touch. Checked by measurement on each: horizontal overflow,
+text running outside the viewport, clipped text, console errors, the water
+either running or cleanly off, fonts loaded.
+
+| Finding | Fix |
+|---|---|
+| WebKit logged errors from its own native video control icons | Gone with the designed control |
+| The overlap test, run at every width for the first time, failed at 320px: a repository name (one unbroken word) spilled out of its column into the stream lane | Row names wrap; the bed now measures a text block's ink as well as its box. Re-run: zero |
+| Firefox warned about drawing without vertex attribute 0 | Every pass draws a real triangle bound to attribute 0 |
+
+Results of the final gates are in the build's final report and in
+`perf.md`.
+
+## Independent critics
+
+Each critic was a fresh agent with no access to this thread's reasoning or
+to the code. Each was given only: captures from a production build (both
+themes, four widths, inner pages, 2x close-ups, the melt and wake strips),
+the reference captures (Igloo, Lando Norris, Lusion, Apple, Cyera, Grail,
+Preymaker, v2's ending and v3's best frames), and the owner's verbatim
+words. Each had to quote text from named images first, as proof it could
+see them. The first also ranked the three type systems blind before seeing
+anything else (typography.md). The same ten questions each time; 8.5 was
+defined as "would not look out of place beside the references".
+
+| | Critic 1 (round 5 build) | Critic 2 (round 6 build) | Critic 3 (after K1 to K3) | Critic 4 (after K4 and K5) | Critic 5 (final build) |
+|---|---|---|---|---|---|
+| a. Real flowing water, bold and central | 5 | 5.5 | 4.5 | 5 | 4.5 |
+| b. Nothing covered or hard to read | 7 | 7 | 6 | 6 | 7 |
+| c. Nothing soft or low resolution | 6 | 7 | 6.5 | 5 | 5.5 |
+| d. Typography | 5 | 6.5 | 6.5 | 6.5 | 7 |
+| e. Five-second read | 8.5 | 8 | 7.5 | 8 | 6.5 |
+| f. Ending against v2's | 5.5 | 7 | 7.5 | 6 | 6.5 |
+| g. Light and dark both first class | 6.5 | 6 | 5.5 | 4.5 | 6 |
+| h. Project pages | 6.5 | 5.5 | 4 | 6 | 6 |
+| i. Phone | 6 | 7 | 6.5 | 6 | 7 |
+| j. Craft against the references | 4.5 | 5 | 5 | 5 | 4.5 |
+| **Overall** | **5.5** | **5.8** | **5.5** | **5.8** | **5.8** |
+
+Five different agents scored five different builds, so the columns are
+not a controlled series: critic 3's 4 for project pages, for instance,
+rests on a capture of mine that showed only the first and last screen of
+each page, and critics 4 and 5 reported that their tooling cut the brief
+short and that they compared against Igloo and Lando Norris only. What
+they have in common is the useful part, and so is the plain fact of the
+bottom row: **five independent scores between 5.5 and 5.8, against a
+target of 8.5.** The build did not reach the target, and no pass moved the
+overall score by more than 0.3.
+
+What all three said, in their words:
+
+- The name: "embossed plastic or soap, a Photoshop layer style" (1),
+  "chunky rounded extruded lettering ... 2000s 3D text, not ice" (2),
+  "bevelled extrusion ... reads as WordArt" (3). Three materials, the same
+  verdict.
+- The water: "a caustics texture laid in a tray" (1), "a uniform
+  swimming-pool caustic pattern ... in narrow plastic tubes" (2), "teal
+  fill with one repeating caustic texture in carved channels" (3).
+- The ground: "about 85% flat grey" (1), "a flat light-grey sheet" (2),
+  "white paper ground with a faint noise texture" (3).
+- Against Igloo, Lusion and Apple: "a tidy, original, above-average
+  portfolio. Beside the references it looks like a clever diagram" (1).
+
+What they said was good: nothing ever covers copy; the five-second read;
+the copy's restraint; the stream as one continuous line; the open-source
+comb where each branch is a real repository; "Dry land" for the 404; the
+serif statement; and, by the third, the ending ("the dark ending is the
+best frame in the build and beats v2").
+
+## Round 6: the deep water pass (after critic 1)
+
+Done in this thread before the work was split.
+
+| Critic 1's finding | What changed |
+|---|---|
+| The name is not ice | A standing block with fracture planes, cut faces and a shadow (later replaced twice more) |
+| The melt is a font-weight slider | The letters sink and clear instead of thinning (later replaced) |
+| Most of the site is flat grey | An oblique camera so walls, waterline and bed read as depth; rivers about twice as wide; a lake from bank to bank |
+| The water reads as a texture | Caustics from the summed curvature of every moving layer: one coherent net that tightens round a wake |
+| The type is the weakest of the three and looks default | TASA Orbiter and Spline Sans Mono, the system the blind ranking put first, with a Newsreader accent |
+| Empty pools where media should be | Pages without media no longer open on a pool; the stream runs in from the top |
+| The ending is a downgrade from v2 | The wedge of land is gone; the words are set in the picture as v2 had them |
+| The play button covers the video's caption | The control sits under the picture |
+| The ending repeated under every inner page | A plain footer |
+
+Found while doing it: the overlap test's check of the ending was vacuous
+(it skipped every element marked as chrome, which is all of the ending's
+text). It now hides the words, photographs the picture behind each line
+three times in both themes, and fails any line under WCAG AA. That failed
+the light ending at 1.6 to 1, which is why the light theme's ending became
+a blue-hour dawn instead of a pale morning.
+
+## Round 7: the water world, the ending, the type scale (after critic 2)
+
+From here the implementation was done by Kilo Code from written briefs
+(tasks K1, K2, K3) and reviewed in this thread from its captures, one task
+at a time.
+
+| Critic 2's finding | What changed |
+|---|---|
+| The pool: "a stock pool texture ... with stepped pool edges" | The terraces are gone; the bed shelves from clear shallows to a dark middle; glacial teal in place of pool blue; caustics that vary with depth |
+| Flat grey background | Lit stone with a visible grain, a wet shore, natural banks |
+| Tubes bent into icons; shapes that explain nothing | Kilo Bench is a pool with the benchmark's real results beside it; RydAR is one meander with the app inside its bends; cc-switch is three branches under the three options of its switch |
+| The wake is a grey smudge | The foam veil is gone; the wake is ripples that bend the light, and a click sends a ring |
+| Ragged, stair-stepped channel edges | Every land and water edge is antialiased from the distance field |
+| Dark theme is daylight water on charcoal | Night water: a dark teal body and a luminous net in the shallows |
+| Body copy tiny against the headings | Reading text 18px at 1440, sentences under project names 22px, and the whole scale grows with the screen past 1440 |
+| A dead screen before the ending; the ending's flat mountains and hard sun; a clipped full stop | The ending's first frames are the page's own water; ranges with a lit side, haze and a reflection; the sun behind the ridge with bloom; the full stop fixed |
+| Infiniview's image caught mid scroll | The composed hero frame |
+
+Sent back to Kilo after review of K1 and K2 (task K3): the meltwater read
+as grey fog and lingered; the melt ended in scattered fragments, worst on
+phones; the dark theme's caustics were drawn as outlined shapes; the last
+reach of open water was a flat field.
+
+## Round 8: the frozen lake (after critic 3)
+
+Three critics had given the same top finding in three builds of it: the
+name as raised letters reads as a text effect whatever it is made of.
+Tuning that was stopped, and the picture was changed (Kilo tasks K4 and
+K5).
+
+| Critic 3's finding | What changed |
+|---|---|
+| The name: "bevelled extrusion ... an offset ghost beneath" | The lake is covered by a sheet of lake ice and the name is cut through it. The letters are live water seen through the ice, with the cut's wall and the sheet's shadow giving it depth. The raised block and its shadow are gone |
+| The melt "thins and cross-fades" | The sheet melts: openings grow from the letters, leads open along the cracks, the sheet becomes a few large floes that shrink and drift to the outlet, then open water |
+| Body water: "teal fill with one repeating caustic texture" | Runs and pools are different water: threads of current in the runs, deep calm pools, a lit edge, no repeated pattern from reach to reach |
+| Dark: "flat charcoal ground" | The dark slab catches light; the water spills a little cool light onto the stone beside it |
+| Light ending: "posterised glints"; "teal pool jump-cuts to purple sea" | A soft sun path; the water's colour travels from the page's teal to the sea across the lift |
+| "A grey band right of the pipe"; "the same pipe on every inner page" | The band is gone; the stream wanders inside its lane |
+| The nav pill over copy as it scrolls under | The nav leaves when the page scrolls down and returns on the way up |
+| The wake as "a thin cartoon outline" | Drawn by shading only |
+
+Sent back after review of K4 (task K5): in dark theme the ice sheet was as
+bright as in light; the light ice read soft, like cloud; the middle of the
+melt had crenellated floes and one cut by a straight line; a crease and
+faint terracing showed in the stream bed.
+
+## Round 9: the last fixes (after critic 4)
+
+Critic 4's worst findings were real and specific, so one more task went
+to Kilo (K6): the dark hero's name "barely legible ... camouflage"
+(now the reverse of the light hero: dark ice, the name glowing as lit
+water); stepped edges on the ice at 2x; cracks cutting the name apart in
+the first half of the melt; a wake that had become too faint; a screen of
+plain water after the melt; an abrupt colour change into the dark ending;
+halos round dark channels; an empty spinner image on the Kilo Bench page.
+The Open Graph cards, which still drew the first build's look, were
+redrawn in the same task.
+
+K6 was reviewed here and pushed: the dark hero measures 4.5 to 1 or better
+with the name as the lighter side and a mean ice luminance of 0.06; the
+light hero keeps 5.2 to 1; cracks route round the name; the lake is
+shorter; the five cards are redrawn.
+
+## Where it ended
+
+The fifth critic scored the final build 5.8. Its findings, for whoever
+picks this up, worst first: the ice reads "flat" and "posterised" where it
+wants to be one lit, refractive surface; the stream still reads as a pipe
+of one width; the wake and the click are too faint in stills; the melt's
+floes are round where they should be angular plates, and the name washes
+out mid-melt; a soft smudge where the lake meets its outlet; the Kilo
+Bench page shows a pool with nothing standing in it since the second image
+was dropped; type is small at 1440 and 1920; inner pages leave their right
+half empty.
+
+What the five agreed is at or near the level of the references: nothing
+ever covers copy, the type system, the copy itself, the five-second read,
+the Infiniview beat in light theme, and the dark ending.
+
+What separates this build from Igloo, Lusion and Lando Norris, in every
+review, is not a list of defects. Those sites are lit three-dimensional
+scenes with a camera, made by studios with modelled and rendered assets.
+This one is a relief seen from above, drawn by one fragment shader over a
+distance field, by design: that is what lets the page's own layout carve
+the bed, keeps water out from under every word by construction, and holds
+60 frames a second at full resolution. Within that design it went from "a
+clever diagram" to a frozen lake that breaks up into a stream. It did not
+become a scene you fly through, and the scores say so.
+
+
+## Rounds 10 and 11: the flight (after critics 5, 6 and 7)
+
+The owner's answer to "where it ended" was a new bar: the critics'
+median at 9.5 with none under 9. The fifth review's last paragraph
+named what separated the build from the references, so the design
+changed kind. The home page became **one glacial world seen through a
+perspective camera that scroll flies**: a frozen lake with the name, the
+sheet breaking up, a meltwater river, eight project stations (each one
+large subject made of ice and water, each with its own water
+behaviour), a delta, a dawn sea, with time of day passing along the
+way. The relief engine stays under the inner pages' history only; the
+old home page, its ending canvas and its shader are gone.
+
+| Critic | Build judged | Overall | Its heaviest findings |
+| --- | --- | --- | --- |
+| 6 | the flight's prototype: lake, statement, one station, the old ending | 6.0 | the name reads as extruded lettering; empty frames between; inner pages "a different world" |
+| 7 | after the film finish, the hero's water, the first object | 6.7 | the name squashed during the descent; "a stock floating monitor"; hexagon lines and regular cracks; saw-toothed shorelines; inner pages "white paper with a gel tube" |
+
+What changed after critic 7 (rounds K8c to K9c, then the parallel wave
+W1 to W6, in `PROGRESS.md`): the camera holds the hero's view until the
+name's ice has gone; the first object became a block of glacier ice
+with the product frozen in it; seven more stations; callouts; the
+delta; the ending as the flight's last frame with one light event; the
+flight became `/`; every inner page opens on a live frame of the same
+world and continues as a case study led by real media; sharing cards
+photographed from the real picture; sound.
+
+## Panel 8: three critics on the whole eight-station build (`106d403`)
+
+Three fresh critics, captures only (58 images: the home page at 24
+scroll positions at 1440 and 390 in both themes, 13 full frames a theme
+at 2x, phone frames, every inner page top to bottom), the same rubric,
+proofs given. Sound not judged.
+
+| | 8a | 8b | 8c |
+| --- | --- | --- | --- |
+| a. real flowing water, bold and central | 6.5 | 7.0 | 7.5 |
+| b. nothing covers or weakens copy | 6.5 | 7.5 | 7.5 |
+| c. nothing soft or low resolution | 5.5 | 6.5 | 6.0 |
+| d. typography | 7.5 | 7.5 | 7.0 |
+| e. the five-second read | 8.5 | 9.0 | 9.0 |
+| f. the ending against v2's | 6.5 | 7.5 | 6.5 |
+| g. light and dark both first class | 6.5 | 7.0 | 6.0 |
+| h. project pages | 7.5 | 8.0 | 7.5 |
+| i. phone | 7.0 | 7.0 | 7.0 |
+| j. craft against the references | 5.5 | 6.8 | 6.5 |
+| **Overall** | **6.6** | **7.2** | **6.8** |
+
+**Median 6.8** (the last single review was 6.7). Not at the bar.
+
+What all three found, and what was started on each the same hour:
+
+| Finding (all three) | Answer under way |
+| --- | --- |
+| At the melt's stop the name reads "Arav Jah": the letters fuse | W7 (the melt, the name as a pool of meltwater) and W14 (the name as standing letters of glacier ice that thin evenly and never deform); one of the two is kept |
+| The name reads as "bevelled 3D text from a title generator", not ice | the same two; all three asked for real ice letters |
+| Half or more of the page's scroll carries no words; the nav is gone after the first screen | W12: each station's words held through its whole stretch, a wordless progress rail, the nav back on any upward scroll, varied layouts |
+| The snow, the largest surface in every frame, is "smeared", "airbrushed", "out of focus"; stray white strokes; patches like holes | not yet assigned: it shares the shaders with the running passes |
+| The dark theme is the lesser one: the aurora "a blown mint band", ice as "teal crates with neon edges", the river "glowing paint" | not yet assigned, for the same reason |
+| Pictures set in the ice are mushy (Infiniview) or washed out (RydAR) | not yet assigned |
+| The ending "lost v2's signature: no ribbon of light, no mirror, a generic sunrise" | W13: the river's light rises from the sea as v2's ribbon; a still mirror sea; v2's deep colour; no scrim |
+| Kilo Bench: "a flat dark rectangle in a blob-shaped pond", 9 px text | W9 (stations 1 to 4, second pass) |
+| Primitive props: prisms, sixteen identical cubes, two-pyramid shards | W9 and W10 (second passes) |
+| Inner pages' ground "looks like an upscaled JPEG"; one skeleton eight times; numbered steps, stat rows, pills | W11 |
+
+None found a banned thing: no particles round the cursor, no jelly, no
+effect over text, no invented content.
+
+## Panel 9: three fresh critics after the second passes (`3f0f3f7`)
+
+The same 58-image package and rubric, new critics. The captures pin
+the engine's full shading (the shared GPU would otherwise lean it).
+
+| | 9a | 9b | 9c |
+| --- | --- | --- | --- |
+| a. real flowing water, bold and central | 7.0 | 7.0 | 6.5 |
+| b. nothing covers or weakens copy | 7.0 | 7.0 | 7.5 |
+| c. nothing soft or low resolution | 6.5 | 6.5 | 6.5 |
+| d. typography | 7.5 | 7.5 | 7.5 |
+| e. the five-second read | 9.0 | 8.5 | 9.0 |
+| f. the ending against v2's | 7.5 | 8.0 | 7.5 |
+| g. light and dark both first class | 6.5 | 6.5 | 7.5 |
+| h. project pages | 8.0 | 8.0 | 8.0 |
+| i. phone | 7.0 | 6.5 | 7.5 |
+| j. craft against the references | 6.8 | 6.5 | 7.0 |
+| **Overall** | **7.1** | **7.0** | **7.3** |
+
+**Median 7.1** (panel 8: 6.8). Not at the bar. What moved: the ending
+(6.5 to 7.5 or 8.0), project pages (all three at 8.0), softness (5.5 to
+6.5 on the lowest seat), the name no longer the first finding ("legible
+and the right idea", though "opaque and plasticky beside igloo-2").
+
+What the three share now, worst first:
+
+| Finding | Seen by |
+| --- | --- |
+| RydAR is the weakest frame in both themes: smeared walls, flat grey torn shapes behind the heading at night, a murky picture | all three |
+| The melt: a hard-edged green patch round the name at night "like a compositing mask"; the letters erode into "a spindly, badly drawn face" instead of sinking and becoming water | all three |
+| Kilo Bench: boulders with pixelated, stretched textures; the results soft and warped in perspective ("7 .6"); the table cut by the screen edge on phones | all three |
+| cc-switch: the dry channels "TV static", the running chute "more milk than water"; at night "flat-shaded grey polygons" | all three |
+| Night snow: "flat slate blue with brush gouges", no relief | all three |
+| Captions truncated with an ellipsis, two different treatments by theme and by width | all three |
+| TensorPoW: the title runs onto the pool's rim and is out of scale; a brown hard-edged blob at top left at night | all three |
+| Words overlap mid-transition ("18,302" over "four open models"); titles cross scene edges | two |
+| A dead frame one scroll into the page (the melt) | two |
+| The ending: closer, but no haze or sparkle band, flat terraced ranges, a stepped tail on the ribbon, the two themes nearly the same picture | all three |
+| A red noisy smear on the far falls from Infiniview at night | one |
+| Inner pages: small body text against empty bands; the same backdrop behind every page; one post on the blog | all three |
+
+## Panel 10: three fresh critics, ours beside the references (`b7e15c0`)
+
+After round 3 (R3a to R3g) and the two frame rate passes. The owner's
+format: every critic scores the same nine categories in one table, for
+ours and for Igloo, Lando Norris and Lusion, from sheets that put our
+frames beside theirs at the same viewports (1440 by 900 and 390 wide):
+18 desktop sheets, 11 phone sheets, 7 motion sheets (the load at 0.6,
+1.5, 3 and 5 s; runs of four consecutive frames every 450 px of
+scroll), plus our 58 full frames and 30 reference frames. Captured
+from the production build with the engine's full shading pinned; the
+motion runs with the page left alone, as a visitor meets it. Three
+critics, run one after another, each seeing only the package.
+
+Ours:
+
+| Category | 10a | 10b | 10c |
+| --- | --- | --- | --- |
+| Typography | 7.0 | 7.0 | 7.0 |
+| Hierarchy | 7.5 | 7.5 | 7.5 |
+| Spacing and density | 7.0 | 7.0 | 7.0 |
+| Color and contrast | 7.5 | 7.0 | 7.0 |
+| Iconography and imagery | 7.5 | 7.0 | 7.0 |
+| Motion | 6.5 | 6.0 | 6.0 |
+| Consistency and polish | 7.0 | 6.5 | 7.0 |
+| Clarity | 9.0 | 8.5 | 8.5 |
+| **Overall** | **7.3** | **7.0** | **7.1** |
+
+The references, by the same critics and the same standard (overall,
+then the range of the eight categories):
+
+| | 10a | 10b | 10c |
+| --- | --- | --- | --- |
+| Igloo | 8.8 (5.5 clarity to 9.5) | 9.0 (6.5 to 9.5) | 9.0 |
+| Lando Norris | 9.3 (8.5 to 9.5) | 9.3 (9.0 to 9.5) | 9.2 |
+| Lusion | 8.6 (8.0 to 9.0) | 8.7 (8.0 to 9.0) | 8.7 |
+
+**Median 7.1, lowest 7.0** (panel 9: 7.1, on a different rubric). Not
+at the bar. Two things to say plainly. First, round 3's fixes did not
+move the overall score: the faults panel 9 named are mostly gone from
+the findings (the canyon's smear, the night patch round the name, the
+boulders, the truncated captions), and the new format's motion sheets
+exposed a fault no earlier panel could see. Second, the bar itself:
+the same critics put the three references at 8.6 to 9.3. A median of
+9.5 with none below 9 means a build these critics rank above all
+three. That is the owner's bar and it stands; it is recorded here so
+the distance is not misread.
+
+Clarity is the one category where ours is level with or ahead of all
+three references (8.5 to 9.0). Motion is the lowest (6.0 to 6.5).
+
+What the three share, worst first:
+
+| Finding | Seen by |
+| --- | --- |
+| **The scroll goes dead.** Four consecutive frames across 1,350 px at the statement are one picture; the stations hold the same way (Infiniview, Upstream, Kilo Bench). "A slideshow of held paintings" while every reference changes in every frame | all three, first or second finding |
+| **The ice name reads as a text effect**: a stock bold sans extruded, snow caps, a cube for the dot of the i, a smeared double reflection. "3D WordArt" beside Igloo's modelled object | all three |
+| **The first paint pops**: a flat teal name on a pale gradient at 0.6 s, replaced by a different composition at 1.5 s; then nothing moves from 1.5 s to 8 s | all three |
+| **The melt looks drawn**: a dark hole with a neon cyan rim; the name goes ghostly and is close to unreadable on a phone; then a full screen of open water with no words and no subject | all three |
+| **Kilo Bench's table is keystoned** (rows of three sizes, scores at three x positions) and **cut by the screen's edge on a phone** ("anthropic/cl", "Scor"): clipped text, a hard ban | all three |
+| **Titles caught at thumbnail size** in transit, resting there after the scroll stops | all three |
+| **Every station is the same white and teal**; nothing in light or weather says the reader has moved on; no accent until the sunrise | all three |
+| **The dark theme is the lesser theme**: stock aurora streaks, ground like crumpled cloth or a bump map, a muddy orange horizon, neon teal shores | all three |
+| **Labels too small**: the mono eyebrows a few pixels tall at 1440, the sublines at caption size under 90 px titles, the pillars' labels about 8 px, Upstream's callouts unspaced repository slugs ("THRASHERANDCHAMBERSWEBSITE"), struck through by a leader line on a phone | all three |
+| **RydAR**: a pale web card in a pale wall, tilted and soft, cropped by the frame; the app in use is never shown | all three |
+| **The objects are a tier below**: faceted, banded, "mid-tier game assets" (TensorPoW's cubes, the pillars, the shards); no haze, grain or lens character | all three |
+| **Text placement has no rule**: bottom left, top left (Agent Bridge), top centre (Open models) | all three |
+| **Inner pages leave the world**: a two-column document on a pale streaked sheet, body and tables at caption size, a one-post writing index, an article title smaller than its index entry | all three |
+| **The ending is handsome but thin**: the streak reads as a lens flare with no source and is the same in both themes; the DevDay line tiny; no action; a "HAPTICS ON" chip beside RSS on a phone | all three |
+| The interests are a word list in two greys | two |
+| cc-switch: dark specks in the side channels, streamlines like a diagram, a tiny switcher | two |
+| Unlabelled controls: the four dots in the nav, the tick rail at the right edge | two |
+| The first screen's supporting sentence floats, aligned to nothing | one |
+| Phone: the statement runs across the meltwater channel | one |
+| **Too close to Igloo**: an ice landscape with each project's media frozen in an ice block "is Igloo's central idea restated" | one |
+| Content: `merlin-control` in the archive; the quoted prize title with a spaced hyphen | two (both fixed at once, `9fd1a1b`) |
+| Em dashes in the blog post's body | all three (the owner's own post, protected: not new copy) |
+
+Could not be judged from captures, by all three: whether the water
+flows and answers the pointer, easing, frame rate, sound.
+
+### Round 4, decided
+
+One helper at a time, each integrated before the next:
+
+1. **R4a, motion and words.** No hold is still: the camera moves
+   through every hold on one curve, and each block of words builds in
+   steps through it. The eyebrow leads; a title is never shown small.
+   The tagline stays until the statement arrives. The first paint is
+   the scene's own first frame, with a designed entrance. One anchor
+   for the words. The type scale's missing middle step. Named
+   controls, a rail with a lane, callouts in people's words.
+2. **R4b, the name and the melt.** The name redrawn for ice and lit as
+   an object; the melt without an outline, the letters solid until
+   they are gone.
+3. **R4c, the light.** A day that moves across the flight, station by
+   station, toward the ending; the dark theme relit; air, grain and
+   lens.
+4. **R4d, the stations** (two helpers, 1 to 4 and 5 to 8 with the
+   delta): each station's one scroll-driven event; the table flat and
+   whole on every screen; RydAR shows the app; the objects' ice.
+5. **R4e, the inner pages and the ending.**
+6. **P3, the frame rate** (after the name is final): the first
+   visit's opening, the name made cheap, the governor.
+
+Then panel 11, in the same format.

@@ -1,17 +1,20 @@
 import { Feed } from 'feed';
-import { getAllPosts } from '@/lib/blog';
+import { getAllPosts } from '@/lib/posts';
+import { SITE_URL } from '@/lib/site';
 
-const SITE_URL = 'https://aravjain.dev';
+// The feed changes only when a post does: it is built once, with the site.
+export const dynamic = 'force-static';
 
 export async function GET() {
   const posts = getAllPosts();
 
   const feed = new Feed({
-    title: 'Arav Jain - Blog',
-    description:
-      'Thoughts on AI, GPU computing, blockchain, and building startups.',
+    title: 'Arav Jain: Writing',
+    description: 'Notes on AI agents, evaluation, security and shipping software.',
     id: SITE_URL,
     link: `${SITE_URL}/blog`,
+    // (`rss` is the key the library reads for the feed's own address.)
+    feedLinks: { rss: `${SITE_URL}/feed.xml` },
     language: 'en',
     copyright: `All rights reserved ${new Date().getFullYear()}, Arav Jain`,
     author: {

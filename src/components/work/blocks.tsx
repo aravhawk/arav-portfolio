@@ -1,0 +1,125 @@
+import { getImageProps } from 'next/image';
+import { Held } from '@/components/Held';
+import { Link } from '@/components/Link';
+import { ViewTransition } from 'react';
+import { Arrow } from '@/components/bits';
+import { VideoSlab } from '@/components/VideoSlab';
+import { PROJECTS, type Project, type ProjectMedia } from '@/content/projects';
+
+/**
+ * The few pieces every project page shares. Each page is otherwise its own
+ * composition (cases.tsx): these are only the picture, the section, the
+ * quiet list of facts, the run-in note, and the foot (the ways out and the
+ * way round the set). There are no eyebrows here: a section that needs a name gets a
+ * heading, and where a thing comes from is said in a sentence under it.
+ */
+
+export const PLATE_SIZES = '(max-width: 1720px) 96vw, 1640px';
+export const HALF_SIZES = '(max-width: 859px) 94vw, (max-width: 1720px) 48vw, 820px';
+
+/**
+ * A piece of real media. A light capture is mounted, and dimmed on the dark theme. No plate is the first thing a
+ * page shows (that is the scene at its head), so every plate is held until the page's first frame: Held.tsx.
+ */
+export function Plate({ media, caption, sizes = PLATE_SIZES, className = '' }: { media: ProjectMedia; caption?: React.ReactNode; sizes?: string; className?: string }) {
+  if (media.kind === 'video') return <VideoSlab media={media} />;
+  const { props } = getImageProps({ src: media.src, alt: media.alt, width: media.w, height: media.h, sizes });
+  return (
+    <figure className={`plate${media.tone === 'light' ? ' plate-light' : ''} ${className}`}>
+      <div className="plate-frame" data-dry>
+        <Held className="plate-media" src={props.src} srcSet={props.srcSet} sizes={sizes} alt={media.alt} width={media.w} height={media.h} style={props.style} />
+      </div>
+      {caption ? <figcaption className="cap">{caption}</figcaption> : null}
+    </figure>
+  );
+}
+
+/** A section of a page. `title` is a real heading; most sections have none. */
+export function Sec({ children, className = '', title, id, label }: { children: React.ReactNode; className?: string; title?: string; id?: string; label?: string }) {
+  return (
+    <section className={`sec wrap ${className}`} aria-labelledby={title && id ? id : undefined} aria-label={!title ? label : undefined}>
+      {title && id ? (
+        <h2 className="sec-h" id={id}>
+          {title}
+        </h2>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
+/** The project's facts, as a quiet two column list in the text face. */
+export function Spec({ facts, className = '' }: { facts: Project['facts']; className?: string }) {
+  return (
+    <dl className={`spec ${className}`}>
+      {facts.map((f) => (
+        <div key={f.label} className="spec-row" data-row>
+          <dt>{f.label}</dt>
+          <dd className={/^(npm |ollama |cc-switch )/.test(f.value) ? 'mono' : undefined}>{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** A point made in a paragraph that opens with its own name. Not a numbered step. */
+export function Note({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+  return (
+    <p className={`note ${className}`}>
+      <strong>{title}.</strong> {children}
+    </p>
+  );
+}
+
+/**
+ * The foot of a project's page, on one line: the ways out (links, set as
+ * links) and the way round the set (the nine projects by name, this one
+ * marked; each name travels into the title of the page it opens). The one
+ * after this is offered as a place, in the band under this: see nextOf.
+ */
+export function Ways({ current }: { current: Project }) {
+  const next = nextOf(current);
+  return (
+    <div className="sec wrap ways">
+      <ul className="outs" aria-label="Links">
+        {current.links.map((l) => (
+          <li key={l.href}>
+            <a className="out" href={l.href} target="_blank" rel="noopener noreferrer">
+              {l.label} <Arrow out />
+            </a>
+          </li>
+        ))}
+      </ul>
+      <nav className="strip" aria-label="Projects">
+        <ul className="strip-names">
+          {PROJECTS.map((p) =>
+            p.slug === current.slug ? (
+              <li key={p.slug}>
+                <span className="strip-name" aria-current="page">
+                  {p.name}
+                </span>
+              </li>
+            ) : (
+              <li key={p.slug}>
+                <Link className="strip-name" href={`/work/${p.slug}`}>
+                  {p.slug === next.slug ? (
+                    p.name
+                  ) : (
+                    <ViewTransition name={`title-${p.slug}`} share="title" default="none">
+                      <span>{p.name}</span>
+                    </ViewTransition>
+                  )}
+                </Link>
+              </li>
+            ),
+          )}
+        </ul>
+      </nav>
+    </div>
+  );
+}
+
+/** The project after this one, round the set. */
+export function nextOf(current: Project): Project {
+  return PROJECTS[(PROJECTS.indexOf(current) + 1) % PROJECTS.length];
+}

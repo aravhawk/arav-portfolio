@@ -1,0 +1,9 @@
+import { OG_SIZE, OG_TYPE, ogAlt, renderOg } from '@/lib/og';
+
+export const alt = ogAlt('Work by Arav Jain: everything I have built', 'work');
+export const size = OG_SIZE;
+export const contentType = OG_TYPE;
+
+export default function Image() {
+  return renderOg({ kicker: 'Work', title: 'Everything I have built', line: 'Ten projects, in the order I would show them.', picture: 'work' });
+}

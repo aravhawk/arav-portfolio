@@ -1,59 +1,41 @@
 import type { Metadata } from 'next';
+import { Link } from '@/components/Link';
 import { notFound } from 'next/navigation';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
 import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
-import {
-  getPostBySlug,
-  getAllPostSlugs,
-  getAdjacentPosts,
-} from '@/lib/blog';
+import { getPostBySlug, getAllPostSlugs, getAdjacentPosts } from '@/lib/posts';
+import { postContents } from '@/components/blog/contents';
 import { mdxComponents } from '@/components/blog/MDXComponents';
-import PostNavigation from '@/components/blog/PostNavigation';
-import Navigation from '@/components/layout/Navigation';
-import Footer from '@/components/layout/Footer';
-import Badge from '@/components/ui/Badge';
-import GridBackground from '@/components/ui/GridBackground';
+import { WAY_TO_WRITING } from '@/components/NextBand';
+import { PageShell } from '@/components/PageShell';
+import { formatPostDate } from '@/lib/dates';
+import { pageMeta } from '@/lib/meta';
+import { SITE_NAME, SITE_URL, abs } from '@/lib/site';
 import type { BlogFrontmatter } from '@/types';
 
 export async function generateStaticParams() {
   return getAllPostSlugs().map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const post = getPostBySlug(slug);
-  if (!post) return { title: 'Post Not Found' };
+  if (!post) return { title: 'Post not found' };
 
-  return {
-    title: `${post.frontmatter.title} - Arav Jain`,
+  return pageMeta({
+    title: post.frontmatter.title,
     description: post.frontmatter.description,
-    openGraph: {
-      title: post.frontmatter.title,
-      description: post.frontmatter.description,
-      type: 'article',
-      publishedTime: post.frontmatter.date,
-      tags: post.frontmatter.tags,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.frontmatter.title,
-      description: post.frontmatter.description,
-    },
-  };
+    path: `/blog/${slug}`,
+    type: 'article',
+    publishedTime: post.frontmatter.date,
+    tags: post.frontmatter.tags,
+  });
 }
 
-export default async function BlogPostPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = getPostBySlug(slug);
   if (!post) notFound();
@@ -73,69 +55,99 @@ export default async function BlogPostPage({
     },
   });
 
-  const adjacentPosts = getAdjacentPosts(slug);
-  const prev = adjacentPosts.prev
-    ? { ...adjacentPosts.prev, content: '' }
-    : null;
-  const next = adjacentPosts.next
-    ? { ...adjacentPosts.next, content: '' }
-    : null;
+  const { prev, next } = getAdjacentPosts(slug);
+  const contents = postContents(post.content);
+  const contentsList = (
+    <ol>
+      {contents.map((h) => (
+        <li key={h.id}>
+          <a href={`#${h.id}`}>{h.text}</a>
+        </li>
+      ))}
+    </ol>
+  );
 
-  const date = new Date(post.frontmatter.date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const articleLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.frontmatter.title,
+    description: post.frontmatter.description,
+    datePublished: post.frontmatter.date,
+    url: abs(`/blog/${slug}`),
+    mainEntityOfPage: abs(`/blog/${slug}`),
+    keywords: post.frontmatter.tags.join(', '),
+    author: { '@type': 'Person', '@id': `${SITE_URL}/#person`, name: SITE_NAME, url: SITE_URL },
+    publisher: { '@id': `${SITE_URL}/#person` },
+  };
 
   return (
-    <main className="min-h-screen bg-[#050505]">
-      <div className="noise-overlay" />
-      <Navigation />
-
-      <article className="relative pt-40 pb-20">
-        <GridBackground variant="circuit" fade="both" intensity="dim" />
-
-        <div className="max-w-3xl mx-auto px-6 lg:px-12">
-          {/* Post header */}
-          <header className="mb-16">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#888888]">
-                {date}
-              </span>
-              <span className="text-[#333333]">/</span>
-              <span className="text-xs font-mono text-[#555555]">
-                {post.readingTime}
-              </span>
-            </div>
-
-            <h1 className="font-display text-5xl md:text-6xl lg:text-7xl text-[#FAFAFA] mb-6 leading-[1.1]">
-              {post.frontmatter.title}
-            </h1>
-
-            <p className="text-lg md:text-xl text-[#888888] max-w-2xl leading-relaxed mb-8">
-              {post.frontmatter.description}
-            </p>
-
-            <div className="flex flex-wrap gap-2 mb-8">
-              {post.frontmatter.tags.map((tag) => (
-                <Badge key={tag} variant="cyan">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-
-            <div className="hr-glow" />
-          </header>
-
-          {/* MDX content */}
-          <div className="prose-brutalist">{content}</div>
-
-          {/* Post navigation */}
-          <PostNavigation prev={prev} next={next} />
+    <PageShell
+      scene="lake"
+      short
+      head={{
+        back: { href: '/blog', label: 'Writing' },
+        label: (
+          <>
+            {/* The date the post was published (not the date of the work it describes). */}
+            Published <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date)}</time> / {post.readingTime}
+          </>
+        ),
+        title: post.frontmatter.title,
+        vt: `post-${slug}`,
+        titleLong: true,
+      }}
+      next={WAY_TO_WRITING}
+    >
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
+      <article className="article wrap">
+        {/* The margin: when it was written, what it is filed under, and its own headings. It stays beside the
+            text while the post is read; on a narrow screen it is folded above the text. */}
+        <aside className="article-rail" aria-label="About this post">
+          <p className="rail-when">
+            <time dateTime={post.frontmatter.date}>{formatPostDate(post.frontmatter.date)}</time>
+            <span>{post.readingTime}</span>
+          </p>
+          <ul className="tags" aria-label="Tags">
+            {post.frontmatter.tags.map((tag) => (
+              <li key={tag}>{tag}</li>
+            ))}
+          </ul>
+          {contents.length ? (
+            <>
+              <nav className="toc toc-wide" aria-label="Contents">
+                <p className="toc-h">Contents</p>
+                {contentsList}
+              </nav>
+              <details className="toc toc-fold">
+                <summary>Contents</summary>
+                {contentsList}
+              </details>
+            </>
+          ) : null}
+        </aside>
+        <div className="article-main">
+          <p className="article-lead">{post.frontmatter.description}</p>
+          <div className="prose">{content}</div>
+          {prev || next ? (
+            <nav className="post-nav" aria-label="More posts">
+              {prev ? (
+                <Link href={`/blog/${prev.slug}`}>
+                  <span className="label">Older</span>
+                  <strong>{prev.frontmatter.title}</strong>
+                </Link>
+              ) : (
+                <span />
+              )}
+              {next ? (
+                <Link href={`/blog/${next.slug}`}>
+                  <span className="label">Newer</span>
+                  <strong>{next.frontmatter.title}</strong>
+                </Link>
+              ) : null}
+            </nav>
+          ) : null}
         </div>
       </article>
-
-      <Footer />
-    </main>
+    </PageShell>
   );
 }

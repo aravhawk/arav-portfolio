@@ -1,0 +1,222 @@
+/* The ending's words and the inner pages' footer. On the home page the
+   words stand in the last frame of the flight, over the near, dark reach of
+   the sea, which the picture keeps calm and in shade for them: they are
+   light in both themes. No card, no border, no blur. */
+
+.ending {
+  --end-ink: #f4f7f8;
+  --end-on: #0b1a26;
+  --end-ink-2: #dfe6ea;
+  --end-line: rgba(244, 247, 248, 0.34);
+}
+
+.ending-kicker {
+  color: var(--end-ink);
+  /* The one credential on the page: set as a line to be read, not as a caption. */
+  font-family: var(--font-display);
+  /* (Large and bold enough at every width to be read over the bright water it leads the headline across.) */
+  font-size: clamp(1.1875rem, 0.5vw + 0.95rem, 1.4375rem);
+  font-weight: 680;
+  letter-spacing: -0.014em;
+  text-transform: none;
+}
+.ending-head {
+  font-family: var(--font-accent);
+  font-weight: 380;
+  /* (Sized so the line ends short of the ribbon of light that crosses the frame beside it.) */
+  font-size: clamp(3.1rem, 5.7vw, 6.4rem);
+  line-height: 0.94;
+  letter-spacing: -0.032em;
+  /* One line wherever the screen has room for it, whatever the block's own measure. */
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--gutter));
+}
+.ending-line {
+  display: block;
+  /* Room on the right for the serif's overhang: the full stop is never cut. */
+  padding: 0.08em 0.14em 0.16em 0;
+  margin: -0.08em -0.14em -0.16em 0;
+}
+
+.ending-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px clamp(18px, 2.4vw, 40px);
+  margin-top: clamp(4px, 1vh, 14px);
+}
+.end-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-height: 46px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.05rem, 1.55vw, 1.6rem);
+  letter-spacing: -0.035em;
+  transition: transform var(--t-press) var(--ease-out);
+}
+.end-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 320ms var(--ease-out);
+}
+.end-link .arrow {
+  width: 0.62em;
+  height: 0.62em;
+  transition: transform var(--t-ui) var(--ease-out);
+}
+.end-link:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .end-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  .end-link:hover .arrow {
+    transform: translate(2px, -2px);
+  }
+}
+.end-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* The feed is the row's quiet word: the small label the inner pages' footer sets it in, on the row's own baseline
+   (the ending's own second ink where it stands over the sea). */
+.end-link.end-feed {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 480;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--end-ink-2, var(--ink-3));
+}
+/* (Its rule lies as close under its small letters as the others' do under theirs.) */
+.end-link.end-feed::after {
+  bottom: 14px;
+}
+
+.foot-meta span:first-child {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 22px;
+}
+.foot-meta a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+  transition: color var(--t-fast) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .foot-meta a:hover {
+    color: var(--ink);
+  }
+}
+
+/* Inner pages: one composed row on the snow. His name at the left with the
+   small print under it, the ways to reach him in the middle at the size of
+   links you are meant to use, the ways round the site at the right. */
+.foot {
+  position: relative;
+  color: var(--ink);
+}
+.foot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 6fr) minmax(0, 3fr);
+  align-items: center;
+  column-gap: var(--s-6);
+  padding-top: clamp(26px, 3vw, 44px);
+  padding-bottom: max(clamp(26px, 3vw, 44px), env(safe-area-inset-bottom));
+}
+.foot-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--gutter);
+  right: var(--gutter);
+  height: 1px;
+  background: var(--ink);
+}
+/* (Under a band of the world the picture's own edge is the line.) */
+.pg-ground:has(.next) .foot-row::before {
+  display: none;
+}
+.foot-brand {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+.foot-mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--font-display);
+  font-weight: var(--display-wght);
+  font-size: clamp(1.5rem, 1.5vw + 1rem, 2.5rem);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+/* (A date is set in the text face with tabular figures: in the mono, its comma stands in a cell of its own.) */
+.foot-note {
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.foot .ending-links {
+  margin-top: 0;
+  justify-content: center;
+  gap: 0 clamp(18px, 2.6vw, 44px);
+}
+.foot .end-link {
+  font-size: clamp(1.125rem, 1vw + 0.8rem, 1.75rem);
+}
+.foot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0 clamp(16px, 1.8vw, 28px);
+  color: var(--ink-2);
+}
+.foot-meta a,
+/* (At the foot of a long page the ground is in the day's last shade: the small capitals take the stronger ink.) */
+.pg-ground .foot-meta {
+  color: var(--ink-3);
+}
+@media (max-width: 1100px) {
+  .foot-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--s-4);
+  }
+  .foot .ending-links {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+}
+
+/* Narrow screens: the same picture, the words still in the near water. */
+@media (max-width: 719px) {
+  .ending-head {
+    font-size: clamp(2.9rem, 14vw, 4.6rem);
+  }
+  .foot-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .foot .ending-links {
+    grid-row: auto;
+  }
+  .foot-meta {
+    justify-content: flex-start;
+  }
+}

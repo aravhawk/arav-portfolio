@@ -1,0 +1,781 @@
+/* What the home page and the project pages share: the name's type, the
+   statement's serif, live numbers, slabs of real media, and the feature
+   boxes whose beds the water owns on a project page. */
+
+/* ---------- the name ---------- */
+
+.ice {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  text-align: center;
+  white-space: nowrap;
+  font-family: var(--f-ice), var(--font-display);
+  font-size: var(--ice-size);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  /* Deep water, seen through the cut. */
+  color: #0c5567;
+  text-shadow: 0 0.012em 0 rgba(255, 255, 255, 0.55);
+  /* Room for ascenders and descenders so nothing is clipped. */
+  padding: 0.08em 0;
+}
+:root[data-theme='dark'] .ice {
+  color: #0a2e39;
+  text-shadow: 0 0.012em 0 rgba(255, 255, 255, 0.25);
+}
+[data-ice] [data-ice-line] {
+  transition: opacity 600ms var(--ease-out);
+}
+
+/* ---------- statement ---------- */
+
+/* His own sentence, in the serif: the one other voice on the page. */
+.say-text {
+  max-width: min(17ch, 62vw);
+  text-wrap: balance;
+  font-family: var(--font-accent);
+  font-weight: 360;
+  font-size: clamp(2.4rem, 5.4vw + 0.5rem, 6rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  padding-bottom: 0.08em;
+}
+
+/* ---------- figures and the way in ---------- */
+
+.beat-figure {
+  display: grid;
+  gap: var(--s-4);
+}
+.beat-unit {
+  max-width: 17ch;
+  color: var(--ink);
+}
+.beat-sub {
+  max-width: 34ch;
+}
+.number-sm {
+  font-size: clamp(3.6rem, 9.4vw + 0.5rem, 10.2rem);
+}
+
+/* The way into a project is its name. The arrow says so. */
+.beat-link {
+  transition: transform var(--t-press) var(--ease-out);
+}
+.beat-link .arrow {
+  display: inline-block;
+  width: 0.36em;
+  height: 0.36em;
+  margin-left: 0.16em;
+  vertical-align: 0.12em;
+  color: var(--ink-3);
+  transition:
+    transform var(--t-ui) var(--ease-out),
+    color var(--t-fast) ease;
+}
+.beat-link:active {
+  transform: scale(0.985);
+}
+@media (hover: hover) and (pointer: fine) {
+  .beat-link:hover .arrow {
+    transform: translateX(0.12em);
+    color: var(--ink);
+  }
+}
+.beat-more {
+  font-size: var(--fs-lead);
+}
+
+/* ---------- live readouts ---------- */
+
+.metric {
+  position: relative;
+  display: inline-block;
+  color: inherit;
+  cursor: help;
+}
+.metric-value {
+  display: inline-block;
+  white-space: nowrap;
+}
+.digit {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
+}
+.number .digit {
+  width: 0.66em;
+}
+.sep {
+  display: inline-block;
+}
+.metric-tip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  padding: 7px 11px;
+  border-radius: var(--r-1);
+  background: var(--ink);
+  color: var(--land);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 480;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 2 * var(--gutter)));
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 4px, 0) scale(0.97);
+  transform-origin: 0 100%;
+  transition:
+    opacity 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+.metric:focus-visible .metric-tip {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .metric:hover .metric-tip {
+    opacity: 1;
+    transform: none;
+    transition-delay: 160ms;
+  }
+}
+
+/* ---------- features ---------- */
+
+.feat {
+  position: relative;
+  height: clamp(440px, 68svh, 760px);
+}
+
+/* A slab: real media on dry land, with one soft contact shadow. */
+.slab {
+  position: relative;
+  border-radius: var(--r-2);
+  background: var(--land-2);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 26px 50px -30px rgba(4, 16, 22, 0.55);
+  overflow: hidden;
+}
+.slab-media {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.slab-video {
+  background: #0b0d0f;
+}
+.slab-bar {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+.slab-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 14px 0 12px;
+  border-radius: var(--r-pill);
+  color: #eef2f3;
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 480;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  transition:
+    transform var(--t-press) var(--ease-out),
+    background-color var(--t-fast) ease;
+}
+.slab-play:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .slab-play:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Upstream: labels on the outer bank, tributaries run from them. */
+.tribs {
+  position: absolute;
+  inset: 4% 0 14% 0;
+  display: grid;
+  align-content: space-between;
+  justify-items: start;
+}
+.trib {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 2px;
+}
+.trib-repo {
+  font-size: 0.9375rem;
+  font-weight: 520;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.trib-n {
+  font-size: 0.9375rem;
+  color: var(--ink-3);
+}
+@media (hover: hover) and (pointer: fine) {
+  .trib-repo:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+/* Agent Bridge: two peers and the launch video on the bank between. */
+.peer {
+  position: absolute;
+  width: clamp(120px, 15vw, 230px);
+  aspect-ratio: 1;
+  --bed-r: 50%;
+  border-radius: 50%;
+}
+.peer-a {
+  left: 6%;
+  top: 2%;
+}
+.peer-b {
+  right: 4%;
+  bottom: 0;
+}
+.feat-bridge .slab {
+  position: absolute;
+  right: 0;
+  top: 5%;
+  width: 56%;
+}
+
+/* Open models: basin area follows pulls. */
+.feat-basins {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  gap: 8% 4%;
+  padding: 4% 2%;
+}
+.model {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  width: 100%;
+}
+.model-disc {
+  width: calc(max(54px, var(--d) * min(250px, 38%)));
+  width: max(64px, calc(var(--d) * 18vw));
+  max-width: 300px;
+  aspect-ratio: 1;
+  --bed-r: 50%;
+  border-radius: 50%;
+}
+.model-name {
+  font-size: 0.9375rem;
+  font-weight: 520;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+@media (hover: hover) and (pointer: fine) {
+  .model-name:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+/* cc-switch: the profile switch sits on the bank beside the fork. */
+.feat-fork .switch {
+  position: absolute;
+  left: 0;
+  bottom: 2%;
+}
+.switch {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: repeat(3, 92px);
+  padding: 4px;
+  border-radius: var(--r-2);
+}
+.switch-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 92px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--ink);
+  /* Critically damped: it lands, it does not bounce. */
+  transition: transform 300ms var(--ease-out);
+}
+.switch-opt {
+  position: relative;
+  z-index: 1;
+  height: 44px;
+  font-size: 0.75rem;
+  font-weight: 520;
+  color: var(--ink-2);
+  border-radius: 8px;
+  transition: color 200ms ease;
+}
+.switch-opt[aria-checked='true'] {
+  color: var(--land);
+}
+.switch-opt:active {
+  transform: scale(0.97);
+}
+
+/* ---------- interests ---------- */
+
+.into-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.06em 0.6em;
+  font-size: clamp(2rem, 3.7vw + 0.5rem, 4.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  max-width: 17em;
+}
+.into-list li {
+  white-space: nowrap;
+}
+.into-list li:nth-child(even) {
+  color: var(--ink-3);
+}
+
+/* ---------- narrow ---------- */
+
+@media (max-width: 859px) {
+  .ice {
+    font-size: var(--ice-size-stacked);
+    line-height: 0.92;
+    white-space: normal;
+  }
+  .ice [data-ice-line] {
+    display: block;
+  }
+  .feat {
+    height: clamp(340px, 52svh, 520px);
+  }
+  .tribs {
+    inset: 0 auto 8% 0;
+    justify-items: start !important;
+  }
+  .feat-bridge .slab {
+    position: absolute;
+    left: 0;
+    right: auto;
+    top: auto;
+    bottom: 0;
+    width: 62%;
+  }
+  .peer {
+    width: 112px;
+  }
+  .peer-a {
+    left: 4%;
+    top: 0;
+  }
+  .peer-b {
+    right: 22%;
+    top: 22%;
+    bottom: auto;
+  }
+  .feat-basins {
+    padding-right: 76px;
+    gap: 6% 2%;
+  }
+  .model-disc {
+    width: max(52px, calc(var(--d) * 34vw));
+  }
+  .model-name {
+    font-size: 0.8125rem;
+  }
+  /* The second basin of each pair sits a line lower, so a long model name
+     keeps its own line and its own bank on the narrowest phone. */
+  .model:nth-child(even) {
+    margin-top: 52px;
+  }
+  .switch {
+    grid-template-columns: repeat(3, 80px);
+  }
+  .switch-thumb {
+    width: 80px;
+  }
+  .feat-fork .switch {
+    left: 0;
+    right: auto;
+    bottom: 0;
+  }
+  .say-text {
+    max-width: none;
+    font-size: clamp(1.7rem, 7.6vw, 2.6rem);
+  }
+  .into-list {
+    font-size: clamp(1.7rem, 8.4vw, 2.6rem);
+  }
+}
+
+@media (max-width: 379px) {
+  .model-disc {
+    width: max(48px, calc(var(--d) * 29vw));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch-thumb {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   The newsletter's field. Its rules live in this sheet because the home page and the inner pages
+   both load it already: a sheet of its own was one more request before the first paint on each.
+   ========================================================================== */
+
+/* (src/components/subscribe/SubscribeForm.tsx.) One look in two places: on the snow of an inner page it takes the
+   page's ink; in the home page's ending it takes the ending's light ink over the dark water the picture keeps
+   calm. No card, no panel, no shadow: a hairline pill with the one filled button of the foot inside it. */
+
+.sub {
+  --sub-ink: var(--end-ink, var(--ink));
+  --sub-on: var(--end-on, var(--land));
+  --sub-2: var(--end-ink-2, var(--ink-2));
+  --sub-edge: color-mix(in srgb, var(--sub-ink) 52%, transparent);
+  position: relative;
+  display: grid;
+  gap: 8px;
+  width: min(100%, 27rem);
+  color: var(--sub-ink);
+}
+.sub-label {
+  justify-self: start;
+  color: var(--sub-2);
+}
+.sub-hint {
+  max-width: 34ch;
+  color: var(--sub-2);
+  text-wrap: pretty;
+}
+
+/* The row keeps its height whatever stands in it: the field, or the sentence that replaces it. */
+.sub-row {
+  display: grid;
+  align-items: center;
+  min-height: 48px;
+}
+.sub-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 4px 4px 4px 18px;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--sub-edge);
+}
+/* One ring for the field, drawn by the pill; the button inside keeps its own. */
+.sub-field:has(.sub-input:focus-visible) {
+  box-shadow: inset 0 0 0 2px var(--sub-ink);
+}
+.sub[data-state='invalid'] .sub-field {
+  box-shadow: inset 0 0 0 2px var(--sub-ink);
+}
+.sub-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-text);
+  /* (16 px or more: a phone does not zoom the page to it.) */
+  font-size: max(16px, 1rem);
+  letter-spacing: -0.005em;
+  text-overflow: ellipsis;
+}
+.sub-input:focus,
+.sub-input:focus-visible {
+  outline: none;
+}
+.sub-input::placeholder {
+  color: var(--sub-2);
+  opacity: 0.78;
+}
+/* (A filled-in address keeps the field's own ground and ink: the browser's tint would be a panel behind the words.) */
+.sub-input:-webkit-autofill,
+.sub-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--sub-ink);
+  caret-color: var(--sub-ink);
+  transition: background-color 99999s 99999s;
+}
+.sub-go {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* (Wide enough for the longest of its three names, so the field beside it never changes width.) */
+  min-width: 7.75rem;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  background: var(--sub-ink);
+  color: var(--sub-on);
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 640;
+  letter-spacing: -0.012em;
+  white-space: nowrap;
+  transition: transform var(--t-press) var(--ease-out);
+}
+/* The target is the pill's whole height and its right end: 48 px tall under a finger. */
+.sub-go::before {
+  content: '';
+  position: absolute;
+  inset: -4px -4px -4px -3px;
+  border-radius: inherit;
+}
+.sub-go:active {
+  transform: scale(0.97);
+}
+.sub-go:focus-visible {
+  outline: 2px solid var(--sub-ink);
+  outline-offset: 2px;
+  border-radius: var(--r-pill);
+}
+.sub-go[aria-disabled='true'] {
+  opacity: 0.72;
+  cursor: progress;
+}
+.sub-go[aria-disabled='true']:active {
+  transform: none;
+}
+
+/* A field no reader meets. */
+.sub-trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* The confirmation stands where the field stood, and comes from where the button was. */
+.sub-done {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+  transform-origin: 100% 50%;
+  transition:
+    opacity var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+.sub-done:focus,
+.sub-done:focus-visible {
+  /* (It takes focus to be announced; it is not a control, so it draws no ring.) */
+  outline: none;
+}
+.sub-tick {
+  flex: none;
+}
+@starting-style {
+  .sub-done {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* What went wrong, by the field. Its place is kept, so the page does not move when it speaks. */
+.sub-say {
+  min-height: 2.7em;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--sub-ink);
+  text-wrap: pretty;
+}
+.sub-said {
+  display: block;
+  transition:
+    opacity var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+@starting-style {
+  .sub-said {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0);
+  }
+}
+/* Sent from the keys: the words change and nothing moves. */
+.sub[data-instant] .sub-done,
+.sub[data-instant] .sub-said {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sub-done,
+  .sub-said {
+    transform: none !important;
+    transition: opacity var(--t-fast) linear;
+  }
+  .sub-go,
+  .sub-go:active {
+    transform: none;
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .sub-field {
+    outline: 1px solid CanvasText;
+  }
+  .sub-field:has(.sub-input:focus-visible) {
+    outline: 2px solid Highlight;
+  }
+}
+
+/* In the home page's ending the reason stands in the small print's line under the field (flight.css: the line about
+   the numbers steps aside for it), on that line's own middle, and takes no room. */
+.sub-compact .sub-say {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  /* (Clear of the feed at the line's right end.) */
+  right: 3.5rem;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  pointer-events: none;
+}
+
+/* On a page that is read the field is a step larger, as the page's other small things are: the page's own body
+   size in the field, a 56 px pill, a 48 px button. */
+.pg-ground .sub {
+  width: min(100%, 30rem);
+  gap: 10px;
+}
+.pg-ground .sub-row {
+  min-height: 56px;
+}
+.pg-ground .sub-field {
+  height: 56px;
+  padding: 4px 4px 4px 22px;
+}
+.pg-ground .sub-input {
+  font-size: var(--pg-body, 1.125rem);
+}
+.pg-ground .sub-go {
+  min-width: 8.75rem;
+  height: 48px;
+  padding: 0 20px;
+  font-size: 1.0625rem;
+}
+.pg-ground .sub-done {
+  min-height: 56px;
+  font-size: clamp(1.0625rem, 0.3vw + 1rem, 1.25rem);
+}
+.pg-ground .sub-say {
+  font-size: 1rem;
+}
+
+/* On a page's two columns (the blog's index: the same two as the post over it): what a subscriber gets at the left,
+   in the type the post's own first sentence is set in, and the field at the right, its left edge on the column the
+   post's words and its way in stand on. The sentence is centred on the field. */
+.sub-split {
+  width: 100%;
+}
+.pg-ground .sub-split {
+  width: 100%;
+}
+.sub-split .sub-hint {
+  max-width: 30ch;
+  font-size: clamp(1.25rem, 0.8vw + 1rem, 1.75rem);
+  font-weight: 520;
+  line-height: 1.26;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+}
+.sub-split .sub-row,
+.sub-split .sub-say {
+  max-width: 30rem;
+}
+@media (min-width: 860px) {
+  .sub-split {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+    column-gap: clamp(32px, 6vw, 120px);
+  }
+  .sub-split .sub-hint {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+  }
+  .sub-split .sub-label {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .sub-split .sub-row {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .sub-split .sub-say {
+    grid-column: 2;
+    grid-row: 3;
+  }
+}
+/* (In one column the sentence stands over the field's name, a little apart from it.) */
+@media (max-width: 859px) {
+  .sub-split .sub-hint {
+    margin-bottom: 10px;
+  }
+}
+
+/* On a phone the ending has little height to give: the pill is the smallest a finger takes. */
+@media (max-width: 719px) {
+  .sub-compact .sub-row {
+    min-height: 44px;
+  }
+  .sub-compact .sub-field {
+    height: 44px;
+    padding: 3px 3px 3px 16px;
+  }
+  .sub-compact .sub-go {
+    height: 38px;
+    min-width: 7.25rem;
+  }
+  .sub-compact .sub-go::before {
+    inset: -3px;
+  }
+  .sub-compact .sub-done {
+    min-height: 44px;
+    font-size: 0.9375rem;
+  }
+  .sub-compact .sub-say {
+    font-size: 0.8125rem;
+  }
+}

@@ -1,0 +1,774 @@
+{
+ "when": "2026-11-19T01:08:54.637Z",
+ "base": "http://localhost:3166",
+ "bands": [
+  {
+   "id": "tall-0",
+   "theme": "light",
+   "lo": 0.4,
+   "hi": 0.44,
+   "w": 738,
+   "h": 1688,
+   "avif": {
+    "kb": 69.2,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 107.9,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-0",
+   "theme": "dark",
+   "lo": 0.4,
+   "hi": 0.44,
+   "w": 738,
+   "h": 1688,
+   "avif": {
+    "kb": 39.9,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 60.5,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-1",
+   "theme": "light",
+   "lo": 0.44,
+   "hi": 0.475,
+   "w": 796,
+   "h": 1688,
+   "avif": {
+    "kb": 73.9,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 114.3,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-1",
+   "theme": "dark",
+   "lo": 0.44,
+   "hi": 0.475,
+   "w": 796,
+   "h": 1688,
+   "avif": {
+    "kb": 42.2,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 63.3,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-2",
+   "theme": "light",
+   "lo": 0.475,
+   "hi": 0.498,
+   "w": 836,
+   "h": 1688,
+   "avif": {
+    "kb": 75.5,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 118.5,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-2",
+   "theme": "dark",
+   "lo": 0.475,
+   "hi": 0.498,
+   "w": 836,
+   "h": 1688,
+   "avif": {
+    "kb": 43.7,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 66.2,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-3",
+   "theme": "light",
+   "lo": 0.498,
+   "hi": 0.545,
+   "w": 914,
+   "h": 1688,
+   "avif": {
+    "kb": 78.9,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 122.1,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-3",
+   "theme": "dark",
+   "lo": 0.498,
+   "hi": 0.545,
+   "w": 914,
+   "h": 1688,
+   "avif": {
+    "kb": 46.3,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 69.4,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-4",
+   "theme": "light",
+   "lo": 0.545,
+   "hi": 0.599,
+   "w": 1006,
+   "h": 1688,
+   "avif": {
+    "kb": 84.8,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 130,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-4",
+   "theme": "dark",
+   "lo": 0.545,
+   "hi": 0.599,
+   "w": 1006,
+   "h": 1688,
+   "avif": {
+    "kb": 49.2,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 74.5,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-5",
+   "theme": "light",
+   "lo": 0.599,
+   "hi": 0.659,
+   "w": 1108,
+   "h": 1688,
+   "avif": {
+    "kb": 90.8,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 141.7,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-5",
+   "theme": "dark",
+   "lo": 0.599,
+   "hi": 0.659,
+   "w": 1108,
+   "h": 1688,
+   "avif": {
+    "kb": 52.5,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 79.5,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-6",
+   "theme": "light",
+   "lo": 0.659,
+   "hi": 0.7,
+   "w": 1176,
+   "h": 1688,
+   "avif": {
+    "kb": 93.5,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 144.2,
+    "quality": 86
+   }
+  },
+  {
+   "id": "tall-6",
+   "theme": "dark",
+   "lo": 0.659,
+   "hi": 0.7,
+   "w": 1176,
+   "h": 1688,
+   "avif": {
+    "kb": 54.9,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 84,
+    "quality": 86
+   }
+  },
+  {
+   "id": "mid-0",
+   "theme": "light",
+   "lo": 0.7,
+   "hi": 0.77,
+   "w": 1179,
+   "h": 1536,
+   "avif": {
+    "kb": 100.3,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 114.4,
+    "quality": 80
+   }
+  },
+  {
+   "id": "mid-0",
+   "theme": "dark",
+   "lo": 0.7,
+   "hi": 0.77,
+   "w": 1179,
+   "h": 1536,
+   "avif": {
+    "kb": 53.7,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 77.6,
+    "quality": 86
+   }
+  },
+  {
+   "id": "mid-1",
+   "theme": "light",
+   "lo": 0.77,
+   "hi": 0.847,
+   "w": 1298,
+   "h": 1536,
+   "avif": {
+    "kb": 100.7,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 115.3,
+    "quality": 80
+   }
+  },
+  {
+   "id": "mid-1",
+   "theme": "dark",
+   "lo": 0.77,
+   "hi": 0.847,
+   "w": 1298,
+   "h": 1536,
+   "avif": {
+    "kb": 54,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 82.8,
+    "quality": 86
+   }
+  },
+  {
+   "id": "mid-2",
+   "theme": "light",
+   "lo": 0.847,
+   "hi": 0.9,
+   "w": 1379,
+   "h": 1536,
+   "avif": {
+    "kb": 103.7,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 116.3,
+    "quality": 80
+   }
+  },
+  {
+   "id": "mid-2",
+   "theme": "dark",
+   "lo": 0.847,
+   "hi": 0.9,
+   "w": 1379,
+   "h": 1536,
+   "avif": {
+    "kb": 56.9,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 85.7,
+    "quality": 86
+   }
+  },
+  {
+   "id": "square-0",
+   "theme": "light",
+   "lo": 0.9,
+   "hi": 0.99,
+   "w": 1186,
+   "h": 1200,
+   "avif": {
+    "kb": 57.6,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 96.8,
+    "quality": 86
+   }
+  },
+  {
+   "id": "square-0",
+   "theme": "dark",
+   "lo": 0.9,
+   "hi": 0.99,
+   "w": 1186,
+   "h": 1200,
+   "avif": {
+    "kb": 42,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 64.2,
+    "quality": 86
+   }
+  },
+  {
+   "id": "square-1",
+   "theme": "light",
+   "lo": 0.99,
+   "hi": 1.089,
+   "w": 1304,
+   "h": 1200,
+   "avif": {
+    "kb": 63.8,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 105.6,
+    "quality": 86
+   }
+  },
+  {
+   "id": "square-1",
+   "theme": "dark",
+   "lo": 0.99,
+   "hi": 1.089,
+   "w": 1304,
+   "h": 1200,
+   "avif": {
+    "kb": 45.3,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 69.3,
+    "quality": 86
+   }
+  },
+  {
+   "id": "square-2",
+   "theme": "light",
+   "lo": 1.089,
+   "hi": 1.2,
+   "w": 1438,
+   "h": 1200,
+   "avif": {
+    "kb": 72.2,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 116.9,
+    "quality": 86
+   }
+  },
+  {
+   "id": "square-2",
+   "theme": "dark",
+   "lo": 1.089,
+   "hi": 1.2,
+   "w": 1438,
+   "h": 1200,
+   "avif": {
+    "kb": 50,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 75.8,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-0",
+   "theme": "light",
+   "lo": 1.2,
+   "hi": 1.284,
+   "w": 1384,
+   "h": 1080,
+   "avif": {
+    "kb": 66.5,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 108.3,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-0",
+   "theme": "dark",
+   "lo": 1.2,
+   "hi": 1.284,
+   "w": 1384,
+   "h": 1080,
+   "avif": {
+    "kb": 43.6,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 66.3,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-1",
+   "theme": "light",
+   "lo": 1.284,
+   "hi": 1.373,
+   "w": 1480,
+   "h": 1080,
+   "avif": {
+    "kb": 73.9,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 119.1,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-1",
+   "theme": "dark",
+   "lo": 1.284,
+   "hi": 1.373,
+   "w": 1480,
+   "h": 1080,
+   "avif": {
+    "kb": 46.8,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 70.7,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-2",
+   "theme": "light",
+   "lo": 1.373,
+   "hi": 1.467,
+   "w": 1582,
+   "h": 1080,
+   "avif": {
+    "kb": 79.6,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 125.6,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-2",
+   "theme": "dark",
+   "lo": 1.373,
+   "hi": 1.467,
+   "w": 1582,
+   "h": 1080,
+   "avif": {
+    "kb": 50.2,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 74.7,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-3",
+   "theme": "light",
+   "lo": 1.467,
+   "hi": 1.567,
+   "w": 1690,
+   "h": 1080,
+   "avif": {
+    "kb": 86,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 135.2,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-3",
+   "theme": "dark",
+   "lo": 1.467,
+   "hi": 1.567,
+   "w": 1690,
+   "h": 1080,
+   "avif": {
+    "kb": 53.6,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 81,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-4",
+   "theme": "light",
+   "lo": 1.567,
+   "hi": 1.672,
+   "w": 1802,
+   "h": 1080,
+   "avif": {
+    "kb": 92.4,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 147.5,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-4",
+   "theme": "dark",
+   "lo": 1.567,
+   "hi": 1.672,
+   "w": 1802,
+   "h": 1080,
+   "avif": {
+    "kb": 57.7,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 85.7,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-5",
+   "theme": "light",
+   "lo": 1.672,
+   "hi": 1.799,
+   "w": 1940,
+   "h": 1080,
+   "avif": {
+    "kb": 103.4,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 122.4,
+    "quality": 80
+   }
+  },
+  {
+   "id": "wide-5",
+   "theme": "dark",
+   "lo": 1.672,
+   "hi": 1.799,
+   "w": 1940,
+   "h": 1080,
+   "avif": {
+    "kb": 62.1,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 96.4,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-6",
+   "theme": "light",
+   "lo": 1.799,
+   "hi": 1.979,
+   "w": 2135,
+   "h": 1080,
+   "avif": {
+    "kb": 122.1,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 147.1,
+    "quality": 80
+   }
+  },
+  {
+   "id": "wide-6",
+   "theme": "dark",
+   "lo": 1.799,
+   "hi": 1.979,
+   "w": 2135,
+   "h": 1080,
+   "avif": {
+    "kb": 68.5,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 105.5,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-7",
+   "theme": "light",
+   "lo": 1.979,
+   "hi": 2.222,
+   "w": 2396,
+   "h": 1080,
+   "avif": {
+    "kb": 130,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 123.2,
+    "quality": 74
+   }
+  },
+  {
+   "id": "wide-7",
+   "theme": "dark",
+   "lo": 1.979,
+   "hi": 2.222,
+   "w": 2396,
+   "h": 1080,
+   "avif": {
+    "kb": 74,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 114.7,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-8",
+   "theme": "light",
+   "lo": 2.222,
+   "hi": 2.661,
+   "w": 2870,
+   "h": 1080,
+   "avif": {
+    "kb": 127.6,
+    "quality": 56
+   },
+   "webp": {
+    "kb": 140.7,
+    "quality": 74
+   }
+  },
+  {
+   "id": "wide-8",
+   "theme": "dark",
+   "lo": 2.222,
+   "hi": 2.661,
+   "w": 2870,
+   "h": 1080,
+   "avif": {
+    "kb": 84.8,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 125.4,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-9",
+   "theme": "light",
+   "lo": 2.661,
+   "hi": 3.02,
+   "w": 3259,
+   "h": 1080,
+   "avif": {
+    "kb": 138.4,
+    "quality": 56
+   },
+   "webp": {
+    "kb": 142.5,
+    "quality": 68
+   }
+  },
+  {
+   "id": "wide-9",
+   "theme": "dark",
+   "lo": 2.661,
+   "hi": 3.02,
+   "w": 3259,
+   "h": 1080,
+   "avif": {
+    "kb": 91.2,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 135.3,
+    "quality": 86
+   }
+  },
+  {
+   "id": "wide-10",
+   "theme": "light",
+   "lo": 3.02,
+   "hi": 3.2,
+   "w": 3454,
+   "h": 1080,
+   "avif": {
+    "kb": 139.3,
+    "quality": 56
+   },
+   "webp": {
+    "kb": 142.2,
+    "quality": 68
+   }
+  },
+  {
+   "id": "wide-10",
+   "theme": "dark",
+   "lo": 3.02,
+   "hi": 3.2,
+   "w": 3454,
+   "h": 1080,
+   "avif": {
+    "kb": 91.6,
+    "quality": 62
+   },
+   "webp": {
+    "kb": 135.8,
+    "quality": 86
+   }
+  }
+ ]
+}

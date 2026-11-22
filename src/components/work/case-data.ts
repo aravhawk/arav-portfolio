@@ -1,0 +1,298 @@
+/**
+ * What the designed pieces on the project pages are made of. Every line is
+ * a public fact: from the product's own site, its README, its Devpost page,
+ * npm or Ollama (the sources are listed in docs/redesign-v4/content-sources.md
+ * and the project fact sheets). Nothing here is measured or claimed by this
+ * site; where a number is the product's own published figure, the page says
+ * whose it is.
+ */
+
+/** Infiniview: the three passes that run against the live app, with the counts infiniview.dev publishes. */
+export const INFINIVIEW_PASSES = [
+  { n: '4', what: 'parallel code review agents', pass: 'Code review' },
+  { n: '12', what: 'runtime attack agents', pass: 'Runtime attack' },
+  { n: '7', what: 'interaction test types', pass: 'Interaction' },
+];
+
+/** Merged in T3 Code: what each pull request changed, from its public description. */
+export const T3_PRS: { n: number; title: string; merged: string; size?: string; what?: string }[] = [
+  {
+    n: 37703,
+    title: 'Open Forgejo and Gitea /pulls/ tab and commit links',
+    merged: '2026-11-16',
+  },
+  {
+    n: 33475,
+    title: 'glab mr new links the new merge request to the thread',
+    merged: '2026-11-14',
+    size: '+9 -1',
+    what: 'The create-command pattern now matches glab’s alias new as well as create.',
+  },
+  {
+    n: 33474,
+    title: 'gh pr new links the new pull request to the thread',
+    merged: '2026-11-11',
+    size: '+11 -1',
+    what: 'The GitHub create-command pattern only matched create. It now also matches gh’s documented alias new.',
+  },
+  {
+    n: 19791,
+    title: 'PR cache cleanup runs once per shared layer',
+    merged: '2026-10-19',
+    size: '+100 -8',
+    what: 'The PR read cache started one cleanup fiber per consumer, six scans of the same directory. Cleanup is now acquired once through a memoized layer.',
+  },
+  {
+    n: 15886,
+    title: 'Load merge request diffs on older GitLab',
+    merged: '2026-10-18',
+    size: '+269 -8',
+    what: 'GitLab before 15.7 returns 404 for the merge request diffs endpoint. On that failure it retries the changes endpoint, so the Code tab can load.',
+  },
+  {
+    n: 19737,
+    title: 'Reject unresolved explicit preview tabs',
+    merged: '2026-10-18',
+    size: '+122 -0',
+    what: 'Opening a preview now returns an error when an explicit tab cannot resolve to a server tab, instead of silently creating a different tab and reporting success.',
+  },
+  {
+    n: 15875,
+    title: 'Preserve ambient Cursor MCP servers',
+    merged: '2026-10-11',
+    size: '+15 -1',
+    what: 'Stops sending the server list on each Cursor send, which had replaced the workspace configuration and hidden user, project and plugin servers.',
+  },
+  {
+    n: 15876,
+    title: 'Reject invalid explicit Bitbucket repositories',
+    merged: '2026-10-06',
+    size: '+248 -23',
+    what: 'An explicit repository name is validated before lookup, so a bare name no longer silently resolves to the working directory’s repository.',
+  },
+  {
+    n: 2981,
+    title: 'Remember Composer Fast mode across new chats',
+    merged: '2026-09-07',
+    size: '+183 -8',
+    what: 'Defaults Cursor Composer to Normal unless the user chose Fast, and keeps that choice when switching models or opening a new chat.',
+  },
+];
+
+/** Kilo Bench: the five Kilo modes it covers, what each run is judged on, and its dashboard's views (Devpost). */
+export const KILO_MODES = ['Architect', 'Code', 'Debug', 'Ask', 'Orchestrator'];
+export const KILO_MEASURES: { name: string; judged: boolean }[] = [
+  { name: 'Quality', judged: true },
+  { name: 'Relevance', judged: true },
+  { name: 'Speed', judged: false },
+  { name: 'Cost', judged: false },
+];
+export const KILO_VIEWS = ['Leaderboard', 'Mode Breakdown', 'Radar Chart', 'Head-to-Head', 'Cost Optimizer'];
+export const KILO_QUOTE = {
+  text: 'The output is simple: data-driven confidence in which model to use for each mode, on your code.',
+  source: 'Kilo Bench on Devpost',
+};
+
+/** Agent Bridge: the README's message flow, who sends each step to whom, and its limits. */
+export type Peer = 'sender' | 'bridge' | 'recipient';
+export const BRIDGE_PEERS: { id: Peer; name: string }[] = [
+  { id: 'sender', name: 'Sender' },
+  { id: 'bridge', name: 'Bridge' },
+  { id: 'recipient', name: 'Recipient' },
+];
+export const BRIDGE_FLOW: { from: Peer; to: Peer; title: string; note: string; ack?: boolean }[] = [
+  { from: 'sender', to: 'bridge', title: 'Calls one tool', note: 'bridge_message_send' },
+  { from: 'bridge', to: 'bridge', title: 'Stores the message', note: 'and an outbox job, in one transaction' },
+  { from: 'bridge', to: 'recipient', title: 'Queues a wake', note: 'it carries the message ID only' },
+  { from: 'recipient', to: 'bridge', title: 'Signs in', note: 'reads, claims and handles the message' },
+  { from: 'recipient', to: 'bridge', title: 'Completes the receipt', note: 'and one correlated ACK, atomically', ack: true },
+  { from: 'bridge', to: 'sender', title: 'Receives the ACK', note: 'terminal: never acknowledged in turn', ack: true },
+];
+export const BRIDGE_LIMITS = ['Exactly two peers and one owner', 'At most 4 KiB of text in a message', 'A 60 s claim lease'];
+/** How it is kept, from the README's security model and stack. */
+export const BRIDGE_MORE: { title: string; body: string }[] = [
+  {
+    title: 'A resource server only',
+    body: 'It verifies RS256 JWTs against a pinned issuer, a per-peer audience and a single allowed subject. It never issues or stores tokens.',
+  },
+  {
+    title: 'Outbound HTTP',
+    body: 'HTTPS only, to public unicast addresses, pinned, with no redirects. Subscription secrets are encrypted with AES-256-GCM.',
+  },
+  { title: 'Stack', body: 'TypeScript that Node 24 runs directly, with no build step, on Vercel functions and Vercel Queues, with Postgres.' },
+];
+
+/** Open models: what each build is, as its Ollama page says. */
+export const MODEL_NOTES: Record<string, { what: string; facts: [string, string][]; run: string }> = {
+  'qwen3.5-opus-4.6': {
+    what: 'Qwen 3.5 distilled from Claude Opus 4.6, in 9B and 27B reasoning builds. The GGUFs are from Jackrong on HuggingFace.',
+    facts: [
+      ['Builds', '9b, 6.5GB; 27b, 17GB (Q4_K_M)'],
+      ['Context', '256K'],
+      ['Takes', 'Text and images'],
+      ['Can', 'Vision, tools, thinking'],
+      ['Updated', 'April 1, 2026'],
+    ],
+    run: 'ollama run aravhawk/qwen3.5-opus-4.6',
+  },
+  llama4: {
+    what: 'Meta Llama 4 Scout and Maverick, Meta’s mixture-of-experts models. Uploaded on April 11, 2025.',
+    facts: [
+      ['Builds', 'Scout 109b, 65GB; Maverick 400b, 243GB (Q4_K_M)'],
+      ['Context', '10M (Scout), 1M (Maverick)'],
+      ['Takes', 'Text'],
+      ['Licence', 'Llama 4 Community License Agreement'],
+      ['Updated', 'April 11, 2025'],
+    ],
+    run: 'ollama run aravhawk/llama4',
+  },
+  gemma4: {
+    what: 'Gemma 4 26B with an aggressive 3-bit K-quant applied, so it fits 16GB of VRAM. Its page reports 132 tok/sec on an RTX 5070 Ti with context set to 100,000, and says to expect decent quality loss compared to Q4/Q8 or FP16. The GGUF is credited to Unsloth.',
+    facts: [
+      ['Builds', '26b, 13GB (Q3_K_S)'],
+      ['Context', '256K'],
+      ['Takes', 'Text'],
+      ['Can', 'Tools, thinking'],
+      ['Updated', 'April 14, 2026'],
+    ],
+    run: 'ollama run aravhawk/gemma4:26b',
+  },
+  'qwen3.6': {
+    what: 'The newest of the four. Its page carries no description yet: one 27B build at 3 bits.',
+    facts: [
+      ['Builds', '27b, 12GB (Q3_K_S)'],
+      ['Context', '256K'],
+      ['Takes', 'Text'],
+      ['Can', 'Tools, thinking'],
+      ['Updated', 'April 25, 2026'],
+    ],
+    run: 'ollama run aravhawk/qwen3.6:27b',
+  },
+};
+
+/** cc-switch: its real commands (README), and the provider templates it ships. */
+export const SWITCH_INSTALL = 'npm install -g @aravhawk/cc-switch';
+export const SWITCH_MORE = ['cc-switch --list', 'cc-switch --current', 'cc-switch --providers'];
+export const SWITCH_GROUPS: { n: number; name: string; who: string }[] = [
+  { n: 2, name: 'Anthropic', who: '' },
+  {
+    n: 12,
+    name: 'Model labs',
+    who: 'Z.ai GLM, Moonshot Kimi, Kimi Code, MiniMax, DeepSeek, Alibaba Qwen, Xiaomi MiMo, StepFun, Volcengine, Tencent, Baidu Qianfan, Meituan LongCat',
+  },
+  { n: 6, name: 'Local', who: 'Ollama, LM Studio, llama.cpp, vLLM, SGLang, Docker Model Runner' },
+  { n: 9, name: 'Gateways and routers', who: 'OpenRouter, Vercel AI Gateway, Hugging Face, ZenMux, AIHubMix, Requesty, OpenCode, LiteLLM, custom' },
+  { n: 8, name: 'Inference hosts', who: '' },
+  { n: 4, name: 'Cloud platforms', who: 'Amazon Bedrock, Vertex AI, Microsoft Foundry, Claude Platform on AWS' },
+];
+export const SWITCH_QUOTE = {
+  text: 'Templates replace everything tied to the previous provider so settings never leak between providers.',
+  source: 'cc-switch README',
+};
+/** What the README says of the commands that have no step of their own, and of what one switch writes. */
+export const SWITCH_INSTALL_NOTE = { title: 'Install', body: 'Or pnpm add -g @aravhawk/cc-switch. It needs Node.js 22.12 or newer.' };
+export const SWITCH_STATE_NOTE = {
+  title: 'Where it lives',
+  body: 'Each profile is a saved settings.json under ~/.cc-switch/profiles. state.json records the active one.',
+};
+export const SWITCH_WRITES: { from: string; to: string; what: string }[] = [
+  { from: 'live settings.json', to: 'profiles/kimi/settings.json', what: 'The live settings are saved into the active profile.' },
+  { from: 'profiles/work/settings.json', to: 'live settings.json', what: 'The target’s settings are written.' },
+  { from: 'work', to: 'state.json', what: 'state.json is updated.' },
+];
+export const SWITCH_CARE: { title: string; body: string }[] = [
+  {
+    title: 'If it fails',
+    body: 'Writes are atomic, symlinked settings.json files are updated in place, and a failed switch or create restores the previous profile.',
+  },
+  {
+    title: 'Keys',
+    body: 'Stored in the profile’s settings.json with 0600 permissions, never printed, and only sent to the profile’s own base URL. The cloud platform templates store no secret.',
+  },
+  { title: 'Full profiles', body: 'With --full a profile also swaps chosen files: CLAUDE.md, agents, skills, rules, commands and more.' },
+];
+export const SWITCH_CAVEAT = {
+  text: 'Anthropic does not support running Claude Code against non-Claude models. Each template follows the provider’s own Claude Code documentation, and that provider is who supports it.',
+  source: 'cc-switch README',
+};
+
+/**
+ * envfetch: a session in its own commands (the README's "Build And Install", "Shell Setup" and "Typical Usage",
+ * each with what the README says it does), the keys of its interactive interface ("TUI Controls", the profile
+ * list) and what the README's "Security Notes" say besides what the page's notes carry.
+ */
+export const ENVFETCH_SESSION: { cmds: string[]; note: { title: string; body: string } }[] = [
+  {
+    cmds: ['git clone https://github.com/aravhawk/envfetch.git', 'cd envfetch', 'make install'],
+    note: { title: 'Install', body: 'make install builds the release binary, code-signs it and copies it to /usr/local/bin/envfetch. No Apple Developer account is needed.' },
+  },
+  {
+    cmds: ['eval "$(command envfetch init zsh)"'],
+    note: { title: 'Shell setup', body: 'One line in ~/.zshrc. There is a line for bash and one for fish.' },
+  },
+  {
+    cmds: ['envfetch profile create work', 'envfetch add work OPENAI_API_KEY'],
+    note: { title: 'A profile', body: 'Adding a variable prompts for its value with echo disabled.' },
+  },
+  {
+    cmds: ['envfetch activate work'],
+    note: { title: 'Activate', body: 'The profile’s variables are exported into the current shell. Activating more than one profile stacks their variables.' },
+  },
+  {
+    cmds: ['envfetch run work -- printenv OPENAI_API_KEY'],
+    note: { title: 'One command', body: 'Runs a single command with the variables injected, without changing the current shell.' },
+  },
+  {
+    cmds: ['envfetch deactivate'],
+    note: { title: 'Deactivate', body: 'ENVFETCH_ACTIVE tracks every key exported in the session, so this clears them all.' },
+  },
+];
+export const ENVFETCH_KEYS: { label: string; value: string }[] = [
+  { label: 'Up, Down', value: 'Move' },
+  { label: 'Enter', value: 'Activate the selected profile' },
+  { label: 'Tab', value: 'Open the profile’s variables' },
+  { label: 'Space', value: 'In a profile, toggle a variable' },
+  { label: 'a, d, r', value: 'Add, delete or rename a profile' },
+  { label: 'q', value: 'Quit' },
+];
+export const ENVFETCH_CARE = [
+  'Mutations are protected by an advisory lock to avoid concurrent write races.',
+  'Interactive secret entry disables terminal echo, in the commands and in the interface.',
+  'If vault.enc is corrupted or the original key material is lost, the vault cannot be recovered.',
+  'envfetch update rebuilds the latest tagged release from source, signs it locally and replaces the binary in place. The vault is left untouched.',
+];
+
+/** TensorPoW: the parts of a node (README), and what stands between it and a live network. */
+export const TENSOR_BACKENDS = ['CPU', 'Apple GPU', 'CUDA GPU'];
+export const TENSOR_STACK: { name: string; does: string }[] = [
+  { name: 'Python 3.12', does: 'the node' },
+  { name: 'PyTorch', does: 'tensors' },
+  { name: 'Cython', does: 'hot paths' },
+  { name: 'BLAKE3', does: 'hashing' },
+  { name: 'Ed25519', does: 'signatures' },
+  { name: 'libp2p', does: 'networking' },
+  { name: 'RocksDB', does: 'state' },
+];
+/** What the reference implementation holds, and the tools an operator runs (README). */
+export const TENSOR_NODE: { name: string; items: string[] }[] = [
+  { name: 'Consensus', items: ['BlockDAG ordering', 'Anchor difficulty adjustment', 'Dynamic K', 'Finality'] },
+  { name: 'State', items: ['UTXO storage', 'Merkle commitments'] },
+  { name: 'Mempool', items: ['Hierarchical sharding', 'A fee-floor policy'] },
+];
+export const TENSOR_TOOLS = ['tensorpow-mine', 'tensorpow-node', 'tensorpow-wallet'];
+export const TENSOR_TOOLS_MORE = 'The wallet keeps an encrypted keystore. Scripts run the soak test and the genesis ceremony.';
+export const TENSOR_SPEC = 'The protocol is specified in PROTOCOL_SPEC.md, in the repository.';
+export const TENSOR_GATES = [
+  'A six hour soak across CPU, Apple GPU and CUDA with matching consensus reports',
+  'A public testnet: 30 days, 100 nodes',
+  'Public genesis publication',
+  'First fruit evidence',
+];
+
+/** Ask Around: what a request has to clear before an agent may act (README). */
+export const AROUND_RULES = ['Each question goes only to its owner', 'An N-of-M quorum approves', 'Any deny vetoes', 'A timeout is never approval'];
+
+/** RydAR: the numbers on rydar.org and in its README, and the prompt it speaks. */
+export const RYDAR_CURVES = { value: '153,328', unit: 'curves mapped in Arkansas' };
+export const RYDAR_MORE = ['75 county pages', 'A base warning lead of 12 s of travel'];
+export const RYDAR_QUOTE = { text: 'Slow to 25 mph for the curve ahead.', source: 'RydAR, spoken' };

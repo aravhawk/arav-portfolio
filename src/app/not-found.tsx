@@ -1,25 +1,34 @@
-import Link from 'next/link';
+import type { Metadata } from 'next';
+import { Link } from '@/components/Link';
+import { Arrow } from '@/components/bits';
+import { Footer } from '@/components/ending/Ending';
+import { SceneBand } from '@/components/SceneBand';
+import { BandStill } from '@/components/work/still-pictures';
+import './home.css';
+import './pages.css';
 
+export const metadata: Metadata = { title: 'Not found' };
+
+/** 404: the snowfield, with no water in sight. Two ways back. */
 export default function NotFound() {
   return (
-    <main className="min-h-screen bg-[#050505] flex items-center justify-center px-6">
-      <div className="text-center">
-        <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#00F0FF] mb-4 block">
-          404
-        </span>
-        <h1 className="font-display text-5xl md:text-6xl text-[#FAFAFA] mb-4">
-          Page Not Found
-        </h1>
-        <p className="text-[#888888] mb-8 max-w-md mx-auto">
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
-        </p>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-6 py-3 text-xs font-mono uppercase tracking-wider text-[#050505] bg-[#00F0FF] hover:bg-[#00D4E0] transition-colors duration-300"
-        >
-          Go Home
-        </Link>
-      </div>
-    </main>
+    <div className="pg-ground">
+      <main id="main" className="pg" data-scene="page">
+        <SceneBand scene="snow" full still={<BandStill scene="snow" kind="full" />}>
+          <p className="label band-label">404</p>
+          <h1 className="display band-title">Dry land</h1>
+          <p className="lead band-lead">Nothing flows to this address. It may have moved, or it never existed.</p>
+          <div className="state-actions">
+            <Link className="way" href="/">
+              Go home <Arrow />
+            </Link>
+            <Link className="way" href="/work">
+              See the work <Arrow />
+            </Link>
+          </div>
+        </SceneBand>
+      </main>
+      <Footer />
+    </div>
   );
 }
