@@ -98,3 +98,35 @@ void main() {
   float k = clamp((l - uCut) / (1.0 - uCut), 0.0, 1.0);
   o = vec4(c * k * k * uGain / max(l, 1e-3), 1.0);
 }`;
+
+/**
+ * A scene drawn at a lower resolution (while the camera travels), brought to the screen's in one pass: each pixel
+ * is read between the scene's own, sharpened against its four neighbours by an amount that follows the local
+ * contrast and never leaves the range of the five (so an edge is firmer and nothing rings), and the film's grain
+ * is laid on at the screen's own resolution, as the scene's own pass lays it at rest.
+ */
+export const RECONSTRUCT = `#version 300 es
+precision highp float;
+in vec2 vUv;
+uniform sampler2D uSrc;
+uniform vec2 uSceneSize;  // the scene's size in its own pixels
+uniform vec2 uInvTarget;  // one texel of the texture it lies in
+uniform vec2 uGrain;      // the grain's phase and amplitude (the scene pass's uFilm.yz)
+uniform float uStrength;
+out vec4 o;
+vec3 at(vec2 pixel) {
+  return textureLod(uSrc, clamp(pixel, vec2(0.5), uSceneSize - 0.5) * uInvTarget, 0.0).rgb;
+}
+void main() {
+  vec2 p = vUv * uSceneSize;
+  vec3 m = at(p);
+  vec3 a = at(p + vec2(1.0, 0.0)), b = at(p - vec2(1.0, 0.0));
+  vec3 c = at(p + vec2(0.0, 1.0)), d = at(p - vec2(0.0, 1.0));
+  vec3 lo = min(m, min(min(a, b), min(c, d)));
+  vec3 hi = max(m, max(max(a, b), max(c, d)));
+  vec3 rgb = clamp(m + uStrength * (1.0 - hi + lo) * (m - 0.25 * (a + b + c + d)), lo, hi);
+  float grain = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)) + uGrain.x)) - 0.5;
+  float l = dot(rgb, vec3(0.3, 0.6, 0.1));
+  rgb += grain * (1.4 / 255.0 + uGrain.y * (0.35 + 1.3 * min(l, 1.0 - l)));
+  o = vec4(rgb, 1.0);
+}`;

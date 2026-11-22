@@ -22,7 +22,8 @@ import { type Pending, type Program, type Target, bindTex, compileBegin, compile
 import { DAWN, ENTER, GATE, LAP, PULSE, RIBBON, breathAt, dawnLight, enterAt, firstLight, heroLight, heroLightAt, nextDrip, stationsNear, stepGates } from './moments';
 import { iceInclusions } from './ice-inclusions';
 import { opening } from './opening';
-import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP } from './shaders/finish';
+import { BLOOM_DOWN, BLOOM_KEEP, BLOOM_UP, RECONSTRUCT } from './shaders/finish';
+import { NEAR_FULL, type Pace, costAt, easeScale, restPace, travelPace, travelling } from './pace';
 import { FLIGHT_FREEBOARD, flightSource, freeboardAt, snowShadowBearing } from './shaders/flight';
 import { GROUND, MOUNT_EDGE, MOUNT_H, MOUNT_PANO, PANO, SHADE_DIRS, SNOW_H } from './shaders/terrain';
 import { skyAt } from './sky';
@@ -81,6 +82,8 @@ export interface FlightMoment {
   capK?: number;
   /** the camera moves only as the first screen breathes: the page is at rest all the same */
   idle?: boolean;
+  /** the camera moves by the first screen's entrance: the reader is not travelling */
+  entering?: boolean;
 }
 
 /**
@@ -142,6 +145,7 @@ export class FlightEngine extends WaterEngine {
   constructor(canvas: HTMLCanvasElement, opts: EngineOpts) {
     super(canvas, opts);
     this.crackCell = 700;
+    this.phone = opts.coarse;
     this.firstMode = this.mode();
     // The world does not scroll under the sheet: it melts where it lies.
     this.meltRange = 0;
@@ -159,6 +163,7 @@ export class FlightEngine extends WaterEngine {
     s.bloomDown = BLOOM_DOWN;
     s.bloomUp = BLOOM_UP;
     s.bloomKeep = BLOOM_KEEP;
+    s.reconstruct = RECONSTRUCT;
     return s;
   }
 
@@ -359,7 +364,7 @@ export class FlightEngine extends WaterEngine {
     this.dirty = true;
     // (A first draw the driver has in store is over within a few frames, however long this GPU's frames are; one it
     // must build takes a quarter of a second and more on top of that. One that held is enough: on this visit the
-    // driver is building them, and it is not asked to again while the reader moves.)
+    // driver is building them, and the picture runs a while between two.)
     if (this.warmedAt - this.warmBegan > 150 + 3 * this.frameMs) this.warmHolds = true;
     else if (!this.heldOnce) this.warmHolds = false;
     this.heldOnce = this.heldOnce || this.warmHolds;
@@ -392,7 +397,6 @@ export class FlightEngine extends WaterEngine {
    * between them: handed to the driver, and when it has linked one, given its first draw. Each holds the picture for as
    * long as the driver takes over it; with the page at rest that is a still frame held a moment, where on the move it
    * would be a jolt. The moment the reader scrolls, moves the pointer or presses a key, nothing more is begun.
-   * (Unless the driver has the programs in store from an earlier visit: see `warmHolds`.)
    *
    * In order: the pieces now on the screen; the pieces of the stretches within three screens of here, nearest first;
    * once the page has rested a while, the other theme's for the pieces on the screen and its broad ones (the switch is
@@ -402,10 +406,11 @@ export class FlightEngine extends WaterEngine {
     if (this.warming()) return;
     // (Not for the checks' held clock: there a frame is wanted as it will stand, at once.)
     const quiet = now - Math.max(this.stillSince, this.inputAt);
-    // (A reader who has been here before: the driver has these programs in store, a build is a matter of a frame, and
-    // it need not wait for the page to rest. It is known from how long the first ones took, behind the still.)
-    const stored = !this.warmHolds && now - this.warmedAt > 150;
-    if (this.held === null && !stored && (quiet < IDLE_MS || now - this.warmedAt < 350)) return;
+    // (A reader who has been here before has some of these programs in the driver's store, and a build is then a
+    // matter of a frame. But not all of them, and which cannot be told before the draw: measured, a program whose
+    // link came back in 70 ms still held the picture 0.4 s. So a returning reader's wait for the page to rest too;
+    // only the breath between two builds is shorter while none has held.)
+    if (this.held === null && (quiet < IDLE_MS || now - this.warmedAt < (this.warmHolds ? 350 : 60))) return;
     for (const v of this.variants.values()) if (v.pending) return;
     const mode = this.mode();
     const other: Mode = mode === 'day' ? 'night' : 'day';
@@ -839,6 +844,8 @@ export class FlightEngine extends WaterEngine {
     super.resize(cssW, cssH, margin, dpr);
     if (this.gov.sized || this.gov.age < 0) return;
     this.gov.sized = true;
+    // (A page whose pace is worked out from this device's measured speed asks for no step by size: see `pace`.)
+    if (this.paced) return;
     const px = this.canvas.width * this.canvas.height;
     this.lean = this.leanNow = px > 6.5e6 ? 2 : px > 4.5e6 ? 1 : 0;
     this.gov.quick = this.lean > 0;
@@ -862,6 +869,8 @@ export class FlightEngine extends WaterEngine {
       this.leanNow = this.leanNow < this.lean ? Math.min(this.lean, this.leanNow + step) : Math.max(this.lean, this.leanNow - step);
       this.dirty = true;
     }
+    // (A page whose pace is worked out takes its step from that: see `pace`.)
+    if (this.paced) return;
     g.age += ms;
     // (The first seconds are the page settling, not the picture's cost: only a picture that misses most of its frames
     // is answered that early, and at once.)
@@ -937,12 +946,125 @@ export class FlightEngine extends WaterEngine {
 
   /** For the checks: hold a shading step (null hands it back to the governor). */
   holdLean(step: number | null) {
+    this.leanHeld = step !== null;
     if (step === null) {
       this.gov.age = 2500;
       return;
     }
     this.lean = Math.min(2, Math.max(0, step));
     this.gov.age = -1e12;
+  }
+  private leanHeld = false;
+
+  /**
+   * The pace (see pace.ts): the resolution the scene is drawn at and how often, worked out each frame from where the
+   * flight is, how fast this device is and whether the camera travels. Only a page that has measured its device is
+   * paced (the home page: `calibrate`); an inner page's band is drawn every frame at the screen's resolution.
+   */
+  paced = false;
+  /** How slow this device is against the cost map's: 1 the same. As measured, and as corrected since by missed frames. */
+  speed = 1;
+  private speed0 = 1;
+  private phone = false;
+  private trip = { on: false, movedAt: 0 };
+  /** The resolution the frame now being drawn has, as a share of the screen's a side; and how many display intervals a frame at rest is shown for. */
+  private scaleNow = 1;
+  private every = 1;
+  private sinceDrawn = 0;
+  private lastCam: { pos: V3; f: V3 } | null = null;
+  private lastHour: number | undefined = undefined;
+  private lastBeat = 0;
+  private beats: number[] = [];
+  private late = { n: 0, missed: 0, clean: 0 };
+  private paceNow: { travel: Pace; rest: Pace } | null = null;
+  /** For the checks: hold the resolution, the rate, or the travelling state (null hands each back). */
+  private paceHeld: { scale?: number; every?: number; travel?: boolean } = {};
+  holdPace(hold: { scale?: number; every?: number; travel?: boolean } | null) {
+    this.paceHeld = hold ?? {};
+    this.dirty = true;
+  }
+
+  /**
+   * One interval of the display. The page calls it every frame from the moment it mounts (a frame of the picture or
+   * not), so the display's own rate is known before the picture loads it: the fastest steady median seen.
+   */
+  beat(now: number) {
+    if (now === this.lastBeat) return 0;
+    const ms = this.lastBeat ? now - this.lastBeat : 0;
+    this.lastBeat = now;
+    if (ms <= 0 || ms > 250) return ms;
+    const b = this.beats;
+    b.push(ms);
+    if (b.length >= 30) {
+      const med = b.slice().sort((x, y) => x - y)[15];
+      b.length = 0;
+      if (med < this.base * 0.9 && med > 3.5) this.base = med;
+    }
+    if (!this.paced) return ms;
+    // Missed frames on the move say the device is slower than it measured (heat, another window): the pace is told.
+    // Half a second with a quarter of its frames late; and a long run of clean travel gives a correction back.
+    const l = this.late;
+    if (this.trip.on) {
+      l.n++;
+      if (ms > this.base * this.every * 1.5 + 1) l.missed++;
+      if (l.n >= 30) {
+        if (l.missed >= 8) {
+          this.speed = Math.min(this.speed * 1.15, this.speed0 * 3);
+          l.clean = 0;
+        } else if (l.missed === 0 && ++l.clean >= 20 && this.speed > this.speed0) {
+          this.speed = Math.max(this.speed0, this.speed * 0.95);
+          l.clean = 0;
+        }
+        l.n = l.missed = 0;
+      }
+    }
+    return ms;
+  }
+
+  /** This frame's pace: sets the resolution it is drawn at and the shading step, and says whether it is drawn at all. */
+  private pace(now: number, ms: number, cam: Basis, aspect: number, at: FlightMoment, ground: number, forced: boolean): boolean {
+    const h = this.paceHeld;
+    if (!this.paced || this.quiet) {
+      this.scaleNow = h.scale ?? 1;
+      this.lastCam = null;
+      return true;
+    }
+    // How fast the picture moves, in screen heights a second: the eye's own travel against how far off the near
+    // ground is, and its turning. (The first screen's entrance and its breathing are its own life, not travel.)
+    let flow = 0;
+    const lc = this.lastCam;
+    // (They are told from travel by the scroll: while it has not moved, the camera's motion is the first screen's own.)
+    const own = (at.idle || at.entering) && at.hour === this.lastHour;
+    this.lastHour = at.hour;
+    if (lc && ms > 2 && !own) {
+      const dp = Math.hypot(cam.pos[0] - lc.pos[0], cam.pos[1] - lc.pos[1], cam.pos[2] - lc.pos[2]);
+      const df = Math.hypot(cam.f[0] - lc.f[0], cam.f[1] - lc.f[1], cam.f[2] - lc.f[2]);
+      flow = ((dp / Math.max(ground, 40) + df) / (2 * cam.tan)) / (ms / 1000);
+    }
+    this.lastCam = { pos: [cam.pos[0], cam.pos[1], cam.pos[2]], f: [cam.f[0], cam.f[1], cam.f[2]] };
+    const was = this.trip.on;
+    this.trip = travelling(this.trip, flow, now);
+    const moving = h.travel ?? this.trip.on;
+    const input = {
+      base: this.base,
+      mpx: (this.canvas.width * this.canvas.height) / 1e6,
+      cost: costAt(at.hour ?? 0, this.theme >= 0.5, aspect),
+      speed: this.speed,
+      broad: this.drawnTiles.length > 0 && this.drawnTiles[0].by.mask !== this.drawnTiles[0].mask,
+      phone: this.phone,
+    };
+    const p = (this.paceNow = { travel: travelPace(input), rest: restPace(input) });
+    const want = moving ? p.travel : p.rest;
+    if (!this.leanHeld) this.lean = Math.max(p.travel.lean, p.rest.lean);
+    this.every = h.every ?? want.every;
+    this.scaleNow = h.scale ?? easeScale(this.scaleNow, want.scale, Math.min(ms, 100) / 1000);
+    // A frame at rest may be shown for more than one interval. The first frame of travel never waits, nor does one
+    // something else has asked for (a press, a theme, a program that has just drawn for the first time).
+    if (forced || (moving && !was) || ++this.sinceDrawn >= this.every) {
+      this.sinceDrawn = 0;
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -993,6 +1115,16 @@ export class FlightEngine extends WaterEngine {
       simTier: this.tier,
       lean: this.lean,
       leanLog: this.leanLog.slice(-12),
+      // The pace: the resolution the last frame was drawn at, how many of the display's intervals a frame stands
+      // for, whether the camera travels, the display's interval, this device's speed against the cost map's, and
+      // what a frame is expected to cost on the move and at rest.
+      scale: +this.scaleNow.toFixed(3),
+      every: this.every,
+      travelling: this.paceHeld.travel ?? this.trip.on,
+      paced: this.paced,
+      base: +this.base.toFixed(2),
+      speed: +this.speed.toFixed(3),
+      pace: this.paceNow,
       // The variant of the pass that drew the last frame, what that frame needed, and every variant asked for so far
       // (how long the driver took over it, in ms; 'pending' while it is still at it).
       variant: this.drawn ? `${maskName(this.drawn.mask)}:${this.drawn.mode}` : '',
@@ -1366,11 +1498,18 @@ export class FlightEngine extends WaterEngine {
     const gl = this.gl;
     if (!this.ready || !this.bedA || !this.bedB || !this.wave || gl.isContextLost()) return;
 
+    const beat = this.beat(now) || (this.last ? now - this.last : 16.7);
+    if (beat < 250) this.frameMs += (beat - this.frameMs) * 0.1;
+    if (this.frameLog && beat < 1000) this.frameLog.push(beat);
+    this.govern(beat);
+    // The pace: at rest a frame may stand for two of the display's intervals (see `pace`); then nothing below runs,
+    // and the clock is not read, so the next frame's step of time covers both.
+    {
+      const under = groundUnder(cam, 0.5, 0.9, aspect);
+      if (!this.pace(now, beat, cam, aspect, at, under ? under.t : 1e4, this.dirty)) return;
+    }
     let dt = this.last ? (now - this.last) / 1000 : 1 / 60;
     this.last = now;
-    if (dt < 0.25) this.frameMs += (dt * 1000 - this.frameMs) * 0.1;
-    if (this.frameLog && dt < 1) this.frameLog.push(dt * 1000);
-    this.govern(dt * 1000);
     dt = Math.min(dt, 1 / 20);
 
     // Melt follows scroll, so it reverses exactly.
@@ -1534,8 +1673,8 @@ export class FlightEngine extends WaterEngine {
       .map((t) => t.mask);
   }
   /** The pieces a frame from this camera is drawn in, each with what it needs (see frameTiles). */
-  tiles(cam: Basis, aspect: number, need: number): Tile[] {
-    return frameTiles(cam, aspect, need, need & F.NAME ? this.nameBox() : null, this.canvas.width, this.canvas.height);
+  tiles(cam: Basis, aspect: number, need: number, w = this.canvas.width, h = this.canvas.height): Tile[] {
+    return frameTiles(cam, aspect, need, need & F.NAME ? this.nameBox() : null, w, h);
   }
 
   /** All tiles see the same hour and atmospheric column. */
@@ -1584,6 +1723,13 @@ export class FlightEngine extends WaterEngine {
     const night = Math.min(1, Math.max(0, this.theme));
     this.drawnTiles = [];
     const light = this.frameLight(cam, aspect, at, night);
+    // The scene's size in pixels: the screen's own, or less while the camera travels (see `pace`). A smaller scene is
+    // drawn in the corner of the screen's own buffer, by the same programs in the same state as a full one (the
+    // driver builds a program anew for every kind of target), and then brought to the screen's size (`reconstruct`).
+    const small = this.scaleNow < 1;
+    const sw = small ? Math.max(2, Math.round(this.canvas.width * this.scaleNow)) : this.canvas.width;
+    const sh = small ? Math.max(2, Math.round(this.canvas.height * this.scaleNow)) : this.canvas.height;
+    this.view = [0, 0, sw, sh];
     // Every tile will be replaced. Discarding the old colour lets tile-based
     // GPUs open this render pass without loading last frame's full-size colour.
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1592,11 +1738,12 @@ export class FlightEngine extends WaterEngine {
       this.drawn = this.forced;
       this.drawnTiles.push({ mask: this.forced.mask, area: 1, by: this.forced });
       this.scene(this.forced, cam, aspect, at, light, null);
+      if (small) this.reconstruct(light);
       this.glow(night);
       return;
     }
     // Each piece of the frame by the leanest variant that carries what stands in that piece.
-    const tiles = this.tiles(cam, aspect, need);
+    const tiles = this.tiles(cam, aspect, need, sw, sh);
     for (const t of tiles) {
       const by = this.pick(t.mask);
       this.drawnTiles.push({ mask: t.mask, area: t.area, by });
@@ -1610,6 +1757,7 @@ export class FlightEngine extends WaterEngine {
       this.warmBegan = performance.now();
     }
     this.coldDrew = false;
+    if (small) this.reconstruct(light);
     this.glow(night);
     // The first frame is drawn behind the still, and stands once the GPU has finished it: every pass in it has then
     // drawn for the first time (the simulation's, the copy to the screen, the glow's), and the page may show it.
@@ -1626,6 +1774,116 @@ export class FlightEngine extends WaterEngine {
     }
   }
   private firstFence: WebGLSync | null = null;
+  /** Where in the screen's buffer the scene is being drawn: x, y, width, height in device pixels. */
+  private view: [number, number, number, number] = [0, 0, 2, 2];
+
+  /** Where a smaller scene is kept while it is brought to the screen's size: a texture a little under the screen's. */
+  private stage: Target | null = null;
+  private stageFor(): Target {
+    const gl = this.gl;
+    const w = Math.ceil(this.canvas.width * NEAR_FULL) + 2;
+    const h = Math.ceil(this.canvas.height * NEAR_FULL) + 2;
+    if (this.stage && this.stage.w === w && this.stage.h === h) return this.stage;
+    freeTarget(gl, this.stage);
+    // (Making a texture binds it: on a unit the scene does not use, and it is let go again.)
+    gl.activeTexture(gl.TEXTURE15);
+    this.stage = makeTarget(gl, w, h, { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, filter: gl.LINEAR });
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    return this.stage;
+  }
+  /**
+   * A scene drawn smaller than the screen, brought to the screen's size: it is copied out of the corner it was drawn
+   * in, and one pass reads it back over the whole screen, sharpened, with the grain at the screen's resolution.
+   */
+  private reconstruct(light: ReturnType<FlightEngine['frameLight']>) {
+    const gl = this.gl;
+    const [, , sw, sh] = this.view;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const stage = this.stageFor();
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, stage.fbo);
+    gl.blitFramebuffer(0, 0, sw, sh, 0, 0, sw, sh, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR]);
+    const r = this.p.reconstruct;
+    gl.useProgram(r.prog);
+    bindTex(gl, 0, stage.tex, r.u.uSrc);
+    gl.uniform2f(r.u.uSceneSize, sw, sh);
+    gl.uniform2f(r.u.uInvTarget, 1 / stage.w, 1 / stage.h);
+    // (The nearer the scene's size to the screen's, the less there is to sharpen.)
+    gl.uniform1f(r.u.uStrength, Math.min(0.86, 2.9 * (1 - sh / h)));
+    gl.uniform2f(r.u.uGrain, light.film[1], light.film[2]);
+    drawTo(gl, null, w, h);
+    // (The texture is let go of its unit: the next frame's passes bind their own there.)
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
+  /**
+   * How fast this device draws the scene, against the GPU the cost map was measured on: measured once, behind the
+   * still. The frame the page opens on is drawn at half size in each quarter of the screen's buffer (a whole frame's
+   * pixels, none drawn twice: a pass nothing reads is dropped by the GPU), three times over with a read between, and
+   * the GPU is waited for; the first round is its clock coming up to speed, the other two are timed. Then one frame
+   * is drawn small and brought to size, so the passes that does have drawn before the reader's first scroll.
+   */
+  async calibrate(cam: Basis, aspect: number, at: FlightMoment): Promise<void> {
+    const gl = this.gl;
+    if (!this.ready || !this.bedA || !this.bedB || !this.wave || this.still || gl.isContextLost()) return;
+    // (No timer, no zero-delay timeout clamp: a message is the shortest wait the page has.)
+    const chan = new MessageChannel();
+    const yieldNow = () =>
+      new Promise<void>((res) => {
+        chan.port1.onmessage = () => res();
+        chan.port2.postMessage(0);
+      });
+    const done = async (fence: WebGLSync | null) => {
+      if (!fence) return;
+      const t0 = performance.now();
+      while (!gl.isContextLost() && gl.getSyncParameter(fence, gl.SYNC_STATUS) !== gl.SIGNALED && performance.now() - t0 < 3000) await yieldNow();
+      gl.deleteSync(fence);
+    };
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const hw = w >> 1;
+    const hh = h >> 1;
+    const night = Math.min(1, Math.max(0, this.theme));
+    this.melt = this.iceTex ? Math.min(1, Math.max(0, at.melt)) : 0;
+    const need = this.needs(cam, aspect);
+    const light = this.frameLight(cam, aspect, at, night);
+    const round = () => {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR]);
+      for (let q = 0; q < 4; q++) {
+        this.view = [(q & 1) * hw, (q >> 1) * hh, hw, hh];
+        for (const t of this.tiles(cam, aspect, need, hw, hh)) this.scene(this.pick(t.mask), cam, aspect, at, light, t.area >= 1 ? null : t.px);
+      }
+      // (Read: the round before cannot be dropped.)
+      this.glow(night);
+      const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      gl.flush();
+      return fence;
+    };
+    if (!this.hasSimTop) this.simTop = 0;
+    await done(round());
+    const t0 = performance.now();
+    await done(round());
+    await done(round());
+    const ms = (performance.now() - t0) / 2;
+    const mpx = (w * h) / 1e6;
+    const expected = costAt(at.hour ?? 0, this.theme >= 0.5, aspect) * mpx;
+    if (ms > 0.2 && expected > 0.2 && !gl.isContextLost()) {
+      // (Four half frames cost a little more than one whole: 1.1 times, measured on the map's own GPU.)
+      this.speed = this.speed0 = Math.min(12, Math.max(0.15, ms / (expected * 1.1)));
+      this.paced = true;
+    }
+    chan.port1.close();
+    // A frame through the smaller path, so its copy and its pass are not first met on the first scroll.
+    this.scaleNow = 0.8;
+    this.draw(cam, aspect, at);
+    this.scaleNow = 1;
+    this.drew = false;
+  }
 
   /** The scene, drawn by one variant: the whole frame, or only the given parts of it. */
   private scene(variant: Variant, cam: Basis, aspect: number, at: FlightMoment, light: ReturnType<FlightEngine['frameLight']>, parts: [number, number, number, number][] | null) {
@@ -1643,7 +1901,8 @@ export class FlightEngine extends WaterEngine {
     gl.uniform3fv(r.u.uCamR, cam.r);
     gl.uniform3fv(r.u.uCamU, cam.u);
     gl.uniform2f(r.u.uLens, cam.tan, aspect);
-    gl.uniform1f(r.u.uPxAng, (2 * cam.tan) / this.canvas.height);
+    const [vx, vy, vw, vh] = this.view;
+    gl.uniform1f(r.u.uPxAng, (2 * cam.tan) / vh);
     gl.uniform4f(r.u.uSim, this.simTop, this.simCell(), this.simW, this.simH);
     gl.uniform2f(r.u.uBedSize, this.bedMeta.w, this.bedMeta.h);
     gl.uniform1f(r.u.uBedDiv, this.bedMeta.div);
@@ -1705,7 +1964,9 @@ export class FlightEngine extends WaterEngine {
     if (r.u.uMoon) gl.uniform4fv(r.u.uMoon, moon);
     gl.uniform4fv(r.u.uBearings, light.bearings);
     gl.uniform4fv(r.u.uShadow, light.shadow);
-    gl.uniform4fv(r.u.uFilm, light.film);
+    // (A scene smaller than the screen leaves its grain to the pass that brings it to size.)
+    if (vw < this.canvas.width) gl.uniform4f(r.u.uFilm, light.film[0], light.film[1], -1, light.film[3]);
+    else gl.uniform4fv(r.u.uFilm, light.film);
     gl.uniform4fv(r.u.uLee, light.lee);
     gl.uniform3fv(r.u.uSkyZen, sky.zen);
     gl.uniform3fv(r.u.uSkyMid, sky.mid);
@@ -1773,15 +2034,17 @@ export class FlightEngine extends WaterEngine {
     bindTex(gl, 15, (this.sheetTex ?? this.grain.tex) as WebGLTexture, r.u.uSheetTex);
     gl.uniform1f(r.u.uSheetOn, this.sheetTex ? 1 : 0);
     gl.uniform1f(r.u.uBloom, this.bloomNow(night));
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(vx, vy, vw, vh);
     if (!parts) {
-      drawTo(gl, null, w, h);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
       return;
     }
-    // (In whole device pixels, x, y, width, height, y up.)
+    // (In whole pixels of the scene, x, y, width, height, y up.)
     gl.enable(gl.SCISSOR_TEST);
     for (const q of parts) {
-      gl.scissor(q[0], q[1], q[2], q[3]);
-      drawTo(gl, null, w, h);
+      gl.scissor(vx + q[0], vy + q[1], q[2], q[3]);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     gl.disable(gl.SCISSOR_TEST);
   }
@@ -1849,6 +2112,7 @@ export class FlightEngine extends WaterEngine {
   destroy() {
     if (this.inclusions) this.gl.deleteTexture(this.inclusions);
     for (const t of this.film) freeTarget(this.gl, t);
+    freeTarget(this.gl, this.stage);
     if (this.slabTex) this.gl.deleteTexture(this.slabTex);
     if (this.faceTex) this.gl.deleteTexture(this.faceTex);
     if (this.sheetTex) this.gl.deleteTexture(this.sheetTex);
@@ -1926,8 +2190,11 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     }
     engine.setCover(needs);
   }
+  // (The display's own rate is learnt from the first frame on, while the still stands and nothing loads the GPU.)
+  const offBeat = onFrame((now) => engine.beat(now), 9);
   await engine.prepare();
   if (isCancelled()) {
+    offBeat();
     engine.destroy();
     return null;
   }
@@ -2325,6 +2592,10 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const planning = planFlight();
     await engine.stand(engine.firstPieces(pose0, aspect, passNeeds(pose0, aspect, iceParts((at0 - MELT.from) / (MELT.to - MELT.from), themeNow(), true), false)));
     await planning;
+    // And how fast this device draws the scene is measured, on the frame the page opens on: the pace is set by it.
+    if (!mqStill.matches && !isCancelled() && !destroyed) {
+      await engine.calibrate(pose0, aspect, { melt: (at0 - MELT.from) / (MELT.to - MELT.from), day: dayAt(at0), hour: at0, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, at0), rest: at0 >= SETTLE_AT - 0.02, calm, near: nearV, box, boxK: 0, boxLight: false });
+    }
     if (isCancelled() || destroyed) {
       solver.dispose();
       engine.destroy();
@@ -2524,6 +2795,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     // The first screen's own life, by the clock: the entrance (the eye comes forward from where the still was taken,
     // the light arrives, the words set), and after it the frame breathes. All of it is let go as the page scrolls.
     let idle = false;
+    let entering = false;
     {
       const t = mqStill.matches ? ENTER.over : (enterHeld ?? (enterT0 < 0 ? 0 : Math.max(0, (now - enterT0) / 1000)));
       const live = heldPose ? 0 : 1 - smooth(0.02, 0.45, s);
@@ -2545,6 +2817,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
         }
         if (brK > 0) pose = moved({ at: pose, pivot: [NAME.x, NAME.y, 0], push: 0.02 * br.near * brK, arc: 0.9 * br.sway * brK, rise: 0 }, 1);
         idle = t >= ENTER.over;
+        entering = !idle;
       }
       if (!heroIn && (t >= ENTER.words || html.dataset.heroWords !== undefined)) {
         heroIn = true;
@@ -2573,7 +2846,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
       cap[3] = 1 - (span[1] - pad) / viewH;
     }
     capK = span ? Math.min(1, capK + dtCap / (mqStill.matches ? 0.001 : 0.3)) : Math.max(0, capK - dtCap / (mqStill.matches ? 0.001 : 0.25));
-    if (canvasVisible) engine.frame(now, cam, aspect, { melt, day: dayNow, hour: s, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle });
+    if (canvasVisible) engine.frame(now, cam, aspect, { melt, day: dayNow, hour: s, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle, entering });
     // The live picture stands over its still once a frame of it is drawn; the entrance begins when the dissolve is done.
     if (!pictureUp && engine.drew) {
       pictureUp = true;
@@ -2601,6 +2874,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     destroy() {
       destroyed = true;
       off();
+      offBeat();
       ro.disconnect();
       forkWatch.disconnect();
       visibility.disconnect();

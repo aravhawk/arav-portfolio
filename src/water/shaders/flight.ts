@@ -3068,6 +3068,7 @@ ${customSubjects.map(s => `#ifdef ${s.define}
   // Interleaved gradient noise in display space. The offset advances the grain without moving the scene.
   float gn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)) + uFilm.y)) - 0.5;
   mediump float lum = dot(display, vec3(0.3, 0.6, 0.1));
-  display += gn * (1.4 / 255.0 + uFilm.z * (0.35 + 1.3 * min(lum, 1.0 - lum)));
+  // (Not where the scene is drawn smaller than the screen: the grain is then laid on at the screen's size, by the pass that brings it there.)
+  if (uFilm.z >= 0.0) display += gn * (1.4 / 255.0 + uFilm.z * (0.35 + 1.3 * min(lum, 1.0 - lum)));
   o = vec4(display, 1.0);
 }`;

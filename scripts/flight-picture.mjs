@@ -4,7 +4,7 @@
  * engine has not changed what a reader sees at rest.
  *
  *   NODE_PATH=<playwright modules> node scripts/flight-picture.mjs capture <base url> <out dir>
- *     [--positions 32] [--at 0,1.5,28] [--theme light,dark] [--size wide,tall]
+ *     [--positions 32] [--at 0,1.5,28] [--theme light,dark] [--size wide,tall] [--scale 0.7]
  *   node scripts/flight-picture.mjs compare <dir a> <dir b> [--crops <out dir>] [--floor 0.99]
  *
  * `capture` opens the home page on the real GPU and, at evenly spaced scroll
@@ -12,7 +12,9 @@
  * (the clock, the entrance, the camera, full shading), waits for the words
  * and their lee to settle, and saves the canvas as it stands, with the film
  * grain left out (it is noise by design). Two builds captured this way draw
- * the same frame wherever their pictures agree.
+ * the same frame wherever their pictures agree. `--scale` draws each frame
+ * as the engine draws it while the camera travels, at that share of the
+ * screen's resolution brought back to size: for judging what motion hides.
  *
  * `compare` gives the structural similarity of each pair (RGB, 8 x 8
  * windows) and fails under the floor. With `--crops` it writes, for the six
@@ -170,6 +172,7 @@ async function capture() {
   const sizes = arg('size', 'wide,tall').split(',');
   const count = Number(arg('positions', '32'));
   const only = arg('at', '');
+  const scale = Number(arg('scale', '1'));
   const browser = await chromium.launch({ headless: false, args: ['--use-angle=metal', '--ignore-gpu-blocklist'] });
   const index = [];
   try {
@@ -191,14 +194,18 @@ async function capture() {
         const end = await page.evaluate(() => (document.documentElement.scrollHeight - innerHeight) / window.__flight.state().unit);
         const stops = only ? only.split(',').map(Number) : Array.from({ length: count }, (_, i) => +((i * end) / (count - 1)).toFixed(3));
         for (const s of stops) {
-          await page.evaluate((s) => {
-            const f = window.__flight;
-            f.engine.holdLean(0);
-            f.engine.holdClock(8);
-            f.holdEntrance(8);
-            scrollTo(0, Math.round(s * f.state().unit));
-            f.holdPose(f.poseAt(s));
-          }, s);
+          await page.evaluate(
+            ([s, scale]) => {
+              const f = window.__flight;
+              f.engine.holdLean(0);
+              f.engine.holdPace?.({ scale, every: 1 });
+              f.engine.holdClock(8);
+              f.holdEntrance(8);
+              scrollTo(0, Math.round(s * f.state().unit));
+              f.holdPose(f.poseAt(s));
+            },
+            [s, scale],
+          );
           // The words set, and the lee behind them comes in: a frame depends on both.
           await page.waitForTimeout(1300);
           await page.waitForFunction(
