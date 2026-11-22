@@ -137,3 +137,5 @@ picture dirty on re-entry so reduced-motion readers get a fresh frame.
 Change log: 2026-11-22 R3: `lightAt`; a registered subject with no pass of its own is in use (the vault).
 
 Change log: 2026-11-22 R2: the pace; programs built behind the still and at rest only.
+
+Measure projected callout rings and label intersections against the camera uniforms submitted to WebGL with `NODE_PATH=<Playwright node_modules> node scripts/callout-check.mjs http://localhost:3189 .tools/out/b3/callouts`.

@@ -1525,7 +1525,7 @@ export class FlightEngine extends WaterEngine {
    * @param aspect the canvas's width over its height
    * @param at where the page is: the melt, the time of day, the settle on the ending
    */
-  frame(now: number, cam: Basis, aspect: number, at: FlightMoment) {
+  frame(now: number, cam: Basis, aspect: number, at: FlightMoment, placeCaptions?: (now: number) => number) {
     const melt = at.melt;
     const gl = this.gl;
     if (!this.ready || !this.bedA || !this.bedB || !this.wave || gl.isContextLost()) return;
@@ -1540,6 +1540,8 @@ export class FlightEngine extends WaterEngine {
       const under = groundUnder(cam, 0.5, 0.9, aspect);
       if (!this.pace(now, beat, cam, aspect, at, under ? under.t : 1e4, this.dirty)) return;
     }
+    // Keep projected DOM geometry on the same interval as the rendered camera.
+    if (placeCaptions) at.capK = placeCaptions(now);
     let dt = this.last ? Math.max(0, now - this.last) / 1000 : 1 / 60;
     this.last = now;
     dt = Math.min(dt, 1 / 20);
@@ -2760,6 +2762,21 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
   }, { threshold: Number.EPSILON });
   visibility.observe(canvas);
 
+  const placeCaptions = (now: number) => {
+    const span = callouts.frame(cam, aspect, viewW, viewH, sNow);
+    // (It comes in where the captions stand and goes out where they last stood.)
+    const dtCap = Math.min(0.1, Math.max(0, (now - capLast) / 1000));
+    capLast = now;
+    if (span) {
+      const pad = 5;
+      cap[0] = (span[0] - pad) / viewW;
+      cap[1] = 1 - (span[3] + pad) / viewH;
+      cap[2] = (span[2] + pad) / viewW;
+      cap[3] = 1 - (span[1] - pad) / viewH;
+    }
+    capK = span ? Math.min(1, capK + dtCap / (mqStill.matches ? 0.001 : 0.3)) : Math.max(0, capK - dtCap / (mqStill.matches ? 0.001 : 0.25));
+    return capK;
+  };
   const off = onFrame((now) => {
     if (!built) return;
     const raw = window.scrollY / unit;
@@ -2893,19 +2910,7 @@ export async function mountFlight(root: HTMLElement, isCancelled: () => boolean 
     const rest = s >= SETTLE_AT - 0.02;
     // (Published before the draw: whoever follows the picture takes its turn ahead of the picture's own work.)
     flightSignal(now, s, cam, aspect, melt, dayNow, rest);
-    const span = callouts.frame(cam, aspect, viewW, viewH, s);
-    // (It comes in where the captions stand and goes out where they last stood.)
-    const dtCap = Math.min(0.1, Math.max(0, (now - capLast) / 1000));
-    capLast = now;
-    if (span) {
-      const pad = 5;
-      cap[0] = (span[0] - pad) / viewW;
-      cap[1] = 1 - (span[3] + pad) / viewH;
-      cap[2] = (span[2] + pad) / viewW;
-      cap[3] = 1 - (span[1] - pad) / viewH;
-    }
-    capK = span ? Math.min(1, capK + dtCap / (mqStill.matches ? 0.001 : 0.3)) : Math.max(0, capK - dtCap / (mqStill.matches ? 0.001 : 0.25));
-    if (canvasVisible) engine.frame(now, cam, aspect, { melt, day: dayNow, hour: s, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle, entering });
+    if (canvasVisible) engine.frame(now, cam, aspect, { melt, day: dayNow, hour: s, settle: smooth(END_AT - SECTIONS.sea + 0.9, SETTLE_AT, s), rest, calm, near: nearV, box, boxK, boxLight, cap, capK, idle, entering }, placeCaptions);
     // The live picture stands over its still once a frame of it is drawn; the entrance begins when the dissolve is done.
     if (!pictureUp && engine.drew) {
       pictureUp = true;

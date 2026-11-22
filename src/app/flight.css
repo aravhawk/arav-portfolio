@@ -628,7 +628,7 @@ html[data-picture] .flight-root > .fl-poster {
 .fl-call {
   color: var(--ink);
   opacity: 0;
-  transition: opacity 260ms var(--ease-out);
+  /* Once its anchor is culled its last transform is no longer valid. */
 }
 .fl-call[data-on] {
   opacity: 1;
