@@ -40,10 +40,16 @@ export function Runtime() {
     // The home page is scrolled from its first frame and starts at once. An inner page's first screen does not
     // need the library: it is fetched once the page has shown that screen and is idle.
     const offCalm = window.location.pathname === '/' ? (sync(), () => {}) : whenCalm(sync);
+    const home = () => {
+      if (lenis) lenis.scrollTo(0, { immediate: reduced.matches, force: true });
+      else window.scrollTo({ top: 0, behavior: reduced.matches ? 'instant' : 'smooth' });
+    };
+    window.addEventListener('flight-home', home);
     reduced.addEventListener('change', sync);
     fine.addEventListener('change', sync);
     return () => {
       cancelled = true;
+      window.removeEventListener('flight-home', home);
       offCalm();
       reduced.removeEventListener('change', sync);
       fine.removeEventListener('change', sync);

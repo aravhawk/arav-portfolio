@@ -99,7 +99,13 @@ export function Nav() {
   const pathname = usePathname();
   return (
     <header className="nav" data-chrome>
-      <Link href="/" ahead="intent" className="nav-mark plate" aria-label="Arav Jain, home" onClick={() => haptic('selection')}>
+      <Link href="/" ahead="intent" className="nav-mark plate" aria-label="Arav Jain, home" onClick={(event) => {
+        haptic('selection');
+        if (pathname !== '/' || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        if (location.hash) history.replaceState(history.state, '', location.pathname + location.search);
+        window.dispatchEvent(new Event('flight-home'));
+      }}>
         <span>Arav Jain</span>
       </Link>
       <nav className="nav-links plate" aria-label="Main">

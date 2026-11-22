@@ -139,7 +139,7 @@ export const viewport: Viewport = {
    they turn it on); or, where they have never chosen, unless the system asks
    for less data (Save-Data, prefers-reduced-data) or the device says it has
    a gigabyte of memory or less. */
-const boot = `(function(){var d=document.documentElement;d.setAttribute('data-scripted','');try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}var n=navigator,o='on';try{var m=localStorage.getItem('sound');if(m=='off'||m!='on'&&((n.connection||0).saveData||n.deviceMemory<=1||matchMedia('(prefers-reduced-data:reduce)').matches))o='off'}catch(e){}d.dataset.sound=o})()`;
+const boot = `(function(){history.scrollRestoration='manual';function top(){if(!location.hash)scrollTo({top:0,behavior:'instant'})}top();addEventListener('pageshow',top);var d=document.documentElement;d.setAttribute('data-scripted','');try{var s=localStorage.getItem('theme');var k=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.dataset.theme=k?'dark':'light'}catch(e){d.dataset.theme='light'}var n=navigator,o='on';try{var m=localStorage.getItem('sound');if(m=='off'||m!='on'&&((n.connection||0).saveData||n.deviceMemory<=1||matchMedia('(prefers-reduced-data:reduce)').matches))o='off'}catch(e){}d.dataset.sound=o})()`;
 
 const fontVars = [orbiter, mono, accent, ice].map((f) => f.variable).join(' ');
 
