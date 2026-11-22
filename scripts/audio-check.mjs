@@ -20,7 +20,7 @@
  *    scene are written, so a person can listen and look.
  *
  * 2. Sync (--sync <base> [--label name] [--load]). On the running site,
- *    with sound turned on by a real click, it causes each moment and reads
+ *    with sound started by a real click on the page, it causes each moment and reads
  *    the conductor's own trace. Moments on the picture's own clock (the
  *    shards' pulse, the lattice, the gates, the surge, the drips, the crests
  *    that land on the block, and the arrival: the gathering along the line
@@ -968,9 +968,9 @@ async function sync(base) {
   await page.bringToFront();
   await page.waitForTimeout(1500);
   const before = await page.evaluate(() => !!window.__sound);
-  await page.hover('.nav-sound');
-  await page.waitForTimeout(300);
-  await page.click('.nav-sound');
+  // (Sound is on unless the reader mutes it, and starts at their first press anywhere but on the control: a press
+  // on the control would mute it.)
+  await page.mouse.click(700, 520);
   await page.waitForFunction(() => window.__sound && window.__sound.ctx.state === 'running', null, { timeout: 20000 });
   await page.waitForTimeout(2500);
   // Listen to the buses the moments sound on, in the context's own time: for each block, the first sample that
