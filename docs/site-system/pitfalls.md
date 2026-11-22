@@ -11,6 +11,18 @@ Each of these cost time on this build.
   term, draw into a target of its own.
 - **A frame time read from a one-pixel read-back** is only right near
   the budget; light frames read slow.
+- **A shader import in the plan puts shader text in the sound's
+  script.** `registry.ts`, `camera.ts`, `sky.ts`, `moments.ts` and
+  `geography.ts` are read by the sound. Shader source goes in
+  `shaders/subjects.ts`. `scripts/sound-load.mjs` fails if the sound's
+  files carry any.
+- **Asking a page for its state from Playwright counts as the reader's
+  act in Chromium** (`evaluate` runs as a gesture), so a wheel after it
+  starts the sound. `scripts/sound-visit.mjs` has the page photograph
+  its own state.
+- **A few hundred bytes in the nav's script is a request on every
+  page.** The sound control's behaviour lives in the home page's script
+  for that reason; count scripts after touching either (`performance.md`).
 - **The sound copies numbers from the picture.**
   `tests/audio/picture.test.ts` fails when one drifts. Fix the copy,
   not the test's floor.

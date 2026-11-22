@@ -224,15 +224,18 @@ for making those stills again.
 
 ## Sound
 
-`src/audio/**`: synthesized, off until asked. It reads the world's
-plan and copies a few of the picture's numbers;
-`tests/audio/picture.test.ts` fails when a copied number drifts. It
-follows the picture through `src/lib/signals.ts`, which the player now
-writes (the place in the flight, the frame's camera, the melt, the dawn,
-the gates). Its own script, fetched only when the toggle is pressed,
-still imports the world's plan from `src/water` (plain numbers and the
-registry, which carries shader source as text; nothing is compiled or
-drawn).
+`src/audio/**`: synthesized, on the home page only, on unless the
+reader mutes it (see [sound.md](sound.md): the control, when sound
+starts, its cost, its level). It reads the world's plan and copies a few
+of the picture's numbers; `tests/audio/picture.test.ts` fails when a
+copied number drifts. It follows the picture through
+`src/lib/signals.ts`, which the player writes (the place in the flight,
+the frame's camera, the melt, the dawn, the gates). Its own script is
+fetched at idle after the home page's first paint. It imports the
+world's plan from `src/water` (the registry, the camera's geometry, the
+hours): plain numbers. The registry holds no shader text: a subject's
+definition names its GLSL function, and `src/water/shaders/subjects.ts`,
+which only the renderer loads, holds the source under that name.
 
 Change log: 2026-11-18 first version (orchestrator).
 
@@ -246,3 +249,5 @@ picture dirty on re-entry so reduced-motion readers get a fresh frame.
 Change log: 2026-11-20 V1: the home page plays the pre-rendered flight; the engine is the renderer; inner bands are stills.
 
 Change log: 2026-11-20 V2: the live layer over the played picture (`src/flight/live.ts`), its masks, the engine's mask output.
+
+Change log: 2026-11-21 S2: sound on by default; the registry without shader text (`shaders/subjects.ts`).

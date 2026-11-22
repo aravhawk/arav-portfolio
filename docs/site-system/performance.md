@@ -352,7 +352,8 @@ reading a report's request log (`a['network-requests']`), not its score:
   that alone cost `/blog` and Upstream a point each. So the theme
   switch is one element with its layers drawn in CSS, and `Nav.tsx`
   keeps its commentary in `nav.css`. After a change to anything in the
-  layout's script (`Nav`, `Runtime`, `SoundToggle`, `Link`), count:
+  layout's script (`Nav`, `Runtime`, `Link`; the sound control's
+  behaviour is kept out of it for this reason, `sound.md`), count:
   `curl -s <page> | grep -o '<script src="[^"]*" async' | wc -l` gives
   8 on `/blog` and 9 on `/work` and the project pages. One more is a
   point lost; find what grew.

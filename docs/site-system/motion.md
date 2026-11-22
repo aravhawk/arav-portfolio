@@ -140,6 +140,9 @@ the model for a small control:
   (`boot` in `layout.tsx`); the switch is drawn from `data-theme`, so
   it is right in that paint too.
 
+The sound control beside it follows the same rules (`sound.md`,
+`sound.css`; `scripts/sound-sheet.mjs <base> <outdir>` is its sheet).
+
 `scripts/toggle-sheet.mjs <base> <outdir>` photographs every state at
 1x and 2x, enlarged, with the travel frame by frame, and writes the
 control's name, role, sizes and what the keys do.
@@ -177,4 +180,4 @@ stations, and a new station must not add one.
 Only as the direct consequence of a meaningful action; never on load,
 hover or continuous scroll; in the picture, only at discrete beats.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 F1: the theme switch.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 F1: the theme switch. S2: the sound control.
