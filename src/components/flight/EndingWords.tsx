@@ -1,4 +1,5 @@
-import { Contact, SubscribeForm } from '@/components/ending/Ending';
+import { Contact } from '@/components/ending/Ending';
+import { SubscribeForm } from '@/components/subscribe/SubscribeForm';
 
 /**
  * The ending's words: the headline, the line under it, and the foot. The foot is one block at one width: the ways

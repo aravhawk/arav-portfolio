@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { SubscribeForm } from '@/components/ending/Ending';
+import { SubscribeForm } from '@/components/subscribe/SubscribeForm';
 import { PageShell } from '@/components/PageShell';
 import { OUTCOMES, type Outcome } from '@/lib/subscribe/messages';
 

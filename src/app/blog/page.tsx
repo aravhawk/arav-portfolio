@@ -4,7 +4,7 @@ import { ViewTransition } from 'react';
 import { Arrow } from '@/components/bits';
 import { openingLines } from '@/components/blog/opening';
 import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
-import { SubscribeForm } from '@/components/ending/Ending';
+import { SubscribeForm } from '@/components/subscribe/SubscribeForm';
 import { PageShell } from '@/components/PageShell';
 import { getAllPosts } from '@/lib/posts';
 import { formatPostDate } from '@/lib/dates';

@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { haptic } from '@/lib/haptics';
 import { EMAIL_MAX, HONEYPOT, OUTCOMES, PROMISE, SAY, SENDING, isValidEmail, normalizeEmail, type Outcome, type Source } from '@/lib/subscribe/messages';
@@ -13,12 +15,6 @@ import { EMAIL_MAX, HONEYPOT, OUTCOMES, PROMISE, SAY, SENDING, isValidEmail, nor
  * confirmation only once the server has said yes; every other answer leaves
  * the reader in the field with what was typed and the reason beside it.
  * Nothing is remembered in the browser: the server is the one that knows.
- *
- * This file has no 'use client' of its own, on purpose: it reaches the
- * browser through src/components/ending/Ending.tsx, which every page already
- * loads, and pages import it from there. As a client module of its own it was
- * one more script request before the first paint, which cost /blog a point
- * on a phone (docs/site-system/performance.md, "the first round").
  */
 
 type Status = 'idle' | 'sending' | Outcome;
