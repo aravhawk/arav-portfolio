@@ -24,6 +24,15 @@ Status: **as built** (K1, 2026-11-20).
   made from the same ledger as the count. The query with the
   exclusions stays on the server.
 - arav.pro is canonical. No photo of him.
+- **No email address, anywhere** (his decision, 2026-11-21: an address
+  in a page is harvested). Not as a link, not as text, not in
+  structured data, the feed, a share card or a script. The ways to
+  reach him are X, LinkedIn, GitHub and his resume (`CONTACT`), in that
+  order; the feed is the row's quiet word. `tests/content/address.test.ts`
+  fails if an address or a mail link comes back into the source;
+  `scripts/address-search.mjs <base>` searches a production build
+  (`.next/`, `public/`) and every served route, and must find nothing
+  before a release. A post may link to pages, never to an address.
 
 ## The words belong to the scenes
 
@@ -76,4 +85,5 @@ own writing and is not edited.
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1:
 the definitive list, recognition, the story's rules. 2026-11-20 K2: the
-public pull request link names only counted repositories.
+public pull request link names only counted repositories. 2026-11-21 R1:
+no email address anywhere.

@@ -486,12 +486,16 @@ export const INTERESTS = [
   'Robotics',
 ];
 
+/**
+ * The ways to reach him: X, LinkedIn and GitHub, and his resume. There is no email address on this site, in any form
+ * (his decision, 21 November 2026: an address in a page is harvested). `tests/content/address.test.ts` and
+ * `scripts/address-search.mjs` fail if one comes back.
+ */
 export const CONTACT = {
-  github: 'https://github.com/aravhawk',
   x: 'https://x.com/aravhawk',
   linkedin: 'https://www.linkedin.com/in/aravjainml',
+  github: 'https://github.com/aravhawk',
   /** His resume, a published Google Doc. It opens in a new tab wherever it is linked. */
   resume:
     'https://docs.google.com/document/d/e/2PACX-1vT7uLdB1QHp5Y0d_9EVGACLrtohbDDEoBabVcEs-cG9ub0gMurhPtl726BkALgJDXOWpkToxqbQYh2e/pub',
-  email: 'aravhawk@gmail.com',
 };

@@ -12,9 +12,7 @@ describe('project links', () => {
   const all = [
     ...PROJECTS.flatMap((p) => p.links.map((l) => ({ where: p.slug, ...l }))),
     { where: 'recognition', label: 'press', href: RECOGNITION.press.href },
-    ...Object.entries(CONTACT)
-      .filter(([key]) => key !== 'email')
-      .map(([key, href]) => ({ where: 'contact', label: key, href })),
+    ...Object.entries(CONTACT).map(([key, href]) => ({ where: 'contact', label: key, href })),
   ];
 
   it('every link is a whole https address with a label, never a placeholder', () => {

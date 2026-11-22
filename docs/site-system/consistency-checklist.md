@@ -39,13 +39,15 @@ old one.
    320, 390, 768 and 1440 in both themes. Lighthouse on the home
    page, one project page and one blog post, at 1440 and at 390.
    Every address (canonical, share image, feed, sitemap, robots,
-   structured data) on `https://arav.pro`.
+   structured data) on `https://arav.pro`. No email address in any of
+   it: `scripts/address-search.mjs <base>` after a build from an empty
+   `.next` finds nothing.
 8a. **Links and controls**: `scripts/click-test.mjs <base>` on the
    production build: every link and control on `/`, `/work`, a project
    page, `/blog` and a post is pressed for real at 1440 with a mouse
    and at 390 with touch, in both themes, and must do what it says
    (a new tab at its address with `rel="noopener"`, the page it names,
-   a state that changes). Then the same with `--noscript`: every link
+   a state that changes; a link that writes to an address fails). Then the same with `--noscript`: every link
    on the pages with scripts off. It takes about ten minutes; add a
    route with `--routes` when a page gains a control of a new kind.
 9. **Code**: `pnpm lint`, `pnpm exec tsc --noEmit`,

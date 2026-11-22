@@ -1,7 +1,6 @@
 'use client';
 
 import { Link } from '@/components/Link';
-import { useEffect, useRef, useState } from 'react';
 import { CONTACT } from '@/content/projects';
 import { haptic } from '@/lib/haptics';
 import { Arrow } from '../bits';
@@ -18,78 +17,32 @@ interface Props {
   note?: string;
 }
 
-function CopyEmail() {
-  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
-  const timer = useRef(0);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(CONTACT.email);
-      haptic('success');
-      setState('copied');
-    } catch {
-      haptic('error');
-      setState('failed');
-    }
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setState('idle'), 2200);
-  };
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-  return (
-    <span className="end-email">
-      <a className="end-link end-primary" href={`mailto:${CONTACT.email}`} onClick={() => haptic('medium')}>
-        Email
-      </a>
-      <button type="button" className="end-copy label" onClick={copy} aria-label="Copy email address">
-        {/* At rest the control is its mark; what happened is said in words when it happens. */}
-        {state === 'idle' ? (
-          <svg className="end-copy-mark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <rect x="5.5" y="5.5" width="8" height="8" rx="1.6" stroke="currentColor" strokeWidth="1.4" />
-            <path d="M10.5 3.2H4.4c-.9 0-1.6.7-1.6 1.6v6.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
-        ) : null}
-        <span aria-live="polite" className={state === 'idle' ? 'sr-only' : undefined}>
-          {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed. Use the link.' : 'Copy'}
-        </span>
-      </button>
-    </span>
-  );
-}
+/** The row's links, in the order he gave them. Each opens in a new tab. */
+const WAYS = [
+  { label: 'X', href: CONTACT.x },
+  { label: 'LinkedIn', href: CONTACT.linkedin },
+  { label: 'GitHub', href: CONTACT.github },
+  { label: 'Resume', href: CONTACT.resume },
+];
 
 /**
- * The ways to reach him. `feed`: the row also carries the feed (the home
- * page's ending, which has no footer under it). Email is the one action and
- * leads the row. (The haptics switch is a setting and stands in the nav.)
+ * The ways to reach him: one row of links in one face, none set apart from the rest. `feed`: the row also carries
+ * the feed, as its last and quietest word (the home page's ending, which has no footer under it). There is no email
+ * address here or anywhere on the site. (The haptics switch is a setting and stands in the nav.)
  */
 export function Contact({ feed = false }: { feed?: boolean }) {
   return (
     <ul className="ending-links">
-      {/* The one action comes first; the rest is a quiet row. */}
-      <li>
-        <CopyEmail />
-      </li>
-      <li>
-        <a className="end-link" href={CONTACT.github} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
-          GitHub <Arrow out />
-        </a>
-      </li>
-      <li>
-        <a className="end-link" href={CONTACT.x} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
-          X <Arrow out />
-        </a>
-      </li>
-      <li>
-        <a className="end-link" href={CONTACT.linkedin} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
-          LinkedIn <Arrow out />
-        </a>
-      </li>
-      <li>
-        <a className="end-link" href={CONTACT.resume} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
-          Resume <Arrow out />
-        </a>
-      </li>
+      {WAYS.map((way) => (
+        <li key={way.label}>
+          <a className="end-link" href={way.href} target="_blank" rel="noopener noreferrer" onClick={() => haptic('medium')}>
+            {way.label} <Arrow out />
+          </a>
+        </li>
+      ))}
       {feed ? (
         <li>
-          <a className="end-link" href="/feed.xml">
+          <a className="end-link end-feed" href="/feed.xml">
             RSS
           </a>
         </li>

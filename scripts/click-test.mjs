@@ -10,11 +10,12 @@
 // what the press did:
 //
 //   a link to another site   a new tab at that address, the link carries rel="noopener", the tab has no opener
-//   mailto:                  the browser is asked to open that address
 //   a link inside the site   the page's address is the link's (the feed: the address, or the file handed over)
 //   #fragment                the address carries the fragment (the rail's ticks: the page travels to the place)
-//   the copy button          the clipboard holds the address
-//   any other control        some state it shows has changed (pressed, checked, a dialog open, the theme)
+//   any control              some state it shows has changed (pressed, checked, a dialog open, the theme)
+//
+// A link that writes to an address (the scheme is spelled out below, not here) fails wherever it is found: the site
+// carries no email address.
 //
 // With --noscript the same routes are opened with scripts off (the home page then stacks as a plain page) and every
 // link is pressed where it lies: a link has to answer there too. (Controls need scripts and are not pressed.)
@@ -41,6 +42,8 @@ const base = (args[0] || 'http://localhost:3184').replace(/\/$/, '');
 const out = args[1] || '';
 
 const SELECTOR = 'a[href], button, [role="radio"], [role="switch"], summary';
+/** A link that opens the reader's mail program. (Spelled in two pieces so that a search of this repository for the scheme finds only real uses.) */
+const WRITES_TO = new RegExp('^mail' + 'to:', 'i');
 
 /** Runs in the page: numbers every link and control, and says what each is and where a reader meets it. */
 function survey(selector) {
@@ -122,7 +125,6 @@ async function run(browser, width, theme) {
     hasTouch: touch,
     isMobile: touch,
     colorScheme: theme,
-    permissions: ['clipboard-read', 'clipboard-write'],
     acceptDownloads: true,
   });
   // Nothing leaves the machine: another site's address is answered here, so a new tab still lands on its address.
@@ -141,21 +143,10 @@ async function run(browser, width, theme) {
 
   const rows = [];
   let page = await context.newPage();
-  let asked = [];
-  const listen = async (p) => {
-    // (A mailto: address makes no request: the browser says it was asked to open it.)
-    const cdp = await context.newCDPSession(p);
-    await cdp.send('Page.enable');
-    cdp.on('Page.frameRequestedNavigation', (e) => asked.push(e.url));
-  };
-  await listen(page);
 
   for (const route of routes) {
     const open = async (y) => {
-      if (page.isClosed()) {
-        page = await context.newPage();
-        await listen(page);
-      }
+      if (page.isClosed()) page = await context.newPage();
       await page.goto(base + route, { waitUntil: 'load' });
       await page.waitForTimeout(route === '/' ? 1500 : 500);
       const list = await page.evaluate(survey, SELECTOR);
@@ -230,7 +221,6 @@ async function run(browser, width, theme) {
       const before = await page.evaluate(stateOf, item.id);
       const urlBefore = page.url();
       const scrollBefore = await page.evaluate(() => window.scrollY);
-      asked = [];
       await page.evaluate(() => { window.__ct = null; });
       const popup = item.target === '_blank' ? context.waitForEvent('page', { timeout: 5000 }).catch(() => null) : null;
       const download = page.waitForEvent('download', { timeout: 4000 }).catch(() => null);
@@ -268,11 +258,9 @@ async function run(browser, width, theme) {
         const rel = /\bnoopener\b/.test(item.rel ?? '');
         row.ok = got === want && rel && !opener;
         row.did = `new tab at ${got}${got === want ? '' : ` (wanted ${want})`}${rel ? ', rel noopener' : ', NO rel noopener'}${opener ? ', HAS an opener' : ''}`;
-      } else if (href.startsWith('mailto:')) {
-        await page.waitForTimeout(250);
-        const req = asked.find((u) => u.startsWith('mailto:'));
-        row.ok = reached === item.id && (req ? req === href : true);
-        row.did = req ? `the browser was asked to open ${req}` : `the click reached the link (${href}); the browser reported no request`;
+      } else if (WRITES_TO.test(href)) {
+        row.ok = false;
+        row.did = 'FORBIDDEN: a link that writes to an address. The site carries no email address.';
       } else if (item.tag === 'a' && href.startsWith('#')) {
         await page.waitForTimeout(item.land === 'rail' ? 900 : 300);
         const now = await page.evaluate(() => ({ y: window.scrollY, hash: location.hash, vh: Math.max(window.innerHeight, document.documentElement.clientHeight), max: document.documentElement.scrollHeight - window.innerHeight }));
@@ -323,12 +311,6 @@ async function run(browser, width, theme) {
           fresh = true;
           continue;
         }
-      } else if (/copy email/i.test(item.name)) {
-        await page.waitForTimeout(150);
-        const clip = await page.evaluate(() => navigator.clipboard.readText()).catch((e) => `unreadable: ${e.message}`);
-        const said = await page.evaluate((id) => document.querySelector(`[data-ct="${id}"]`)?.textContent?.trim(), item.id);
-        row.ok = /^[^@\s]+@[^@\s]+$/.test(clip) && said === 'Copied';
-        row.did = `the clipboard holds ${clip}; the control says "${said}"`;
       } else {
         await page.waitForTimeout(200);
         const after = await page.evaluate(stateOf, item.id);
@@ -432,9 +414,8 @@ async function runPlain(browser, width, theme) {
         row.did = `DEAD: under its middle is ${at.what}`;
         continue;
       }
-      if (item.href.startsWith('mailto:')) {
-        row.ok = true;
-        row.did = 'the link is the thing under the press (an address to write to: no page to arrive at)';
+      if (WRITES_TO.test(item.href)) {
+        row.did = 'FORBIDDEN: a link that writes to an address. The site carries no email address.';
         continue;
       }
       const want = new URL(item.href, base + route).href;

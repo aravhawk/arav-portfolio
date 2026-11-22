@@ -89,46 +89,19 @@
   transform: scaleX(1);
 }
 
-.end-email {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
+/* The feed is the row's quiet word: the small label the inner pages' footer sets it in, on the row's own baseline
+   (the ending's own second ink where it stands over the sea). */
+.end-link.end-feed {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 480;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--end-ink-2, var(--ink-3));
 }
-/* The one action: a solid pill in the row's own ink. */
-.end-link.end-primary {
-  min-height: 48px;
-  padding: 0 clamp(20px, 1.8vw, 30px);
-  border-radius: var(--r-pill);
-  background: var(--end-ink, var(--ink));
-  color: var(--end-on, var(--land));
-}
-.end-link.end-primary::after {
-  content: none;
-}
-.end-link.end-primary:active {
-  transform: scale(0.97);
-}
-.end-copy {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: var(--r-pill);
-  box-shadow: inset 0 0 0 1px var(--end-line, var(--line));
-  color: var(--end-ink-2, var(--ink-2));
-  transition:
-    transform var(--t-press) var(--ease-out),
-    background-color var(--t-fast) ease;
-}
-.end-copy:active {
-  transform: scale(0.97);
-}
-@media (hover: hover) and (pointer: fine) {
-  .end-copy:hover {
-    background: color-mix(in srgb, currentColor 12%, transparent);
-  }
+/* (Its rule lies as close under its small letters as the others' do under theirs.) */
+.end-link.end-feed::after {
+  bottom: 14px;
 }
 
 .foot-meta span:first-child {

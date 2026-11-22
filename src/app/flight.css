@@ -962,8 +962,8 @@ html[data-picture] .flight-root > .fl-poster {
   max-width: min(50vw, 800px);
   margin-bottom: clamp(28px, 6.5vh, 80px);
 }
-/* The contact row. The ways to reach him, the feed among them in the same face, and (where a device can buzz) the
-   haptics switch as the row's last small control, drawn like the copy button: one row, nothing set apart from it. */
+/* The contact row: the ways to reach him in one face, flush with the lines over them, and the feed after them as
+   the row's quiet word. Nothing in it is set apart as a button. */
 .fl-end-row {
   width: max-content;
   max-width: calc(100vw - 2 * var(--gutter));

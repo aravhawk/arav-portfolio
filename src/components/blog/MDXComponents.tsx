@@ -7,8 +7,8 @@ import type { MDXComponents } from 'mdx/types';
 export const mdxComponents: MDXComponents = {
   a: (props) => {
     const href = props.href || '';
-    const isSafe =
-      href.startsWith('/') || href.startsWith('#') || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:');
+    // (A page of this site, a place in this page, or another site. Nothing else is a link here: no address to write to.)
+    const isSafe = href.startsWith('/') || href.startsWith('#') || href.startsWith('http://') || href.startsWith('https://');
     if (!isSafe) return <span>{props.children}</span>;
     const external = href.startsWith('http');
     return <a target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined} {...props} href={href} />;

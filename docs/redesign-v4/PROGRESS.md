@@ -72,7 +72,7 @@ The work is not paused; it is split.
    visual checks, then send the next. No parallel helpers on any provider.
 5. Every brief stands alone (Kilo gets no history): spec sections, exact
    files, Arav's rules and bans, acceptance tests, commands. Kilo commits
-   locally, SSH-signed as aravhawk@gmail.com, and never pushes. This thread
+   locally, SSH-signed under the owner's identity, and never pushes. This thread
    pushes the signed checkpoint after review.
 6. If a Kilo task shows `waiting` or looks idle for about 10 minutes, check
    `task_status` and `t3_pending_request` for it at once and unblock it. Two
@@ -792,7 +792,7 @@ nothing else is on the GPU.
 
 ## Kilo R3a/R3b (Nov 17, 2026, morning CT)
 
-Done by Kilo in code mode while the orchestrator thread was paused. Briefs: `.tools/briefs/R3a-words.md`, `R3b-inner.md`. Branch `redesign/fable-v4b-20261115`, pushed over SSH, both commits SSH-signed (aravhawk@gmail.com, verified with `git log --show-signature -1`). No PR, no merge.
+Done by Kilo in code mode while the orchestrator thread was paused. Briefs: `.tools/briefs/R3a-words.md`, `R3b-inner.md`. Branch `redesign/fable-v4b-20261115`, pushed over SSH, both commits SSH-signed (the owner's identity, verified with `git log --show-signature -1`). No PR, no merge.
 
 ### Commits
 
