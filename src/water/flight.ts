@@ -211,6 +211,20 @@ export class FlightEngine extends WaterEngine {
     await tick();
     await this.bakeRanges(tick);
     await tick();
+    // The pointer's own passes are not run until it first moves the water, and a pass's first draw is the driver's
+    // build of it (0.6 to 0.9 s for the four, measured on a first visit: the picture held as the pointer first
+    // crossed the lake). Each draws one pixel now, into a target of the kind it will draw into, behind the still.
+    {
+      gl.activeTexture(gl.TEXTURE15);
+      const scratch = makeTarget(gl, 1, 1, { ...this.f16(), filter: gl.LINEAR });
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      for (let unit = 0; unit < 4; unit++) bindTex(gl, unit, this.grain.tex, null);
+      for (const k of ['velAdvect', 'velDiv', 'velPressure', 'velProject']) {
+        gl.useProgram(this.p[k].prog);
+        drawTo(gl, scratch);
+      }
+      freeTarget(gl, scratch);
+    }
     await this.stand(firsts);
   }
 
@@ -409,8 +423,10 @@ export class FlightEngine extends WaterEngine {
     // (A reader who has been here before has some of these programs in the driver's store, and a build is then a
     // matter of a frame. But not all of them, and which cannot be told before the draw: measured, a program whose
     // link came back in 70 ms still held the picture 0.4 s. So a returning reader's wait for the page to rest too;
-    // only the breath between two builds is shorter while none has held.)
-    if (this.held === null && (quiet < IDLE_MS || now - this.warmedAt < (this.warmHolds ? 350 : 60))) return;
+    // only the breath between two builds is shorter while none has held. Where they hold, the picture runs 0.7 s
+    // between two: a build cannot be taken back, and a scroll that begins during one waits for it, so the driver
+    // is busy no more than a third of the time.)
+    if (this.held === null && (quiet < IDLE_MS || now - this.warmedAt < (this.warmHolds ? 700 : 60))) return;
     for (const v of this.variants.values()) if (v.pending) return;
     const mode = this.mode();
     const other: Mode = mode === 'day' ? 'night' : 'day';
