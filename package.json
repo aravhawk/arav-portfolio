@@ -9,9 +9,11 @@
     "lint": "eslint src/ scripts/ tests/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "metrics:refresh": "node scripts/refresh-metrics.mjs"
+    "metrics:refresh": "node scripts/refresh-metrics.mjs",
+    "db:apply": "node scripts/db-apply.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "feed": "^6.0.0",

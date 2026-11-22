@@ -963,24 +963,53 @@ html[data-picture] .flight-root > .fl-poster {
   max-width: min(50vw, 800px);
   margin-bottom: clamp(28px, 6.5vh, 80px);
 }
-/* The contact row: the ways to reach him in one face, flush with the lines over them, and the feed after them as
-   the row's quiet word. Nothing in it is set apart as a button. */
+/* The foot: one block at one width. The ways to reach him, in one face, flush with the lines over them; under them
+   the newsletter's field, from the row's first letter to its last; and one line of small print in the margin the
+   block keeps over the frame's edge. Nothing in it stands on a panel: the field is a hairline, like the rail's. */
+.fl-end-foot {
+  position: relative;
+  display: grid;
+  gap: clamp(2px, 0.7vh, 8px);
+  justify-items: start;
+  /* (The row's own width, and never so narrow that the field's words are cut.) */
+  width: max-content;
+  min-width: min(21rem, 100%);
+  max-width: calc(100vw - 2 * var(--gutter));
+}
 .fl-end-row {
   width: max-content;
-  max-width: calc(100vw - 2 * var(--gutter));
+  max-width: 100%;
 }
 .fl-end-row .ending-links {
   margin-top: 0;
   align-items: center;
 }
-/* The foot's small print: when the page's numbers were read, said here and nowhere else on the page. It hangs
-   under the block, in the margin the block keeps over the frame's edge, so every line over it stands where it stood
-   without it. A date is set in the text face with tabular figures, as the inner pages' footer sets it. */
-.fl-end-note {
+.fl-end-sub {
+  width: 100%;
+}
+.fl-end-sub .sub {
+  width: 100%;
+}
+/* (The field's own width asks for nothing: the row over it sets the block's.) */
+.fl-end-sub .sub-input {
+  width: 0;
+}
+/* The small print: when the page's numbers were read, said here and nowhere else on the page, and the feed at the
+   line's other end, under the button. It hangs under the block, so every line over it stands where it would
+   without it. A date is set in the text face with tabular figures, as the inner pages' footer sets it. The line is
+   as tall as a finger needs for the feed; its words sit in its middle. */
+.fl-end-print {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: clamp(4px, 1vh, 10px);
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+}
+.fl-end-note {
   font-size: var(--fl-cap);
   line-height: 1.35;
   font-weight: 480;
@@ -988,6 +1017,20 @@ html[data-picture] .flight-root > .fl-poster {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--end-ink-2);
+  transition: opacity var(--t-fast) var(--ease-out);
+}
+.fl-end-print .end-feed {
+  min-height: 44px;
+  /* (Its letters end where the button's edge does: the tracking after the last one is taken back.) */
+  margin-right: -0.07em;
+}
+.fl-end-print .end-feed::after {
+  bottom: 13px;
+}
+/* What the field has to say (a wrong address, too many tries) is said in the small print's place: the line about
+   the numbers steps aside while it stands, and comes back when the reader types again. */
+.fl-end-foot:has(.sub-said) .fl-end-note {
+  opacity: 0;
 }
 /* The entrance. The small line leads, alone, as the camera comes down to the sea (the block is on from then);
    when the camera rests the block sets (`data-set`): the headline wipes in and the links follow. It leaves fast. */
@@ -1001,7 +1044,8 @@ html[data-picture] .flight-root > .fl-poster {
 }
 .fl-end-words .ending-kicker,
 .fl-end-words .ending-links,
-.fl-end-words .fl-end-note {
+.fl-end-words .fl-end-sub,
+.fl-end-words .fl-end-print {
   opacity: 0;
   transform: translate3d(0, 14px, 0);
   transition:
@@ -1022,13 +1066,20 @@ html[data-picture] .flight-root > .fl-poster {
     opacity 700ms var(--ease-out) 420ms,
     transform 700ms var(--ease-out) 420ms;
 }
-/* (The small print comes last, a moment after the row it stands under.) */
-.fl-end-words[data-set] .fl-end-note {
+/* (The field follows the row, and the small print the field: each a moment after the one over it.) */
+.fl-end-words[data-set] .fl-end-sub {
   opacity: 1;
   transform: none;
   transition:
-    opacity 700ms var(--ease-out) 520ms,
-    transform 700ms var(--ease-out) 520ms;
+    opacity 700ms var(--ease-out) 500ms,
+    transform 700ms var(--ease-out) 500ms;
+}
+.fl-end-words[data-set] .fl-end-print {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 700ms var(--ease-out) 580ms,
+    transform 700ms var(--ease-out) 580ms;
 }
 /* A section takes no pointer events (`.fl-sec`), and what stands in it inherits that. A station's pieces are given
    them back as each one sets (`[data-at][data-in]`). The ending's pieces are not steps: the block sets them, so the
@@ -1037,7 +1088,7 @@ html[data-picture] .flight-root > .fl-poster {
 .fl-end-words[data-on] .fl-end-block {
   pointer-events: auto;
 }
-.fl-end-words:not([data-set]) .ending-links *,
+.fl-end-words:not([data-set]) .fl-end-foot *,
 .fl-end-words:not([data-set]) .ending-head * {
   pointer-events: none;
 }
@@ -1046,9 +1097,23 @@ html[data-picture] .flight-root > .fl-poster {
 }
 
 @media (max-width: 719px) {
+  /* (On a phone the foot is the frame's width: the row's four links are spread from edge to edge and the field
+     stands under them at the same width. The small print's line reaches into the frame's own bottom margin, so the
+     headline stays below the end of the ribbon of light.) */
   .fl-end-block {
     max-width: 68vw;
-    margin-bottom: clamp(16px, 3.4vh, 34px);
+    margin-bottom: 20px;
+  }
+  .fl-end-foot {
+    width: calc(100vw - 2 * var(--gutter));
+  }
+  .fl-end-row {
+    width: 100%;
+  }
+  .fl-end-row .ending-links {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 0;
   }
 
   .fl .fl-into-list {
@@ -1056,11 +1121,19 @@ html[data-picture] .flight-root > .fl-poster {
     font-size: clamp(1.6rem, 7.6vw, 2.4rem);
   }
 }
+/* (On the narrowest phones the four links are a step smaller, so they still stand on one line with air between.) */
+@media (max-width: 359px) {
+  .fl-end-row .end-link {
+    font-size: 0.9375rem;
+    gap: 0.3em;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .fl-end-words .ending-line,
   .fl-end-words .ending-kicker,
   .fl-end-words .ending-links,
-  .fl-end-words .fl-end-note {
+  .fl-end-words .fl-end-sub,
+  .fl-end-words .fl-end-print {
     clip-path: none;
     transform: none;
     transition: opacity 200ms linear;
@@ -1233,16 +1306,17 @@ html[data-picture] .flight-root > .fl-poster {
 }
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-kicker,
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .ending-links,
-:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .fl-end-note {
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .fl-end-sub,
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words .fl-end-print {
   opacity: 1;
   transform: none;
 }
 :is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words * {
   pointer-events: auto;
 }
-/* (The block never sets here, and the rule that holds its row until it sets outweighs the one above: without this
-   the contact row took no presses on the page without scripts or without the picture.) */
-:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words:not([data-set]) :is(.ending-links, .ending-head) * {
+/* (The block never sets here, and the rule that holds its foot until it sets outweighs the one above: without this
+   the contact row and the newsletter's field took no presses on the page without scripts or without the picture.) */
+:is(html[data-flight='off'], html:not([data-scripted])) .fl-end-words:not([data-set]) :is(.fl-end-foot, .ending-head) * {
   pointer-events: auto;
 }
 @media (max-width: 859px) {

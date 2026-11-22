@@ -66,5 +66,19 @@ Each of these cost time on this build.
 - **A synthetic click proves nothing.** `element.click()` and
   `dispatchEvent` reach an element whatever covers it. Test a link by
   putting the pointer at its place on the screen.
+- **Hidden text is counted.** A field hidden by being moved off the
+  screen still has visible words to `checks.js`: the newsletter's trap
+  has an `aria-label` and no text, or the home page counts two more.
+- **The database's variables cannot be pulled.** The Neon integration
+  marks them sensitive, and `vercel env pull` writes the word
+  `[SENSITIVE]` in their place. The site makes its own table; a
+  machine without the string tests against the stand-in. See
+  `newsletter.md`.
+- **A client component of its own is a script of its own, and a sheet
+  it imports is a stylesheet of its own.** The newsletter's field has
+  its rules in `home.css`, which every page loads, and no
+  `'use client'`: it is exported through `Ending.tsx`, whose script
+  every page loads. Each page loads the scripts and stylesheets it did
+  without the field (count the tags in the served HTML).
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links; three from the newsletter's field.

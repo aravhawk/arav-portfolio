@@ -447,3 +447,335 @@
     transition: none;
   }
 }
+
+/* ==========================================================================
+   The newsletter's field. Its rules live in this sheet because the home page and the inner pages
+   both load it already: a sheet of its own was one more request before the first paint on each.
+   ========================================================================== */
+
+/* (src/components/subscribe/SubscribeForm.tsx.) One look in two places: on the snow of an inner page it takes the
+   page's ink; in the home page's ending it takes the ending's light ink over the dark water the picture keeps
+   calm. No card, no panel, no shadow: a hairline pill with the one filled button of the foot inside it. */
+
+.sub {
+  --sub-ink: var(--end-ink, var(--ink));
+  --sub-on: var(--end-on, var(--land));
+  --sub-2: var(--end-ink-2, var(--ink-2));
+  --sub-edge: color-mix(in srgb, var(--sub-ink) 52%, transparent);
+  position: relative;
+  display: grid;
+  gap: 8px;
+  width: min(100%, 27rem);
+  color: var(--sub-ink);
+}
+.sub-label {
+  justify-self: start;
+  color: var(--sub-2);
+}
+.sub-hint {
+  max-width: 34ch;
+  color: var(--sub-2);
+  text-wrap: pretty;
+}
+
+/* The row keeps its height whatever stands in it: the field, or the sentence that replaces it. */
+.sub-row {
+  display: grid;
+  align-items: center;
+  min-height: 48px;
+}
+.sub-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 4px 4px 4px 18px;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--sub-edge);
+}
+/* One ring for the field, drawn by the pill; the button inside keeps its own. */
+.sub-field:has(.sub-input:focus-visible) {
+  box-shadow: inset 0 0 0 2px var(--sub-ink);
+}
+.sub[data-state='invalid'] .sub-field {
+  box-shadow: inset 0 0 0 2px var(--sub-ink);
+}
+.sub-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-text);
+  /* (16 px or more: a phone does not zoom the page to it.) */
+  font-size: max(16px, 1rem);
+  letter-spacing: -0.005em;
+  text-overflow: ellipsis;
+}
+.sub-input:focus,
+.sub-input:focus-visible {
+  outline: none;
+}
+.sub-input::placeholder {
+  color: var(--sub-2);
+  opacity: 0.78;
+}
+/* (A filled-in address keeps the field's own ground and ink: the browser's tint would be a panel behind the words.) */
+.sub-input:-webkit-autofill,
+.sub-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--sub-ink);
+  caret-color: var(--sub-ink);
+  transition: background-color 99999s 99999s;
+}
+.sub-go {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* (Wide enough for the longest of its three names, so the field beside it never changes width.) */
+  min-width: 7.75rem;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  background: var(--sub-ink);
+  color: var(--sub-on);
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 640;
+  letter-spacing: -0.012em;
+  white-space: nowrap;
+  transition: transform var(--t-press) var(--ease-out);
+}
+/* The target is the pill's whole height and its right end: 48 px tall under a finger. */
+.sub-go::before {
+  content: '';
+  position: absolute;
+  inset: -4px -4px -4px -3px;
+  border-radius: inherit;
+}
+.sub-go:active {
+  transform: scale(0.97);
+}
+.sub-go:focus-visible {
+  outline: 2px solid var(--sub-ink);
+  outline-offset: 2px;
+  border-radius: var(--r-pill);
+}
+.sub-go[aria-disabled='true'] {
+  opacity: 0.72;
+  cursor: progress;
+}
+.sub-go[aria-disabled='true']:active {
+  transform: none;
+}
+
+/* A field no reader meets. */
+.sub-trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* The confirmation stands where the field stood, and comes from where the button was. */
+.sub-done {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+  transform-origin: 100% 50%;
+  transition:
+    opacity var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+.sub-done:focus,
+.sub-done:focus-visible {
+  /* (It takes focus to be announced; it is not a control, so it draws no ring.) */
+  outline: none;
+}
+.sub-tick {
+  flex: none;
+}
+@starting-style {
+  .sub-done {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* What went wrong, by the field. Its place is kept, so the page does not move when it speaks. */
+.sub-say {
+  min-height: 2.7em;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--sub-ink);
+  text-wrap: pretty;
+}
+.sub-said {
+  display: block;
+  transition:
+    opacity var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+@starting-style {
+  .sub-said {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0);
+  }
+}
+/* Sent from the keys: the words change and nothing moves. */
+.sub[data-instant] .sub-done,
+.sub[data-instant] .sub-said {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sub-done,
+  .sub-said {
+    transform: none !important;
+    transition: opacity var(--t-fast) linear;
+  }
+  .sub-go,
+  .sub-go:active {
+    transform: none;
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .sub-field {
+    outline: 1px solid CanvasText;
+  }
+  .sub-field:has(.sub-input:focus-visible) {
+    outline: 2px solid Highlight;
+  }
+}
+
+/* In the home page's ending the reason stands in the small print's line under the field (flight.css: the line about
+   the numbers steps aside for it), on that line's own middle, and takes no room. */
+.sub-compact .sub-say {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  /* (Clear of the feed at the line's right end.) */
+  right: 3.5rem;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  pointer-events: none;
+}
+
+/* On a page that is read the field is a step larger, as the page's other small things are: the page's own body
+   size in the field, a 56 px pill, a 48 px button. */
+.pg-ground .sub {
+  width: min(100%, 30rem);
+  gap: 10px;
+}
+.pg-ground .sub-row {
+  min-height: 56px;
+}
+.pg-ground .sub-field {
+  height: 56px;
+  padding: 4px 4px 4px 22px;
+}
+.pg-ground .sub-input {
+  font-size: var(--pg-body, 1.125rem);
+}
+.pg-ground .sub-go {
+  min-width: 8.75rem;
+  height: 48px;
+  padding: 0 20px;
+  font-size: 1.0625rem;
+}
+.pg-ground .sub-done {
+  min-height: 56px;
+  font-size: clamp(1.0625rem, 0.3vw + 1rem, 1.25rem);
+}
+.pg-ground .sub-say {
+  font-size: 1rem;
+}
+
+/* On a page's two columns (the blog's index: the same two as the post over it): what a subscriber gets at the left,
+   in the type the post's own first sentence is set in, and the field at the right, its left edge on the column the
+   post's words and its way in stand on. The sentence is centred on the field. */
+.sub-split {
+  width: 100%;
+}
+.pg-ground .sub-split {
+  width: 100%;
+}
+.sub-split .sub-hint {
+  max-width: 30ch;
+  font-size: clamp(1.25rem, 0.8vw + 1rem, 1.75rem);
+  font-weight: 520;
+  line-height: 1.26;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+}
+.sub-split .sub-row,
+.sub-split .sub-say {
+  max-width: 30rem;
+}
+@media (min-width: 860px) {
+  .sub-split {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+    column-gap: clamp(32px, 6vw, 120px);
+  }
+  .sub-split .sub-hint {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+  }
+  .sub-split .sub-label {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .sub-split .sub-row {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .sub-split .sub-say {
+    grid-column: 2;
+    grid-row: 3;
+  }
+}
+/* (In one column the sentence stands over the field's name, a little apart from it.) */
+@media (max-width: 859px) {
+  .sub-split .sub-hint {
+    margin-bottom: 10px;
+  }
+}
+
+/* On a phone the ending has little height to give: the pill is the smallest a finger takes. */
+@media (max-width: 719px) {
+  .sub-compact .sub-row {
+    min-height: 44px;
+  }
+  .sub-compact .sub-field {
+    height: 44px;
+    padding: 3px 3px 3px 16px;
+  }
+  .sub-compact .sub-go {
+    height: 38px;
+    min-width: 7.25rem;
+  }
+  .sub-compact .sub-go::before {
+    inset: -3px;
+  }
+  .sub-compact .sub-done {
+    min-height: 44px;
+    font-size: 0.9375rem;
+  }
+  .sub-compact .sub-say {
+    font-size: 0.8125rem;
+  }
+}

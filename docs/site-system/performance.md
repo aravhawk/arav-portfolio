@@ -169,3 +169,12 @@ router 48 kB, 8 kB more) and the site's own (35 kB), the two fonts
 (74 kB), the still (33 to 48 kB), the stylesheets (25 kB), the page
 (12 kB) and the ground's textures (6 kB). That simulates at about
 3.1 s and scores 92 to 93. See `.tools/out/k3/REPORT.md` of the K3 task.
+
+## The newsletter's field adds no request (R1, 2026-11-21)
+
+Its rules are in `home.css` and its script rides in `Ending.tsx`'s
+module, both of which every page already loads: the home page still
+loads 13 scripts and 3 stylesheets, `/blog` 10 and 3 (counted in the
+served HTML, before and after). The route (`/api/subscribe`) is asked
+only when a reader sends the form. See `newsletter.md`.
+

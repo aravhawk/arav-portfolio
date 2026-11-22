@@ -11,7 +11,8 @@ Status: **as built** (K1, 2026-11-20).
 - No em dashes or en dashes. Sentence case.
 - First person for him ("I co-founded"), third person for a project
   ("It switches"). One voice from the first screen to the ending.
-- The home page holds 260 to 300 visible words. `checks.js` in the
+- The home page holds 260 to 300 visible words, and one more: the
+  newsletter field's "Subscribe" (301 as built). `checks.js` in the
   capture tools counts them; adding a word means removing one.
 - Every number is real and sourced
   (`docs/redesign-v4/content-sources.md`); numbers that change are
@@ -87,11 +88,12 @@ Ask the owner before adding a tenth.
 links; recognition; interests; contact), `src/content/kinds.ts` (the
 small labels), `src/components/work/case-data.ts` (what the project
 pages' designed pieces say), `src/components/flight/` (the home
-page's own sentences). The post in `content/posts/` is the owner's
+page's own sentences), `src/lib/subscribe/messages.ts` (what the
+newsletter's field says). The post in `content/posts/` is the owner's
 own writing and is not edited.
 
 Change log: 2026-11-18 first version (orchestrator). 2026-11-20 K1:
 the definitive list, recognition, the story's rules. 2026-11-20 K2: the
 public pull request link names only counted repositories. 2026-11-21 R1:
 no email address anywhere; when the numbers were read is said once, at
-the foot.
+the foot; the newsletter's sentences, the count at 301.

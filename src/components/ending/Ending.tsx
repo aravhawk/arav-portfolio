@@ -6,6 +6,9 @@ import { haptic } from '@/lib/haptics';
 import { Arrow } from '../bits';
 import './ending.css';
 
+// The newsletter's field rides in this module's script (see the note at the head of its file).
+export { SubscribeForm } from '../subscribe/SubscribeForm';
+
 /**
  * The contact row and its small controls. The home page sets them in the
  * last frame of its flight (src/app/page.tsx); inner pages end with the
@@ -26,11 +29,12 @@ const WAYS = [
 ];
 
 /**
- * The ways to reach him: one row of links in one face, none set apart from the rest. `feed`: the row also carries
- * the feed, as its last and quietest word (the home page's ending, which has no footer under it). There is no email
- * address here or anywhere on the site. (The haptics switch is a setting and stands in the nav.)
+ * The ways to reach him: one row of links in one face, none set apart from the rest. There is no email address
+ * here or anywhere on the site. (The feed is a way to follow the writing, not to reach him: the home page's ending
+ * sets it by the newsletter's field, an inner page's footer among the ways round the site. The haptics switch is a
+ * setting and stands in the nav.)
  */
-export function Contact({ feed = false }: { feed?: boolean }) {
+export function Contact() {
   return (
     <ul className="ending-links">
       {WAYS.map((way) => (
@@ -40,13 +44,6 @@ export function Contact({ feed = false }: { feed?: boolean }) {
           </a>
         </li>
       ))}
-      {feed ? (
-        <li>
-          <a className="end-link end-feed" href="/feed.xml">
-            RSS
-          </a>
-        </li>
-      ) : null}
     </ul>
   );
 }
