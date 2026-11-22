@@ -30,7 +30,7 @@
 import { END_AT, SECTIONS, SETTLE_AT, dayAt, stillStops } from './camera';
 import { byId, composed } from './registry';
 import { HERO_SUN } from './moments';
-import { SUN } from './shaders/terrain';
+import { SUN } from './geography';
 
 type V3 = [number, number, number];
 

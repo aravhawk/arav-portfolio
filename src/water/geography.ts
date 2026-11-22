@@ -16,6 +16,9 @@
 
 import { type BedPainter, type Pt, type Rect, pt } from './bed';
 
+/** Where the morning sun stands: bearing from +y toward +x, and height, radians. (The terrain's shader and the sky's hours both read it; it is kept here, with the plan, so that reading the hours does not load shader text.) */
+export const SUN = { az: -0.52, el: 0.088 };
+
 /**
  * How much longer the lake is than the first build's. The lake has to run
  * from under the first camera to a far shore near the horizon, so the

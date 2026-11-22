@@ -25,6 +25,13 @@ import { NAME_ICE } from './name';
 import { BOX_HIT, DEEP_ICE_FEATURES, GLACIER_ICE, SEG_D, SHALLOWS, STATION_COMMON } from './stations';
 import { PANO, SHADE_AZ, WIND } from './terrain';
 import { customSubjects, subjects } from '../registry';
+import { sourceOf } from './subjects';
+
+/** The source of the subject that draws in a named pass, or what stands in for it where no such subject is registered. */
+const passSource = (pass: string, none: string) => {
+  const subject = subjects.find(s => s.pass === pass);
+  return subject ? sourceOf(subject) : none;
+};
 import { F_DEFINES } from '../variants';
 import { AT, BASIN, DELTA, ISLAND, LAKE, LIP, lipY, OUTLET, SHARDS, STREAM, TARN, TARN_BAY, TRIBS, WORLD } from '../world';
 
@@ -769,7 +776,7 @@ vec3 iciclesOn(vec3 col, float along, float dz, float px, float reach);
 vec3 waterlineOn(vec3 col, float z, float g);
 vec3 snowOn(vec3 n, float lump);
 
-${subjects.find(s => s.pass === 'slab')?.shader?.source ?? "float gSlabSoft = 0.0;"}
+${passSource('slab', "float gSlabSoft = 0.0;")}
 /* ---------- the bed ---------- */
 
 float bedShore;
@@ -1263,9 +1270,9 @@ vec3 cutFoot(vec3 col, vec2 pw, vec3 dir, vec2 slope, float foot, float k) {
 }
 
 #endif
-${subjects.find(s => s.pass === 'confluence')?.shader?.source ?? ''}
+${passSource('confluence', '')}
 #if defined(F_POOL)
-${subjects.find(s => s.pass === 'pool')?.shader?.source ?? ''}
+${passSource('pool', '')}
 #else
 // (No pool in this variant of the pass: nowhere is inside its reach.)
 #define poolAt(p) 0.0
@@ -2487,29 +2494,29 @@ float gNmCov = 0.0;
 #endif
 ${SHALLOWS}
 #ifdef F_COLS
-${subjects.find(s => s.pass === 'columns')?.shader?.source ?? ''}
+${passSource('columns', '')}
 #endif
 #if defined(F_DAM) || defined(F_LAT) || defined(F_CANYON)
 ${BOX_HIT}
 #endif
 #ifdef F_DAM
-${subjects.find(s => s.pass === 'dam')?.shader?.source ?? ''}
+${passSource('dam', '')}
 #endif
 #if defined(F_LAT) || defined(F_CANYON)
 ${SEG_D}
 #endif
 #ifdef F_LAT
-${subjects.find(s => s.pass === 'lattice')?.shader?.source ?? ''}
+${passSource('lattice', '')}
 #endif
 #ifdef F_CANYON
-${subjects.find(s => s.pass === 'canyon')?.shader?.source ?? ''}
+${passSource('canyon', '')}
 #endif
 #ifdef F_SHARDS
-${subjects.find(s => s.pass === 'shards')?.shader?.source ?? ''}
+${passSource('shards', '')}
 #endif
 
 ${customSubjects.map(s => `#ifdef ${s.define}
-${s.shader.source}
+${sourceOf(s)}
 #endif`).join('\n')}
 void main() {
   skyKey();

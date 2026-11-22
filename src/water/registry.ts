@@ -1,8 +1,5 @@
-import { BASIN_OBJECT, CONFLUENCE, ROCK_POOL, TARN_OBJECT } from './shaders/river-stations';
 import { paintLake, paintReach, paintBasin, paintConfluence, paintPool, paintRing, paintTarn, paintShallows, paintDam, paintLattice, paintCanyon, paintDelta } from './geography';
 import type { BedPainter } from './bed';
-import { COLUMNS, DAM_ICE, DAM_WATER, LATTICE_ICE, CANYON_ICE } from './shaders/stations';
-import { RING_ICE } from './shaders/ring';
 import { boxInView, projectPoint, type Box, type Rect } from './projection';
 import type { Basis, Key, Move, Pose, V3 } from './camera';
 import { AT, BENDS, BOARD_DEPTH, FACE, RING, SHEET, boardSpan, sheetCols, CANYON, COLS, CONF_Y, DAM, DY, LATTICE, LIP, POOL, SHARDS, SLAB, TARN, TARN_BAY, lipY } from './geography';
@@ -159,8 +156,12 @@ export interface Subject {
   wholeWhen?: (cam: Basis) => boolean;
   combine?: boolean;
   silhouette?: (cam: Basis, aspect: number) => Rect | null;
-  /** A named GLSL function. Custom objects receive (colour, world ray, scroll progress). */
-  shader: { source: string; fn: string };
+  /**
+   * A named GLSL function. Custom objects receive (colour, world ray, scroll progress). Its source is registered
+   * under the same name in shaders/subjects.ts, which only the renderer loads: this file holds no shader text, so
+   * what reads the plan (the sound, the pages) does not carry it.
+   */
+  shader: { fn: string };
   /** Existing objects whose rays also affect the ground, media or water pass. */
   pass?: 'slab' | 'confluence' | 'pool' | 'shards' | 'columns' | 'dam' | 'lattice' | 'canyon';
   proximity?: { lane: 0 | 1 | 2 | 3; x: number; y: number; from: number; to: number };
@@ -341,7 +342,7 @@ const INFINIVIEW = {
       silhouette: (cam, aspect) => {
         const frame = slabInFrame(cam, aspect);
         return frame.behind === 0 ? frame.box : null;
-      }, shader: { source: BASIN_OBJECT, fn: 'slabHit' } },
+      }, shader: { fn: 'slabHit' } },
     project: 'infiniview',
     hold: { name: 'Infiniview' },
     camera: ({ stop, end, upright, move, holdKeys }) => upright ? [
@@ -361,7 +362,7 @@ const INFINIVIEW = {
 const UPSTREAM = {
     steps: { eyebrow: -1.3 },
     id: 'upstream', paint: paintConfluence, rail: 'Open source', length: 2.8, offset: 1.25, kind: 'figure', layout: 'contributions',
-    subject: { bit: 4, define: 'F_CONF', boxes: [CONF_RIVER_BOX], pass: 'confluence', wholeWhen: confNearCam, combine: true, shader: { source: CONFLUENCE, fn: 'confLift' } },
+    subject: { bit: 4, define: 'F_CONF', boxes: [CONF_RIVER_BOX], pass: 'confluence', wholeWhen: confNearCam, combine: true, shader: { fn: 'confLift' } },
     project: 'open-source',
     hold: { name: 'Upstream' },
     camera: ({ start, stop, aspect, upright, band, move, holdKeys }) => upright ? [
@@ -379,7 +380,7 @@ const UPSTREAM = {
   } as const satisfies Definition;
 const BENCH = {
     id: 'bench', paint: paintPool, rail: 'Kilo Bench', length: 2.6, offset: 1.15, kind: 'title', layout: 'table',
-    subject: { bit: 8, define: 'F_POOL', boxes: [POOL_BOX], pass: 'pool', wholeWhen: poolNearCam, combine: true, shader: { source: ROCK_POOL, fn: 'rockHit' } },
+    subject: { bit: 8, define: 'F_POOL', boxes: [POOL_BOX], pass: 'pool', wholeWhen: poolNearCam, combine: true, shader: { fn: 'rockHit' } },
     project: 'kilo-bench',
     hold: { name: 'Kilo Bench' },
     camera: ({ start, stop, aspect, upright, move, holdKeys }) => upright ? [
@@ -395,7 +396,7 @@ const BENCH = {
   } as const satisfies Definition;
 const BRIDGE = {
     id: 'bridge', paint: paintTarn, rail: 'Agent Bridge', length: 2.8, offset: 1.2, kind: 'title', layout: 'film',
-    subject: { bit: 16, define: 'F_SHARDS', boxes: [SHARDS_BOX], pass: 'shards', visible: tarnNear, shader: { source: TARN_OBJECT, fn: 'shardHit' } },
+    subject: { bit: 16, define: 'F_SHARDS', boxes: [SHARDS_BOX], pass: 'shards', visible: tarnNear, shader: { fn: 'shardHit' } },
     project: 'agent-bridge',
     hold: { name: 'Agent Bridge' },
     camera: ({ start, stop, end, aspect, upright, band, move, holdKeys }) => upright ? [
@@ -417,7 +418,7 @@ const BRIDGE = {
 const MODELS = {
     steps: { eyebrow: -1.3 },
     id: 'models', paint: paintShallows, rail: 'Open models', length: 2.8, offset: 1.2, kind: 'figure', layout: 'downloads',
-    subject: { bit: 32, define: 'F_COLS', boxes: [COLS_BOX, COLS_DEEP], pass: 'columns', proximity: { lane: 0, x: 1340, y: COLS.y, from: 1750, to: 2350 }, shader: { source: COLUMNS, fn: 'columns' } },
+    subject: { bit: 32, define: 'F_COLS', boxes: [COLS_BOX, COLS_DEEP], pass: 'columns', proximity: { lane: 0, x: 1340, y: COLS.y, from: 1750, to: 2350 }, shader: { fn: 'columns' } },
     project: 'ollama',
     bandLift: 0.1,
     hold: { name: 'Open models' },
@@ -441,7 +442,7 @@ const MODELS = {
 const FORK = {
     steps: { eyebrow: -1.3, title: -0.45, line: -0.32, meta: -0.2 },
     id: 'fork', paint: paintDam, rail: 'cc-switch', length: 2.8, offset: 1.2, kind: 'title', layout: 'switch',
-    subject: { bit: 64, define: 'F_DAM', boxes: [DAM_BOX], pass: 'dam', proximity: { lane: 1, x: 1300, y: DAM.y, from: 3300, to: 4000 }, shader: { source: [DAM_ICE, DAM_WATER].join('\n'), fn: 'dam' } },
+    subject: { bit: 64, define: 'F_DAM', boxes: [DAM_BOX], pass: 'dam', proximity: { lane: 1, x: 1300, y: DAM.y, from: 3300, to: 4000 }, shader: { fn: 'dam' } },
     project: 'cc-switch',
     hold: { name: 'cc-switch', before: 0.45 },
     camera: ({ start, stop, end, upright, move, holdKeys }) => upright ? [
@@ -463,7 +464,7 @@ const FORK = {
   } as const satisfies Definition;
 const LATTICE_POOL = {
     id: 'lattice', paint: paintLattice, rail: 'TensorPoW', length: 2.6, offset: 1.15, kind: 'title', layout: 'pool',
-    subject: { bit: 128, define: 'F_LAT', boxes: [LAT_BOX], pass: 'lattice', proximity: { lane: 2, x: LATTICE.x, y: LATTICE.y, from: 2300, to: 2900 }, shader: { source: LATTICE_ICE, fn: 'lattice' } },
+    subject: { bit: 128, define: 'F_LAT', boxes: [LAT_BOX], pass: 'lattice', proximity: { lane: 2, x: LATTICE.x, y: LATTICE.y, from: 2300, to: 2900 }, shader: { fn: 'lattice' } },
     project: 'tensorpow',
     bandLift: 0.05,
     hold: { name: 'TensorPoW' },
@@ -480,7 +481,7 @@ const LATTICE_POOL = {
 const CANYON_RUN = {
     steps: { eyebrow: -2.15, leave: 0.75 },
     id: 'canyon', paint: paintCanyon, rail: 'RydAR', length: 3.6, offset: 2.2, kind: 'title', layout: 'wall',
-    subject: { bit: 256, define: 'F_CANYON', boxes: [CANYON_BOX], pass: 'canyon', proximity: { lane: 3, x: 1700, y: (CANYON.y0 + CANYON.y1) / 2, from: 3700, to: 4600 }, shader: { source: CANYON_ICE, fn: 'canyon' } },
+    subject: { bit: 256, define: 'F_CANYON', boxes: [CANYON_BOX], pass: 'canyon', proximity: { lane: 3, x: 1700, y: (CANYON.y0 + CANYON.y1) / 2, from: 3700, to: 4600 }, shader: { fn: 'canyon' } },
     project: 'rydar',
     hold: { name: 'RydAR', after: 0.6 },
     camera: ({ start, upright, g }) => upright ? [
@@ -517,7 +518,7 @@ const RING_BOX: Box = [
 ];
 const AROUND = {
   id: 'around', paint: paintRing, rail: 'Ask Around', length: 2.6, offset: 1.15, kind: 'title',
-  subject: { bit: 4096, define: 'F_RING', reach: 3300, boxes: [RING_BOX], shader: { source: RING_ICE, fn: 'ringIce' } },
+  subject: { bit: 4096, define: 'F_RING', reach: 3300, boxes: [RING_BOX], shader: { fn: 'ringIce' } },
   project: 'ask-around',
   hold: { name: 'Ask Around' },
   camera: ({ start, stop, end, upright, move, holdKeys }) => upright ? [

@@ -5,6 +5,8 @@
  * frame through a full mip chain with anisotropic filtering.
  */
 
+import { SUN } from '../geography';
+
 const HEAD = `#version 300 es
 precision highp float;
 in vec2 vUv;
@@ -121,8 +123,6 @@ void main() {
   o = vec4(g, ha, hb);
 }`;
 
-/** Where the morning sun stands: bearing from +y toward +x, and height, radians. */
-export const SUN = { az: -0.52, el: 0.088 };
 /** What the panorama of the ranges covers: bearings either side of +y, and elevations from the horizon up. */
 /** (On a screen that can show it the panorama is drawn finer than a pixel of the picture; elsewhere at the smaller size.) */
 export const PANO = { az: 1.75, el: 0.11, w: 8192, h: 384, wSmall: 4096, hSmall: 256 };
