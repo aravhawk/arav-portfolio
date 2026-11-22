@@ -980,6 +980,7 @@ export class FlightEngine extends WaterEngine {
   private every = 1;
   private sinceDrawn = 0;
   private lastCam: { pos: V3; f: V3 } | null = null;
+  private flow = 0;
   private lastHour: number | undefined = undefined;
   private lastBeat = 0;
   private beats: number[] = [];
@@ -1036,6 +1037,7 @@ export class FlightEngine extends WaterEngine {
     if (!this.paced || this.quiet) {
       this.scaleNow = h.scale ?? 1;
       this.lastCam = null;
+      this.flow = 0;
       return true;
     }
     // How fast the picture moves, in screen heights a second: the eye's own travel against how far off the near
@@ -1051,8 +1053,12 @@ export class FlightEngine extends WaterEngine {
       flow = ((dp / Math.max(ground, 40) + df) / (2 * cam.tan)) / (ms / 1000);
     }
     this.lastCam = { pos: [cam.pos[0], cam.pos[1], cam.pos[2]], f: [cam.f[0], cam.f[1], cam.f[2]] };
+    // (Taken over a twentieth of a second, not one interval: the page scrolls in whole pixels, and as a scroll dies
+    // away a one-pixel step is twice the speed on a display with half the interval. Measured at 60 and 120 Hz:
+    // without this the camera was called travelling a third of a second longer at 120.)
+    this.flow += (flow - this.flow) * (1 - Math.exp(-Math.max(0, Math.min(ms, 100)) / 50));
     const was = this.trip.on;
-    this.trip = travelling(this.trip, flow, now);
+    this.trip = travelling(this.trip, this.flow, now);
     const moving = h.travel ?? this.trip.on;
     const input = {
       base: this.base,
