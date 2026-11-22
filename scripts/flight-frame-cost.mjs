@@ -3,7 +3,7 @@
  * What a frame of the flight costs the GPU, by scroll position.
  *
  *   NODE_PATH=<playwright modules> node scripts/flight-frame-cost.mjs <url> <output directory>
- *     [--governed] [--stops light:1.5,dark:28] [--repeat 7] [--size wide,tall] [--theme light,dark]
+ *     [--governed] [--stops light:1.5,dark:28] [--repeat 7] [--step 0.25] [--size wide,tall] [--theme light,dark]
  *     [--base 8.33] [--speed 0.5] [--lean 0] [--map src/water/cost-map.json]
  *
  * Each row times one complete engine callback (simulation, scene, the glow)
@@ -26,7 +26,10 @@
  * is to be read against this GPU's share of that display's budget.
  *
  * `--lean 1` or `2` pins that step of leaner shading in place of full
- * shading (what a step saves). `--stops` times only the named stops, `--repeat` times each that often
+ * shading (what a step saves). `--step` is the distance between stops in
+ * screens (the map needs 0.25). A single timed frame after a quiet spell
+ * reads long, because the GPU's clock has dropped: for the governed survey
+ * use `--repeat 3` or more. `--stops` times only the named stops, `--repeat` times each that often
  * and keeps the median (for comparing two builds at the dearest places).
  */
 import { createRequire } from 'node:module';
@@ -51,6 +54,7 @@ const base = arg('base', '');
 const speed = arg('speed', '');
 const mapPath = arg('map', '');
 const lean = Number(arg('lean', '0'));
+const step = Number(arg('step', '0.25'));
 const SIZES = { wide: [1728, 1117], tall: [390, 844] };
 
 mkdirSync(directory, { recursive: true });
@@ -117,7 +121,7 @@ try {
       await page.waitForFunction(() => window.__flight && document.documentElement.dataset.picture !== undefined, null, { timeout: 120000 });
       await page.waitForTimeout(2500);
       const end = await page.evaluate(() => (document.documentElement.scrollHeight - innerHeight) / window.__flight.state().unit);
-      const stops = only.length ? only.filter((x) => x[0] === colorScheme).map((x) => Number(x[1])) : Array.from({ length: Math.floor(end / 0.25) + 1 }, (_, i) => i * 0.25);
+      const stops = only.length ? only.filter((x) => x[0] === colorScheme).map((x) => Number(x[1])) : Array.from({ length: Math.floor(end / step) + 1 }, (_, i) => i * step);
       if (governed && (base || speed)) {
         await page.evaluate(
           ([b, k]) => {
@@ -184,7 +188,7 @@ try {
   await browser.close();
 }
 
-if (mapPath && !governed && !only.length && !lean) {
+if (mapPath && !governed && !only.length && !lean && step === 0.25) {
   const rows = readFileSync(table, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
   const map = { step: 0.25, gpu: 'Apple M4 (10 GPU cores)', wide: {}, tall: {} };
   for (const r of rows) {

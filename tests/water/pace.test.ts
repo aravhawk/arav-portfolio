@@ -30,7 +30,8 @@ describe('the pace', () => {
       expect(p.scale).toBe(1);
       expect(p.lean).toBe(0);
       // Every interval where it fits one, every other where it does not: never slower than 60 a second.
-      expect(p.every).toBe(cost(M5(c), 1, 0) <= REST_SHARE * (1000 / 120) ? 1 : 2);
+      expect(p.every).toBe(cost(M5(c), 1, 0) <= TRAVEL_SHARE * (1000 / 120) ? 1 : 2);
+      expect(p.ms).toBeLessThanOrEqual(REST_SHARE * (1000 / 60));
     }
   });
 

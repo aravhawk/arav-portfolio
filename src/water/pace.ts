@@ -49,8 +49,17 @@ export const REST_FLOOR = { desktop: 0.8, phone: 0.6 } as const;
 export const LEAN_KEEPS = [1, 0.99, 0.93] as const;
 /** What a piece costs when a stretch's broad variant draws it instead of its own (see coverFlight). */
 export const BROAD_COSTS = 1.4;
-/** The copy and the sharpening pass a lower resolution adds, ms per megapixel of the screen on the reference GPU. */
-export const RECONSTRUCT_MS = 0.19;
+/**
+ * The copy and the sharpening pass a lower resolution adds, ms per megapixel of the screen on the reference GPU
+ * (measured at 7.7 megapixels: the copy 0.27 ms, the pass 0.5).
+ */
+export const RECONSTRUCT_MS = 0.1;
+/**
+ * The part of a frame that does not shrink with the scene: the simulation's passes and the glow's, ms on the
+ * reference GPU, and ms more per megapixel of the screen. (Measured: a scene at 0.7 of the screen's side is half
+ * the pixels and 56 to 60 percent of the frame.)
+ */
+export const FIXED_MS = { flat: 1.0, perMpx: 0.03 } as const;
 /** A resolution this near the screen's is the screen's: the last step is not worth a pass. */
 export const NEAR_FULL = 0.94;
 
@@ -91,10 +100,16 @@ export interface Pace {
   ms: number;
 }
 
+/** A full frame's cost here, ms, as the part that does not shrink with the scene and the part that does. */
+function parts(i: PaceInput, lean: number): { fixed: number; scene: number } {
+  const full = i.speed * i.cost * i.mpx;
+  const fixed = Math.min(0.6 * full, i.speed * (FIXED_MS.flat + FIXED_MS.perMpx * i.mpx));
+  return { fixed, scene: (full - fixed) * (i.broad ? BROAD_COSTS : 1) * LEAN_KEEPS[lean] };
+}
 /** What a frame is expected to cost here at a resolution and a shading step, ms. */
 export function expect(i: PaceInput, scale: number, lean: number): number {
-  const full = i.speed * i.cost * i.mpx * (i.broad ? BROAD_COSTS : 1) * LEAN_KEEPS[lean];
-  return full * scale * scale + (scale < 1 ? i.speed * RECONSTRUCT_MS * i.mpx : 0);
+  const p = parts(i, lean);
+  return p.fixed + p.scene * scale * scale + (scale < 1 ? i.speed * RECONSTRUCT_MS * i.mpx : 0);
 }
 
 /** The pace while the camera travels. */
@@ -106,8 +121,8 @@ export function travelPace(i: PaceInput): Pace {
   const over = i.speed * RECONSTRUCT_MS * i.mpx;
   const fit = (lean: number) => {
     if (expect(i, 1, lean) <= room) return 1;
-    const full = i.speed * i.cost * i.mpx * (i.broad ? BROAD_COSTS : 1) * LEAN_KEEPS[lean];
-    return Math.sqrt(Math.max(room - over, 0.1 * room) / full);
+    const p = parts(i, lean);
+    return Math.sqrt(Math.max(room - over - p.fixed, 0.1 * room) / p.scene);
   };
   let lean = 0;
   let scale = fit(0);
@@ -116,7 +131,8 @@ export function travelPace(i: PaceInput): Pace {
   const late = (l: number) => expect(i, Math.max(floor, Math.min(1, fit(l))), l) > (i.phone ? room : 0.92 * i.base * every);
   while (lean < 2 && scale < floor && late(lean)) scale = fit(++lean);
   scale = Math.min(1, Math.max(floor, scale));
-  if (scale >= NEAR_FULL) scale = 1;
+  // (A resolution that near the screen's is the screen's, where the whole frame is then no more than a tenth over.)
+  if (scale >= NEAR_FULL) scale = expect(i, 1, lean) <= 1.1 * room ? 1 : NEAR_FULL - 0.02;
   return { scale, every, lean, ms: expect(i, scale, lean) };
 }
 
@@ -125,12 +141,14 @@ export function restPace(i: PaceInput): Pace {
   const floor = i.phone ? REST_FLOOR.phone : REST_FLOOR.desktop;
   // The scene is never drawn less often than 60 a second while a full frame fits that.
   const slowest = Math.max(1, Math.round(16.7 / i.base));
-  const room = (every: number) => REST_SHARE * i.base * every;
+  // (On a fast display a frame every interval has the margin a travelling frame has: 7 ms of an 8.3 ms interval is a
+  // frame that is late half the time. Every other interval, and on a 60 Hz display, it has the larger share.)
+  const room = (every: number) => (every === 1 && slowest > 1 ? TRAVEL_SHARE : REST_SHARE) * i.base * every;
   for (let every = 1; every <= slowest; every++) if (expect(i, 1, 0) <= room(every)) return { scale: 1, every, lean: 0, ms: expect(i, 1, 0) };
   for (const lean of [1, 2]) if (expect(i, 1, lean) <= room(slowest)) return { scale: 1, every: slowest, lean, ms: expect(i, 1, lean) };
-  const full = expect(i, 1, 2);
+  const p = parts(i, 2);
   const over = i.speed * RECONSTRUCT_MS * i.mpx;
-  let scale = Math.sqrt(Math.max(room(slowest) - over, 0.1 * room(slowest)) / full);
+  let scale = Math.sqrt(Math.max(room(slowest) - over - p.fixed, 0.1 * room(slowest)) / p.scene);
   let every = slowest;
   if (scale < floor) {
     scale = floor;

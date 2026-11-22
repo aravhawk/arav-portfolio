@@ -989,7 +989,8 @@ export class FlightEngine extends WaterEngine {
    * not), so the display's own rate is known before the picture loads it: the fastest steady median seen.
    */
   beat(now: number) {
-    if (now === this.lastBeat) return 0;
+    // (A frame's clock never runs back: a callback handed an older time than the last is not an interval.)
+    if (now <= this.lastBeat) return 0;
     const ms = this.lastBeat ? now - this.lastBeat : 0;
     this.lastBeat = now;
     if (ms <= 0 || ms > 250) return ms;
@@ -1057,7 +1058,7 @@ export class FlightEngine extends WaterEngine {
     const want = moving ? p.travel : p.rest;
     if (!this.leanHeld) this.lean = Math.max(p.travel.lean, p.rest.lean);
     this.every = h.every ?? want.every;
-    this.scaleNow = h.scale ?? easeScale(this.scaleNow, want.scale, Math.min(ms, 100) / 1000);
+    this.scaleNow = h.scale ?? easeScale(this.scaleNow, want.scale, Math.max(0, Math.min(ms, 100)) / 1000);
     // A frame at rest may be shown for more than one interval. The first frame of travel never waits, nor does one
     // something else has asked for (a press, a theme, a program that has just drawn for the first time).
     if (forced || (moving && !was) || ++this.sinceDrawn >= this.every) {
@@ -1498,7 +1499,7 @@ export class FlightEngine extends WaterEngine {
     const gl = this.gl;
     if (!this.ready || !this.bedA || !this.bedB || !this.wave || gl.isContextLost()) return;
 
-    const beat = this.beat(now) || (this.last ? now - this.last : 16.7);
+    const beat = Math.max(0, this.beat(now) || (this.last ? now - this.last : 16.7));
     if (beat < 250) this.frameMs += (beat - this.frameMs) * 0.1;
     if (this.frameLog && beat < 1000) this.frameLog.push(beat);
     this.govern(beat);
@@ -1508,7 +1509,7 @@ export class FlightEngine extends WaterEngine {
       const under = groundUnder(cam, 0.5, 0.9, aspect);
       if (!this.pace(now, beat, cam, aspect, at, under ? under.t : 1e4, this.dirty)) return;
     }
-    let dt = this.last ? (now - this.last) / 1000 : 1 / 60;
+    let dt = this.last ? Math.max(0, now - this.last) / 1000 : 1 / 60;
     this.last = now;
     dt = Math.min(dt, 1 / 20);
 
