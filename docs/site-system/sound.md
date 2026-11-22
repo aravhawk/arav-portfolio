@@ -48,7 +48,16 @@ of `src/components/sound.css`.
 - **True from the first paint.** `boot` in `layout.tsx` writes
   `data-sound` before anything is drawn; the control is drawn from it by
   CSS alone. For a reader who had muted, a one-line script after the
-  button sets its state for assistive technology as it is parsed.
+  button sets its state for assistive technology as it is parsed. Its
+  title (the sentence shown when it is pointed at) comes with its
+  script.
+- **Its markup is three empty bars.** The speaker and the cross are
+  drawn in `sound.css` (shapes cut from the mark's colour), the status
+  line is made by the script, and the script after the button is one
+  short line: the nav is in every page, and `/work`'s HTML is within a
+  byte of what a new connection sends before it waits
+  (`performance.md`). With the speaker and the cross in the markup,
+  `/work` lost two points on a phone.
 - **It never says "playing" while the browser is holding sound back:**
   `data-sound-live` is set only when the audio context's state is
   `running` and the sound is built.

@@ -32,8 +32,8 @@ old one.
 6. **First visit**: no held frame while moving.
 7. **Words**: `scripts/legibility-test.mjs`, `scripts/words-test.mjs`,
    `scripts/titles-test.mjs` pass at 390, 768, 1440 (and the wide
-   ones); nothing clipped or covered; 200 words or fewer on the home
-   page; copy follows `copy.md`.
+   ones); nothing clipped or covered; the home page's words within the
+   count `copy.md` gives (`checks.js`); copy follows `copy.md`.
 8. **Inner pages**: `scripts/overlap-test.mjs`, `scripts/fill-test.mjs`
    on every page, **a blog post and the blog index included**, at
    320, 390, 768 and 1440 in both themes. Lighthouse on the home
@@ -50,6 +50,13 @@ old one.
    a state that changes; a link that writes to an address fails). Then the same with `--noscript`: every link
    on the pages with scripts off. It takes about ten minutes; add a
    route with `--routes` when a page gains a control of a new kind.
+8b. **Sound**: `scripts/sound-visit.mjs` (first and second visits in
+   Chromium, WebKit and Firefox: when the sound starts, what the
+   control says, nothing in a console), `scripts/sound-load.mjs` (the
+   sound's script is not asked for before the load ends or the largest
+   paint, and never for a muted reader), and after a change to the mix
+   `scripts/audio-check.mjs --only walk,walk-night,walk-lean,power-start,power-mute,power-mute-hero,power-hidden`
+   (about -23 LUFS, no click). See `sound.md`.
 9. **Code**: `pnpm lint`, `pnpm exec tsc --noEmit`,
    `pnpm exec vitest run`, `pnpm build`; no console errors; pages read
    with scripts off.

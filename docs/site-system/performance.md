@@ -178,3 +178,20 @@ loads 13 scripts and 3 stylesheets, `/blog` 10 and 3 (counted in the
 served HTML, before and after). The route (`/api/subscribe`) is asked
 only when a reader sends the form. See `newsletter.md`.
 
+## An inner page's HTML fits a new connection's first round (R1, 2026-11-21)
+
+A new connection sends about 14.6 kB before it waits for the reader's
+side to answer, and Lighthouse's phone preset charges a document over
+that with one more round trip on its first paint and its largest.
+`/work` is the heaviest page: 14,558 bytes on the wire in yesterday's
+build (14,040 of gzipped HTML and its headers). 250 bytes more of nav
+markup (the sound control's speaker and cross as SVG, a longer script
+after it) put it at 14,807 and took `/work` from 92 to 90 on a phone.
+The control's shapes are now drawn in CSS and `/work` is at 14,039
+bytes of HTML again.
+
+So: anything added to the nav, the footer or the root layout is added
+to every page. Count the gzipped HTML of `/work` before and after
+(`curl -s -o /dev/null -w '%{size_download}' -H 'Accept-Encoding: gzip'
+<base>/work`), and put shapes in CSS, not in markup.
+

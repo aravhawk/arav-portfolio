@@ -54,18 +54,30 @@ html:not([data-scripted]) .nav-sound {
   height: 14px;
   transition: opacity var(--t-sound) var(--ease-out);
 }
-.nav-sound-cone {
+/* The speaker and the cross are the mark's two pseudo-elements: each a shape cut out of the mark's own colour (so
+   the page's markup carries neither; it is in every page). The speaker is the one the control has always had. */
+.nav-sound-mark::before,
+.nav-sound-mark::after {
+  content: '';
   position: absolute;
+  background: currentColor;
+  -webkit-mask: var(--shape) center / 100% 100% no-repeat;
+  mask: var(--shape) center / 100% 100% no-repeat;
+}
+.nav-sound-mark::before {
+  --shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'%3E%3Cpath d='M0.6 4.1h2.1L6.9 0.9a0.4 0.4 0 0 1 0.6 0.3v9.6a0.4 0.4 0 0 1-0.6 0.3L2.7 7.9H0.6a0.6 0.6 0 0 1-0.6-0.6V4.7a0.6 0.6 0 0 1 0.6-0.6z'/%3E%3C/svg%3E");
   top: 1px;
   left: 0;
-  display: block;
+  width: 8px;
+  height: 12px;
 }
 /* The cross, in the bars' place. */
-.nav-sound-cross {
-  position: absolute;
+.nav-sound-mark::after {
+  --shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M1 1l6 6M7 1L1 7'/%3E%3C/svg%3E");
   top: 3px;
   left: 12px;
-  display: block;
+  width: 8px;
+  height: 8px;
   opacity: 0;
   transition: opacity var(--t-sound) var(--ease-out);
 }
@@ -78,14 +90,14 @@ html:not([data-scripted]) .nav-sound {
   opacity: 0.42;
   transition: opacity var(--t-sound) var(--ease-out);
 }
-.nav-sound-mark i:nth-of-type(1) {
+.nav-sound-mark i:nth-child(1) {
   left: 11px;
   top: 4px;
   height: 6px;
   --lo: 0.5;
   animation-duration: 0.9s;
 }
-.nav-sound-mark i:nth-of-type(2) {
+.nav-sound-mark i:nth-child(2) {
   left: 15px;
   top: 1px;
   height: 12px;
@@ -93,7 +105,7 @@ html:not([data-scripted]) .nav-sound {
   animation-duration: 1.25s;
   animation-delay: -0.4s;
 }
-.nav-sound-mark i:nth-of-type(3) {
+.nav-sound-mark i:nth-child(3) {
   left: 19px;
   top: 3px;
   height: 8px;
@@ -126,7 +138,7 @@ html[data-sound='off'] .nav-sound-mark {
 html[data-sound='off'] .nav-sound-mark i {
   opacity: 0;
 }
-html[data-sound='off'] .nav-sound-cross {
+html[data-sound='off'] .nav-sound-mark::after {
   opacity: 1;
 }
 @media (hover: hover) and (pointer: fine) {
@@ -138,7 +150,7 @@ html[data-sound='off'] .nav-sound-cross {
 /* Changed from the keyboard, it is simply in its new state. */
 .nav-sound[data-instant],
 .nav-sound[data-instant] .nav-sound-mark,
-.nav-sound[data-instant] .nav-sound-cross,
+.nav-sound[data-instant] .nav-sound-mark::after,
 .nav-sound[data-instant] .nav-sound-mark i {
   transition: none;
 }
@@ -147,6 +159,11 @@ html[data-sound='off'] .nav-sound-cross {
 @media (forced-colors: active) {
   .nav-sound {
     color: ButtonText;
+  }
+  .nav-sound-mark::before,
+  .nav-sound-mark::after,
+  .nav-sound-mark i {
+    background: ButtonText;
   }
 }
 
@@ -196,7 +213,7 @@ html[data-sound='off'] .nav-sound-cross {
     transition: none;
   }
   .nav-sound-mark,
-  .nav-sound-cross,
+  .nav-sound-mark::after,
   .nav-sound-mark i {
     transition-timing-function: linear;
   }

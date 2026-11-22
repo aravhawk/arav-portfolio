@@ -80,5 +80,23 @@ Each of these cost time on this build.
   `'use client'`: it is exported through `Ending.tsx`, whose script
   every page loads. Each page loads the scripts and stylesheets it did
   without the field (count the tags in the served HTML).
+- **A request made between the load and the largest paint is charged
+  to that paint.** A page's largest picture is painted a frame or more
+  after its `load` event. The sound's script was first asked for at the
+  first idle moment after the load, and on `/work` that was 6 ms before
+  the picture's paint. It now waits a second more
+  (`SoundToggle.tsx`); `scripts/sound-load.mjs` fails if it is early.
+- **A test browser may count a wheel as the reader's act.** Chrome,
+  Safari and Firefox do not let sound start on a scroll. The WebKit and
+  Firefox builds Playwright drives do count the wheel it sends. Ask the
+  browser (`navigator.userActivation`) and hold the page to its answer,
+  as `scripts/sound-visit.mjs` does; do not write the test to a rule
+  the test browser does not keep.
+- **A state drawn from `<html>` is right at the first paint; a state
+  React writes is right after hydration.** The theme switch and the
+  sound control are drawn by CSS from `data-theme` and `data-sound`,
+  which the page's first script sets. What assistive technology is told
+  (`aria-checked`) comes with React, so the sound control has a
+  one-line script after it for a reader who had muted.
 
-Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links; three from the newsletter's field.
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the dead links; three from the newsletter's field; three from the sound.

@@ -6,8 +6,8 @@
 // production server up at `base` (default http://localhost:3184). It reads:
 //
 //   every file under `.next/` and `public/`, whatever its kind, as bytes
-//   every served route: each page of the sitemap and a page that does not exist, as HTML and as the data a link
-//   fetches ahead; the feed, the sitemap, robots.txt; every share card and icon a page names; every script and
+//   every served route: each page of the sitemap, each other page the build rendered and a page that does not
+//   exist, as HTML and as the data a link fetches ahead; the feed, the sitemap, robots.txt; every share card and icon a page names; every script and
 //   stylesheet a page loads
 //
 // and looks, in each, for his address (plain, and with its sign written as a URL, an HTML entity or a script escape),
@@ -108,6 +108,13 @@ const local = (url) => {
 const sitemap = (await get('/sitemap.xml')).buf.toString('utf8');
 const pages = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
 for (const fixed of ['/', '/work', '/blog']) if (!pages.includes(fixed)) pages.push(fixed);
+// (And every page the build rendered that the sitemap leaves out: the newsletter's answer pages are not indexed.)
+try {
+  const built = JSON.parse(readFileSync(join(root, '.next', 'prerender-manifest.json'), 'utf8'));
+  for (const route of Object.keys(built.routes ?? {})) if (!/\.[a-z0-9]+$|opengraph-image|apple-icon|^\/_/.test(route) && !pages.includes(route)) pages.push(route);
+} catch {
+  /* no manifest: the sitemap's pages */
+}
 pages.push('/a-page-that-does-not-exist');
 for (const path of ['/feed.xml', '/robots.txt', '/icon.svg', '/apple-icon', '/favicon.ico', '/opengraph-image', '/work/opengraph-image', '/blog/opengraph-image']) await get(path);
 for (const page of pages) {

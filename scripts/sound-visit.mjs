@@ -150,6 +150,9 @@ for (const name of browsers) {
   const waiting = (r) => r.choice === 'on' && !r.playing && /^switch Sound true \| Sound is on and starts/.test(r.control);
   const playing = (r) => r.choice === 'on' && r.playing && r.state === 'running' && r.level > 0.9 && r.control === 'switch Sound true | Sound is on. Mute (M)';
   const muted = (r) => r.choice === 'off' && !r.playing && (r.level === null || r.level === 0) && /^switch Sound false \| Sound is muted/.test(r.control);
+  // (At the first paint the control has its role, its name and its state, drawn and said; its title comes with its script.)
+  const waitingFirst = (r) => r.choice === 'on' && !r.playing && r.control.startsWith('switch Sound true');
+  const mutedFirst = (r) => r.choice === 'off' && !r.playing && r.control.startsWith('switch Sound false');
   const must = (ok, msg) => (ok ? [] : [msg]);
   const spot = { x: 700, y: 520 };
 
@@ -167,7 +170,7 @@ for (const name of browsers) {
     r.counted = counted;
     return [r];
   }, ({ first, before, after }) => [
-    ...must(waiting(first) && waiting(before), 'not on-and-waiting before'),
+    ...must(waitingFirst(first) && waiting(before), 'not on-and-waiting before'),
     ...must(before.fetched > 0, 'the script was not fetched at idle'),
     ...must(after.counted ? playing(after) : waiting(after) && after.state !== 'running', after.counted ? 'the browser counted the wheel and the sound did not start' : 'the sound started on a wheel the browser did not count (or the control says playing)'),
   ]);
@@ -204,7 +207,7 @@ for (const name of browsers) {
     await page.locator('.nav-sound').click();
     return [a, b, await take('after muting again', 1200)];
   }, ({ first, before, steps }) => [
-    ...must(muted(first) && muted(before), 'the control is not muted from the first paint'),
+    ...must(mutedFirst(first) && muted(before), 'the control is not muted from the first paint'),
     ...must(before.fetched === 0 && steps[0].fetched === 0, 'the sound script was fetched for a muted reader'),
     ...must(muted(steps[0]) && steps[0].contexts === 0, 'a context was made for a muted reader'),
     ...must(playing(steps[1]) && steps[1].stored === 'on', 'not playing after it was turned on'),
@@ -243,12 +246,12 @@ for (const name of browsers) {
   await visit('a first visit that asks for less data', { init: () => Object.defineProperty(Navigator.prototype, 'connection', { configurable: true, get: () => ({ saveData: true, addEventListener() {} }) }) }, async (page, take) => {
     await page.mouse.click(spot.x, spot.y);
     return [await take('after a click on the page')];
-  }, ({ first, before, after }) => [...must(muted(first) && before.fetched === 0, 'not muted from the first paint, or the script was fetched'), ...must(muted(after) && after.contexts === 0 && after.stored === null, 'sound started, or a choice was stored for them')]);
+  }, ({ first, before, after }) => [...must(mutedFirst(first) && before.fetched === 0, 'not muted from the first paint, or the script was fetched'), ...must(muted(after) && after.contexts === 0 && after.stored === null, 'sound started, or a choice was stored for them')]);
 
   await visit('a first visit on a device with little memory', { init: () => Object.defineProperty(Navigator.prototype, 'deviceMemory', { configurable: true, get: () => 1 }) }, async (page, take) => {
     await page.mouse.click(spot.x, spot.y);
     return [await take('after a click on the page')];
-  }, ({ first, before, after }) => [...must(muted(first) && before.fetched === 0, 'not muted from the first paint, or the script was fetched'), ...must(muted(after) && after.contexts === 0, 'sound started')]);
+  }, ({ first, before, after }) => [...must(mutedFirst(first) && before.fetched === 0, 'not muted from the first paint, or the script was fetched'), ...must(muted(after) && after.contexts === 0, 'sound started')]);
 
   await visit('the M key is left alone while a field is typed in', { route: '/blog' }, async (page, take) => {
     await page.locator('.sub-input').click();
@@ -269,7 +272,7 @@ for (const name of browsers) {
     await page.waitForURL(`${base}/`);
     return [a, await take('on the home page, arrived by a press', 4500)];
   }, ({ first, before, steps }) => [
-    ...must(waiting(first) && waiting(before) && before.fetched > 0, 'an inner page is not on-and-waiting with the script fetched at idle'),
+    ...must(waitingFirst(first) && waiting(before) && before.fetched > 0, 'an inner page is not on-and-waiting with the script fetched at idle'),
     ...must(playing(steps[0]), 'not playing on an inner page after a click'),
     ...must(playing(steps[1]) && steps[1].contexts === 1, 'the sound did not carry across to the home page in the one context'),
   ]);

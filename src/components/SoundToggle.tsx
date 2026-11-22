@@ -35,6 +35,8 @@ import './sound.css';
 const KEY = 'sound';
 type Ctor = typeof AudioContext;
 type State = 'off' | 'waiting' | 'playing';
+/** (What the server's markup stands for: on, with no title yet. The title comes with this file's script.) */
+type Shown = State | 'unread';
 
 let read = false;
 let on = true;
@@ -66,6 +68,16 @@ const subscribe = (cb: () => void) => {
 };
 
 const load = () => (mod ??= import('@/audio'));
+
+/** The line that says a change aloud. It is made here, not in the page's markup: it has nothing to say until the first change. */
+let status: HTMLElement | null = null;
+function statusLine() {
+  if (status) return;
+  status = document.createElement('span');
+  status.className = 'nav-sound-status sr-only';
+  status.setAttribute('role', 'status');
+  document.body.appendChild(status);
+}
 
 /**
  * A browser's first audio context can hold the page for a tenth of a second
@@ -134,7 +146,6 @@ function toggle(instant: boolean) {
   d.querySelector('.nav-sound')?.toggleAttribute('data-instant', instant);
   on = !choice();
   // (Said to assistive technology wherever its attention is: the key works from anywhere on the page.)
-  const status = d.querySelector('.nav-sound-status');
   if (status) status.textContent = on ? 'Sound on' : 'Sound muted';
   try {
     localStorage.setItem(KEY, on ? 'on' : 'off');
@@ -166,14 +177,19 @@ const TITLE: Record<State, string> = {
   off: 'Sound is muted. Turn it on (M)',
 };
 
-/** The control's state said right as it is parsed, for a reader who had muted: before this file's script has run, the markup would say "on". */
-const SAID_AT_ONCE = `(function(b){if(document.documentElement.dataset.sound==='off'){b.setAttribute('aria-checked','false');b.title=${JSON.stringify(TITLE.off)}}})(document.currentScript.previousElementSibling)`;
+/**
+ * The control's state said right as it is parsed, for a reader who had muted: before this file's script has run, the
+ * markup would say "on". (Kept to one short line, and the mark is drawn in CSS: this markup is in every page, and an
+ * inner page's HTML has to fit what a new connection sends before it waits. See docs/site-system/performance.md.)
+ */
+const SAID_AT_ONCE = `document.documentElement.dataset.sound=='off'&&document.currentScript.previousSibling.setAttribute('aria-checked',!1)`;
 
 export function SoundToggle() {
-  const now = useSyncExternalStore<State>(subscribe, state, () => 'waiting');
+  const now = useSyncExternalStore<Shown>(subscribe, state, () => 'unread');
 
   useEffect(() => {
     choice();
+    statusLine();
     sync();
     // The sound's script: a second after the page's own load has ended, at the first idle moment (the one gate,
     // calm.ts); never for a reader who has muted. (The second is for the page's largest picture: it is painted a
@@ -218,24 +234,18 @@ export function SoundToggle() {
         aria-label="Sound"
         aria-checked={now !== 'off'}
         aria-keyshortcuts="M"
-        title={TITLE[now]}
+        title={now === 'unread' ? undefined : TITLE[now]}
         suppressHydrationWarning
       >
-        {/* A speaker and, beside it, what the sound is doing: standing bars (faint and still while it waits, full and moving while it plays) or a cross when muted. */}
+        {/* A speaker and, beside it, what the sound is doing: standing bars (faint and still while it waits, full and
+            moving while it plays) or a cross when muted. The speaker and the cross are drawn in sound.css. */}
         <span className="nav-sound-mark" aria-hidden="true">
-          <svg className="nav-sound-cone" width="8" height="12" viewBox="0 0 8 12">
-            <path d="M0.6 4.1h2.1L6.9 0.9a0.4 0.4 0 0 1 0.6 0.3v9.6a0.4 0.4 0 0 1-0.6 0.3L2.7 7.9H0.6a0.6 0.6 0 0 1-0.6-0.6V4.7a0.6 0.6 0 0 1 0.6-0.6z" fill="currentColor" />
-          </svg>
           <i />
           <i />
           <i />
-          <svg className="nav-sound-cross" width="8" height="8" viewBox="0 0 8 8" fill="none">
-            <path d="M1 1l6 6M7 1L1 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
         </span>
       </button>
       <script dangerouslySetInnerHTML={{ __html: SAID_AT_ONCE }} />
-      <span className="nav-sound-status sr-only" role="status" />
     </>
   );
 }
