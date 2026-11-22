@@ -119,22 +119,36 @@ export function Runtime() {
     return () => io.disconnect();
   }, [pathname]);
 
-  // Held pictures (Held.tsx): each gets its address at the page's first calm moment, and is an ordinary lazy picture
-  // from then on.
-  useEffect(
-    () =>
-      whenCalm(() => {
-        for (const img of document.querySelectorAll<HTMLImageElement>('img[data-held]')) {
-          const { src, srcset } = img.dataset;
-          // (Once the real picture is in, its own shape rules again, exactly as it did before pictures were held.)
-          img.addEventListener('load', () => img.style.removeProperty('aspect-ratio'), { once: true });
-          if (srcset) img.srcset = srcset;
-          if (src) img.src = src;
-          img.removeAttribute('data-held');
-        }
-      }),
-    [pathname],
-  );
+  // Keep pictures well ahead of the reader without releasing the whole index at first layout.
+  useEffect(() => {
+    let observer: IntersectionObserver | undefined;
+    const release = (img: HTMLImageElement) => {
+      const { src, srcset } = img.dataset;
+      img.addEventListener('load', () => img.style.removeProperty('aspect-ratio'), { once: true });
+      if (srcset) img.srcset = srcset;
+      if (src) img.src = src;
+      img.removeAttribute('data-held');
+    };
+    const cancel = whenCalm(() => {
+      if (typeof IntersectionObserver === 'function') {
+        observer = new IntersectionObserver((entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            observer?.unobserve(entry.target);
+            release(entry.target as HTMLImageElement);
+          }
+        }, { rootMargin: '600px 0px' });
+      }
+      for (const img of document.querySelectorAll<HTMLImageElement>('img[data-held]')) {
+        if (observer) observer.observe(img);
+        else release(img);
+      }
+    });
+    return () => {
+      cancel();
+      observer?.disconnect();
+    };
+  }, [pathname]);
 
   // Warm haptics on the first touch, so the first real one is not late.
   useEffect(() => {

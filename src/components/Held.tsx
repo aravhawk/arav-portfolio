@@ -6,9 +6,8 @@
  * these pages is most of them, and they then share the line with the page's
  * own first picture and its fonts. So a held picture is written with its
  * address set aside (`data-src`, `data-srcset`) and one clear pixel in its
- * place, and Runtime.tsx gives it its address at the page's first calm
- * moment (src/lib/calm.ts). From then on it is an ordinary lazy picture: the
- * browser fetches it when it is near, as before.
+ * place, and Runtime.tsx gives it its address after the page's first calm
+ * moment (src/lib/calm.ts), when it comes within 600px of the viewport.
  *
  * The clear pixel keeps it a picture while it waits: it takes the size its
  * CSS and its `width` and `height` give it, so nothing moves when the real
