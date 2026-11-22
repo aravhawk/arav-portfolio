@@ -38,6 +38,23 @@ function firstPaint(): Promise<void> {
       done();
     }
   });
+  // Text may paint while the header's high-priority picture is still on the wire.
+  // Let that first frame reach the screen before prefetch, held pictures and WebGL start.
+  const still = document.querySelector<HTMLImageElement>('img.band-still');
+  if (still && still.getClientRects().length && document.visibilityState === 'visible') {
+    painted = painted.then(() => new Promise<void>((resolve) => {
+      // A failed or stalled picture must not hold back navigation or the live band.
+      const timeout = window.setTimeout(resolve, 3000);
+      const done = () => {
+        window.clearTimeout(timeout);
+        resolve();
+      };
+      void still.decode().then(
+        () => requestAnimationFrame(() => requestAnimationFrame(done)),
+        done,
+      );
+    }));
+  }
   return painted;
 }
 
