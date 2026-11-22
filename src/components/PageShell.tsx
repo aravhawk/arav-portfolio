@@ -88,7 +88,7 @@ export async function PageShell({
     <div className="pg-ground" style={groundOf(`${scene ?? 'type'}${head.title}`)}>
       <main id="main" className="pg" data-scene="page">
         {scene ? (
-          <SceneBand scene={scene} short={short} index={index} still={<BandStill scene={scene} kind={short ? 'short' : index ? 'index' : 'page'} />} {...stationData(m)}>
+          <SceneBand scene={scene} short={short} index={index} still={<BandStill scene={scene} kind={short ? 'short' : index ? 'index' : 'page'} />} {...stationData(m, scene)}>
             <BandWords head={head} />
           </SceneBand>
         ) : (
