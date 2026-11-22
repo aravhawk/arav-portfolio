@@ -31,22 +31,22 @@ export function setTheme(next: Theme) {
   window.dispatchEvent(new Event('themechange'));
 }
 
+/**
+ * The theme switch: a real switch, on is the dark theme. What it shows is drawn in nav.css from the theme on the
+ * document (`data-theme`, set before the first paint), not from this component's state, so it is right in the
+ * first frame. A press moves it; changed from the keyboard it is simply in its new state (`data-instant`).
+ */
 function ThemeToggle() {
   const theme = useSyncExternalStore(subscribe, getTheme, getServerTheme);
-  const toggle = useCallback(() => {
+  const toggle = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    // (A click the keyboard made carries no press count.)
+    e.currentTarget.toggleAttribute('data-instant', e.detail === 0);
     // Haptic and visual change in the same handler, on the same frame.
     haptic('light');
     setTheme(getTheme() === 'dark' ? 'light' : 'dark');
   }, []);
   return (
-    <button
-      type="button"
-      className="nav-toggle"
-      onClick={toggle}
-      aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-      aria-pressed={theme === 'dark'}
-      suppressHydrationWarning
-    >
+    <button type="button" className="nav-toggle" role="switch" onClick={toggle} aria-label="Dark theme" aria-checked={theme === 'dark'} suppressHydrationWarning>
       <span className="nav-toggle-track" aria-hidden="true">
         <span className="nav-toggle-knob" />
       </span>

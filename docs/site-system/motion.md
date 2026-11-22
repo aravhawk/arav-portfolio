@@ -75,6 +75,40 @@ the hero, the river or any 3D work.
   fade in place of any large movement.
 - `text-wrap: pretty` on body copy.
 
+### The theme switch (as built, R1)
+
+`ThemeToggle` in `src/components/Nav.tsx`, styled in `nav.css`. It is
+the model for a small control in the nav:
+
+- **A real switch** (`role="switch"`, named "Dark theme",
+  `aria-checked`). Off is light: an open track with a hairline edge
+  and a full disc at its left. On is dark: the track filled, the disc
+  at its right, cut to a crescent. The state reads without a label.
+- **To the nav's scale, on the pixel grid.** A 32 by 18 track, a 12 px
+  disc 3 px in, 14 px of travel, a 1 px edge: the links' capitals are
+  10 px tall and the speaker beside it 12. Every size is a whole pixel,
+  and the nav's side padding is rounded to one (the gutter is a share
+  of the window's width), so every edge is sharp at 1x and 2x.
+- **The button is the target** (52 by 44; never under 44 either way on
+  a narrow screen); the focus ring stands round the track.
+- **180 ms, ease-out, transform and opacity only.** The fill is a
+  layer that fades over the open track; the crescent's bite is a
+  second layer over the knob, in the fill's colour, that comes in the
+  second half of the travel. Their colours are the switch's own and do
+  not turn with the theme's tokens. The press is `scale(0.97)`.
+- **Nothing moves when it is changed from the keyboard**
+  (`data-instant`, from the click's press count), and there is no
+  press scale under `:focus-visible`.
+- **Reduced motion: a cross-fade.** A disc at the left and a crescent
+  at the right; one fades as the other comes.
+- The first paint has the system's scheme or the stored choice
+  (`boot` in `layout.tsx`); the switch is drawn from `data-theme`, so
+  it is right in that paint too.
+
+`scripts/toggle-sheet.mjs <base> <outdir>` photographs every state at
+1x and 2x, enlarged, with the travel frame by frame, and writes the
+control's name, role, sizes and what the keys do.
+
 ## Springs (planned: one helper in the engine)
 
 For anything that follows the pointer or a drag: critically damped
@@ -108,4 +142,4 @@ stations, and a new station must not add one.
 Only as the direct consequence of a meaningful action; never on load,
 hover or continuous scroll; in the picture, only at discrete beats.
 
-Change log: 2026-11-18 first version (orchestrator).
+Change log: 2026-11-18 first version (orchestrator). 2026-11-21 R1: the theme switch.
