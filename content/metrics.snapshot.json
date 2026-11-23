@@ -1,30 +1,30 @@
 {
   "schemaVersion": 1,
-  "retrievedAt": "2026-11-20T11:12:09.575Z",
+  "retrievedAt": "2026-11-23T22:28:14.985Z",
   "ollama": {
-    "retrievedAt": "2026-11-20T11:12:09.000Z",
+    "retrievedAt": "2026-11-23T22:28:14.985Z",
     "source": "https://ollama.com/aravhawk",
     "endpoints": [
       "https://ollama.com/aravhawk",
       "https://ollama.com/aravhawk/<model>"
     ],
-    "total": 18324,
+    "total": 18349,
     "models": [
       {
         "name": "qwen3.5-opus-4.6",
-        "pulls": 9473,
+        "pulls": 9492,
         "url": "https://ollama.com/aravhawk/qwen3.5-opus-4.6",
         "uploadedAt": "2026-04-01T03:58:00.000Z"
       },
       {
         "name": "llama4",
-        "pulls": 7365,
+        "pulls": 7366,
         "url": "https://ollama.com/aravhawk/llama4",
         "uploadedAt": "2025-04-11T02:23:00.000Z"
       },
       {
         "name": "gemma4",
-        "pulls": 1288,
+        "pulls": 1293,
         "url": "https://ollama.com/aravhawk/gemma4",
         "uploadedAt": "2026-04-14T04:54:00.000Z"
       },
@@ -37,44 +37,44 @@
     ]
   },
   "npm": {
-    "retrievedAt": "2026-11-20T11:12:09.000Z",
+    "retrievedAt": "2026-11-23T22:28:14.985Z",
     "source": "https://www.npmjs.com/package/@aravhawk/cc-switch",
     "endpoints": [
       "https://api.npmjs.org/downloads/range/<start>:<end>/<package>",
       "https://api.npmjs.org/downloads/point/last-month/<package>"
     ],
-    "allTime": 9953,
-    "lastMonth": 562,
+    "allTime": 10066,
+    "lastMonth": 645,
     "packages": [
       {
         "name": "@aravhawk/cc-switch",
         "firstPublished": "2026-02-01",
-        "allTime": 9953,
-        "lastMonth": 562,
+        "allTime": 10066,
+        "lastMonth": 645,
         "url": "https://www.npmjs.com/package/@aravhawk/cc-switch"
       }
     ]
   },
   "contributions": {
-    "retrievedAt": "2026-11-20T11:12:01.000Z",
+    "retrievedAt": "2026-11-23T22:28:14.985Z",
     "source": "https://github.com/aravhawk",
     "endpoints": [
       "https://github.com/users/aravhawk/contributions?from=<YYYY>-01-01&to=<YYYY>-12-31",
       "https://github.com/users/aravhawk/contributions"
     ],
-    "lifetime": 3336,
+    "lifetime": 3571,
     "byYear": {
       "2021": 11,
       "2022": 16,
       "2023": 2,
       "2024": 162,
       "2025": 186,
-      "2026": 2959
+      "2026": 3194
     },
-    "last12Months": 2999
+    "last12Months": 3203
   },
   "mergedPrs": {
-    "retrievedAt": "2026-11-20T11:12:02.000Z",
+    "retrievedAt": "2026-11-23T22:28:14.985Z",
     "source": "https://github.com/search?q=is%3Apr+is%3Amerged+is%3Apublic+author%3Aaravhawk+-user%3Aaravhawk+-user%3Ainfiniflop+-user%3A2ALabz+-user%3Anextup-inspired+-user%3Anavkarcaterers+-repo%3AAvinashDevineni%2FThrasherAndChambersWebsite+-repo%3AKanishksasi%2FInvesto&type=pullrequests",
     "totalSource": "https://github.com/search?q=is%3Apr+is%3Amerged+is%3Apublic+author%3Aaravhawk&type=pullrequests",
     "endpoints": [
@@ -92,9 +92,16 @@
       "Kanishksasi/Investo"
     ],
     "requireMergedByOther": false,
-    "upstream": 15,
-    "total": 117,
+    "upstream": 16,
+    "total": 128,
     "ledger": [
+      {
+        "repo": "pingdotgg/t3code",
+        "number": 39817,
+        "title": "fix(gitlab): pull_request_create opens a draft MR as a draft",
+        "mergedAt": "2026-11-20T18:15:36Z",
+        "url": "https://github.com/pingdotgg/t3code/pull/39817"
+      },
       {
         "repo": "pingdotgg/t3code",
         "number": 37703,
