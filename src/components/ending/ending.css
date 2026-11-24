@@ -23,7 +23,7 @@
 .ending-head {
   font-family: var(--font-accent);
   font-weight: 380;
-  /* (Sized so the line ends short of the ribbon of light that crosses the frame beside it.) */
+  /* (Sized so the line ends well short of the sun's path on the water beside it.) */
   font-size: clamp(3.1rem, 5.7vw, 6.4rem);
   line-height: 0.94;
   letter-spacing: -0.032em;

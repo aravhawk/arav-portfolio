@@ -1,7 +1,7 @@
 import { starts, composed } from '@/water/registry';
 import { describe, expect, it } from 'vitest';
-import { DAWN, GATE, LAP, RIBBON, stationsNear } from '@/water/moments';
-import { ARRIVE_AT, BLOCK_EARS, BLOCK_MID, LIGHT, NAME_MELT, SHEET_BREAKS, SHIMMER_AT, W, WATER, arrivalOf, arrivalTime, bearingAt, blockSet, camN, climbTime, climbVoice, curtainAt, curtainsAt, gatherTime, gatherVoice, landings, lightPan, lineRun, lineTime, nameLetters, nameMelt, railVoice, ribbonHead, ribbonTime, sinkAt, sinkOrder, sinkVoice, unsmooth, chirpAt, chirpLen, crackVoice, dripVoice, dropVoice, gust, latticeAt, latticeTime, latticeVoice, mixOf, roomsOf, scrollN, seaAt, shardVoice, slapTime, surgeRing, swellAt, uiVoice, waterOf, windPanOf } from '@/audio/mapping';
+import { DAWN, GATE, LAP, stationsNear } from '@/water/moments';
+import { ARRIVE_AT, BLOCK_EARS, BLOCK_MID, LIGHT, LIGHT_AT, NAME_MELT, SHEET_BREAKS, SHIMMER_AT, W, WATER, arrivalOf, arrivalTime, bearingAt, blockSet, camN, climbTime, climbVoice, curtainAt, curtainsAt, gatherTime, gatherVoice, landings, lightPan, lineRun, lineTime, nameLetters, nameMelt, railVoice, ribbonHead, ribbonTime, sinkAt, sinkOrder, sinkVoice, unsmooth, chirpAt, chirpLen, crackVoice, dripVoice, dropVoice, gust, latticeAt, latticeTime, latticeVoice, mixOf, roomsOf, scrollN, seaAt, shardVoice, slapTime, surgeRing, swellAt, uiVoice, waterOf, windPanOf } from '@/audio/mapping';
 import { APPROACH, type Scene, SceneReader, type Seen, type SignalsLike, groundAt, heard, movementAt, seenAt, wetUnder } from '@/audio/scene';
 import { ARRIVAL, ARRIVAL_AT, CLIMB, GATHER, MOTIF, MOVE, PENTA } from '@/audio/theory';
 import { END_AT, MELT, SETTLE_AT, basisOf, dayAt, endLens, flightKeys, heroDesign, poseAt, stillStops } from '@/water/camera';
@@ -630,8 +630,8 @@ describe('each moment is built from where and what it is', () => {
     // Where the light stands across the frame: the ribbon's foot is right of the middle, and it leans further right both as it climbs and, in the water, toward the eye.
     const L = endLens(1.6);
     const tan = Math.tan((L.fov * Math.PI) / 360);
-    expect(lightPan(0, 1.6, tan)).toBeCloseTo(RIBBON.at(1.6), 9);
-    expect(lightPan(0, 0.46, tan)).toBeCloseTo(RIBBON.at(0.46), 9);
+    expect(lightPan(0, 1.6, tan)).toBeCloseTo(LIGHT_AT.at(1.6), 9);
+    expect(lightPan(0, 0.46, tan)).toBeCloseTo(LIGHT_AT.at(0.46), 9);
     expect(lightPan(0.2, 1.6, tan)).toBeGreaterThan(lightPan(0.05, 1.6, tan));
     expect(lightPan(LIGHT.foot, 1.6, tan)).toBeGreaterThan(lightPan(0.2, 1.6, tan));
     expect(lightPan(LIGHT.foot, 1.6, tan)).toBeLessThan(0.75);

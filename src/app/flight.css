@@ -1273,7 +1273,7 @@ html[data-picture] .flight-root > .fl-poster {
 @media (max-width: 719px) {
   /* (On a phone the foot is the frame's width: the row's four links are spread from edge to edge and the field
      stands under them at the same width. The small print's line reaches into the frame's own bottom margin, so the
-     headline stays below the end of the ribbon of light.) */
+     headline stays low in the frame.) */
   .fl-end-block {
     max-width: 68vw;
     margin-bottom: 20px;

@@ -153,8 +153,6 @@ uniform vec4 uCalmBox;     // where the words now showing stand, in vUv: x0, y0,
 uniform vec2 uCalmK;       // x: 0..1 how much the picture is calmed for them, y: 1 when they are light in both themes (the ending)
 uniform vec4 uCapBox;      // centre and inverse radii of the caption group in screen UV
 uniform float uCapK;       // 0..1 how much the picture is calmed behind them
-uniform vec4 uRay;         // the ribbon of light at the ending. x: 0..1 how far its line has run out across the water, y: 0..1 how far it has risen from it, z: its strength (0: not there), w: how far it leans as it climbs, and which way
-uniform vec4 uRib;         // xy: the bearing its foot stands on (a unit vector on the ground), zw: the strip of the frame it can be in (u from, u to)
 
 uniform sampler2D uBedA;
 uniform sampler2D uBedB;
@@ -2079,7 +2077,7 @@ float gLee = 0.0;
 // How much of this pixel is open sea.
 float gSea = 0.0;
 
-/* ---------- the ribbon of light ---------- */
+/* ---------- points of light ---------- */
 
 /**
  * Fine points of light, one to a cell, each coming and going in its own
@@ -2113,85 +2111,6 @@ float bokeh(vec2 p, float px, float seed) {
   return (1.0 - smoothstep(1.0 - e, 1.0, d)) * (0.62 + 0.38 * smoothstep(0.55, 0.95, d)) * (life - 0.42) * 1.7 * (0.35 + 0.65 * tw * tw);
 }
 
-// Half the width of the ribbon's solid core, and how far from it any of its light reaches (radians, near enough).
-const float RIB_W = 0.0027;
-const float RIB_REACH = 0.13;
-// The height (as a tangent) over which it turns from upright to its lean.
-const float RIB_E0 = 0.1;
-// The ribbon's own frame for the direction last asked: how high along it (the tangent of the height above the horizon), and how far off its centre line to the right.
-vec2 gRib = vec2(0.0);
-/**
- * The ribbon of light. The river's light leaves the water where the sea
- * meets the far shore and climbs: upright at its foot, leaning over as it
- * rises, up and out of the top of the frame. It is a shape in the sky, so a
- * mirror shows it too: asked with the mirror's direction it is its own
- * image on the water, which is the line of light the river ran out along.
- * Returns how far a direction is from its centre line (under 0: to its left).
- */
-float ribbonAt(vec3 d) {
-  float inv = inversesqrt(max(dot(d.xy, d.xy), 1e-6));
-  vec2 dn = d.xy * inv;
-  if (dot(dn, uRib.xy) < 0.8) return 1e3;
-  float x = dn.x * uRib.y - dn.y * uRib.x;
-  float e = abs(d.z) * inv;
-  float q = e / RIB_E0;
-  float root = sqrt(1.0 + q * q);
-  float off = x - uRay.w * RIB_E0 * (root - 1.0);
-  float slope = uRay.w * q / root;
-  gRib = vec2(e, off);
-  return off * inversesqrt(1.0 + slope * slope);
-}
-/** Its light at a distance from its centre line. x: the solid core, y: the glow round it. fat: how much wider it is (a mirror in moving water). */
-vec2 ribbonLight(float dist, float fat) {
-  // (Several pixels of solid light, a little heavier where it leaves the water; its edge is never harder than a pixel.)
-  float w = RIB_W * mix(1.22, 0.86, smoothstep(0.0, 0.3, gRib.x)) + fat;
-  float aa = max(0.42 * w, 0.9 * uPxAng);
-  float a = abs(dist);
-  float core = 1.0 - smoothstep(w - aa, w + aa, a);
-  // (Its glow runs out to nothing well inside the strip it is drawn in.)
-  float win = 1.0 - smoothstep(0.04, RIB_REACH, a);
-  return vec2(core, (exp(-a / (w * 3.0)) * 0.3 + exp(-a / (w * 12.0)) * 0.075) * win);
-}
-/** The ribbon in the sky, as the eye sees it: the core, the glow, and the fine dust that drifts off it. */
-vec3 ribbonSky(vec3 d) {
-  float dist = ribbonAt(d);
-  if (abs(dist) > RIB_REACH) return vec3(0.0);
-  float e = gRib.x;
-  float rise = uRay.y;
-  // It is drawn from the water upward: its head climbs, and is the brightest of it while it does.
-  float head = 0.012 + 0.33 * rise + 4.0 * smoothstep(0.92, 1.0, rise);
-  float shown = (1.0 - smoothstep(head - 0.035, head, e)) * (1.0 - smoothstep(0.75, 1.2, e)) * smoothstep(0.0, 0.04, rise);
-  if (shown <= 0.0) return vec3(0.0);
-  vec2 l = ribbonLight(dist, 0.0);
-  float tip = exp(-pow((e - head) / 0.024, 2.0)) * (1.0 - smoothstep(0.85, 1.0, rise));
-  // (A slow shimmer runs up it.)
-  float shim = 0.8 + 0.2 * n1(e * 44.0 - uTime * 0.6) + 0.12 * (n1(e * 9.0 - uTime * 0.17) - 0.5);
-  // (Brightest where it leaves the water.)
-  float foot = exp(-e / 0.03);
-  // (Its head is a round light on its own line: the glow round the ribbon is not lit across its whole width there.)
-  float light = l.x * (4.4 * shim + 4.0 * foot + 5.0 * tip) + l.y * (1.0 + 2.2 * foot) + exp(-dist * dist / 0.00016) * tip * 1.4;
-  light += exp(-(e * e + gRib.y * gRib.y) / 0.0003) * 1.2;
-  // The dust: fine points that leave the ribbon to either side and thin away, each coming and going.
-  float a = abs(gRib.y);
-  float dustK = (exp(-a / 0.017) + 0.5 * exp(-a / 0.006)) * (1.0 - smoothstep(0.05, 0.08, a)) * (0.55 + 0.45 * shim);
-  if (dustK > 0.004) {
-    float side = gRib.y < 0.0 ? 17.0 : 0.0;
-    float px = uPxAng;
-    float r0 = max(0.0006, 0.85 * px);
-    float r1 = max(0.001, 0.85 * px);
-    float r2 = max(0.0015, 0.85 * px);
-    // (The finest of it is a grain that hugs the ribbon: many points, each small, so the cloud has weight without lumps.)
-    float rf = max(0.00042, 0.8 * px);
-    float dust = (motes(vec2(e, a) / 0.0017 - uTime * vec2(0.2, 0.12), vec2(rf / 0.0017), 61.0 + side) + motes(vec2(e, a) / 0.0017 - uTime * vec2(0.13, 0.17) + 0.5, vec2(rf / 0.0017), 83.0 + side)
-      + motes(vec2(e, a) / 0.0021 - uTime * vec2(0.09, 0.2) + 0.25, vec2(rf / 0.0021), 97.0 + side)) * 2.4 * (0.00042 * 0.00042) / (rf * rf) * exp(-a / 0.02)
-      + (motes(vec2(e, a) / 0.0028 - uTime * vec2(0.16, 0.1), vec2(r0 / 0.0028), 3.0 + side) + motes(vec2(e, a) / 0.0028 - uTime * vec2(0.11, 0.14) + 0.5, vec2(r0 / 0.0028), 47.0 + side)) * 2.2 * (0.0006 * 0.0006) / (r0 * r0)
-      + motes(vec2(e, a) / 0.0058 - uTime * vec2(0.1, 0.07) + 0.37, vec2(r1 / 0.0058), 9.0 + side) * 2.6 * (0.001 * 0.001) / (r1 * r1)
-      + motes(vec2(e, a) / 0.013 - uTime * vec2(0.06, 0.045) + 0.71, vec2(r2 / 0.013), 21.0 + side) * 1.5 * exp(-a / 0.03) / max(exp(-a / 0.017), 1e-3);
-    light += dust * dustK * (1.0 + 1.5 * foot + 2.0 * tip);
-  }
-  return mix(vec3(1.0, 0.975, 0.94), vec3(1.0, 0.9, 0.7), 0.55 * foot) * (light * shown * uRay.z);
-}
-
 /**
  * The sea toward the light (the old ending's water, in this world). Ripples
  * that close up with distance, the sky and the ranges mirrored in them, a
@@ -2207,7 +2126,7 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
   // to nothing at the horizon, so it is never seen as a shape. (uSea.w below zero: how high the words stand, on a wide screen.)
   float topV = uSea.w < -0.001 ? -uSea.w : 0.42;
   float lee = (1.0 - smoothstep(0.0, 1.0, length(max((vUv - vec2(uSea.z - 0.06, topV - 0.04)) / vec2(0.3, max(0.6 - topV, 0.1)), 0.0)))) * e;
-  // (On a narrow screen the words run the width of the frame and stand at its foot: the line of light comes down to them and stops.)
+  // (On a narrow screen the words run the width of the frame and stand at its foot: the water under them is kept calm.)
   float leeFoot = step(0.001, uSea.w) * (1.0 - smoothstep(uSea.w - 0.02, uSea.w + 0.2, vUv.y)) * e;
   lee = max(lee, leeFoot);
   // How still the sea is: the ending's own water, as the camera settles on it.
@@ -2342,40 +2261,9 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     float xs = sin(da);
     float wS = 0.006 + 0.15 * em;
     float pathS = exp(-xs * xs / (wS * wS)) * step(0.0, cos(da)) * up * (1.0 - lee);
-    // The ribbon's image, when it stands: its own glitter lies round it.
-    float pathR = 0.0;
-    float lineK = 0.0;
-    vec3 line = vec3(0.0);
-    if (uRay.z > 0.0 && vUv.x > uRib.z && vUv.x < uRib.w) {
-      // (The mirror is the water's, ripples and all, but it is the river's light: it keeps to its line, carried a little by each ripple it crosses.)
-      // (By the slow swell only: the fine ripples would notch its edge, and a notched edge at 2x is a stair.)
-      vec3 rm = normalize(vec3(dir.xy, -dir.z) + vec3(g * 0.05, 0.0));
-      float dR = ribbonAt(rm);
-      if (abs(dR) < RIB_REACH) {
-        float eR = gRib.x;
-        // The line runs out across the water from under the eye to where the ribbon will stand.
-        float run = smoothstep(0.0, 0.62, uRay.x);
-        // (It sets out from the foot of the frame: no part of its run is spent out of sight.)
-        float headM = mix(0.47, -0.05, run);
-        float shownM = smoothstep(headM, headM + 0.045, eR) * (1.0 - leeFoot) * (1.0 - leeFoot);
-        float tipM = exp(-pow((eR - headM - 0.02) / 0.03, 2.0)) * (1.0 - smoothstep(0.9, 1.0, run));
-        // (A mirror in moving water is a little wider the nearer the eye.)
-        vec2 l = ribbonLight(dR, 0.0045 * smoothstep(0.03, 0.4, eR));
-        float shim = 0.8 + 0.2 * n1(eR * 44.0 - uTime * 0.6);
-        float foot = exp(-eR / 0.03);
-        // (Light lying on water: the faces turned to it carry it, the others a little less.)
-        float carry = 0.7 + 0.3 * smoothstep(-0.02, 0.02, g.y);
-        lineK = (l.x * (3.4 * shim * carry + 4.0 * foot + 5.0 * tipM) + l.y * (0.8 + 2.2 * foot) + exp(-dR * dR / 0.00016) * tipM * 1.4) * shownM;
-        lineK += exp(-(eR * eR + gRib.y * gRib.y) / 0.0003) * 1.2 * smoothstep(0.0, 0.3, uRay.y) * shownM;
-        line = mix(vec3(1.0, 0.975, 0.94), vec3(1.0, 0.9, 0.7), 0.55 * exp(-eR / 0.03)) * lineK * uRay.z;
-        pathR = exp(-abs(gRib.y) / (0.004 + 0.05 * eR)) * shownM * uRay.z * (1.0 - smoothstep(0.03, 0.06, abs(gRib.y)));
-        // (And its light lies on the water round it: a soft sheen that widens toward the eye and is gone well inside its strip.)
-        line += vec3(0.62, 0.78, 1.0) * (0.05 * exp(-abs(dR) / (0.012 + 0.09 * eR)) * (1.0 - smoothstep(0.04, RIB_REACH, abs(dR))) * smoothstep(0.0, 0.5, uRay.y) * shownM * uRay.z);
-      }
-    }
     // The far shore: a band of glitter along the waterline, brightest under the light.
     float shore = exp(-em / 0.0075) * (0.22 + 0.78 * exp(-xs * xs / 0.05));
-    float env = max(max(pathS, pathR), shore);
+    float env = max(pathS, shore);
     if (env > 0.002) {
       float pa = uPxAng;
       float r0 = max(0.0006, 0.85 * pa);
@@ -2391,7 +2279,6 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
       float glint = fineG * mix(5.0, 3.0, smoothstep(0.0, 0.25, em)) + bigG * 4.5 * smoothstep(0.03, 0.22, em) * face;
       vec3 warm = mix(vec3(1.0, 0.9, 0.74), vec3(1.0, 0.9, 0.78), uNight);
       col += warm * S.band * 0.55 * glint * max(pathS, shore) * mix(1.0, 0.8, uNight) * still;
-      col += vec3(1.0, 0.97, 0.92) * (glint * 0.8) * pathR * still;
     }
     // Along the far shore the glitter is far out of focus: soft discs of light lie in a band on the waterline,
     // most of them under the light, with a soft even glow behind them that has no edge.
@@ -2403,7 +2290,6 @@ vec3 seaColor(vec2 pw, vec3 dir, float t, float footL) {
     }
     // (A soft even light under the sun, so the path has a body between its points.)
     col += S.band * pathS * (0.05 + 0.1 * exp(-em / 0.05)) * still;
-    col += line * still;
   }
   // Drift ice on the way out: each plate a hand of ice above the water, snow on its top, a blue wall on the side
   // the eye sees, and the pale skirt of the ice under water round it.
@@ -3002,10 +2888,6 @@ ${customSubjects.map(s => `#ifdef ${s.define}
   col = ${s.shader.fn}(col, dir, ${s.event ? 'uProgress_' + s.define : '0.0'});
 #endif`).join('\n')}
   if (slabCov > 0.0 && slabCov <= 0.999) col = mix(col, slabCol, slabCov);
-#ifdef SEA
-  // The ribbon of light stands in front of the ranges: it is only looked for in the strip of the frame it can be in.
-  if (uRay.z > 0.0 && dir.z > -0.0006 && vUv.x > uRib.z && vUv.x < uRib.w) col += ribbonSky(dir);
-#endif
 
 //#DBG_B
   // ---- the finish, in this same pass: the glow of the last frame's

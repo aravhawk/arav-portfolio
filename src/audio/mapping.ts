@@ -8,7 +8,7 @@
  */
 
 import { type Basis, heroDesign, rayThrough } from '@/water/camera';
-import { DAWN, GATE, LAP, RIBBON } from '@/water/moments';
+import { DAWN, GATE, LAP } from '@/water/moments';
 import { NAME, SLAB } from '@/water/world';
 import { type Scene, type Seen, heard, sat, smooth } from './scene';
 import { ARRIVAL_AT, CLIMB, GATHER, ladder, latticeNote, shardNote, snap } from './theory';
@@ -334,8 +334,8 @@ export function mixOf(sc: Scene, t: number): Mix {
 /* ---------- the ending's light ---------- */
 
 /**
- * The light event as the shading pass draws it (shaders/flight.ts; a test
- * holds these to the shader's own text). The line of light: `run` is the
+ * The ending's light event, as the music is set to it (the picture no longer
+ * draws the line or the ribbon; these are the sound's own). The line of light: `run` is the
  * share of `ray` over which it runs, and its head goes from `foot` (the
  * tangent of how far below the horizon the foot of the frame is) to `past`
  * the far shore. The ribbon: it is first seen at `first` of `rise`, and its
@@ -373,15 +373,24 @@ export const arrivalTime = (i: number) => ARRIVE_AT + ARRIVAL_AT[i] * (DAWN.rise
 export const climbTime = (j: number, top: number) => ribbonTime(LIGHT.base + ((j + 1) / CLIMB.length) * (top - LIGHT.base));
 
 /**
- * Where the light stands across the frame, as a pan: the ribbon's foot is
- * right of the middle and it leans toward the sun as it climbs; the line on
- * the water is its mirror image, so it leans the same way toward the eye.
+ * Where the ending's music stands across the frame. `at`: its foot, as a
+ * share of half the frame's width right of its middle (the sun stands at
+ * 0.46, or 0.7 on an upright screen). `lean`: how far it moves toward the
+ * sun as it climbs, turning over a height of `e0` (a tangent). (The picture
+ * once drew a ribbon of light here; the sound keeps its place.)
+ */
+export const LIGHT_AT = { at: (aspect: number) => (aspect < 0.8 ? 0.16 : 0.2), lean: 0.5, e0: 0.1 };
+
+/**
+ * Where the light stands across the frame, as a pan: its foot is right of
+ * the middle and it leans toward the sun as it climbs, and the same way
+ * toward the eye below the horizon.
  * @param e the tangent of the height above (or below) the horizon
  * @param tan the tangent of half the frame's height, as the camera has it
  */
 export const lightPan = (e: number, aspect: number, tan: number) => {
-  const q = Math.abs(e) / RIBBON.e0;
-  return clamp(RIBBON.at(aspect) + (RIBBON.lean * RIBBON.e0 * (Math.sqrt(1 + q * q) - 1)) / (tan * aspect), -0.95, 0.95);
+  const q = Math.abs(e) / LIGHT_AT.e0;
+  return clamp(LIGHT_AT.at(aspect) + (LIGHT_AT.lean * LIGHT_AT.e0 * (Math.sqrt(1 + q * q) - 1)) / (tan * aspect), -0.95, 0.95);
 };
 
 /** One note of the gathering: the theme's first three notes, twice, going away. Each is two soft bells that close on the line as it narrows toward the far shore. */

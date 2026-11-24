@@ -118,19 +118,10 @@ export function heroLight(sky: { sun: number[]; key: number[]; keyDir: number[] 
   return [Math.sin(HERO_SUN.moonAz) * c, Math.cos(HERO_SUN.moonAz) * c, Math.sin(HERO_SUN.moonEl), k * night];
 }
 
-/** The light event at the ending, `t` seconds after the camera comes to rest: the sun's last lift and the line of light, 0..1 each. */
-// (The line of light runs out over the first two thirds of `ray`; the ribbon of light climbs, `rise`, from where it ends.)
+/** The light event at the ending, `t` seconds after the camera comes to rest: the sun's last lift, then the two stretches the ending's music is set to, 0..1 each. */
 export const DAWN = { lift: [0, 2.6], ray: [0.7, 4.4], rise: [2.7, 4.9], over: 5.2 } as const;
 export const dawnLight = (t: number) => ({ lift: smooth(DAWN.lift[0], DAWN.lift[1], t), ray: smooth(DAWN.ray[0], DAWN.ray[1], t), rise: smooth(DAWN.rise[0], DAWN.rise[1], t) });
 
-/**
- * The ribbon of light at the ending. `at`: where its foot stands in the
- * frame, as a share of half the frame's width right of its middle (the sun
- * stands at 0.46, or 0.7 on an upright screen). `lean`: how far it leans
- * toward the sun as it climbs. `e0` and `reach` are the shading pass's own
- * (RIB_E0, RIB_REACH).
- */
-export const RIBBON = { at: (aspect: number) => (aspect < 0.8 ? 0.16 : 0.2), lean: 0.5, e0: 0.1, reach: 0.13 };
 
 /**
  * How many of the vault's slivers are lit at a scroll position: its event runs with the reader's arrival, so this is

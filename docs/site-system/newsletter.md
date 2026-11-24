@@ -124,7 +124,7 @@ from the Neon console into `.env.local` yourself. Never commit it.
 - The home page shows one word of the field ("Subscribe"): the page's
   count is 301, 300 and that word (`copy.md`). Do not add a visible
   line to the ending: the block's height is what keeps the headline
-  below the end of the ribbon of light on a phone.
+  low in the frame on a phone.
 - Anything added to the ending's foot needs the three rules the rest
   of it has in `flight.css`: its entrance with the block (`data-set`),
   its presses held until then, and both again for the page without
