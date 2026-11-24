@@ -59,8 +59,9 @@ Status: **as built** (K1, 2026-11-20).
   world (`Callout`): the block of ice, the two shards, the pane in
   the canyon's wall. Its text is a fact (a site, a name), never a
   comment on the picture.
-- The ending is exactly "This was the warm-up." with "The next
-  station isn't built yet." under it.
+- The ending is exactly "Thanks for stopping by." with "Keep up
+  with what I ship." under it (the owner's change, 2026-11-24; the
+  same number of words as the lines it replaced).
 
 ## What may appear (the owner's list, 2026-11-20, and envfetch, 2026-11-22)
 

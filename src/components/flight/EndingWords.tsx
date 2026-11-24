@@ -13,9 +13,9 @@ export function EndingWords({ note }: { note?: string }) {
   return (
     <div className="fl-end-block">
       <h2 className="ending-head">
-        <span className="ending-line">This was the warm-up.</span>
+        <span className="ending-line">Thanks for stopping by.</span>
       </h2>
-      <p className="label ending-kicker">The next station isn&apos;t built yet.</p>
+      <p className="label ending-kicker">Keep up with what I ship.</p>
       <div className="fl-end-foot">
         <div className="fl-end-row">
           <Contact />
