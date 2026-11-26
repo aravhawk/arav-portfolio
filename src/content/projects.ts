@@ -508,6 +508,11 @@ export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === s
  */
 export const RECOGNITION = {
   devday: 'Selected for OpenAI DevDay 2026',
+  /** Placed roughly, not by a verified rank. The scholarship is program credit, never cash or funding. */
+  veritas: {
+    award: 'Honorable Mention at the Veritas AI International High School Hackathon 2026, for OxyDrop',
+    result: 'Roughly the top 20 of more than 1,000 entries, with a $1,500 Veritas AI program scholarship',
+  },
   press: {
     text: 'In a Business Insider story on coders who keep their laptops open in public, May 2026',
     href: 'https://www.businessinsider.com/coders-keep-laptops-open-in-public-ai-agent-2026-5',

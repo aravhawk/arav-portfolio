@@ -82,6 +82,9 @@ export default async function Work() {
         <ul className="recog">
           <li>{RECOGNITION.devday}.</li>
           <li>
+            {RECOGNITION.veritas.award}. {RECOGNITION.veritas.result}.
+          </li>
+          <li>
             {RECOGNITION.press.text}.{' '}
             <a className="link" href={RECOGNITION.press.href} target="_blank" rel="noopener noreferrer">
               Article <Arrow out />

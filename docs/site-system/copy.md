@@ -83,8 +83,12 @@ keeps the order its world was built in.
 | envfetch | Only what its repository says (README, languages, the v1.1.0 release of June 4, 2026). No star count, no praise. Its commands are set as text from the README. |
 
 Recognition is lines, never cards (`RECOGNITION`): "Selected for
-OpenAI DevDay 2026" (about him, never under Infiniview); the
-Business Insider story of May 2026, without his age, city or grade;
+OpenAI DevDay 2026" (about him, never under Infiniview); the Veritas
+AI International High School Hackathon 2026 Honorable Mention for
+OxyDrop (roughly top 20 of more than 1,000 entries, never an exact
+rank; the $1,500 Veritas AI program scholarship is program credit,
+never cash or funding; OxyDrop is named in the line only, with no
+card, station or link); the Business Insider story of May 2026, without his age, city or grade;
 his GitHub contributions in 2026, read live (the date is the footer's).
 
 Nothing else is shown: no archive, no "also" list, no project the
