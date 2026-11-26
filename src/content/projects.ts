@@ -503,11 +503,25 @@ export const PROJECTS: Project[] = entries;
 export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === slug);
 
 /**
+ * The day cc-switch's downloads are counted from, said the same on the home page, /work and its page. It is the
+ * package's first publish in `NPM_PACKAGES` (src/lib/metrics/config.ts): `tests/content/cc-switch.test.ts` checks
+ * the two agree. The count is all of its downloads, so "all time" and "since" are one window.
+ */
+export const CC_SWITCH_SINCE = 'February 1, 2026';
+
+/**
  * What he is recognised for: lines, never cards. The year's contributions
  * are read live (src/lib/metrics) and said with the date they were read.
  */
 export const RECOGNITION = {
   devday: 'Selected for OpenAI DevDay 2026',
+  /** Placed roughly, not by a verified rank. The scholarship is program credit, never cash or funding. */
+  veritas: {
+    award: 'Honorable Mention at the Veritas AI International High School Hackathon 2026, for OxyDrop',
+    result: 'Roughly the top 20 of more than 1,000 entries, with a $1,500 Veritas AI program scholarship',
+    /** The home page's line, a little tighter, as its Business Insider line is: the block stands at the foot of a short frame. */
+    home: 'Honorable Mention, Veritas AI International High School Hackathon 2026, for OxyDrop. Roughly the top 20 of 1,000+ entries, with a $1,500 Veritas AI program scholarship',
+  },
   press: {
     text: 'In a Business Insider story on coders who keep their laptops open in public, May 2026',
     href: 'https://www.businessinsider.com/coders-keep-laptops-open-in-public-ai-agent-2026-5',

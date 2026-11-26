@@ -1,7 +1,7 @@
 import { Arrow } from '@/components/bits';
 import { ProfileSwitch } from '@/components/home/ProfileSwitch';
 import { LiveNumber } from '@/components/LiveNumber';
-import type { Project, ProjectMedia } from '@/content/projects';
+import { CC_SWITCH_SINCE, type Project, type ProjectMedia } from '@/content/projects';
 import { formatPostDate } from '@/lib/dates';
 import { formatAsOf, formatCount, type Metric, type SiteMetrics } from '@/lib/metrics';
 import { SHEET_COLS, SHEET_SRC } from '@/water/world';
@@ -551,9 +551,9 @@ function CcSwitch({ p, m }: { p: Project; m: SiteMetrics }) {
           <ul className="figs figs-side">
             <li className="fig">
               <span className="fig-value">
-                <Live metric={m.npm.allTime} what="npm downloads of cc-switch, all time" />
+                <Live metric={m.npm.allTime} what={`npm downloads of cc-switch since ${CC_SWITCH_SINCE}`} />
               </span>
-              <span className="fig-unit">npm downloads since February 1, 2026</span>
+              <span className="fig-unit">npm downloads since {CC_SWITCH_SINCE}</span>
             </li>
             <li className="fig">
               <span className="fig-value">

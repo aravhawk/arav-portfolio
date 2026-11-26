@@ -14,6 +14,7 @@ import { PageShell } from '@/components/PageShell';
 import { formatPostDate } from '@/lib/dates';
 import { pageMeta } from '@/lib/meta';
 import { SITE_NAME, SITE_URL, abs } from '@/lib/site';
+import { PERSON_ID } from '@/lib/site-ld';
 import type { BlogFrontmatter } from '@/types';
 
 export async function generateStaticParams() {
@@ -27,6 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return pageMeta({
     title: post.frontmatter.title,
+    shareTitle: post.frontmatter.title,
     description: post.frontmatter.description,
     path: `/blog/${slug}`,
     type: 'article',
@@ -76,8 +78,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     url: abs(`/blog/${slug}`),
     mainEntityOfPage: abs(`/blog/${slug}`),
     keywords: post.frontmatter.tags.join(', '),
-    author: { '@type': 'Person', '@id': `${SITE_URL}/#person`, name: SITE_NAME, url: SITE_URL },
-    publisher: { '@id': `${SITE_URL}/#person` },
+    author: { '@type': 'Person', '@id': PERSON_ID, name: SITE_NAME, url: SITE_URL },
+    publisher: { '@id': PERSON_ID },
   };
 
   return (

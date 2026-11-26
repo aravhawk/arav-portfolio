@@ -6,6 +6,7 @@ import { Case, SwitchInScene } from '@/components/work/cases';
 import { sceneOf } from '@/water/registry';
 import { PROJECTS, projectBySlug } from '@/content/projects';
 import { pageMeta } from '@/lib/meta';
+import { projectLd } from '@/lib/work-ld';
 import { formatAsOf, getMetrics } from '@/lib/metrics';
 
 export const revalidate = 3600;
@@ -59,6 +60,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         aria: 'Next project',
       }}
     >
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(projectLd(p)) }} />
       <Case p={p} m={m} />
       <Ways current={p} />
     </PageShell>

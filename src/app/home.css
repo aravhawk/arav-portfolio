@@ -114,7 +114,8 @@
 .sep {
   display: inline-block;
 }
-.metric-tip {
+.metric[data-tip]::after {
+  content: attr(data-tip);
   position: absolute;
   left: 0;
   bottom: calc(100% + 8px);
@@ -139,12 +140,12 @@
     opacity 140ms var(--ease-out),
     transform 140ms var(--ease-out);
 }
-.metric:focus-visible .metric-tip {
+.metric:focus-visible::after {
   opacity: 1;
   transform: none;
 }
 @media (hover: hover) and (pointer: fine) {
-  .metric:hover .metric-tip {
+  .metric:hover::after {
     opacity: 1;
     transform: none;
     transition-delay: 160ms;

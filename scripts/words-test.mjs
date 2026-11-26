@@ -70,7 +70,7 @@ function collect(minOpacity) {
       const text = node.nodeValue?.trim();
       if (!text) continue;
       const el = node.parentElement;
-      if (el.closest('.sr-only, .metric-tip')) continue;
+      if (el.closest('.sr-only')) continue;
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       let op = 1;
@@ -132,7 +132,7 @@ function copyLines() {
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (!node.nodeValue?.trim()) continue;
       const el = node.parentElement;
-      if (el.closest('.sr-only, .metric-tip')) continue;
+      if (el.closest('.sr-only')) continue;
       let op = 1;
       let seen = true;
       for (let e = el; e && e !== document.body; e = e.parentElement) {

@@ -29,8 +29,11 @@ Status: **as built** (K1, 2026-11-20).
   the pages that show numbers) and under the contact row in the home
   page's ending (`.fl-end-note`). No block, caption, recognition line
   or footnote repeats it; a caption may name the source ("Read from
-  GitHub."). The tip a number shows when pointed at, and its name for
-  assistive technology, keep their "as of".
+  GitHub."). The tip a number shows when pointed at is drawn from an
+  attribute (`data-tip`), never a text node, so a line of words reads as one
+  phrase to anything that extracts text; a number inside a heading or a
+  recognition line has no tip and no "as of" in its name. Elsewhere a
+  number's name for assistive technology keeps its "as of".
   Merged pull requests count only repositories he does not own, less
   the repositories in `EXCLUDED_REPOS`
   (`src/lib/metrics/config.ts`). What is left out is never written
@@ -83,8 +86,12 @@ keeps the order its world was built in.
 | envfetch | Only what its repository says (README, languages, the v1.1.0 release of June 4, 2026). No star count, no praise. Its commands are set as text from the README. |
 
 Recognition is lines, never cards (`RECOGNITION`): "Selected for
-OpenAI DevDay 2026" (about him, never under Infiniview); the
-Business Insider story of May 2026, without his age, city or grade;
+OpenAI DevDay 2026" (about him, never under Infiniview); the Veritas
+AI International High School Hackathon 2026 Honorable Mention for
+OxyDrop (roughly top 20 of more than 1,000 entries, never an exact
+rank; the $1,500 Veritas AI program scholarship is program credit,
+never cash or funding; OxyDrop is named in the line only, with no
+card, station or link); the Business Insider story of May 2026, without his age, city or grade;
 his GitHub contributions in 2026, read live (the date is the footer's).
 
 Nothing else is shown: no archive, no "also" list, no project the

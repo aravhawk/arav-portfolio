@@ -1094,6 +1094,13 @@ html[data-picture] .flight-root > .fl-poster {
   max-width: min(26ch, 86vw);
   color: var(--ink);
 }
+/* A short, wide frame (a phone on its side) has the block's foot at the frame's foot and little height above it:
+   the lines take more of the width, so they stand in fewer rows and the label stays clear of the navigation. */
+@media (max-height: 480px) and (min-width: 600px) {
+  .fl .fl-recog {
+    max-width: min(52ch, 78vw);
+  }
+}
 .fl-recog-link {
   text-decoration: underline;
   text-decoration-thickness: 1.5px;

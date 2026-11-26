@@ -21,6 +21,7 @@ export function Interests({ timing: delta, year, recogUntil }: { timing: Timing;
       </p>
       <ul className="fl-unit fl-recog" {...delta.title} {...until}>
         <li>{RECOGNITION.devday}.</li>
+        <li>{RECOGNITION.veritas.home}.</li>
         <li>
           In a{' '}
           <a className="fl-recog-link" href={RECOGNITION.press.href} target="_blank" rel="noopener noreferrer">
