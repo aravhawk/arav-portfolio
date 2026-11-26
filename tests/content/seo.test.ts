@@ -74,3 +74,21 @@ describe('the one address', () => {
     expect(hits.map((h) => h.slice(process.cwd().length + 1))).toEqual(['src/lib/site.ts']);
   });
 });
+
+describe('the Veritas recognition line', () => {
+  it('says the same facts on the home page (the tighter line) and on /work (the fuller one)', async () => {
+    const { RECOGNITION } = await import('@/content/projects');
+    const work = `${RECOGNITION.veritas.award}. ${RECOGNITION.veritas.result}`;
+    for (const line of [RECOGNITION.veritas.home, work]) {
+      expect(line).toContain('Honorable Mention');
+      expect(line).toContain('Veritas AI International High School Hackathon 2026');
+      expect(line).toContain('OxyDrop');
+      expect(line).toContain('Roughly');
+      expect(line).toMatch(/top 20 of (more than 1,000|1,000\+) entries/);
+      expect(line).toContain('$1,500 Veritas AI program scholarship');
+      expect(line).not.toMatch(/—|cash|funding|prize/i);
+      expect(line).not.toMatch(/\.$/);
+    }
+    expect(RECOGNITION.veritas.home.length).toBeLessThan(work.length);
+  });
+});

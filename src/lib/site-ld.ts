@@ -6,12 +6,19 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site'
  * address is what it describes), not in every page's HTML: an inner page's HTML has to fit what a new connection
  * sends before it waits (docs/site-system/performance.md), and this was 290 bytes of each.
  */
+/**
+ * The entries' `@id`s are the site's address with the fragment on it, no slash between (`https://arav.pro#person`),
+ * the same form as the canonical, og:url and the sitemap (src/lib/site.ts). The work pages and posts refer to them.
+ */
+export const PERSON_ID = `${SITE_URL}#person`;
+export const WEBSITE_ID = `${SITE_URL}#website`;
+
 export const SITE_LD = {
   '@context': 'https://schema.org',
   '@graph': [
     {
       '@type': 'Person',
-      '@id': `${SITE_URL}/#person`,
+      '@id': PERSON_ID,
       name: SITE_NAME,
       url: SITE_URL,
       description: SITE_TAGLINE,
@@ -21,12 +28,12 @@ export const SITE_LD = {
     },
     {
       '@type': 'WebSite',
-      '@id': `${SITE_URL}/#website`,
+      '@id': WEBSITE_ID,
       url: SITE_URL,
       name: SITE_NAME,
       description: SITE_DESCRIPTION,
       inLanguage: 'en',
-      publisher: { '@id': `${SITE_URL}/#person` },
+      publisher: { '@id': PERSON_ID },
     },
   ],
 };

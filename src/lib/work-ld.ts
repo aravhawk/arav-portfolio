@@ -1,5 +1,6 @@
 import { PROJECTS, type Project } from '@/content/projects';
-import { SITE_URL, abs } from '@/lib/site';
+import { abs } from '@/lib/site';
+import { PERSON_ID, WEBSITE_ID } from '@/lib/site-ld';
 
 /**
  * Structured data for the work pages, in the shape of the home page's (src/lib/site-ld.ts): the entries refer to the
@@ -7,8 +8,8 @@ import { SITE_URL, abs } from '@/lib/site';
  * the heaviest page's HTML (docs/site-system/performance.md, "An inner page's HTML fits a new connection's first
  * round"): its entry is kept to what it must say, and was measured at 320 bytes gzipped.
  */
-const PERSON = { '@id': `${SITE_URL}/#person` };
-const WEBSITE = { '@id': `${SITE_URL}/#website` };
+const PERSON = { '@id': PERSON_ID };
+const WEBSITE = { '@id': WEBSITE_ID };
 
 /** The name as the page says it (the non-breaking hyphen in a name is set for the eye, not for a reader of data). */
 const nameOf = (p: Project) => p.name.replace('‑', '-');

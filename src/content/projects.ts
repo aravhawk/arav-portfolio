@@ -519,6 +519,8 @@ export const RECOGNITION = {
   veritas: {
     award: 'Honorable Mention at the Veritas AI International High School Hackathon 2026, for OxyDrop',
     result: 'Roughly the top 20 of more than 1,000 entries, with a $1,500 Veritas AI program scholarship',
+    /** The home page's line, a little tighter, as its Business Insider line is: the block stands at the foot of a short frame. */
+    home: 'Honorable Mention, Veritas AI International High School Hackathon 2026, for OxyDrop. Roughly the top 20 of 1,000+ entries, with a $1,500 Veritas AI program scholarship',
   },
   press: {
     text: 'In a Business Insider story on coders who keep their laptops open in public, May 2026',
