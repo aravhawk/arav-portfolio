@@ -7,8 +7,9 @@ import { WAY_TO_WORK, WAY_TO_WRITING } from '@/components/NextBand';
 import { PageShell } from '@/components/PageShell';
 import { sceneOf } from '@/water/registry';
 import { FeatStill } from '@/components/work/still-pictures';
-import { PROJECTS, RECOGNITION } from '@/content/projects';
+import { CC_SWITCH_SINCE, PROJECTS, RECOGNITION } from '@/content/projects';
 import { pageMeta } from '@/lib/meta';
+import { workLd } from '@/lib/work-ld';
 import { formatAsOf, formatCount, getMetrics } from '@/lib/metrics';
 
 export const revalidate = 3600;
@@ -31,7 +32,7 @@ export default async function Work() {
   const stat: Record<string, string> = {
     'open-source': `${formatCount(m.mergedPrs.upstream.value)} merged pull requests across ${m.mergedPrs.upstreamRepoCount} repositories`,
     ollama: `${formatCount(m.ollama.total.value)} pulls across ${m.ollama.models.length} models`,
-    'cc-switch': `${formatCount(m.npm.allTime.value)} npm downloads since February 1, 2026`,
+    'cc-switch': `${formatCount(m.npm.allTime.value)} npm downloads since ${CC_SWITCH_SINCE}`,
   };
   const year = m.contributions.byYear[RECOGNITION.year];
 
@@ -43,6 +44,7 @@ export default async function Work() {
       note={`Numbers read ${formatAsOf(m.retrievedAt)}`}
       next={WAY_TO_WRITING}
     >
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(workLd()) }} />
       <section className="sec wrap" aria-label="Projects">
         <ul className="feats">
           {PROJECTS.map((p) => {
@@ -98,6 +100,7 @@ export default async function Work() {
                 source={m.contributions.total.source}
                 asOf={formatAsOf(m.contributions.total.asOf)}
                 what={`GitHub contributions in ${RECOGNITION.year}`}
+                tip={false}
               />{' '}
               GitHub contributions in {RECOGNITION.year}.
             </li>

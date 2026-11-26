@@ -11,7 +11,7 @@ import { Film } from '@/components/flight/Film';
 import { ProfileSwitch } from '@/components/home/ProfileSwitch';
 import { FlightStage } from '@/components/FlightStage';
 import { LiveNumber } from '@/components/LiveNumber';
-import { PROJECTS, RECOGNITION, type Project, type ProjectMedia } from '@/content/projects';
+import { CC_SWITCH_SINCE, PROJECTS, RECOGNITION, type Project, type ProjectMedia } from '@/content/projects';
 import { KIND } from '@/content/kinds';
 import { formatAsOf, formatCount, getMetrics } from '@/lib/metrics';
 import { THEME_COLOR } from '@/lib/site';
@@ -280,6 +280,7 @@ export default async function Home() {
                     source={m.mergedPrs.upstream.source}
                     asOf={formatAsOf(m.mergedPrs.upstream.asOf)}
                     what="merged pull requests in repositories I do not own"
+                    tip={false}
                   />
                 </span>
               </span>
@@ -375,6 +376,7 @@ export default async function Home() {
                     source={m.ollama.total.source}
                     asOf={formatAsOf(m.ollama.total.asOf)}
                     what="pulls of my open models on Ollama"
+                    tip={false}
                   />
                 </span>
               </span>
@@ -405,9 +407,9 @@ export default async function Home() {
                 from={m.npm.allTime.snapshotValue}
                 source={m.npm.allTime.source}
                 asOf={formatAsOf(m.npm.allTime.asOf)}
-                what="npm downloads of cc-switch, all time"
+                what={`npm downloads of cc-switch since ${CC_SWITCH_SINCE}`}
               />{' '}
-              npm downloads.{' '}
+              npm downloads since {CC_SWITCH_SINCE}.{' '}
               <LiveNumber
                 className="fl-count"
                 value={m.npm.lastMonth.value}
@@ -511,6 +513,7 @@ export default async function Home() {
                     source={m.contributions.total.source}
                     asOf={formatAsOf(m.contributions.total.asOf)}
                     what={`GitHub contributions in ${RECOGNITION.year}`}
+                    tip={false}
                   />
                 ) : null
               }

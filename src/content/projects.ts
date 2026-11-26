@@ -503,6 +503,13 @@ export const PROJECTS: Project[] = entries;
 export const projectBySlug = (slug: string) => PROJECTS.find((p) => p.slug === slug);
 
 /**
+ * The day cc-switch's downloads are counted from, said the same on the home page, /work and its page. It is the
+ * package's first publish in `NPM_PACKAGES` (src/lib/metrics/config.ts): `tests/content/cc-switch.test.ts` checks
+ * the two agree. The count is all of its downloads, so "all time" and "since" are one window.
+ */
+export const CC_SWITCH_SINCE = 'February 1, 2026';
+
+/**
  * What he is recognised for: lines, never cards. The year's contributions
  * are read live (src/lib/metrics) and said with the date they were read.
  */

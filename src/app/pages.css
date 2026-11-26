@@ -328,7 +328,7 @@
 }
 /* The smallest things a page shares with the home page (a live number's note, the film's control, the switch's
    three names) are a step larger on a page that is read. */
-.pg-ground .metric-tip {
+.pg-ground .metric[data-tip]::after {
   font-size: 0.875rem;
 }
 .pg-ground .slab-play,
@@ -2789,7 +2789,7 @@
     --cols: 2;
   }
   /* A live number's note opens toward the page, not off its edge. */
-  .figs .fig:nth-child(even) .metric-tip {
+  .figs .fig:nth-child(even) .metric[data-tip]::after {
     left: auto;
     right: 0;
     transform-origin: 100% 100%;

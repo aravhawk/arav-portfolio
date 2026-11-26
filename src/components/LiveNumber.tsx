@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 
+import { countAt } from '@/lib/count-up';
+
 interface Props {
   /** The value to show (already max(live, snapshot) on the server). */
   value: number;
@@ -13,6 +15,12 @@ interface Props {
   asOf: string;
   /** What the number counts, for assistive tech and the tooltip. */
   what: string;
+  /**
+   * Whether hovering shows the "as of" note. It is drawn from an attribute, never a text node, so the words around
+   * the number read as one phrase to anything that extracts text. Off inside a heading or a line of words: the
+   * time the numbers were read is said once, in the small line at the foot of the page.
+   */
+  tip?: boolean;
   className?: string;
 }
 
@@ -32,7 +40,7 @@ function cells(n: number): string {
  * layout shift and no empty state. When it first comes into view it counts
  * once from the snapshot value to the live one, then never moves again.
  */
-export function LiveNumber({ value, from, source, asOf, what, className }: Props) {
+export function LiveNumber({ value, from, source, asOf, what, className, tip = true }: Props) {
   const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -47,9 +55,8 @@ export function LiveNumber({ value, from, source, asOf, what, className }: Props
         const t0 = performance.now();
         const dur = 1100;
         const step = (now: number) => {
-          const t = Math.min(1, (now - t0) / dur);
-          const e = 1 - Math.pow(1 - t, 4);
-          el.innerHTML = cells(Math.round(from + (value - from) * e));
+          const t = (now - t0) / dur;
+          el.innerHTML = cells(countAt(from, value, t));
           if (t < 1) raf = requestAnimationFrame(step);
         };
         raf = requestAnimationFrame(step);
@@ -69,12 +76,10 @@ export function LiveNumber({ value, from, source, asOf, what, className }: Props
       href={source}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`${fmt.format(value)} ${what}, as of ${asOf}. Opens the source.`}
+      aria-label={tip ? `${fmt.format(value)} ${what}, as of ${asOf}. Opens the source.` : `${fmt.format(value)} ${what}. Opens the source.`}
+      data-tip={tip ? `as of ${asOf}` : undefined}
     >
       <span ref={ref} className="metric-value" aria-hidden="true" dangerouslySetInnerHTML={{ __html: cells(value) }} />
-      <span className="metric-tip" aria-hidden="true" data-nodry>
-        as of {asOf}
-      </span>
     </a>
   );
 }

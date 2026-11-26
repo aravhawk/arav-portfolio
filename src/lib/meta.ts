@@ -12,6 +12,8 @@ interface PageMeta {
   tags?: string[];
   /** Title for the browser tab when it should differ from the share title. */
   tabTitle?: string | { absolute: string };
+  /** The title Open Graph and Twitter show, when it should not be `title · Arav Jain` (a post's own title stands alone). */
+  shareTitle?: string;
 }
 
 /**
@@ -20,13 +22,15 @@ interface PageMeta {
  * the shared fields are repeated here on purpose. The card image comes from
  * each route's opengraph-image file.
  */
-export function pageMeta({ title, description, path, type = 'website', publishedTime, tags, tabTitle }: PageMeta): Metadata {
+export function pageMeta({ title, description, path, type = 'website', publishedTime, tags, tabTitle, shareTitle }: PageMeta): Metadata {
+  // The tab's title takes the layout's template (`%s · Arav Jain`); a card has no template, so it is given whole.
+  const share = shareTitle ?? `${title} · ${SITE_NAME}`;
   return {
     title: tabTitle ?? title,
     description,
     alternates: { canonical: path, types: { 'application/rss+xml': '/feed.xml' } },
     openGraph: {
-      title,
+      title: share,
       description,
       url: path,
       siteName: SITE_NAME,
@@ -36,7 +40,7 @@ export function pageMeta({ title, description, path, type = 'website', published
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: share,
       description,
       creator: '@aravhawk',
       site: '@aravhawk',

@@ -29,8 +29,11 @@ Status: **as built** (K1, 2026-11-20).
   the pages that show numbers) and under the contact row in the home
   page's ending (`.fl-end-note`). No block, caption, recognition line
   or footnote repeats it; a caption may name the source ("Read from
-  GitHub."). The tip a number shows when pointed at, and its name for
-  assistive technology, keep their "as of".
+  GitHub."). The tip a number shows when pointed at is drawn from an
+  attribute (`data-tip`), never a text node, so a line of words reads as one
+  phrase to anything that extracts text; a number inside a heading or a
+  recognition line has no tip and no "as of" in its name. Elsewhere a
+  number's name for assistive technology keeps its "as of".
   Merged pull requests count only repositories he does not own, less
   the repositories in `EXCLUDED_REPOS`
   (`src/lib/metrics/config.ts`). What is left out is never written

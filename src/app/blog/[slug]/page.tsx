@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return pageMeta({
     title: post.frontmatter.title,
+    shareTitle: post.frontmatter.title,
     description: post.frontmatter.description,
     path: `/blog/${slug}`,
     type: 'article',

@@ -387,4 +387,9 @@ to every page. Count the gzipped HTML of `/work` before and after
 (`curl -s -o /dev/null -w '%{size_download}' -H 'Accept-Encoding: gzip'
 <base>/work`), and put shapes in CSS, not in markup.
 
+`/work` now carries its structured data (`src/lib/work-ld.ts`): a collection page that names each project's entry by `@id`,
+about 320 bytes gzipped (the script is in the HTML twice, once in the page and once in the page's data, and gzip folds
+the second into the first). Listing names, positions or addresses there cost 100 to 260 bytes more and put the page over
+the first round, so it stays a list of references.
+
 Change log: 2026-11-22 L1: the loading sequence's numbers.

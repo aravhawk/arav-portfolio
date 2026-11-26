@@ -1,9 +1,13 @@
 /**
- * The one place the site's address lives. arav.pro is the canonical domain;
- * aravjain.dev redirects to it. Everything that needs an absolute URL
- * (metadata, sitemap, robots, feed, JSON-LD, Open Graph) reads this.
+ * The one place the site's address lives. arav.pro is the canonical domain, written one way everywhere: https, no
+ * "www", no trailing slash (the home page's canonical, og:url, sitemap entry and JSON-LD are all exactly this
+ * string). aravjain.dev and www.arav.pro only redirect to it (REDIRECT_HOSTS, next.config.ts). Everything that
+ * needs an absolute URL (metadata, sitemap, robots, feed, JSON-LD, Open Graph) reads this.
+ *
+ * It is a constant, not read from the environment: a stray NEXT_PUBLIC_SITE_URL on a host (the old domain, a
+ * preview's address) would otherwise put that address in every canonical link.
  */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://arav.pro').replace(/\/$/, '');
+export const SITE_URL = 'https://arav.pro';
 export const SITE_NAME = 'Arav Jain';
 export const SITE_TAGLINE = 'AI and developer tooling builder';
 export const SITE_DESCRIPTION =
